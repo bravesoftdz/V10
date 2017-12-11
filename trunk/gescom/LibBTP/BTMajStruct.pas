@@ -47,6 +47,7 @@ type
     XX :  TfbtMajStructure;
     LanceMajVues : boolean;
     VersionBaseRef, VersionBaseDest : string;
+    ForceGlobale : boolean;
     //
     procedure TraiteChangementTable (TheListRef : TOB);
     procedure TraiteChangementParamSoc (TheListRef : TOB);
@@ -342,6 +343,7 @@ var Indice : integer;
 begin
 //  if not IsModeMajHalley then
   begin
+    if VersionBaseDest = '998.0' then ForceGlobale := True;
   	XX.Visible := true;
   	V_Pgi.EnableDeShare := False;
     //
@@ -619,7 +621,7 @@ function TMajStructBTP.ModifieTable (TheListRef,TheStructureRef : TOB;NomTable :
 var Force : Boolean;
 begin
 	result := false;
-  Force := (TheListRef.GetString('BTV_FORCE') = 'X');
+  Force := (TheListRef.GetString('BTV_FORCE') = 'X') or (ForceGlobale);
   if not IsATraiter (NomTable,Force) then exit;
   result := true;
   if TableExiste (TEMPTABLE) then DBDeleteTable(DBSOC,DestDriver, TEMPTABLE, TRUE);
