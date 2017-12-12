@@ -343,7 +343,11 @@ var Indice : integer;
 begin
 //  if not IsModeMajHalley then
   begin
-    if VersionBaseDest = '998.0' then ForceGlobale := True;
+    if VersionBaseDest = '998.0' then
+    begin
+      ExecuteSQLContOnExcept('delete from ymybobs where yb_bobname like "BAT30999%"');
+      ForceGlobale := True;
+    end;
   	XX.Visible := true;
   	V_Pgi.EnableDeShare := False;
     //
@@ -2343,6 +2347,7 @@ function TMajStructBTP.IsTraiteVue (TheListRef,TOBRef,TOBDest : TOB) : boolean;
 begin
   result := true;
   if TOBDest = nil then exit; // -> pas de destination c'est donc une création
+  if (ForceGlobale) or (IsModeMajHalley) then Exit;
   if (TheListRef.GetString('BTV_FORCE') = 'X') then exit; // --> Force donc on lance
   if TOBDest.getValue('DV_NUMVERSION') < TOBRef.getValue('DV_NUMVERSION') then exit; // version sur ref > cele de la base
   result := false;
