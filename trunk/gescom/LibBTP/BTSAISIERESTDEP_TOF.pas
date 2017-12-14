@@ -38,6 +38,7 @@ Uses StdCtrls,
      windows,
      Fe_main,
      StrUtils,
+     HSysMenu,
      UTOF ;
 
 Type
@@ -228,6 +229,9 @@ Type
     CHKEngage         : ThCheckbox;
     CHKEngageDepuis   : ThCheckbox;
     CHKGestionEnPa    : ThCheckbox;
+    CHKRevision       : ThCheckBox;
+    CHKFactHD         : ThCheckBox;
+    CHKAvoir          : ThCheckBox;
     //
     PanelLeft         : THPanel;
     PanelBottom       : THPanel;
@@ -262,10 +266,14 @@ Type
     RADDefinitf       : Boolean;
     Ok_ModifRadValide : Boolean;
     Ok_Marque         : Boolean;
+    Ok_Revision       : Boolean;
+    Ok_FactHD         : Boolean;
+    OK_Avoir          : Boolean;
     //
     COEFFG            : double;
     budgetDepuis      : string;
-
+    Prorata           : String;
+    Revision          : String;
     //
     procedure AffecteMoisAnne(DateP: TDateTime);
     procedure AfficheLagrille (First : boolean=false);
@@ -284,17 +292,18 @@ Type
     procedure Calcultotaldepenses;
     procedure CalculDPR;
     procedure CalculMarge;
+    procedure CalculSousTotal(Typeligne, Typeressource: String);
     procedure CalculSsTot(TypeSt: String);
+    function  CalculTheorique(Val1, Val2: Double): Double;
     //
     procedure CellEnter(Sender: TObject; var ACol, ARow: Integer; var Cancel: Boolean);
     procedure CellExit(Sender: TObject; var ACol, ARow: Integer; var Cancel: Boolean);
     //
     procedure ChargeEnteteAffaire;
-    procedure ChargeInfoAffaire;
-    Procedure ChargementFirstAffaire;
-    procedure ChargeNaturesPrestation;
     procedure ChargeGrilleWithTobInt;
+    procedure ChargeInfoAffaire;
     procedure ChargeInfoDateArretee;
+    procedure ChargementAvoir(DateDebut, DateArrete: TDateTime);
     procedure ChargementBudget;
     procedure ChargementBudgetBCE;
     procedure ChargementBudgetFrais(PieceFRais : String);
@@ -303,12 +312,17 @@ Type
     procedure ChargementConsommeDepuis(DateDebut, DateArrete: TDateTime);
     procedure ChargementEngage(DateArrete : TDateTime);
     procedure ChargementEngageDepuis(DateArrete : TDateTime);
+    procedure ChargementFactHorsdevis(DateArrete: TDateTime);
     procedure ChargementFacturation(DateDebut, DateArrete: TDateTime);
     procedure ChargementFactureDepuis(DateDebut, DateArrete: TDateTime);
+    Procedure ChargementFirstAffaire;
     procedure ChargementLigneVide(TOBMere: TOB; TheTitre, TypeTob: String);
+    procedure ChargementProrata(DateArrete: TDateTime);
     procedure ChargementRecettesFraisAnnexes(DateDebut, DateArrete: TDateTime);
     procedure ChargementRecettesAnnexesFraisDepuis(DateDebut, DateArrete: TDateTime);
     procedure ChargementResteADepenser;
+    procedure ChargementRevision(DateArrete: TDateTime);
+    procedure ChargeNaturesPrestation;
     procedure ChargeSsTot(TypeSt: String);
     procedure ChargeTob(TOBL, TOBMere: TOB; TheTitre, TypeTotal : String);
     //
@@ -316,6 +330,10 @@ Type
     Procedure CHKGestionEnPaOnClick(Sender: TObject);
     Procedure CHKEngageOnClick(Sender: TObject);
     Procedure CHKEngageDepuisOnClick(Sender: TObject);
+    procedure CHKRevisionOnClick(Sender: TObject);
+    procedure CHKFactHDOnClick(Sender: TObject);
+    procedure ChkAvoirOnClick(Sender: TObject);
+
     //
     procedure ConstitueDateArrete;
     procedure ConstitueEngageADate(TOBEngage: TOB; DateArrete: TDateTime);
@@ -372,8 +390,7 @@ Type
     //
     function  ZoneAccessible(var ACol, ARow: integer): boolean;
     procedure ZoneSuivanteOuOk(var ACol, ARow: integer; var Cancel: boolean);
-    function CalculTheorique(Val1, Val2: Double): Double;
-    procedure CalculSousTotal(Typeligne, Typeressource: String);
+
 
     //
   end ;
@@ -386,7 +403,8 @@ uses  Messages,
       StockUtil,
       UPrintScreen,
       factDomaines,
-      UFonctionsCBP;
+      UFonctionsCBP,
+      UtilPGI;
 
 procedure TOF_BTSAISIERESTDEP.OnNew ;
 begin
@@ -426,6 +444,11 @@ begin
   CHKPROVISION      := GetParamSocSecur('SO_RADLIGNEPROVISION', False);
   ValideRADaZero    := GetParamSocSecur('SO_VALIDERADAZERO', False);
   Ok_Marque         := GetParamSocSecur('SO_BTGESTIONMARQ', False);
+  Prorata           := FabriqueConditionIn(GetParamSocSecur('SO_PRORATA',  ''));
+  Revision          := FabriqueConditionIn(GetParamSocSecur('SO_REVISION', ''));
+  Ok_Revision       := GetParamSocSecur('SO_RADREVISION', False);
+  Ok_FactHD         := GetParamSocSecur('SO_RADFACTHD', False);
+  OK_Avoir          := GetParamSocSecur('SO_RADAVOIR', False);
   //
   THValComboBox(GetControl('BUDGETDEPUIS')).Value := BudgetDepuis;
   //
@@ -461,6 +484,9 @@ begin
   CHKEngage.Checked       := VisuEngage;
   CHKEngageDepuis.Checked := VisuEngageDepuis;
   CHKGestionEnPa.Checked  := GestionEnPa;
+  CHKRevision.Checked     := Ok_Revision;
+  CHKFactHD.Checked       := Ok_FactHD;
+  CHKAvoir.Checked        := OK_Avoir;
 
   CreateTOB;
 
@@ -724,6 +750,9 @@ begin
   CHKEngage       := THCheckBox(GetControl('ENGAGE'));
   CHKEngageDepuis := THCheckBox(GetControl('ENGAGEDEPUIS'));
   CHKGestionEnPa  := THCheckBox(GetControl('GESTIONPA'));
+  CHKRevision     := THCheckbox(GetControl('REVISION'));
+  CHKFactHD       := THCheckbox(GetControl('FACTHD'));
+  CHKAvoir        := THCheckbox(GetControl('AVOIR'));
   //
   BNAFFAIRE   := THDBRichEditOLE (GetControl('BNAFFAIRE'));
   //
@@ -777,6 +806,9 @@ begin
   CHKEngage.OnClick       := CHKEngageOnClick;
   CHKEngageDepuis.OnClick := CHKEngageDepuisOnClick;
   CHKGestionEnPa.OnClick  := CHKGestionEnPaOnClick;
+  CHKRevision.OnClick     := ChkRevisionOnClick;
+  CHKFactHD.OnClick       := ChkFactHDOnClick;
+  CHKAvoir.OnClick        := ChkAvoirOnClick;
 
   TToolBarbutton97(getControl('BDelete')).onClick := BDeleteClick;
 end;
@@ -1014,6 +1046,9 @@ begin
   CHKEngage.Checked       := VisuEngage;
   CHKEngageDepuis.Checked := VisuEngageDepuis;
   CHKGestionEnPA.Checked  := GestionEnPA;
+  CHKRevision.Checked     := Ok_Revision;
+  CHKFactHD.Checked       := Ok_FactHD;
+  CHKAvoir.Checked        := OK_Avoir;
 
   GS.Enabled := True;
   BImprimer.Visible := True;
@@ -1023,7 +1058,7 @@ begin
 
   DestroyTOB;
 
-  OK_LanceReq := True;
+  OK_LanceReq   := True;
   Ok_CtrlSaisie := false;
   if TFVierge(Ecran).ActiveControl <> nil then
   begin
@@ -1191,7 +1226,7 @@ begin
     end;
   until lelement = '';
   //
-  GS.FixedCols := 1;
+  GS.FixedCols    := 1;
   GS.ColCount     := Nbcols;
   //
   st              := fColNamesGS ;
@@ -1213,26 +1248,6 @@ begin
     GS.cells[Indice,0]     := leTitre;
     GS.ColNames [Indice]   := Nam;
     //
-    (*
-    if      nam = 'RESTEQTE'          then ColResteQte   := Indice+1
-    else if nam = 'RESTEMT'           then ColResteMt    := Indice+1
-    else if nam = 'REALISEMT'         then ColRealiseMt  := Indice+1
-    else if nam = 'REALISEMTPA'       then ColRealiseMtPA:= Indice+1
-    else if nam = 'ENGAGE'            then ColEngage     := Indice+1
-    else if nam = 'ENGAGEDEPUIS'      then ColEngageDepuis := Indice+1
-    else if nam = 'REALISEDEPUISPA'   then ColDepuisMtPA := Indice+1
-    else if nam = 'REALISEDEPUIS'     then ColDepuisMt   := Indice+1
-    else if nam = 'REALISEQTE'        then ColRealiseQte := Indice+1
-    else if nam = 'REALISEQTEDEPUIS'  then ColDepuisQte  := Indice+1
-    else if nam = 'BUDGETQTE'         then ColBudgetQte  := Indice+1
-    else if nam = 'BUDGETMTPA'        then ColBudgetMTPA := Indice+1
-    else if nam = 'BUDGETMT'          then ColBudgetMT   := Indice+1
-    else if nam = 'THEOQTE'           then ColTheoQte    := Indice+1
-    else if nam = 'THEOMT'            then ColTheoMT     := Indice+1
-    else if nam = 'THEOMTPA'          then ColTheoMTPA   := Indice+1
-    else if nam = 'FINAFFAIRE'        then ColFinAffaire := Indice+1
-    else if nam = 'FINAFFAIREPA'      then ColFinAffairePA := Indice+1
-    *)
     if      nam = 'RESTEQTE'          then ColResteQte   := Indice
     else if nam = 'RESTEMT'           then ColResteMt    := Indice
     else if nam = 'REALISEMT'         then ColRealiseMt  := Indice
@@ -1251,7 +1266,6 @@ begin
     else if nam = 'THEOMTPA'          then ColTheoMTPA   := Indice
     else if nam = 'FINAFFAIRE'        then ColFinAffaire := Indice
     else if nam = 'FINAFFAIREPA'      then ColFinAffairePA := Indice
-
     ;
 
     //Alignement des cellules
@@ -1295,9 +1309,9 @@ procedure TOF_BTSAISIERESTDEP.DefinieGrid;
 begin
 
   fColNamesGS := 'ST;LIBTYPEARTICLE;BUDGETQTE;';
-  Falignement := 'G.0  ---;G.0  ---;D/2  -X-;D/2  -X-;D/2  -X-;D/2  -X-;';
+  Falignement := 'C.0  ---;G.0  ---;D/2  -X-;D/2  -X-;D/2  -X-;D/2  -X-;';
   Ftitre      := ' ;Libelle;Budget Qté;';
-  fLargeur    := '10;120;30;30;30;30;';
+  fLargeur    := '5;120;30;30;30;30;';
 
   if gestionEnpa then
   Begin
@@ -1440,7 +1454,14 @@ Begin
   //
   ChargementFacturation(DateDebut, DateArrete);
   //
+  if OK_Avoir  then ChargementAvoir(DateDebut, DateArrete);
+  //
+  if Ok_FactHD then ChargementFactHorsdevis(DateArrete);
+  //
   ChargementRecettesFraisAnnexes(DateDebut, DateArrete);
+  //
+  //if Ok_Prorata then ChargementProrata(DateArrete);
+  if Ok_Revision then ChargementRevision(DateArrete);
   //
   ChargementResteADepenser;
   //
@@ -1926,6 +1947,121 @@ begin
   TOBfact.Free;
 end;
 
+//FV1 : 05/12/2017 - - GUINIER : Ajouter en Facturation le Montant des Ports & Frais pour Prorata
+Procedure TOF_BTSAISIERESTDEP.ChargementProrata(DateArrete : TDateTime);
+Var STSQL   : String;
+    QQ      : TQuery;
+    i       : Integer;
+    TOBFact : TOB;
+begin
+
+  If Prorata = '' Then Exit;
+
+  TobFact := TOB.Create('FACTURE', nil, -1);
+
+  StSQl := 'SELECT "TYPEELT" = "PRORATA", ' +
+           '"TYPERESSOURCE"  = "AUT",' +
+           'SUM(GPT_TOTALHTDEV) AS FACTURE FROM PIECE ' +
+           'LEFT JOIN PIEDPORT ON GPT_NATUREPIECEG=GP_NATUREPIECEG AND GPT_SOUCHE=GP_SOUCHE AND GPT_NUMERO=GP_NUMERO AND GPT_INDICEG=GP_INDICEG ' +
+           'WHERE GPT_NATUREPIECEG="FBT" ' +
+           '  AND GPT_FRAISREPARTIS="-" '  +
+           '  AND GP_DATEPIECE < "' + UsDateTime(DateArrete) + '" ' +
+           '  AND GP_AFFAIRE = "' + AFFAIRE.Text + '" ' +
+           '  AND GPT_CODEPORT IN ' + Prorata ;
+
+  QQ := OpenSQL(StSQL, False);
+
+  If Not QQ.eof then
+  begin
+    TobFact.LoadDetailDB('Les PRORATAS','','',QQ, False);
+    For i := 0 TO TobFact.Detail.count -1 do
+    Begin
+      if TobFact.Detail[i].GeTDouble('FACTURE') <> 0 then
+        ChargeTob(TobFact.Detail[i], TOBDiverse, 'Prorata/Révision', 'DEP')
+    end;
+  end;
+
+  Ferme (QQ);
+
+  TOBfact.Free;
+
+end;
+
+//FV1 : 05/12/2017 - - GUINIER : Ajouter en Facturation le Montant des Ports & Frais pour Prorata
+Procedure TOF_BTSAISIERESTDEP.ChargementRevision(DateArrete : TDateTime);
+Var STSQL   : String;
+    QQ      : TQuery;
+    i       : Integer;
+    TOBFact : TOB;
+begin
+
+  If Revision = '' Then Exit;
+
+  TobFact := TOB.Create('FACTURE', nil, -1);
+
+  StSQl := 'SELECT "TYPEELT" = "REVISION", ' +
+           '"TYPERESSOURCE"  = "REVISION",' +
+           'SUM(GPT_TOTALHTDEV) AS FACTURE FROM PIECE ' +
+           'LEFT JOIN PIEDPORT ON GPT_NATUREPIECEG=GP_NATUREPIECEG AND GPT_SOUCHE=GP_SOUCHE AND GPT_NUMERO=GP_NUMERO AND GPT_INDICEG=GP_INDICEG ' +
+           'WHERE GPT_NATUREPIECEG="FBT" ' +
+           '  AND GPT_FRAISREPARTIS="-" '  +
+           '  AND GP_DATEPIECE < "' + UsDateTime(DateArrete) + '" ' +
+           '  AND GP_AFFAIRE = "' + AFFAIRE.Text + '" ' +
+           '  AND GPT_CODEPORT IN ' + Revision ;
+
+  QQ := OpenSQL(StSQL, False);
+
+  If Not QQ.eof then
+  begin
+    TobFact.LoadDetailDB('Les REVISIONS','','',QQ, False);
+    For i := 0 TO TobFact.Detail.count -1 do
+    Begin
+      if TobFact.Detail[i].GeTDouble('FACTURE') <> 0 then
+        ChargeTob(TobFact.Detail[i], TOBDiverse, 'Révision', 'FAC')
+    end;
+  end;
+
+  Ferme (QQ);
+
+  TOBfact.Free;
+
+end;
+
+//FV1 : 05/12/2017 - GUINIER : Ajouter en Facturation le Montant des Factures Hors Devis
+procedure TOF_BTSAISIERESTDEP.ChargementFactHorsdevis(DateArrete: TDateTime);
+Var StSQL   : String;
+    QQ      : TQuery;
+    i       : Integer;
+    TOBFact : TOB;
+begin
+
+  TobFact := TOB.Create('FACTURE', nil, -1);
+
+  //Chargement des Factures Hors-devis
+  StSQl := 'SELECT "TYPEELT" = "FACHD", ' +
+           '"TYPERESSOURCE"  = "FAC", ' +
+           'SUM(GL_QTEFACT * GL_PUHTDEV) AS FACTURE ' +
+           'FROM LIGNE WHERE GL_NATUREPIECEG = "FBT"' +
+           ' AND GL_DATEPIECE < "' + UsDateTime(DateArrete) + '" '+
+           ' AND GL_PIECEORIGINE = ""' +
+           ' AND GL_AFFAIRE = "' + AFFAIRE.Text + '"';
+
+  QQ := OpenSQL(StSQl, true,-1,'',true);
+  if not QQ.eof then
+  begin
+    TobFact.LoadDetailDB('Le FACTURE','','',QQ, False);
+    For i := 0 TO TobFact.Detail.count -1 do
+    Begin
+      if TobFact.Detail[i].GeTDouble('FACTURE') <> 0 then
+        ChargeTob(TobFact.Detail[i], TOBFacturation,'Facturation Hors-Devis', 'FAC')
+    end;
+  end;
+
+  Ferme(QQ);
+  TOBFact.Free;
+
+end;
+
 //FV1 : 17/09/2013 - FS#657 - BAGE : En reste à dépenser, montant de facturation incorrect (le montant réalisé doit prendre en compte la somme des recettes annexes)
 //Chargement des Recettes Annexes Depuis
 Procedure TOF_BTSAISIERESTDEP.ChargementRecettesAnnexesFraisDepuis(DateDebut, DateArrete : TDateTime);
@@ -2136,12 +2272,12 @@ begin
   Ferme (QQ);
   TOBFact.ClearDetail;
 
-  //Chargement de la TOb Facturation Pour chargement Conso (Réalisé)
-  StSQl := 'SELECT "TYPEELT" = "FACR", ' +
+  //Chargement de la TOb Facturation Pour chargement des Factures
+  StSQl := 'SELECT "TYPEELT" = "FACF", ' +
            '"TYPERESSOURCE" = "FAC", ' +
            'SUM(GP_TOTALHTDEV) AS FACTURE, ' +
            'SUM(GP_MONTANTPR)  AS REVIENT FROM PIECE ' +
-           'WHERE GP_NATUREPIECEG IN ("FBT", "ABT") AND GP_AFFAIRE="' + AFFAIRE.text + '" ' +
+           'WHERE GP_NATUREPIECEG = "FBT" AND GP_AFFAIRE="' + AFFAIRE.text + '" ' +
            '  AND GP_DATEPIECE < "' + UsDateTime(DateArrete) + '" '+
            'GROUP BY GP_NATUREPIECEG';
 
@@ -2149,10 +2285,45 @@ begin
 
   If Not QQ.eof then
   begin
-    TobFact.LoadDetailDB('Le FACTURE','','',QQ, False);
+    TobFact.LoadDetailDB('Les FACTURES','','',QQ, False);
     For i := 0 TO TobFact.Detail.count -1 do
     Begin
       ChargeTob(TobFact.Detail[i], TOBFacturation,'Facturation', 'FAC')
+    end;
+  end;
+
+  Ferme (QQ);
+
+  FreeAndNil(Tobfact);
+
+end;
+
+Procedure TOF_BTSAISIERESTDEP.ChargementAvoir(DateDebut, DateArrete : TDateTime);
+Var STSQL     : String;
+    QQ        : TQuery;
+    i         : Integer;
+    TOBFact   : TOB;
+begin
+
+  TobFact := TOB.Create('AVOIRS', nil, -1);
+
+  //Chargement de la TOb Facturation Pour chargement des Avoirs
+  StSQl := 'SELECT "TYPEELT" = "FACA", ' +
+           '"TYPERESSOURCE" = "FAC", ' +
+           'SUM(GP_TOTALHTDEV) AS FACTURE, ' +
+           'SUM(GP_MONTANTPR)  AS REVIENT FROM PIECE ' +
+           'WHERE GP_NATUREPIECEG = "ABT" AND GP_AFFAIRE="' + AFFAIRE.text + '" ' +
+           '  AND GP_DATEPIECE < "' + UsDateTime(DateArrete) + '" '+
+           'GROUP BY GP_NATUREPIECEG';
+
+  QQ := OpenSQL(StSQL, False);
+
+  If Not QQ.eof then
+  begin
+    TobFact.LoadDetailDB('Les AVOIRS','','',QQ, False);
+    For i := 0 TO TobFact.Detail.count -1 do
+    Begin
+      ChargeTob(TobFact.Detail[i], TOBFacturation,'Avoirs', 'FAC')
     end;
   end;
 
@@ -2482,28 +2653,36 @@ Begin
   //
   TOBIntLig.PutValue('TYPEELT',          TOBL.GetString('TYPEELT'));
   TOBIntLig.PutValue('TYPERESSOURCE',    TOBL.GetString('TYPERESSOURCE'));
+  TOBIntLig.PutValue('TYPEARTICLE',      '');
+  TOBIntLig.PutValue('CODEARTICLE',      '');
+  TOBIntLig.PutValue('LIBELLEART',       '');
 
-  if (TOBL.GetString('TYPEELT') = 'FACB') or
-     (TOBL.GetString('TYPEELT') = 'FACR') OR
+  if (TOBL.GetString('TYPEELT') = 'FACB') OR
+     (TOBL.GetString('TYPEELT') = 'FACF') OR
 //   (TOBL.GetString('TYPEELT') = 'FACBDEPUIS') OR   // Modif BRL 18/10/2013 : inutile pour l'instant
      (TOBL.GetString('TYPEELT') = 'FACRDEPUIS') Then
   begin
     TOBIntLig.PutValue('NATUREPRESTATION', 'FAC');
     TOBIntLig.PutValue('LIBNATPRESTATION', 'Facturation');
-    TOBIntLig.PutValue('TYPEARTICLE',      '');
-    TOBIntLig.PutValue('CODEARTICLE',      '');
-    TOBIntLig.PutValue('LIBELLEART',       '');
   end
-  Else
-  if (TOBL.GetString('TYPEELT') = 'FACRAN') OR
+  else if (TOBL.GetString('TYPEELT') = 'PRORATA')  OR
+          (TOBL.GetString('TYPEELT') = 'REVISION') Then
+  begin
+    TOBIntLig.PutValue('NATUREPRESTATION', 'FAC');
+    TOBIntLig.PutValue('LIBNATPRESTATION', TheTitre);
+  end
+  Else if (TOBL.GetString('TYPEELT') = 'FACA')     OR
+          (TOBL.GetString('TYPEELT') = 'FACHD')  Then
+  Begin
+    TOBIntLig.PutValue('NATUREPRESTATION', TOBL.GetString('TYPEELT'));
+    TOBIntLig.PutValue('LIBNATPRESTATION', TheTitre);
+  end
+  Else if (TOBL.GetString('TYPEELT') = 'FACRAN') OR
 //   (TOBL.GetString('TYPEELT') = 'FACBDEPUIS') OR   // Modif BRL 18/10/2013 : inutile pour l'instant
      (TOBL.GetString('TYPEELT') = 'FACRANDEPUIS') Then
   begin
     TOBIntLig.PutValue('NATUREPRESTATION', 'RAN');
     TOBIntLig.PutValue('LIBNATPRESTATION', 'Recettes Annexes');
-    TOBIntLig.PutValue('TYPEARTICLE',      '');
-    TOBIntLig.PutValue('CODEARTICLE',      '');
-    TOBIntLig.PutValue('LIBELLEART',       '');
   end
   Else
   if (TOBL.GetString('TYPEELT') = 'FACFAN') OR
@@ -2512,9 +2691,6 @@ Begin
   begin
     TOBIntLig.PutValue('NATUREPRESTATION', 'FAN');
     TOBIntLig.PutValue('LIBNATPRESTATION', 'Dépenses Annexes');
-    TOBIntLig.PutValue('TYPEARTICLE',      '');
-    TOBIntLig.PutValue('CODEARTICLE',      '');
-    TOBIntLig.PutValue('LIBELLEART',       '');
   end
   Else
   begin
@@ -2616,14 +2792,18 @@ Begin
     TOBIntLig.PutValue('REALISEDEPUISPA',   TOBL.GetDouble('BUDGETMTPA'));
     TOBIntLig.PutValue('REALISEDEPUIS',     TOBL.GetDouble('BUDGETMT'));
   end
-  Else if TOBL.GetString('TYPEELT') = 'FACB' then
+  Else if (TOBL.GetString('TYPEELT') = 'FACB') then
   begin
     TOBIntLig.PutValue('BUDGETMTPA',      TOBL.GetDouble('FACTURE'));
     TOBIntLig.PutValue('BUDGETMT',        TOBL.GetDouble('FACTURE'));
   end
-  Else If (TOBL.GetSTring('TYPEELT') = 'FACR') or
-          (TOBL.GetSTring('TYPEELT') = 'FACRAN')  or
-          (TOBL.GetSTring('TYPEELT') = 'FACFAN') Then
+  Else If (TOBL.GetSTring('TYPEELT') = 'FACF')    Or
+          (TOBL.GetSTring('TYPEELT') = 'FACA')    Or
+          (TOBL.GetSTring('TYPEELT') = 'FACRAN')  Or
+          (TOBL.GetSTring('TYPEELT') = 'FACFAN')  Or
+          (TOBL.GetString('TYPEELT') = 'PRORATA') Or
+          (TOBL.GetString('TYPEELT') = 'REVISION')Or
+          (TOBL.GetString('TYPEELT') = 'FACHD') Then
   begin
     TOBIntLig.PutValue('REALISEMTPA',     TOBL.GetDouble('FACTURE'));
     TOBIntLig.PutValue('REALISEMT',       TOBL.GetDouble('FACTURE'));
@@ -2795,6 +2975,8 @@ begin
     //end;
   end;
   //
+  CreateLigneSsTotalToGrille('Sous-Total Facturation', 'FAC');
+  //
   CreateLigneSsTotalToGrille('Marge (PV-PR)', 'MRG');
 
 
@@ -2854,6 +3036,8 @@ begin
 
   //Calcul de la ligne de Prix de revient
   CalculDPR;
+
+  CalculSsTot('FAC');  
 
   //Calcul de la ligne de marge
   CalculMarge;
@@ -2951,7 +3135,6 @@ end;
 
 
 Procedure TOF_BTSAISIERESTDEP.CalculDPR;
-Var TOBL : TOB;
 begin
 
   TotalBudgetDPR      := 0;
@@ -3582,8 +3765,6 @@ end;
 
 Procedure TOF_BTSAISIERESTDEP.ChargeSsTot(TypeSt : String);
 Var TOBL : TOB;
-    TotalTheoriqueDPRPA : Double;
-    TotalTheoriqueDPR   : Double;
 begin
 
     If TobGrille = nil then exit;
@@ -3882,10 +4063,12 @@ begin
         GS.RowHeights [Indice+1] := 18 * 3;
       end;
     end;
+    THSystemMenu (GetControl('HMTRAD')).ResizeGridColumns(GS); 
   FINALLY
     GS.SynEnabled := true;
     GS.EndUpdate;
   END;
+
   if First then
   begin
     TFVierge(ecran).HMTrad.ResizeGridColumns(GS);
@@ -4528,6 +4711,33 @@ begin
 
   //dessin de la grille
   DessineGrille;
+
+  if OK_LanceReq then LanceReqOnClick(Self);
+
+end;
+
+procedure TOF_BTSAISIERESTDEP.CHKRevisionOnClick(Sender: TObject);
+begin
+
+  Ok_Revision := CHKRevision.Checked;
+
+  if OK_LanceReq then LanceReqOnClick(Self);
+
+end;
+
+procedure TOF_BTSAISIERESTDEP.CHKFactHDOnClick(Sender: TObject);
+begin
+
+  Ok_FactHD := CHKFactHD.Checked;
+
+  if OK_LanceReq then LanceReqOnClick(Self);
+
+end;
+
+procedure TOF_BTSAISIERESTDEP.ChkAvoirOnClick(Sender: TObject);
+begin
+
+  Ok_Avoir := CHKAvoir.Checked;
 
   if OK_LanceReq then LanceReqOnClick(Self);
 

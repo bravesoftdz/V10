@@ -55,6 +55,7 @@ uses StdCtrls,
   UtilsEtat,
   UtilTableauBord,
   UtilsGrille;
+  UtilPGI;
 
 type
 
@@ -96,7 +97,7 @@ type
     Etablissement : string;
     CodeChantier  : String;
     Apporteur     : string;
-    Responsable : String;
+    Responsable   : String;
     //
     fModeleAnaXls : String;
     //
@@ -117,6 +118,10 @@ type
     CEclatNatPrest: TCheckBox;
     CEclatFamNiv1 : TCheckBox;
     CSELACHATSTOCK: TCheckBox;
+    CHKPRORATA    : TCheckBox;
+    CHKREVISION   : TCheckBox;
+    CFactHorsDevis: TCheckBox;
+    CTotauxAvoir  : TCheckBox;
     //
     THAffaire     : THEdit;
     THAffaire0    : THEdit;
@@ -134,6 +139,11 @@ type
     MontantPR     : Double;
     MontantPV     : Double;
     Qte           : Double;
+    //
+    //---
+    // Modified by f.vautrain 29/11/2017 16:29:31 -
+    Prorata       : String;
+    Revision      : String;
     //
     // ---
     //Modif FV : Dev. prioritaire DSL le 05/06/2012
@@ -158,8 +168,13 @@ type
     //
     procedure OnDblClickTV(Sender: TObject);
 
+    procedure ChargelesFacturesansCommandes(TOBTMP : TOB; CodeAffaire: String);
     procedure ChargeLesChantiers;
+    procedure ChargelesCommandesLivrees(TOBTMP  : TOB; CodeAffaire: String);
+    procedure ChargelesCommandesNonLivrees(TOBTMP  : TOB; CodeAffaire: String);
     procedure ChargeLesConsos;
+    procedure ChargeProrata(TOBTMP: TOB; CodeAffaire: String);
+    procedure ChargeRevision(TOBTMP: TOB; CodeAffaire: String);
 
     procedure AjouteChampSup(var TOBTMP: TOB);
     procedure CompletelesChantiers;
@@ -222,11 +237,11 @@ type
     procedure ExitResponsable(Sender: TObject);
     procedure ExitDomaine(Sender: TObject);
     procedure ExitEtablissement(Sender: TObject);
-    procedure ChargelesCommandesNonLivrees(TOBTMP  : TOB; CodeAffaire: String);
-    procedure ChargelesCommandesLivrees(TOBTMP  : TOB; CodeAffaire: String); 
-    procedure ChargelesFacturesansCommandes(TOBTMP : TOB; CodeAffaire: String);
     procedure AppelListeDesCdes;
     procedure CloseTTForm(Sender: TOBJECT);
+    procedure ChargeHorsDevis(TOBTMP: TOB; CodeAffaire: String);
+    procedure ChargeTotalAvoir(TOBTMP: TOB; CodeAffaire: String);
+
   end;
 
 implementation
@@ -391,6 +406,11 @@ begin
   CEclatFamNiv1  := ThCheckBox(ecran.FindComponent('CECLATFAMNIV1'));
   CSELACHATSTOCK := ThCheckBox(ecran.FindComponent('CSELACHATSTOCK'));
   //
+  CHKPRORATA     := ThCheckBox(ecran.FindComponent('CHKPRORATA'));
+  CHKREVISION    := ThCheckBox(ecran.FindComponent('CHKREVISION'));
+  CFactHorsDevis := ThCheckBox(ecran.FindComponent('CHKFACTHORSDEVIS'));
+  CTotauxAvoir   := ThCheckBox(ecran.FindComponent('CHKTOTAUXAVOIR'));
+  //
   T_Affaire :=  THLabel (GetControl('TBTB_AFFAIRE'));
   //
   //FV1 : 09/03/2017 - Intégration gestion des modèles d'état dans le Tableau de bord
@@ -408,8 +428,10 @@ begin
   ferme(QQ);
 
   if (CAppel.visible = false) and (CContrat.Visible = false) then
-     //SetControlproperty('GCHOIXAFFAIRE', 'Visible', False);
+  begin
+     SetControlproperty('GCHOIXAFFAIRE', 'Visible', False);
      SetControlproperty('CChantier', 'Visible', False);
+  end;
   // --
   THAffaire0.text := 'A';
 
@@ -437,7 +459,17 @@ begin
   // -- Recup Info partage de referentiel
   NomTabNatPrest := GetShare('BTNATPRESTATION')+'NATUREPREST';
   // --
+  Prorata       := GetParamSocSecur('SO_PRORATA',  '');
+  Revision      := GetParamSocSecur('SO_REVISION', '');
+  //
+  Prorata   := FabriqueConditionIn(Prorata);
+  Revision  := FabriqueConditionIn(Revision);
+  //
+  if Prorata  = '' then CHKPRORATA.visible := False;
+  if Revision = '' then CHKREVISION.Visible := False;
+  //
 end;
+
 
 Procedure TOF_BTTABLEAUBORD.ExitResponsable(Sender: TObject);
 Var Lib1, Lib2 : string;
@@ -1364,7 +1396,42 @@ begin
     end;
   end;
   //
-
+  // Modified by f.vautrain 29/11/2017 16:47:11
+  if assigned(CHKPRORATA) then
+  begin
+    if CHKPRORATA.Checked then
+    begin
+      if Prorata <> '' then
+      Begin
+        TOBTMP.addchampsup('PRORATA', false);
+        TOBTMP.PutValue('PRORATA', 0.0);
+      end;
+    end;
+  end; 
+  //
+  if assigned(CHKREVISION) then
+  begin
+    if CHKREVISION.Checked then
+    begin
+      if Revision <> '' then
+      Begin
+        TOBTMP.addchampsup('REVISION', false);
+        TOBTMP.PutValue('REVISION', 0.0);
+      end;
+    end;
+  end;
+  //
+  if CFactHorsDevis.Checked then
+  begin
+    TOBTMP.addchampsup('FACTHORSDEVIS', false);
+    TOBTMP.PutValue('FACTHORSDEVIS', 0.0);
+  end;
+  //
+  If CTotauxAvoir.Checked then
+  begin
+    TOBTMP.addchampsup('TOTALAVOIR', false);
+    TOBTMP.PutValue('TOTALAVOIR', 0.0);
+  end;
   //
   TOBTMP.addchampsup('PREVUPA', false); TOBTMP.PutValue('PREVUPA', 0.0);
   TOBTMP.addchampsup('PREVUPR', false); TOBTMP.PutValue('PREVUPR', 0.0);
@@ -1901,6 +1968,12 @@ begin
 
          ChargeLeReste(TOBTMP);
 
+         // Modified by f.vautrain 04/12/2017 16:55:55 - GUINIER -
+         if CHKPRORATA.Checked      then ChargeProrata(TOBTMP, CodeAff);
+         if CHKREVISION.Checked     then ChargeRevision(TOBTMP, CodeAff);
+         if CFactHorsDevis.Checked  then ChargeHorsDevis(TOBTMP, CodeAff);
+         if CTotauxAvoir.Checked    then ChargeTotalAvoir(TOBTMP, CodeAff);
+
          if (TOBTMP.GetDateTime('AFF_DATEFIN') > DateMvtFin) then
             ChargeLeResteADepenser(TOBTMP,TOBEclate,CodeAff);
 
@@ -1911,11 +1984,12 @@ begin
          //FV1 : 30/08/2017 - FS#2667 - ARKAL : Nouvelle présentation de tableau d'analyse chantier
          if CSELACHATSTOCK.Checked then
          begin
-         ChargelesCommandesNonLivrees(TOBTMP, CodeAff);
-         ChargelesCommandesLivrees(TOBTMP, CodeAff);
-         ChargelesFacturesansCommandes(TOBTMP, CodeAff);
-      end;
-  end;
+          ChargelesCommandesNonLivrees(TOBTMP, CodeAff);
+          ChargelesCommandesLivrees(TOBTMP, CodeAff);
+          ChargelesFacturesansCommandes(TOBTMP, CodeAff);
+         end;
+
+    end;
   end;
 
 end;
@@ -2821,6 +2895,103 @@ begin
 		   end;
      end;
      FreeAndNil(TobEclate);
+  end;
+
+  Ferme(QQ);
+
+end;
+
+// Modified by f.vautrain 29/11/2017 16:49:48 - GUINIER - Ajout des Totaux de Proratas frais et ports
+Procedure TOF_BTTABLEAUBORD.ChargeProrata(TOBTMP : TOB; CodeAffaire : String);
+var Req : String;
+    QQ  : TQuery;
+    Ind : Integer;
+begin
+
+  If Prorata = '' Then Exit;
+
+  Req := 'SELECT SUM(GPT_TOTALHTDEV) AS TOTALPRORATA FROM PIECE ';
+  Req := Req + 'LEFT JOIN PIEDPORT ON GPT_NATUREPIECEG=GP_NATUREPIECEG AND GPT_SOUCHE=GP_SOUCHE AND GPT_NUMERO=GP_NUMERO AND GPT_INDICEG=GP_INDICEG ';
+  Req := Req + 'WHERE GP_NATUREPIECEG="FBT" AND GP_AFFAIRE="' + CodeAffaire + '" AND GPT_FRAISREPARTIS="-" AND GPT_CODEPORT IN ' + Prorata;
+  Req := Req + '  AND GP_DATEPIECE BETWEEN "' + UsDateTime(DateMvtDeb) + '"';
+  Req := Req + '  AND "' + UsDateTime(DateMvtFin) + '" ';
+
+  QQ := OpenSQL(Req, true,-1,'',true);
+  if not QQ.eof then
+    TOBTMP.PutValue('PRORATA', QQ.FindField('TOTALPRORATA').AsFloat)
+  else
+    TOBTMP.PutValue('PRORATA', 0.00);
+
+  ferme(QQ);
+
+end;
+
+// Modified by f.vautrain 04/12/2017 16:53:55 - GUINIER - Ajout des totaux des Révisions Frais & Ports
+Procedure TOF_BTTABLEAUBORD.ChargeRevision(TOBTMP : TOB; CodeAffaire : String);
+var Req : String;
+    QQ  : TQuery;
+    Ind : Integer;
+begin
+
+  If Revision = '' Then Exit;
+
+  Req := 'SELECT SUM(GPT_TOTALHTDEV) AS TOTALREVISION FROM PIECE ';
+  Req := Req + 'LEFT JOIN PIEDPORT ON GPT_NATUREPIECEG=GP_NATUREPIECEG AND GPT_SOUCHE=GP_SOUCHE AND GPT_NUMERO=GP_NUMERO AND GPT_INDICEG=GP_INDICEG ';
+  Req := Req + 'WHERE GP_NATUREPIECEG="FBT" AND GP_AFFAIRE="' + CodeAffaire + '" AND GPT_FRAISREPARTIS="-" AND GPT_CODEPORT IN ' + Revision;
+  Req := Req + '  AND GP_DATEPIECE BETWEEN "' + UsDateTime(DateMvtDeb) + '"';
+  Req := Req + '  AND "' + UsDateTime(DateMvtFin) + '" ';
+
+  QQ := OpenSQL(Req, true,-1,'',true);
+  if not QQ.eof then
+    TOBTMP.PutValue('REVISION', QQ.FindField('TOTALREVISION').AsFloat)
+  else
+    TOBTMP.PutValue('REVISION', 0.00);
+
+  ferme(QQ);
+
+end;
+
+// Modified by f.vautrain 04/12/2017 16:53:32 - GUINIER - Ajouts des Factures Hors Devis
+Procedure TOF_BTTABLEAUBORD.ChargeHorsDevis(TOBTMP : TOB; CodeAffaire : String);
+var Req : String;
+    QQ  : TQuery;
+    Ind : Integer;
+begin
+
+  Req := 'SELECT SUM(GL_QTEFACT * GL_PUHTDEV) AS TOTALFACTHD FROM LIGNE';
+  Req := Req + ' WHERE GL_NATUREPIECEG = "FBT" ';
+  Req := Req + '   AND GL_PIECEORIGINE = ""';
+  if CodeAffaire <> '' then  Req := Req + '   AND GL_AFFAIRE = "' + CodeAffaire + '" ';
+  Req := Req + '   AND GL_DATEPIECE BETWEEN "' + UsDateTime(DateMvtDeb) + '"';
+  Req := Req + '   AND "' + UsDateTime(DateMvtFin) + '" ';
+
+  QQ := OpenSQL(Req, true,-1,'',true);
+  if not QQ.eof then
+  begin
+    TOBTMP.PutValue('FACTHORSDEVIS', QQ.findfield('TOTALFACTHD').AsFloat);
+  end;
+
+  Ferme(QQ);
+
+end;
+
+// Modified by f.vautrain 04/12/2017 16:53:04 - GUINIER - Ajouts des totaux des Avoirs
+Procedure TOF_BTTABLEAUBORD.ChargeTotalAvoir(TOBTMP : TOB; CodeAffaire : String);
+var Req : String;
+    QQ  : TQuery;
+    Ind : Integer;
+begin
+
+  Req := 'SELECT SUM(GL_QTEFACT * GL_PUHTDEV) AS TOTALAVOIR FROM LIGNE';
+  Req := Req + ' WHERE GL_NATUREPIECEG = "ABT" ';
+  Req := Req + '   AND GL_AFFAIRE = "' + CodeAffaire + '" ';
+  Req := Req + '   AND GL_DATEPIECE BETWEEN "' + UsDateTime(DateMvtDeb) + '"';
+  Req := Req + '   AND "' + UsDateTime(DateMvtFin) + '" ';
+
+  QQ := OpenSQL(Req, true,-1,'',true);
+  if not QQ.eof then
+  begin
+    TOBTMP.PutValue('TOTALAVOIR', QQ.findfield('TOTALAVOIR').AsFloat);
   end;
 
   Ferme(QQ);
