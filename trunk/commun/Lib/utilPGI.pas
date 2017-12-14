@@ -262,6 +262,7 @@ function GetSelectAll(PrefixesTables : string; SansBlob : boolean=True; ExclureC
 function GetParamSocPaysNumerique : string;
 function CodePays3CVersNumerique(CodePays: String): String;
 
+    function FabriqueConditionIn(Zone: string): string;
 CONST
   MS_CODEREGROUPEMENT : String = '##MULTISOC' ;  // Code du regroupement multi-société
 
@@ -4417,6 +4418,30 @@ begin
   end;
 end;
 { GC_BDU_ERACANADA_FIN - Posé par DBR }
+
+Function FabriqueConditionIn(Zone : string) : string;
+Var TmpZone : String;
+Begin
+
+  Result := '';
+
+  if (zone = '') then Exit;
+
+  Tmpzone :=  Trim(ReadTokenSt(Zone));
+
+  While (Tmpzone <>'') do
+  Begin
+    if Result = '' then
+      Result := '("' + Tmpzone + '"'
+    else
+      Result := Result + ',"' + Tmpzone + '"';
+    Tmpzone:=Trim(ReadTokenSt(Zone));
+  End;
+
+  Result := result + ')';
+
+end;
+
 
 
 Initialization

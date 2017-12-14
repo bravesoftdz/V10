@@ -30,7 +30,7 @@ Uses StdCtrls,
      EntGc,
      UtilPgi,
      utofAfBaseCodeAffaire,
-     UTOF,uEntCommun ;
+     UTOF,uEntCommun,Paramsoc ;
 
 Type
   TOF_BTISFACTURE = Class (TOF_AFBASECODEAFFAIRE)
@@ -46,8 +46,13 @@ Type
   private
   	TOBresultat : TOB;
   	ISFACTURE : TCheckBox;
+  	FACTURE     : THEdit;
   	FACTURE,FACTURE_ : THEDIT;
     GP_NATUREPIECEG : THValComboBox;
+    //
+    Prorata     : String;
+    Revision    : string;
+    //
     procedure NaturePieceChanged (Sender : TObject);
     procedure generelaTOB;
     procedure AddChampTOB (UneTOB : TOB);
@@ -97,6 +102,10 @@ begin
   FACTURE_ := THEDit(GetControl('FACTURE_'));
   GP_NATUREPIECEG := THValComboBox (GetCOntrol('GP_NATUREPIECEG'));
   GP_NATUREPIECEG.OnChange := NaturePieceChanged;
+  //
+  Prorata := FabriqueConditionIn(GetParamSocSecur('SO_PRORATA',''));
+  Revision:= FabriqueConditionIn(GetParamSocSecur('SO_REVISION',''));
+  //
 end ;
 
 procedure TOF_BTISFACTURE.OnClose ;
@@ -144,8 +153,11 @@ var Req : string;
     indice : integer;
     cledoc : r_cledoc;
 begin
+
 	TOBIni.ClearDetail;
+
 	TOBLig := TOB.Create ('LES LIGNES',nil,-1);
+
   Req := 'SELECT GL_NATUREPIECEG,GL_SOUCHE,GL_NUMERO,GL_INDICEG,GL_DATEPIECE,GL_PIECEPRECEDENTE,GP_TOTALHTDEV FROM LIGNE LEFT JOIN PIECE ON GP_NATUREPIECEG=GL_NATUREPIECEG '+
          'AND GP_SOUCHE=GL_SOUCHE AND GP_NUMERO=GL_NUMERO AND GP_INDICEG=GL_INDICEG WHERE '+
          'GL_NATUREPIECEG="'+TOBL.getValue('GP_NATUREPIECEG') +'" and GL_SOUCHE="'+TOBL.getValue('GP_SOUCHE')+'" '+
@@ -154,6 +166,7 @@ begin
   QQ := OpenSql (req,true);
   TOBLIG.loadDetailDb ('LIGNE','','',QQ,false);
   ferme (QQ);
+
   for Indice := 0 to TOBLig.detail.count -1 do
   begin
     TOBP := TOBLIg.detail[Indice];
@@ -169,7 +182,9 @@ begin
       ferme (QQ);
     end;
   end;
+
   TOBLig.free;
+
 end;
 
 procedure TOF_BTISFACTURE.AjouteFBTResultat (TOBF,TOBD : TOB);
@@ -194,6 +209,7 @@ begin
                ' Montant : '+FloatToStrF (TOBF.GetValue('GP_TOTALHTDEV'),ffNumBer,15,V_PGI.OkDecV);
     TOBI.PutValue ('LIBELLEAFFICHAGED',Libelle);
   end;
+
   if TOBD <> nil then
   begin
     TOBI.PutValue ('NATUREPIECEF',TOBD.GetValue('GP_NATUREPIECEG'));
@@ -224,7 +240,7 @@ begin
   ferme (QQ);
   for Indice := 0 to TOBDep.detail.count -1 do
   begin
-  	chargelesPieces (TOBDep.detail[Indice],TOBIni);
+  	ChargelesPieces (TOBDep.detail[Indice],TOBIni);
     for Ind := 0 to TOBini.detail.count -1 do
     begin
       AjouteFBTResultat (TOBDep.detail[Indice],TOBINI.detail[Ind]);
@@ -308,6 +324,13 @@ begin
   UneTOB.AddChampSupValeur ('LIBAFFAIRE','');
   UneTOB.AddChampSupValeur ('MONTANTD',0.0);
   UneTOB.AddChampSupValeur ('MONTANTF',0.0);
+  //
+  UneTOB.AddChampSupValeur ('RECETTEANNEXE',0.0);
+  UneTOB.AddChampSupValeur ('MONTANTA',0.0);
+  UneTOB.AddChampSupValeur ('FACTUREHD',0.0);
+  UneTOB.AddChampSupValeur ('REVISION',0.0);
+  UneTOB.AddChampSupValeur ('PRORATA',0.0);
+  //
   UneTOB.AddChampSupValeur ('NATUREPIECEF','');
   UneTOB.AddChampSupValeur ('DATEPIECEF','');
   UneTOB.AddChampSupValeur ('LIBNATUREPIECEF','');
@@ -336,7 +359,7 @@ begin
   ferme (QQ);
 end;
 
-procedure TOF_BTISFACTURE.AjouteDBTResultat (TOBD,TOBF : TOB);
+procedure TOF_BTISFACTURE.AjouteDBTResultat (TOBD, TOBF : TOB);
 var TOBI : TOB;
     TOBL  : TOB;
 		Libelle : string;
@@ -375,6 +398,7 @@ begin
     TOBI.PutValue ('LIBELLEAFFICHAGEF',Libelle);
   end;
 end;
+
 
 procedure TOF_BTISFACTURE.NomsChampsAffaire(var Aff, Aff0, Aff1, Aff2,
   Aff3, Aff4, Aff_, Aff0_, Aff1_, Aff2_, Aff3_, Aff4_, Tiers,
