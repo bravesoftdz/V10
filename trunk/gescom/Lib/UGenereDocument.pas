@@ -1172,8 +1172,8 @@ procedure TGenerePiece.ConstituePieceFromBast(TOBBAST: TOB; DateFac : TDateTime)
     TOBL.PutValue('GL_COEFMARG', 0);
     TOBL.PutValue('GL_COEFFG', 1);
     TOBL.SetString('GL_TYPEDIM', 'NOR');
-    TOBL.PutValue('GL_FAMILLETAXE1', TOBBAST.GetValue('BM0_FAMILLETAXE1'));
-    TOBL.PutValue('GL_FAMILLENIV2', TOBBAST.GetValue('BM0_FAMILLENIV2'));
+    TOBL.PutValue('GL_FAMILLETAXE1', TOBBAST.GetValue('BM4_FAMILLETAXE1'));
+    TOBL.PutValue('GL_FAMILLENIV2', TOBBAST.GetValue('BM4_FAMILLENIV2'));
   end;
 
   function  AjouteLignePort (TOBPiece,TOBPorcs,TLBAST,TParam : TOB ; var NbTrait : Integer) : boolean;
@@ -1208,7 +1208,7 @@ procedure TGenerePiece.ConstituePieceFromBast(TOBBAST: TOB; DateFac : TDateTime)
           TOBPP.SetDouble('GPT_BASETTCDEV',TLBAST.getDouble('BM5_MTSITUATION'));
         end;
         TOBPP.SetDouble('GPT_BASETTC',DEVISETOPIVOTEx(TOBPP.GetDouble('GPT_BASETTCDEV'),DEV.Taux,DEV.Quotite,V_PGI.OkDecP));
-        TOBPP.SetString('GPT_FAMILLETAXE1',TOBBAST.GetString('BM0_FAMILLETAXE1'));
+        TOBPP.SetString('GPT_FAMILLETAXE1',TOBBAST.GetString('BM4_FAMILLETAXE1'));
         CalculMontantsPiedPort(TOBpiece, TOBPP,TOBBases);
         result := True;
       end;
@@ -1238,7 +1238,7 @@ procedure TGenerePiece.ConstituePieceFromBast(TOBBAST: TOB; DateFac : TDateTime)
         TOBPP.SetString('GPT_LIBELLE',TLBAST.GetString('BM5_LIBELLE'));
         TOBPP.SetDouble('GPT_BASETTCDEV',TLBAST.getDouble('BM5_MTSITUATION'));
         TOBPP.SetDouble('GPT_BASETTC',DEVISETOPIVOTEx(TOBPP.GetDouble('GPT_BASETTCDEV'),DEV.Taux,DEV.Quotite,V_PGI.OkDecP));
-        TOBPP.SetString('GPT_FAMILLETAXE1',TOBBAST.GetString('BM0_FAMILLETAXE1'));
+        TOBPP.SetString('GPT_FAMILLETAXE1',TOBBAST.GetString('BM4_FAMILLETAXE1'));
         CalculMontantsPiedPort(TOBpiece, TOBPP,TOBBases);
         result := True;
       end;
@@ -1262,14 +1262,14 @@ procedure TGenerePiece.ConstituePieceFromBast(TOBBAST: TOB; DateFac : TDateTime)
       initLigneRg (TT,TOBPiece);
       TT.AddChampSupValeur('CAUTIONTOT',0);
       TT.AddChampSupValeur('RGCUM',TLBAST.GEtValue('BM5_MTDEJAFACT')+TLBAST.getDouble('BM5_MTSITUATION'));
-      TT.putValue('PRG_TAUXRG',TOBBAST.GEtValue('BM0_TAUXRG'));
+      TT.putValue('PRG_TAUXRG',TOBBAST.GEtValue('BM4_TAUXRG'));
       TT.putValue('PRG_TYPERG','TTC');
       TT.putValue('PRG_NUMLIGNE',0);
       TT.putValue('PRG_MTMANUEL','X');
       TT.putValue('INDICERG',0);
       TT.SetDouble('PRG_MTTTCRGDEV',TLBAST.getDouble('BM5_MTSITUATION'));
       TT.SetDouble('PRG_MTTTCRG',DEVISETOPIVOTEx(TT.GetDouble('PRG_MTTTCRGDEV'),DEV.Taux,DEV.Quotite,V_PGI.okdecV ));
-      TauxTaxe := GetTauxTaxe(TOBPiece,'ACH',TOBPiece.GetString('GP_REGIMETAXE'),TOBBAST.GetString('BM0_FAMILLETAXE1'));
+      TauxTaxe := GetTauxTaxe(TOBPiece,'ACH',TOBPiece.GetString('GP_REGIMETAXE'),TOBBAST.GetString('BM4_FAMILLETAXE1'));
       TT.SetDouble('PRG_MTHTRGDEV',ARRONDI(TT.GetDouble('PRG_MTTTCRGDEV')/ (1+TauxTaxe/100),DEV.Decimale));
       TT.SetDouble('PRG_MTHTRG',DEVISETOPIVOTEx(TT.GetDouble('PRG_MTHTRGDEV'),DEV.Taux,DEV.Quotite,V_PGI.okdecV ));
       result := true;
@@ -1299,7 +1299,7 @@ procedure TGenerePiece.ConstituePieceFromBast(TOBBAST: TOB; DateFac : TDateTime)
             TT.putValue('PRG_MTMANUEL','X');
             TT.SetDouble('PRG_MTTTCRGDEV',MtRgDue);
             TT.SetDouble('PRG_MTTTCRG',DEVISETOPIVOTEx(TT.GetDouble('PRG_MTTTCRGDEV'),DEV.Taux,DEV.Quotite,V_PGI.okdecV ));
-            TauxTaxe := GetTauxTaxe(TOBPiece,'ACH',TOBPiece.GetString('GP_REGIMETAXE'),TOBBAST.GetString('BM0_FAMILLETAXE1'));
+            TauxTaxe := GetTauxTaxe(TOBPiece,'ACH',TOBPiece.GetString('GP_REGIMETAXE'),TOBBAST.GetString('BM4_FAMILLETAXE1'));
             TT.SetDouble('PRG_MTHTRGDEV',ARRONDI(TT.GetDouble('PRG_MTTTCRGDEV')/ (1+TauxTaxe/100),DEV.Decimale));
             TT.SetDouble('PRG_MTHTRG',DEVISETOPIVOTEx(TT.GetDouble('PRG_MTHTRGDEV'),DEV.Taux,DEV.Quotite,V_PGI.okdecV ));
           end else
@@ -1332,7 +1332,7 @@ begin
     TOBPiece.SetDateTime('GP_DATECREATION',TOBBAST.GetDateTime('BM4_DATEVALID'));
     TOBPiece.SetString('GP_REFEXTERNE',TOBBAST.GetString('BM3_NUMERODOC'));
     //
-    if (Pos(TOBBAST.GetString('BM0_FAMILLETAXE1'),VH_GC.AutoLiquiTVAST)>0) then
+    if (Pos(TOBBAST.GetString('BM4_FAMILLETAXE1'),VH_GC.AutoLiquiTVAST)>0) then
     begin
       TOBPiece.SetBoolean('GP_AUTOLIQUID',true);
     end;
