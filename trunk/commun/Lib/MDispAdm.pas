@@ -191,7 +191,7 @@ var
 {$ENDIF}
   CodeRetour : integer;
   stMessage, Versionbase : string;
-  Ok1,Ok2 : Boolean;
+  Ok1,Ok2,Ok3 : Boolean;
 begin
   case Num of
     10:
@@ -230,8 +230,9 @@ begin
 					// TraiteChangementGamme;
           // PGI_IMPORT_BOB('BAT2008'); ancienne gestion
           Ok1 := (BOB_IMPORT_PCL_STD('BAT2009','Business',False)=1);
-          Ok2 := (BOB_IMPORT_PCL_STD('MAJERPCEGIDV9','CEGID',False)=1);
-          if (Ok1) or (Ok2) then
+          Ok2 := (BOB_IMPORT_PCL_STD('BATV10','Business',False)=1);
+          Ok3 := (BOB_IMPORT_PCL_STD('MAJERPCEGIDV9','CEGID',False)=1);
+          if (Ok1) or (Ok2) or (Ok3) then
           begin
           	TraitementsAfterImportBOB (VersionBase);
 						PGIInfo('Mise à jour terminée.#13#10 Une sortie du produit est necéssaire.');

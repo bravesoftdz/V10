@@ -657,24 +657,37 @@ procedure TGenerePiece.UpdateDocumentsPrecedent;
     TOBLP := TOB.Create ('LIGNE',nil,-1);
     TRY
       // on ne récupère que la ligne
-      SQL := 'SELECT GL_NATUREPIECEG,GL_SOUCHE,GL_NUMERO,GL_INDICEG,GL_NUMLIGNE,GL_QTEFACT,GL_QTERESTE,GL_QTERELIQUAT,GL_QTESTOCK '+
+      SQL := 'SELECT GL_NATUREPIECEG,GL_SOUCHE,GL_NUMERO,GL_INDICEG,GL_NUMLIGNE,GL_QTEFACT,GL_QTERESTE,GL_QTERELIQUAT,GL_QTESTOCK,GL_MTRESTE,GL_MTRELIQUAT,(SELECT GA_RELIQUATMT FROM ARTICLE WHERE GA_ARTICLE=GL_ARTICLE) AS RELIQUATMT '+
              'FROM LIGNE '+
              'WHERE '+ WherePiece(CleDoc, ttdLigne, true,true);
       QQ := OpenSQL(SQL,true,1,'',true);
       if not QQ.eof then
       begin
         TOBLP.SelectDB('',QQ);
-        if TOBLP.GetDouble('GL_QTERESTE') <= TOBL.GetDouble('GL_QTEFACT') then
+        if TOBLP.GetString('RELIQUATMT')='X' then
         begin
-          TOBLP.SetDouble('GL_QTERESTE',0);
-          TOBLP.SetBoolean('GL_VIVANTE',false);
+          if TOBLP.GetDouble('GL_MTRESTE') <= TOBL.GetDouble('GL_MONTANTHT') then
+          begin
+            TOBLP.SetDouble('GL_MTRESTE',0);
+            TOBLP.SetBoolean('GL_VIVANTE',false);
+          end else
+          begin
+            TOBLP.SetDouble('GL_MTRESTE',TOBLP.GetDouble('GL_MTRESTE')-TOBL.GetDouble('GL_MONTANTHT'));
+          end;
         end else
         begin
-          TOBLP.SetDouble('GL_QTERESTE',TOBLP.GetDouble('GL_QTERESTE')-TOBL.GetDouble('GL_QTEFACT'));
+          if TOBLP.GetDouble('GL_QTERESTE') <= TOBL.GetDouble('GL_QTEFACT') then
+          begin
+            TOBLP.SetDouble('GL_QTERESTE',0);
+            TOBLP.SetBoolean('GL_VIVANTE',false);
+          end else
+          begin
+            TOBLP.SetDouble('GL_QTERESTE',TOBLP.GetDouble('GL_QTERESTE')-TOBL.GetDouble('GL_QTEFACT'));
+          end;
+          //
+          TOBL.SetDouble('GL_QTERELIQUAT',TOBLP.GetDouble('GL_QTERESTE'));
+          TOBL.SetDouble('GL_QTESAIS',TOBL.GetDouble('GL_QTESTOCK'));
         end;
-        //
-        TOBL.SetDouble('GL_QTERELIQUAT',TOBLP.GetDouble('GL_QTERESTE'));
-        TOBL.SetDouble('GL_QTESAIS',TOBL.GetDouble('GL_QTESTOCK'));
         //
         if (not TOBLP.UpdateDB(false)) then exit;
       end;

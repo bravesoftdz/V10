@@ -46,7 +46,6 @@ Type
   private
   	TOBresultat : TOB;
   	ISFACTURE : TCheckBox;
-  	FACTURE     : THEdit;
   	FACTURE,FACTURE_ : THEDIT;
     GP_NATUREPIECEG : THValComboBox;
     //

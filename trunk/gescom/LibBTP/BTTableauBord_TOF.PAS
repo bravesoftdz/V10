@@ -54,7 +54,7 @@ uses StdCtrls,
   //
   UtilsEtat,
   UtilTableauBord,
-  UtilsGrille;
+  UtilsGrille,
   UtilPGI;
 
 type
