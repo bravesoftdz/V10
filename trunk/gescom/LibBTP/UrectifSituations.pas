@@ -141,6 +141,7 @@ begin
   LoadLesOuvrages(TOBPiece, TOBOuvrage, TOBArticles, Cledoc, IndiceOuv,nil);
   if (TFFACTURE(XX).IsEcritLesOuvPlat)  then LoadLesOuvragesPlat(TOBPiece, TOBOuvragesP, Cledoc);
   LoadLaTOBAffaireInterv(TOBAffaireInterv,TOBPiece.getValue('GP_AFFAIRE'));
+  LoadLesVTECOLLECTIF (CleDoc,TOBVTECOLL);
 end;
 
 procedure TRectifSituation.LoadLesArticles (Cledoc : r_cledoc);
@@ -1251,6 +1252,7 @@ begin
   TOBAffaireInterv := TOB.Create ('LES CO-SOUSTRAITANTS',nil,-1);
   TOBACOMPTES := TOB.create('LES ACOMPTES',nil,-1);
   TOBLIGNEFAC := TOB.Create ('LES LIGNES FAC',nil,-1); 
+  TOBVTECOLL := TOB.Create ('LES VENTIL COLL',nil,-1);
 end;
 
 procedure TRectifSituation.ToutLiberer;
@@ -1282,6 +1284,7 @@ begin
   TOBACOMPTES.free;
   TOBLIGNEFAC.free;
   TOBRESULTATS.free;
+  TOBVTECOLL.Free;
 end;
 
 procedure TRectifSituation.EnregistreCreationDoc(Ioerror : TIOErr; DebutTitre,LastErrorMessage : string);
