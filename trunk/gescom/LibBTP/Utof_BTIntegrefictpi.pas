@@ -2236,7 +2236,8 @@ begin
   end;
 
   //Modification pour client LSEBAT DELATTRE (Code ana à 15 et pas 10)
-  if Length(StLig) = 113 then
+  //FV1 : 14/12/20018 - FS#2764 - SFD ETS SERVAIS - En gestion TPI erreur dépôt inexistant et les livraisons ne seraient pas créés
+  if Length(StLig) <= 113 then
   begin
     CodeAna := Trim(Copy(StLig,63,10));
     CodeDep := Trim(Copy(StLig,73,20));
