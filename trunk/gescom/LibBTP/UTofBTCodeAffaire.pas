@@ -82,12 +82,14 @@ Type
         Consultation : Boolean;
         ModifDateSit : boolean;
         Stock        : Boolean;
-        RapportGen : TGestionRapport;
-        StatutAff : string;
+        GensurDevisNonACPT  : Boolean;
+        RapportGen   : TGestionRapport;
+        StatutAff    : string;
         ReajusteAnal : Boolean;
         SaisieAvancPoc : boolean;
 
         Recup        : TCheckBox;
+        EtatAffaire   : THValCombobox;
 
         procedure RenommageEnteteColonnes(TypePiece : string);
         procedure ControleChamp(Champ, Valeur: String);
@@ -174,8 +176,10 @@ Inherited;
   IsMemoire    := false;
   ModifDateSit := false;
   Stock        := false;
+  GensurDevisNonACPT := GetParamSocSecur('SO_GENCESURDEVNACPT', False);
   //
   if Assigned(GetControl('RECUP')) then Recup := TCheckBox(GetControl('RECUP'));
+  if Assigned(GetControl('AFF_ETATAFFAIRE')) then EtatAffaire := THValComboBox(GetControl('AFF_ETATAFFAIRE'));
   //
   Repeat
     Critere:=uppercase(ReadTokenSt(stArgument)) ;
@@ -1398,7 +1402,17 @@ begin
   begin
     if THEdit(GetControl ('ZEACTION')).Text = 'GENCONTRETU' then
     begin
-      THEdit(GetControl('AFF_ETATAFFAIRE')).Enabled := false;
+      //FV1 : 14/12/2017 - FS#2808 - TEAM RESEAUX : autorisation de passer les devis non acceptés en contre-étude
+      if Assigned(EtatAffaire) then
+      begin
+        EtatAffaire.Enabled := GensurDevisNonACPT;
+        if GensurDevisNonACPT then
+        begin
+          EtatAffaire.Plus := 'AND CC_CODE = "ACP" OR CC_CODE = "ENC"';
+          EtatAffaire.Text := '';
+        end;
+      end;
+      //THEdit(GetControl('AFF_ETATAFFAIRE')).Enabled := false;
       TToolbarButton97(GetControl('BInsert')).visible := false;
       TToolbarButton97(GetControl('BINSERT1')).visible := false;
       if BTDuplic <> nil then BTDuplic.Visible := False;
