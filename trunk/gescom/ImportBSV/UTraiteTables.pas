@@ -502,6 +502,8 @@ begin
         if TOBL <> nil then
         begin
           SetInfosLigne(TOBL,TOBD);
+          TOBL.SetString('GL_PIECEPRECEDENTE',provenance);
+          if TOBL.GetString('GL_PIECEORIGINE')='' then TOBL.SetString('GL_PIECEORIGINE',provenance);
         end else
         begin
           TOBL := InsertLigne(TOBP,TOBD); // ligne ajouté via BSV
@@ -560,6 +562,7 @@ begin
   begin
     TOBL.SetDouble('GL_QTEFACT',0);
     TOBL.SetDouble('GL_QTERESTE',0);
+    TOBL.SetDouble('GL_MTRESTE',0);
     TOBL.SetDouble('GL_QTERELIQUAT',0);
   end;
   TOBL.ChangeParent(TOBP,-1);

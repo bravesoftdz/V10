@@ -1691,9 +1691,9 @@ var
   http: IWinHttpRequest;
   url : string;
   TheXml : WideString;
-  OneFile : TFileStream;
-  resFile : string;
-  flags : Word;
+//  OneFile : TFileStream;
+//  resFile : string;
+//  flags : Word;
 begin
   Result := false;
   if fServer = '' then
@@ -1710,6 +1710,7 @@ begin
     http.SetRequestHeader('charset', 'utf8');
     http.SetRequestHeader('Accept', 'text/xml,*/*');
     TheXml := constitueTheMessage(TOBFields,TOBPARAMBSV);
+    (*
     resFile := 'c:\LSE-BSV\Result.xml';
     Flags := fmOpenReadWrite;
     if not FileExists(resFile) then Flags := Flags or fmCreate;
@@ -1719,6 +1720,7 @@ begin
     FINALLY
       OneFile.Free;
     END;
+    *)
     http.SetRequestHeader('Content-Length',IntToStr(length(TheXml)));
     http.SetRequestHeader('Cookie','ASP.NET_SessionId='+fcookie_session);
     http.SetRequestHeader('SOAPAction','http://ZeDOC.fr/ZeDOCNetSolution/SetFields');

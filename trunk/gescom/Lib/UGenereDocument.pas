@@ -84,6 +84,7 @@ type
     procedure AjouteArticlesPLus;
     procedure ConstituePieceFromBast(TOBBAST : TOB; DateFac : TDateTime);
     procedure ChargeTiers(NatureAuxi, Tiers: string);
+    function ChargeTOBA(RefUnique, stDepot: string): TOB;
   public
     constructor create; overload;
     destructor destroy; override;
@@ -97,7 +98,7 @@ type
 
 implementation
 uses FactTOB,ParamSoc,UtilPGI,FactAdresse,FactCalc,FactUtil,FactComm,UtilTOBpiece,StockUtil,FactPiece,FactOuvrage,FactCpta,BTGENODANAL_TOF,
-  TypInfo,ENt1,FactRG,UCumulCollectifs;
+  TypInfo,ENt1,FactRG,UCumulCollectifs,FactArticle;
 { TGenerePiece }
 
 
@@ -191,8 +192,6 @@ begin
     if TOBProv <> nil then
     begin
       AddLesSupLigne(TOBL, false);
-      TOBL.SetString('GL_PIECEPRECEDENTE',EncodeRefPiece(TOBL));
-      if TOBL.GetString('GL_PIECEORIGINE')='' then TOBL.SetString('GL_PIECEORIGINE',EncodeRefPiece(TOBL));
     end;
     Savtype := TOBL.GetValue('BNP_TYPERESSOURCE');
     if TOBProv <> nil then InitLesSupLigne(TOBL,false);
@@ -203,10 +202,9 @@ begin
       TOBL.putValue('MODIFIABLE','-');
       TOBPiece.PutValue('ESCREMMULTIPLE','X');
     end;
-    if TOBL.GetString('GL_PIECEPRECEDENTE')='' then
+    if TOBL.GetString('GL_PIECEPRECEDENTE')<>'' then
     begin
       DecodeRefPiece(TOBL.GetString('GL_PIECEPRECEDENTE'),cledoc);
-      AddReferenceDoc(CleDoc,TOBPiecePrec);
     end;
   end;
   ConstitueTobAffaire;
@@ -215,6 +213,13 @@ begin
   ConstitueTobArticles;
   if fResult.ErrorResult <> OeOk then Exit;
   AjouteArticlesPLus;
+  if fResult.ErrorResult <> OeOk then Exit;
+  for II := 0 to TOBPiece.Detail.count -1 do
+  begin
+    TOBL := TOBPiece.detail[II];
+    if TOBL.GetSTring('GL_TYPELIGNE')<>'ART' Then Continue;
+    ChargeTOBA (TOBL.GEtSTring('GL_ARTICLE'),TOBL.GetSTring('GL_DEPOT'));
+  end;
   if fResult.ErrorResult <> OeOk then Exit;
   ConstitueTobDispo;
   if fResult.ErrorResult <> OeOk then Exit;
@@ -240,7 +245,7 @@ begin
   END ;
   //
   TiersVersAdresses(TOBTiers, TOBAdresses, TOBPiece);
-  AffaireVersAdresses(TOBAffaire,TOBAdresses,TOBPiece); 
+  AffaireVersAdresses(TOBAffaire,TOBAdresses,TOBPiece);
   TOBAdresses.SetAllModifie(True);
   //
   DEV.Code := TOBPIECE.GetValue('GP_DEVISE');
@@ -674,6 +679,7 @@ procedure TGenerePiece.UpdateDocumentsPrecedent;
           begin
             TOBLP.SetDouble('GL_MTRESTE',TOBLP.GetDouble('GL_MTRESTE')-TOBL.GetDouble('GL_MONTANTHT'));
           end;
+          TOBL.SetDouble('GL_MTRESTE',TOBL.GetDouble('GL_MONTANTHT'));
         end else
         begin
           if TOBLP.GetDouble('GL_QTERESTE') <= TOBL.GetDouble('GL_QTEFACT') then
@@ -788,6 +794,38 @@ begin
   fResult.ErrorResult := oeOk;
   fResult.LibError := '';
 end;
+
+function TGenerePiece.ChargeTOBA(RefUnique : string; stDepot : string) : TOB; // DBR : Dépot unique chargé
+var Q : TQuery;
+    SQL : String;
+    TobArt : TOB;
+begin
+  TOBART := TOBArticles.FindFirst(['GA_ARTICLE'],[RefUnique],true);
+  if TobArt= nil then
+  begin
+    SQL := 'SELECT A.*,AC.*,N.BNP_TYPERESSOURCE,N.BNP_LIBELLE,'+
+           '"" AS REFARTSAISIE, '+
+           '"" AS REFARTBARRE, '+
+           '"" AS REFARTTIERS, '+
+           '"" AS _FROMOUVRAGE, '+
+           '"-" AS SUPPRIME, '+
+           '"-" AS UTILISE '+
+          'FROM ARTICLE A '+
+          'LEFT JOIN NATUREPREST N ON N.BNP_NATUREPRES=A.GA_NATUREPRES '+
+          'LEFT JOIN ARTICLECOMPL AC ON AC.GA2_ARTICLE=A.GA_ARTICLE '+
+          'WHERE GA_ARTICLE="'+RefUnique+'"';
+    Q:=OpenSQL(SQL,True,-1,'',true) ;
+    if Not Q.EOF then
+    begin
+      TobArt := CreerTOBArt(TOBArticles);
+      TobArt.SelectDB('',Q);
+      LoadTOBDispo(TobArt, True, '"' + stDepot + '"') ; // DBR : Dépot unique chargé
+    end;
+    Ferme(Q);
+  end;
+  Result:=TobArt;
+end;
+
 
 procedure TGenerePiece.ValideLeDocument;
 var II : Integer;

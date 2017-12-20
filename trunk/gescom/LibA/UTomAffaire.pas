@@ -8303,6 +8303,7 @@ begin
   Zone := THDbEdit(Sender);
   //
   if Zone.name = 'AFF_RESPONSABLE' then Libelle := 'LIBAFF_RESPONSABLE'
+  else if Zone.name = 'AFF_RESPONSABLE1' then Libelle := 'LIBAFF_RESPONSABLE1'
   else if Zone.name = 'AFF_RESSOURCE1' then Libelle := 'LIBAFF_RESSOURCE1'
   else if Zone.name = 'AFF_RESSOURCE2' then Libelle := 'LIBAFF_RESSOURCE2'
   else if Zone.name = 'AFF_RESSOURCE3' then Libelle := 'LIBAFF_RESSOURCE3';
@@ -8325,7 +8326,7 @@ begin
 
   IF THDBEdit(Zone).text <> '' then
   begin
-    SetControlproperty(Zone.name, 'Visible', True);
+    SetControlproperty(Libelle, 'Visible', true);
     SetControlText(Libelle, GetLibResponsable(Zone.Text));
   end else
   begin

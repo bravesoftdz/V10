@@ -35,7 +35,7 @@ Type
   TResultB = class(TObject)
   private
     fResult : Integer;
-    fNumBast : Integer;
+    fNumBast : String;
     fNaturePiece : string;
     fNumeroPiece : Integer;
     fNumSituation : Integer;
@@ -45,7 +45,7 @@ Type
     property MessageRet : string read fMessage write fMessage;
     property NaturePiece : string read fNaturePiece write fNaturePiece;
     property Numero : integer read fNumeroPiece write fNumeroPiece;
-    property Numbast : Integer read fNumBast write fNumBast;
+    property Numbast : string read fNumBast write fNumBast;
     property NumSituation : Integer read fNumSituation write fNumSituation;
     procedure Clear;
   end;
@@ -192,6 +192,9 @@ var TT : TOB;
 begin
   Result.result := -1;
   Result.MessageRet := 'Abandonné par l''utilisateur';
+  Result.fNumBast := '';
+  Result.fNumSituation := 0;
+  //
   if Not DemandeDatesFacturation(DateFac) then exit;
 
   TT := TOB.Create('BASTENT',nil,-1);
@@ -208,6 +211,9 @@ begin
     QQ := OpenSQL (SQL,True,1,'',true);
     if not QQ.Eof then TT.SelectDB('',QQ);
     ferme (QQ);
+    //
+    Result.fNumBast := TT.GetString('BM3_NUMERODOC');
+    Result.fNumSituation := TT.GetInteger('BM3_NUMSITUATION');
     //
     Result.result := -1;
     Result.MessageRet := 'Document innexistant';
@@ -252,7 +258,7 @@ var St : string;
 begin
   if Result.result = 0 then
   begin
-    St := Format('BAST N° %d situation N° %d --> %s N° %d',[Result.Numbast,Result.NumSituation,RechDom('GCNATUREPIECEG','FF',false),Result.fNumeroPiece]);
+    St := Format('BAST N° %s situation N° %d --> %s N° %d',[Result.Numbast,Result.NumSituation,RechDom('GCNATUREPIECEG','FF',false),Result.fNumeroPiece]);
   end else
   begin
     St := Format('ERREUR en génération du BAST N° %d situation N° %d --> %s',[Result.Numbast,Result.NumSituation,Result.MessageRet]);

@@ -4376,7 +4376,7 @@ begin
     begin
       req := 'SELECT * FROM PIEDBASE, BSITUATIONS WHERE '+
              'BST_SSAFFAIRE="'+ThePiece.GetValue('GP_AFFAIREDEVIS')+'" AND '+
-             'BST_NATUREPIECE="'+ThePiece.GetValue('GP_NATUREPIECEG')+'" AND '+
+             'BST_NATUREPIECE IN ("FBP","FBT") AND '+
              'BST_NUMEROSIT <= '+ThePiece.getString('NUMSIT')+' AND '+
              'BST_VIVANTE="X" AND '+
              'GPB_NATUREPIECEG=BST_NATUREPIECE AND GPB_SOUCHE=BST_SOUCHE AND GPB_NUMERO=BST_NUMEROFAC';
@@ -4385,7 +4385,7 @@ begin
     begin
       req := 'SELECT * FROM PIEDBASE, BSITUATIONS WHERE '+
              'BST_SSAFFAIRE="'+ThePiece.GetValue('GP_AFFAIREDEVIS')+'" AND '+
-             'BST_NATUREPIECE="'+ThePiece.GetValue('GP_NATUREPIECEG')+'" AND '+
+             'BST_NATUREPIECE IN ("FBP","FBT") AND '+
              'BST_NUMEROSIT < '+ThePiece.getString('NUMSIT')+' AND '+
              'BST_VIVANTE="X" AND '+
              'GPB_NATUREPIECEG=BST_NATUREPIECE AND GPB_SOUCHE=BST_SOUCHE AND GPB_NUMERO=BST_NUMEROFAC';
@@ -4395,7 +4395,7 @@ begin
   begin
     req := 'SELECT * FROM PIEDBASE, PIECE WHERE '+
            'GP_AFFAIREDEVIS="' + ThePiece.GetValue('GP_AFFAIREDEVIS') + '" AND ' +
-           'GP_NATUREPIECEG="' + ThePiece.GetValue('GP_NATUREPIECEG') + '" AND ' +
+           'GP_NATUREPIECE IN ("FBP","FBT") AND '+
            'GP_NUMERO      = ' + IntToStr(ThePiece.GetValue('GP_NUMERO'))       + '  AND ' +
            'GP_VIVANTE="X" AND '+
            'GPB_NATUREPIECEG=GP_NATUREPIECEG AND GPB_SOUCHE=GP_SOUCHE AND GPB_NUMERO=GP_NUMERO';
@@ -4405,6 +4405,7 @@ begin
   for Indice := 0 to TVASIt.detail.count -1 do
   begin
     TVAS :=TVASit.detail[indice];
+    if (VH_GC.BTCODESPECIF = '001') and (TVAS.getString('GPB_FOURN')<> '') then continue;
     TVAC := TOBTVAPre.findFirst(['FAMILLETAXE'],[TVAS.getValue('GPB_FAMILLETAXE')],true);
     if TVAC = nil then
     begin
@@ -4424,6 +4425,7 @@ begin
   for Indice := 0 to fTOBBases.detail.count -1 do
   begin
     TVAS := fTOBBases.detail[Indice];
+    if (VH_GC.BTCODESPECIF = '001') and (TVAS.getString('GPB_FOURN')<> '') then continue;
     TVAC := TOBTVAPre.findFirst(['FAMILLETAXE'],[TVAS.getValue('GPB_FAMILLETAXE')],true);
     if TVAC = nil then
     begin
