@@ -2,7 +2,7 @@ unit UBTPSequenceCpta;
 
 interface
 uses uTob, HEnt1, HCtrls, StdCtrls, Ent1,
-     DB,SysUtils,
+     DB,SysUtils,CbpMCD,
     {$IFNDEF DBXPRESS} dbtables {$ELSE} uDbxDataSet {$ENDIF}
 ;
 // COMPTA
@@ -21,8 +21,18 @@ function ConstitueCodeSequenceGC (TypeSouche,CodeSouche : string) : string;
 implementation
 
 function wExistTable(Const TableName:String): Boolean;
+{$IFDEF V10}
+var  Mcd : IMCDServiceCOM;
+    Table     : ITableCOM ;
+{$ENDIF}
 begin
+{$IFDEF V10}
+  MCD := TMCD.GetMcd;
+  if not mcd.loaded then mcd.WaitLoaded();
+  Result := Mcd.TableExists(TableName);
+{$ELSE}
 	Result := TableToNum(TableName) <> 0;
+{$ENDIF}
 end;
 
 function CodeExo(DD:tDateTime):string;
