@@ -1960,7 +1960,7 @@ begin
   TobFact := TOB.Create('FACTURE', nil, -1);
 
   StSQl := 'SELECT "TYPEELT" = "PRORATA", ' +
-           '"TYPERESSOURCE"  = "AUT",' +
+           '"TYPERESSOURCE"  = "FAC",' +
            'SUM(GPT_TOTALHTDEV) AS FACTURE FROM PIECE ' +
            'LEFT JOIN PIEDPORT ON GPT_NATUREPIECEG=GP_NATUREPIECEG AND GPT_SOUCHE=GP_SOUCHE AND GPT_NUMERO=GP_NUMERO AND GPT_INDICEG=GP_INDICEG ' +
            'WHERE GPT_NATUREPIECEG="FBT" ' +
@@ -1977,7 +1977,7 @@ begin
     For i := 0 TO TobFact.Detail.count -1 do
     Begin
       if TobFact.Detail[i].GeTDouble('FACTURE') <> 0 then
-        ChargeTob(TobFact.Detail[i], TOBDiverse, 'Prorata/Révision', 'DEP')
+        ChargeTob(TobFact.Detail[i], TOBFacturation, 'Prorata', 'FAC')
     end;
   end;
 
@@ -2000,7 +2000,7 @@ begin
   TobFact := TOB.Create('FACTURE', nil, -1);
 
   StSQl := 'SELECT "TYPEELT" = "REVISION", ' +
-           '"TYPERESSOURCE"  = "REVISION",' +
+           '"TYPERESSOURCE"  = "FAC",' +
            'SUM(GPT_TOTALHTDEV) AS FACTURE FROM PIECE ' +
            'LEFT JOIN PIEDPORT ON GPT_NATUREPIECEG=GP_NATUREPIECEG AND GPT_SOUCHE=GP_SOUCHE AND GPT_NUMERO=GP_NUMERO AND GPT_INDICEG=GP_INDICEG ' +
            'WHERE GPT_NATUREPIECEG="FBT" ' +
@@ -2017,7 +2017,7 @@ begin
     For i := 0 TO TobFact.Detail.count -1 do
     Begin
       if TobFact.Detail[i].GeTDouble('FACTURE') <> 0 then
-        ChargeTob(TobFact.Detail[i], TOBDiverse, 'Révision', 'FAC')
+        ChargeTob(TobFact.Detail[i], TOBFacturation, 'Révision', 'FAC')
     end;
   end;
 
@@ -2665,14 +2665,10 @@ Begin
     TOBIntLig.PutValue('NATUREPRESTATION', 'FAC');
     TOBIntLig.PutValue('LIBNATPRESTATION', 'Facturation');
   end
-  else if (TOBL.GetString('TYPEELT') = 'PRORATA')  OR
+  Else if (TOBL.GetString('TYPEELT') = 'FACA')   OR
+          (TOBL.GetString('TYPEELT') = 'FACHD')  OR
+          (TOBL.GetString('TYPEELT') = 'PRORATA')  OR
           (TOBL.GetString('TYPEELT') = 'REVISION') Then
-  begin
-    TOBIntLig.PutValue('NATUREPRESTATION', 'FAC');
-    TOBIntLig.PutValue('LIBNATPRESTATION', TheTitre);
-  end
-  Else if (TOBL.GetString('TYPEELT') = 'FACA')     OR
-          (TOBL.GetString('TYPEELT') = 'FACHD')  Then
   Begin
     TOBIntLig.PutValue('NATUREPRESTATION', TOBL.GetString('TYPEELT'));
     TOBIntLig.PutValue('LIBNATPRESTATION', TheTitre);

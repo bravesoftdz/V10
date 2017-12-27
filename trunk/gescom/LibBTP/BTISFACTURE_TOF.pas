@@ -44,24 +44,25 @@ Type
     procedure OnCancel                 ; override ;
     procedure NomsChampsAffaire(var Aff, Aff0, Aff1, Aff2, Aff3, Aff4, Aff_, Aff0_, Aff1_, Aff2_, Aff3_, Aff4_, Tiers, Tiers_:THEdit);override ;
   private
-  	TOBresultat : TOB;
-  	ISFACTURE : TCheckBox;
+  	TOBresultat      : TOB;
+  	ISFACTURE        : TCheckBox;
   	FACTURE,FACTURE_ : THEDIT;
-    GP_NATUREPIECEG : THValComboBox;
+    GP_NATUREPIECEG  : THValComboBox;
     //
     Prorata     : String;
-    Revision    : string;
+    Revision    : String;
     //
     procedure NaturePieceChanged (Sender : TObject);
     procedure generelaTOB;
     procedure AddChampTOB (UneTOB : TOB);
     function  EncodeRefPieceDBTLoc (TOBP : TOB) : string;
     procedure GenerelaTOBPourDBT;
+    procedure GenerelaTOBPourRAN;
     procedure AjouteDBTResultat(TOBD, TOBF: TOB);
     procedure chargelesPieces(TOBL, TOBIni : TOB);
     procedure GenerelaTOBPourFBT;
     procedure AjouteFBTResultat(TOBF, TOBD : TOB);
-    function FindLibelleAffaire(CodeAffaire: string): string;
+    function  FindLibelleAffaire(CodeAffaire: string): string;
   end ;
 
 Implementation
@@ -140,8 +141,11 @@ procedure TOF_BTISFACTURE.generelaTOB;
 var NaturePiece : string;
 begin
   NaturePiece := GetCOntrolText('GP_NATUREPIECEG');
-  if Naturepiece = 'DBT' Then GenerelaTOBPourDBT
-  											 else GenerelaTOBPourFBT;
+  if Naturepiece = 'DBT' Then
+    GenerelaTOBPourDBT
+  else
+    GenerelaTOBPourFBT;
+
 end;
 
 procedure TOF_BTISFACTURE.chargelesPieces (TOBL,TOBIni : TOB);
@@ -244,9 +248,17 @@ begin
     begin
       AjouteFBTResultat (TOBDep.detail[Indice],TOBINI.detail[Ind]);
     end;
+    GenerelaTOBPourRAN;
   end;
   tobdep.free;
   TOBIni.free;
+end;
+
+procedure TOF_BTISFACTURE.GenerelaTOBPourRAN;
+Var Req : string;
+    QQ  : TQuery;
+begin
+  
 end;
 
 procedure TOF_BTISFACTURE.GenerelaTOBPourDBT;

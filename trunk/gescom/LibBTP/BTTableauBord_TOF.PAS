@@ -2913,8 +2913,8 @@ begin
   Req := 'SELECT SUM(GPT_TOTALHTDEV) AS TOTALPRORATA FROM PIECE ';
   Req := Req + 'LEFT JOIN PIEDPORT ON GPT_NATUREPIECEG=GP_NATUREPIECEG AND GPT_SOUCHE=GP_SOUCHE AND GPT_NUMERO=GP_NUMERO AND GPT_INDICEG=GP_INDICEG ';
   Req := Req + 'WHERE GP_NATUREPIECEG="FBT" AND GP_AFFAIRE="' + CodeAffaire + '" AND GPT_FRAISREPARTIS="-" AND GPT_CODEPORT IN ' + Prorata;
-  Req := Req + '  AND GP_DATEPIECE BETWEEN "' + UsDateTime(DateMvtDeb) + '"';
-  Req := Req + '  AND "' + UsDateTime(DateMvtFin) + '" ';
+  Req := Req + '  AND GP_DATEPIECE BETWEEN "' + UsDateTime(DateDeb) + '"';
+  Req := Req + '  AND "' + UsDateTime(DateFin) + '" ';
 
   QQ := OpenSQL(Req, true,-1,'',true);
   if not QQ.eof then
@@ -2937,9 +2937,9 @@ begin
 
   Req := 'SELECT SUM(GPT_TOTALHTDEV) AS TOTALREVISION FROM PIECE ';
   Req := Req + 'LEFT JOIN PIEDPORT ON GPT_NATUREPIECEG=GP_NATUREPIECEG AND GPT_SOUCHE=GP_SOUCHE AND GPT_NUMERO=GP_NUMERO AND GPT_INDICEG=GP_INDICEG ';
-  Req := Req + 'WHERE GP_NATUREPIECEG="FBT" AND GP_AFFAIRE="' + CodeAffaire + '" AND GPT_FRAISREPARTIS="-" AND GPT_CODEPORT IN ' + Revision;
-  Req := Req + '  AND GP_DATEPIECE BETWEEN "' + UsDateTime(DateMvtDeb) + '"';
-  Req := Req + '  AND "' + UsDateTime(DateMvtFin) + '" ';
+  Req := Req + 'WHERE GPT_NATUREPIECEG="FBT" AND GP_AFFAIRE="' + CodeAffaire + '" AND GPT_FRAISREPARTIS="-" AND GPT_CODEPORT IN ' + Revision;
+  Req := Req + '  AND GP_DATEPIECE BETWEEN "' + UsDateTime(DateDeb) + '"';
+  Req := Req + '  AND "' + UsDateTime(DateFin) + '" ';
 
   QQ := OpenSQL(Req, true,-1,'',true);
   if not QQ.eof then
@@ -2962,8 +2962,8 @@ begin
   Req := Req + ' WHERE GL_NATUREPIECEG = "FBT" ';
   Req := Req + '   AND GL_PIECEORIGINE = ""';
   if CodeAffaire <> '' then  Req := Req + '   AND GL_AFFAIRE = "' + CodeAffaire + '" ';
-  Req := Req + '   AND GL_DATEPIECE BETWEEN "' + UsDateTime(DateMvtDeb) + '"';
-  Req := Req + '   AND "' + UsDateTime(DateMvtFin) + '" ';
+  Req := Req + '   AND GL_DATEPIECE BETWEEN "' + UsDateTime(DateDeb) + '"';
+  Req := Req + '   AND "' + UsDateTime(DateFin) + '" ';
 
   QQ := OpenSQL(Req, true,-1,'',true);
   if not QQ.eof then
@@ -2985,8 +2985,8 @@ begin
   Req := 'SELECT SUM(GL_QTEFACT * GL_PUHTDEV) AS TOTALAVOIR FROM LIGNE';
   Req := Req + ' WHERE GL_NATUREPIECEG = "ABT" ';
   Req := Req + '   AND GL_AFFAIRE = "' + CodeAffaire + '" ';
-  Req := Req + '   AND GL_DATEPIECE BETWEEN "' + UsDateTime(DateMvtDeb) + '"';
-  Req := Req + '   AND "' + UsDateTime(DateMvtFin) + '" ';
+  Req := Req + '   AND GL_DATEPIECE BETWEEN "' + UsDateTime(DateDeb) + '"';
+  Req := Req + '   AND "' + UsDateTime(DateFin) + '" ';
 
   QQ := OpenSQL(Req, true,-1,'',true);
   if not QQ.eof then

@@ -56,6 +56,7 @@ Type
         BInsert1  : TToolBarButton97;
         BTAnalyse : TToolBarButton97;
         BTDuplic  : TToolBarButton97;
+        BTDuplic1 : TToolBaRButton97;
 
         MnZTiers  : TMenuItem;
         MnZSuiviCde  : TMenuItem;
@@ -83,13 +84,14 @@ Type
         ModifDateSit : boolean;
         Stock        : Boolean;
         GensurDevisNonACPT  : Boolean;
-        RapportGen   : TGestionRapport;
-        StatutAff    : string;
-        ReajusteAnal : Boolean;
-        SaisieAvancPoc : boolean;
+        RapportGen      : TGestionRapport;
+        StatutAff       : string;
+        ReajusteAnal    : Boolean;
+        SaisieAvancPoc  : boolean;
+        SaisieInterdite : Boolean;
 
-        Recup        : TCheckBox;
-        EtatAffaire   : THValCombobox;
+        Recup           : TCheckBox;
+        EtatAffaire     : THValCombobox;
 
         procedure RenommageEnteteColonnes(TypePiece : string);
         procedure ControleChamp(Champ, Valeur: String);
@@ -176,7 +178,8 @@ Inherited;
   IsMemoire    := false;
   ModifDateSit := false;
   Stock        := false;
-  GensurDevisNonACPT := GetParamSocSecur('SO_GENCESURDEVNACPT', False);
+  GensurDevisNonACPT  := GetParamSocSecur('SO_GENCESURDEVNACPT', False);
+  SaisieInterdite     := GetParamSocSecur('SO_SAISIEDIRECTEINTERDITE', False);
   //
   if Assigned(GetControl('RECUP')) then Recup := TCheckBox(GetControl('RECUP'));
   if Assigned(GetControl('AFF_ETATAFFAIRE')) then EtatAffaire := THValComboBox(GetControl('AFF_ETATAFFAIRE'));
@@ -289,7 +292,8 @@ Inherited;
 
   if assigned(GetControl('B_DUPLICATION1')) then
   begin
-    TToolbarButton97(GetControl('B_DUPLICATION1')).OnClick := BTDuplicationClick;
+    BTDuplic1 := TToolBarButton97(Getcontrol('B_DUPLICATION1'));
+    if BTDuplic1 <> nil Then BTDuplic1.OnClick := BTDuplicationClick;
   end;
 
   if Assigned(GetControl('PInsertFBT')) then
@@ -1228,134 +1232,154 @@ var TypePiece : String;
 begin
 Inherited;
 
-TypePiece := GetControlText ('GP_NATUREPIECEG');
+  TypePiece := GetControlText ('GP_NATUREPIECEG');
 
-// En cas d'appel multi natures de pices, remplacement de : par ;
-TypePiece := StringReplace(TypePiece,':',';',[rfReplaceAll]);
-SetControlText ('GP_NATUREPIECEG',TypePiece);
+  //En cas d'appel multi natures de pices, remplacement de : par ;
+  TypePiece := StringReplace(TypePiece,':',';',[rfReplaceAll]);
+  SetControlText ('GP_NATUREPIECEG',TypePiece);
 
-//Setcontrolproperty('B_DUPLICATION1','visible',false);
-//Setcontrolproperty('B_DUPLICATION','visible',true);
-
-if (TypePiece <> ''){ and (Length(TypePiece) = 3) } then
+  if (TypePiece <> ''){ and (Length(TypePiece) = 3) } then
   Begin
-  if copy(ecran.name,1,15)='BTPREPACHANTIER' then
-  begin
-  	Caption := 'Préparation de chantier depuis les '+rechdom('GCNATUREPIECEG',GetControlText ('GP_NATUREPIECEG'),false);
-  end else if copy(ecran.name,1,15)='BTACCDEVNEG_MUL' then
-  begin
-    Caption := 'Acceptation des '+rechdom('GCNATUREPIECEG',GetControlText ('GP_NATUREPIECEG'),false);
-  end else if copy(ecran.name,1,15)='BTREJDEVNEG_MUL' then
-  begin
-    Caption := 'Rejet des '+rechdom('GCNATUREPIECEG',GetControlText ('GP_NATUREPIECEG'),false);
-  end else if copy(ecran.name,1,12)<>'BTACCDEV_MUL' then
-  begin
-    if copy(ecran.name,1,13)='BTRECTSIT_MUL' then
+    if copy(ecran.name,1,15)='BTPREPACHANTIER' then
     begin
-      if THCheckBox(getControl('AVOIRUNIQUEMENT')).checked then Caption := 'Génération d''avoir global depuis situation'
-                                                           else Caption := 'Modification Situation (via Avoir)';
-    end else
+      Caption := 'Préparation de chantier depuis les '+rechdom('GCNATUREPIECEG',GetControlText ('GP_NATUREPIECEG'),false);
+    end
+    else if copy(ecran.name,1,15)='BTACCDEVNEG_MUL' then
     begin
-    Caption := 'Liste '+rechdom('GCNATUREPIECEG',GetControlText ('GP_NATUREPIECEG'),false);
-    if IsMemoire then
+      Caption := 'Acceptation des '+rechdom('GCNATUREPIECEG',GetControlText ('GP_NATUREPIECEG'),false);
+    end
+    else if copy(ecran.name,1,15)='BTREJDEVNEG_MUL' then
+    begin
+      Caption := 'Rejet des '+rechdom('GCNATUREPIECEG',GetControlText ('GP_NATUREPIECEG'),false);
+    end
+    else if copy(ecran.name,1,12)<>'BTACCDEV_MUL' then
+    begin
+      if copy(ecran.name,1,13)='BTRECTSIT_MUL' then
       begin
-      Caption := TraduireMemoire ( 'Traitement de cloture');
+        if THCheckBox(getControl('AVOIRUNIQUEMENT')).checked then
+          Caption := 'Génération d''avoir global depuis situation'
+        else
+          Caption := 'Modification Situation (via Avoir)';
+      end
+      else
+      begin
+        Caption := 'Liste '+rechdom('GCNATUREPIECEG',GetControlText ('GP_NATUREPIECEG'),false);
+        if IsMemoire then
+        begin
+          Caption := TraduireMemoire ( 'Traitement de cloture');
+        end;
+      end;
+    end
+    else
+    begin
+      if GetControlText('ACCEPTINVERSE')<>'X' then
+        Caption := 'Acceptation '+rechdom('GCNATUREPIECEG',GetControlText ('GP_NATUREPIECEG'),false)
+      else
+        Caption := 'Annulation de l''acceptation '+rechdom('GCNATUREPIECEG',GetControlText ('GP_NATUREPIECEG'),false);
+    end;
+    ecran.caption := caption;
+    UpdateCaption(Ecran);
+    RenommageEnteteColonnes(TypePiece);
+  end;
+
+	if (GetInfoParPiece(TypePiece,'GPP_VENTEACHAT'))='ACH'  then
+  begin
+    Setcontrolvisible('AFF_GENERAUTO',False);
+    Setcontrolvisible('TAFF_GENERAUTO',False);
+    if BTDuplic <> nil then BTDuplic.Visible := False;
+    Setcontrolproperty('GP_TIERS','Plus',' AND T_NATUREAUXI="FOU"');
+    //FV1 : 19/12/2017 - FS#2818 - GUINIER - Interdire la saisie directe de Factures/Avoirs/Factures fournisseur
+    if (TypePiece = 'FF') OR  (TypePiece = 'AFS') then
+    BEGIN
+      if SaisieInterdite then
+      begin
+        BInsert.Visible := false;
+        if BTDuplic  <> nil Then BTDuplic.visible  := false;
+        if BTDuplic1 <> nil Then BTDuplic1.visible := false;
       end;
     end;
-  end else
+  end
+  else if TypePiece = 'DBT' then
   begin
-    if GetControlText('ACCEPTINVERSE')<>'X' then
+    if THEdit(GetControl ('ZEACTION')) <> nil then
     begin
-      Caption := 'Acceptation '+rechdom('GCNATUREPIECEG',GetControlText ('GP_NATUREPIECEG'),false);
-    end else
+    if GetControlText ('ZEACTION')='GENCONTRETU' then
     begin
-      Caption := 'Annulation de l''acceptation '+rechdom('GCNATUREPIECEG',GetControlText ('GP_NATUREPIECEG'),false);
+      ecran.caption := 'Génération des contre études';
+      UpdateCaption(Ecran);
+      Setcontrolvisible('BINSERT',False);
+      Setcontrolvisible('BINSERT1',False);
+      if BTDuplic <> nil then BTDuplic.Visible := False;
     end;
-  end;
-  ecran.caption := caption;
-  UpdateCaption(Ecran);
-  RenommageEnteteColonnes(TypePiece);
-  end;
-
-	 if (GetInfoParPiece(TypePiece,'GPP_VENTEACHAT'))='ACH'  then
-   begin
-     Setcontrolvisible('AFF_GENERAUTO',False);
-     Setcontrolvisible('TAFF_GENERAUTO',False);
-   if BTDuplic <> nil then BTDuplic.Visible := False;
-     Setcontrolproperty('GP_TIERS','Plus',' AND T_NATUREAUXI="FOU"');
-   end
-   else if TypePiece = 'DBT' then
-   begin
-     if THEdit(GetControl ('ZEACTION')) <> nil then
-     begin
-       if GetControlText ('ZEACTION')='GENCONTRETU' then
-       begin
-         ecran.caption := 'Génération des contre études';
-  			 UpdateCaption(Ecran);
-         Setcontrolvisible('BINSERT',False);
-         Setcontrolvisible('BINSERT1',False);
-         if BTDuplic <> nil then BTDuplic.Visible := False;
-       end;
-     end;
-   end
-else if (TypePiece = 'ABT') or (TypePiece = 'ABP')  then
-   begin
-   Setcontrolvisible('AFF_GENERAUTO',False);
-   Setcontrolvisible('TAFF_GENERAUTO',False);
-   end
-else if (TypePiece = 'PBT') or (TypePiece = 'CBT') or (TypePiece = 'FPR') or (TypePiece = 'FAC') or (TypePiece = 'AVC') then
-   begin
-   Setcontrolvisible('AFF_GENERAUTO',False);
-   Setcontrolvisible('TAFF_GENERAUTO',False);
-   if BTDuplic <> nil then BTDuplic.Visible := False;
-   if (typePiece = 'FPR') or (typePiece = 'FAC') or (typePiece = 'AVC') then SetControlText ('AFF_GENERAUTO','');
-   end
-else if (TypePiece = 'DAP') or (TypePiece = 'DAC') then
-   begin
-   if copy(Ecran.name,1,14)<>'BTDEVISINT_MUL' then
-   begin
-   	Setcontrolvisible('BINSERT',False);
-   end;
-   Setcontrolvisible('BACOMPTES',False);
-   if BTDuplic <> nil then BTDuplic.Visible := False;
-   Setcontrolvisible('AFF_GENERAUTO',False);
-   Setcontrolvisible('TAFF_GENERAUTO',False);
-   end
-else if TypePiece = 'ETU' then
-   begin
-   Setcontrolvisible('BINSERT1',False);
-   Setcontrolvisible('BACOMPTES',False);
-   Setcontrolproperty('BINSERT','Hint',TraduireMemoire('Nouvelle étude'));
-   Setcontrolproperty('BOUVRIR','Hint',TraduireMemoire('Valider les études sélectionnées'));
-   Setcontrolproperty('B_DUPLICATION1','Hint',TraduireMemoire('dupliquer l''étude'));
-   if BTDuplic <> nil then BTDuplic.Visible := True;
-   //Setcontrolproperty('B_DUPLICATION1','visible',true);
-   end
-else if TypePiece = 'LBT' then
-   begin
-   if BTDuplic <> nil then BTDuplic.Visible := False;
-   end
-else if TypePiece = 'BCE' then
-   begin
-   if copy(ecran.name,1,14)<>'BTSELPIECE_POC' then
-   begin
+    end;
+  end
+  else if (TypePiece = 'ABT') or (TypePiece = 'ABP')  then
+  begin
+    Setcontrolvisible('AFF_GENERAUTO',False);
+    Setcontrolvisible('TAFF_GENERAUTO',False);
+    //FV1 : 19/12/2017 - FS#2818 - GUINIER - Interdire la saisie directe de Factures/Avoirs/Factures fournisseur
+    if SaisieInterdite then
+    begin
+      BInsert.Visible := false;
+      if BTDuplic  <> nil Then BTDuplic.visible  := false;
+      if BTDuplic1 <> nil Then BTDuplic1.visible := false;
+    end;
+  end
+  else if (TypePiece = 'PBT') or (TypePiece = 'CBT') or (TypePiece = 'FPR') or (TypePiece = 'FAC') or (TypePiece = 'AVC') then
+  begin
+    Setcontrolvisible('AFF_GENERAUTO',False);
+    Setcontrolvisible('TAFF_GENERAUTO',False);
+    if BTDuplic <> nil then BTDuplic.Visible := False;
+    if (typePiece = 'FPR') or (typePiece = 'FAC') or (typePiece = 'AVC') then SetControlText ('AFF_GENERAUTO','');
+  end
+  else if (TypePiece = 'DAP') or (TypePiece = 'DAC') then
+  begin
+    if copy(Ecran.name,1,14)<>'BTDEVISINT_MUL' then
+    begin
+      Setcontrolvisible('BINSERT',False);
+    end;
+    Setcontrolvisible('BACOMPTES',False);
+    if BTDuplic <> nil then BTDuplic.Visible := False;
+    Setcontrolvisible('AFF_GENERAUTO',False);
+    Setcontrolvisible('TAFF_GENERAUTO',False);
+  end
+  else if TypePiece = 'ETU' then
+  begin
+    Setcontrolvisible('BINSERT1',False);
+    Setcontrolvisible('BACOMPTES',False);
+    Setcontrolproperty('BINSERT','Hint',TraduireMemoire('Nouvelle étude'));
+    Setcontrolproperty('BOUVRIR','Hint',TraduireMemoire('Valider les études sélectionnées'));
+    if BTDuplic1 <> nil Then BTDuplic1.Hint := TraduireMemoire('Dupliquer l''étude');
+    if BTDuplic  <> nil then BTDuplic.Visible := True;
+  end
+  else if TypePiece = 'LBT' then
+  begin
+    if BTDuplic <> nil then BTDuplic.Visible := False;
+  end
+  else if TypePiece = 'BCE' then
+  begin
+    if copy(ecran.name,1,14)<>'BTSELPIECE_POC' then
+    begin
      Setcontrolproperty('BINSERT','Hint',TraduireMemoire('Nouvelle contre-étude'));
-     Setcontrolproperty('B_DUPLICATION1','Hint',TraduireMemoire('dupliquer la contre étude'));
-     Setcontrolproperty('B_DUPLICATION1','visible',true);
+     if BTDuplic1 <> nil Then
+     Begin
+        BTDuplic1.Hint    := TraduireMemoire('Dupliquer la contre étude');
+        BTDuplic1.Visible := True;
+     end;
      if BTDuplic <> nil then BTDuplic.Visible := False;
-   end;
-   end
-else if TypePiece = 'BFC' then
-  begin
-   Setcontrolproperty('B_DUPLICATION1','visible',false);
-   if BTDuplic <> nil then BTDuplic.Visible := False;
+    end;
   end
-else if TypePiece = 'B00' then
+  else if TypePiece = 'BFC' then
   begin
-   Setcontrolproperty('B_DUPLICATION1','visible',false);
-   if BTDuplic <> nil then BTDuplic.Visible := False;
+   if BTDuplic1 <> nil Then BTDuplic1.visible := false;
+   if BTDuplic  <> nil then BTDuplic.Visible := False;
   end
-else  if TypePiece = 'PBT' then
+  else if TypePiece = 'B00' then
+  begin
+    if BTDuplic1 <> nil Then BTDuplic1.visible := false;
+    if BTDuplic  <> nil then BTDuplic.Visible := False;
+  end
+  else if TypePiece = 'PBT' then
   begin
     if GetControl('BVISUALP')<> nil then
     begin
@@ -1363,9 +1387,16 @@ else  if TypePiece = 'PBT' then
       TToolbarButton97(GetControl('BVISUALP')).onclick := BTVisualPClick;
     end;
   end
-else  if TypePiece = 'FBT' then
+  else  if TypePiece = 'FBT' then
   begin
     Setcontrolproperty('BOUVRIR','Hint',TraduireMemoire('Valider les Factures provisoires'));
+    //FV1 : 19/12/2017 - FS#2818 - GUINIER - Interdire la saisie directe de Factures/Avoirs/Factures fournisseur
+    if SaisieInterdite then
+    begin
+      BInsert.Visible := false;
+      if BTDuplic  <> nil Then BTDuplic.visible  := false;
+      if BTDuplic1 <> nil Then BTDuplic1.visible := false;
+    end;
   end;
 
 if UpperCase(copy(Ecran.Name,1,15)) = 'BTPREPACHANTIER' then
