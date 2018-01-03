@@ -406,7 +406,7 @@ VenteAchat:=GetInfoParPiece(TobPiece.getvalue('GP_NATUREPIECEG'),'GPP_VENTEACHAT
 // mcd 21/11/02 teste en plus axe ... idem fct créersectionvolee if ExisteSQL('Select S_SECTION from SECTION where S_SECTION="'+ Cpt + '"') then exit;
 if VH^.LiaisonY2ViaShare then
 begin
-  if ExisteSQL('Select CSP_SECTION from SECTION where CSP_SECTION="'+ Cpt +'" AND S_AXE="A'+IntToStr(NumA)+'"') then exit;
+  if ExisteSQL('Select CSP_SECTION from CSECTION where CSP_SECTION="'+ Cpt +'" AND CSP_AXE="A'+IntToStr(NumA)+'"') then exit;
 end else
 begin
   if ExisteSQL('Select S_SECTION from SECTION where S_SECTION="'+ Cpt +'" AND S_AXE="A'+IntToStr(NumA)+'"') then exit;
@@ -438,7 +438,6 @@ BEGIN
 if TypeChargement = tCodeSection  then TypeStruct := 'SEC' else
 if TypeChargement = tLibSection   then TypeStruct := 'LSE' else
 if Typechargement = tLibSsSection then TypeStruct := 'LSS';
-
 TobDet:= VH_GC.MGCTOBAna.FindFirst(['GDA_AXE','GDA_ETABLISSEMENT','GDA_TYPESTRUCRANA','GDA_TYPECOMPTE'],[Axe,Etab,Typestruct,VenteAchat],TRUE) ;
 if Tobdet <> Nil then TobAna := TOB.Create ('Liste struct ana', Nil,-1) else TobAna := nil;
 While TobDet <>Nil do

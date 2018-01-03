@@ -44,12 +44,12 @@ Type
     procedure OnCancel                 ; override ;
   private
     procedure EcritDatas;
-    procedure BdeleteClick (Sender : Tobject); 
+    procedure BdeleteClick (Sender : Tobject);
   end ;
 
 Implementation
 
-uses Math, TntStdCtrls;
+uses Math, TntStdCtrls,Paramsoc;
 
 procedure TOF_BTSHAREY2.OnNew ;
 begin
@@ -99,8 +99,13 @@ end ;
 
 procedure TOF_BTSHAREY2.OnArgument (S : String ) ;
 var QQ : TQuery;
+    Y2Share : string;
+    IndexSel,CurIndex : Integer;
+    FindItem : boolean;
 begin
   Inherited ;
+  IndexSel := 1;
+  Y2Share := GetParamSocSecur('SO_BTSHAREY2','');
   if ExisteSQL('SELECT 1 FROM DESHARE') then
   begin
     TToolbarButton97 (GetControl('BDelete')).Visible := true;
@@ -110,10 +115,19 @@ begin
   if not QQ.eof then
   begin
     QQ.first;
+    CurIndex := 0;
+    FindItem := false;
     repeat
       THValComboBox (GetControl('CBLISTDB')).AddItem(QQ.fields[0].AsString,nil);
+      if (Y2Share <> '') and (QQ.fields[0].AsString=Y2Share) then
+      begin
+        IndexSel := CurIndex;
+        FindItem := True;
+      end;
       qq.next;
+      inc(CurIndex);
     until QQ.eof;
+    if FindItem then THValComboBox (GetControl('CBLISTDB')).ItemIndex := IndexSel;
   end;
   ferme (QQ);
 end ;
@@ -140,6 +154,8 @@ begin
   DBName := THValComboBox (GetControl('CBLISTDB')).Text;
 {$IFDEF DIRECT}
   // PARAMSOC
+  ExecuteSql('UPDATE PARAMSOC SET SOC_DATA="'+DBName+'" WHERE SOC_NOM="SO_BTSHAREY2"');
+  //
   if ExecuteSQL('insert into deshare (ds_nomtable,ds_modefonc,ds_nombase,ds_typtable,ds_vue) select soc_nom,"LIB","'+DBName+'","PAR","" from paramsoc where soc_tree like "001;001;%"') = 0 then V_PGI.IOError := OeUnknown;
   if ExecuteSQL('insert into deshare (ds_nomtable,ds_modefonc,ds_nombase,ds_typtable,ds_vue) select soc_nom,"LIB","'+DBName+'","PAR","" from paramsoc where soc_tree like "001;027;%"') = 0 then V_PGI.IOError := OeUnknown;
   if ExecuteSQL('insert into deshare (ds_nomtable,ds_modefonc,ds_nombase,ds_typtable,ds_vue) select soc_nom,"LIB","'+DBName+'","PAR","" from paramsoc where soc_tree like "001;035;%"') = 0 then V_PGI.IOError := OeUnknown;
@@ -157,7 +173,7 @@ begin
   SQL := 'insert into deshare (ds_nomtable,ds_modefonc,ds_nombase,ds_typtable,ds_vue) '+
   			 'select dt_nomtable ,"LIB","'+DBName+'","TAB","" '+
          'from detables '+
-         'where dt_domaine IN ("C","P","Y","T","D","0") AND DT_NOMTABLE NOT IN ("RTDOCUMENT","RESSOURCEEQUIPE","RESSOURCEPR","CHOIXCOD","CHOIXEXT","EXERCICE","YMYBOBS")';
+         'where dt_domaine IN ("C","P","Y","T","D","0") AND DT_NOMTABLE NOT IN ("RTDOCUMENT","RESSOURCEEQUIPE","RESSOURCEPR","CHOIXCOD","CHOIXEXT","EXERCICE","YMYBOBS","VENTEANA","VENTIL")';
   if EXECUTESQL(SQL)=0 then V_PGI.IOError := OeUnknown;
   // Tablettes CHOIXCOD et CHOIXEXT
   if EXECUTESQL('insert into deshare (ds_nomtable,ds_modefonc,ds_nombase,ds_typtable,ds_vue) select do_combo ,"LIB","'+DBName+'","TTE","" from decombos where do_domaine in ("C","P","Y","T","D","0")  and do_prefixe in ("CC","YX")')=0 then V_PGI.IOError := OeUnknown;
@@ -207,6 +223,9 @@ begin
     TOBDatas.LoadDetailDBFromSQL ('DESHARE',SQL,true);
     TOBDatas.SetAllModifie(true);
     TOBDatas.InsertOrUpdateDB(false);
+    // PARAMSOC
+    ExecuteSql('UPDATE PARAMSOC SET SOC_DATA="'+DBName+'" WHERE SOC_NOM="SO_BTSHAREY2"');
+    //
   FINALLY
     TOBDatas.Free;
   END;
@@ -218,10 +237,16 @@ procedure TOF_BTSHAREY2.BdeleteClick(Sender: Tobject);
 begin
   if PGIAsk('ATTENTION : Vous allez casser le lien entre la base de donnée Y2 et cette base de donnée.#13#10 Confirmez-vous cette action ?')<>mryes then exit;
   if PGIAsk('Confirmez-vous la suppression de ce lien ?')<>mryes then exit;
-  ExecuteSQL('DELETE FROM DESHARE');
-//  RegenereVues (false);;
-  PgiInfo ('Les données ne sont plus partagés avec la base de donnée CEGID Y2 '+THValComboBox (GetControl('CBLISTDB')).Value+'.#13#10 Veuillez vous deconnecter de l''applicatif');
-  PostMessage(Application.Handle, WM_CLOSE, 0, 0);
+  if GetParamSocSecur('SO_BTSHAREY2','')<> '' then
+  begin
+    ExecuteSQL('DELETE FROM DESHARE WHERE DS_NOMBASE="'+GetParamSocSecur('SO_BTSHAREY2','')+'"');
+    PgiInfo ('Les données ne sont plus partagés avec la base de donnée CEGID Y2 '+THValComboBox (GetControl('CBLISTDB')).Value+'.#13#10 Veuillez vous deconnecter de l''applicatif');
+    ExecuteSql('UPDATE PARAMSOC SET SOC_DATA="" WHERE SOC_NOM="SO_BTSHAREY2"');
+    PostMessage(Application.Handle, WM_CLOSE, 0, 0);
+  end else
+  begin
+    PgiInfo('Vous ne pouvez réaliser cette opération de cette façon.Merci de procéder manuellement');
+  end;
 end;
 
 Initialization
