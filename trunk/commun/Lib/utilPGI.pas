@@ -261,6 +261,7 @@ function GetParamIsoflex : string;
 function GetSelectAll(PrefixesTables : string; SansBlob : boolean=True; ExclureChamps : string='') : string;
 function GetParamSocPaysNumerique : string;
 function CodePays3CVersNumerique(CodePays: String): String;
+function GetSousSectionUnique(Ax : string) : string;
 
     function FabriqueConditionIn(Zone: string): string;
 CONST
@@ -1780,52 +1781,110 @@ BEGIN Result:=EuroToPivot(X) ; END ;
 FUNCTION EUROTOFRANCNA ( X : Double ) : Double ;
 BEGIN Result:=EuroToPivotNA(X) ; END ;
 
+function GetSousSectionUnique(Ax : string) : string;
+var QQ: TQuery;
+begin
+  Result := '';
+  QQ := OpenSQL('SELECT CAS_SOUSPLAN FROM CSOUSPLAN WHERE CAS_AXE="'+Ax+'"',True,1,'',true);
+  if not QQ.Eof then
+  begin
+    Result := QQ.Fields[0].AsString;
+  end;
+  ferme (QQ);
+end;
+
 Function CreerSectionVolee ( CodeSect,Libelle : String ; NumA : integer ) : boolean ; overload;
 Var TOBS : TOB ;
-    Ax : String ;
+    Ax,SousSection : String ;
 BEGIN
-Result:=False ;
-if NumA<=0 then Exit ;
-if CodeSect='' then Exit ;
-Ax:='A'+IntToStr(NumA) ;
-if ExisteSQL('SELECT S_SECTION FROM SECTION WHERE S_SECTION="'+CodeSect+'" AND S_AXE="'+Ax+'"') then Exit ;
-CodeSect:=BourreLaDonc(CodeSect,TFichierBase(Ord(fbAxe1)+NumA-1)) ;
-TOBS:=TOB.Create('SECTION',Nil,-1) ;
-TOBS.PutValue('S_SECTION',CodeSect) ;
-TOBS.PutValue('S_LIBELLE',Copy(Libelle,1,35)) ;
-TOBS.PutValue('S_ABREGE',Copy(Libelle,1,17)) ;
-TOBS.PutValue('S_SENS','M') ;
-TOBS.PutValue('S_AXE',Ax) ;
-TOBS.PutValue('S_CREERPAR','AFF') ;
-TOBS.PutValue('S_SOLDEPROGRESSIF','X') ;
-TOBS.PutValue('S_CODEIMPORT',CodeSect) ;
-// CEGID V9
-TOBS.PutValue('S_INVISIBLE','-') ;
-// ---
-Result:=TOBS.InsertDB(Nil) ;
-TOBS.Free ;
+  Result:=False ;
+  if NumA<=0 then Exit ;
+  if CodeSect='' then Exit ;
+  Ax:='A'+IntToStr(NumA) ;
+  if VH^.LiaisonY2ViaShare then
+  begin
+    if ExisteSQL('SELECT CSP_SECTION FROM CSECTION WHERE CSP_SECTION="'+CodeSect+'" AND CSP_AXE="'+Ax+'"') then Exit ;
+    SousSection := GetSousSectionUnique(Ax);
+    CodeSect:=BourreLaDonc(CodeSect,TFichierBase(Ord(fbAxe1)+NumA-1)) ;
+    TOBS:=TOB.Create('CSECTION',Nil,-1) ;
+    TOBS.PutValue('CSP_SECTION',CodeSect) ;
+    TOBS.PutValue('CSP_SOUSPLAN',SousSection) ;
+    TOBS.PutValue('CSP_LIBELLE',Copy(Libelle,1,35)) ;
+    TOBS.PutValue('CSP_ABREGE',Copy(Libelle,1,17)) ;
+    TOBS.PutValue('CSP_SENS','M') ;
+    TOBS.PutValue('CSP_AXE',Ax) ;
+    TOBS.PutValue('CSP_CREERPAR','AFF') ;
+    TOBS.PutValue('CSP_SOLDEPROGRESS','X') ;
+    TOBS.PutValue('CSP_CODEIMPORT',CodeSect) ;
+    // CEGID V9
+    TOBS.PutValue('CSP_INVISIBLE','-') ;
+    // ---
+    Result:=TOBS.InsertDB(Nil) ;
+    TOBS.Free ;
+  end else
+  begin
+    if ExisteSQL('SELECT S_SECTION FROM SECTION WHERE S_SECTION="'+CodeSect+'" AND S_AXE="'+Ax+'"') then Exit ;
+    CodeSect:=BourreLaDonc(CodeSect,TFichierBase(Ord(fbAxe1)+NumA-1)) ;
+    TOBS:=TOB.Create('SECTION',Nil,-1) ;
+    TOBS.PutValue('S_SECTION',CodeSect) ;
+    TOBS.PutValue('S_LIBELLE',Copy(Libelle,1,35)) ;
+    TOBS.PutValue('S_ABREGE',Copy(Libelle,1,17)) ;
+    TOBS.PutValue('S_SENS','M') ;
+    TOBS.PutValue('S_AXE',Ax) ;
+    TOBS.PutValue('S_CREERPAR','AFF') ;
+    TOBS.PutValue('S_SOLDEPROGRESSIF','X') ;
+    TOBS.PutValue('S_CODEIMPORT',CodeSect) ;
+    // CEGID V9
+    TOBS.PutValue('S_INVISIBLE','-') ;
+    // ---
+    Result:=TOBS.InsertDB(Nil) ;
+    TOBS.Free ;
+  end;
 END ;
 
 Function CreerSectionVolee ( CodeSect,Libelle,Axe : String ) : boolean ; overload;
 Var TOBS : TOB ;
+    SousSection : string;
 BEGIN
 Result:=False ;
 if CodeSect='' then Exit ;
-if ExisteSQL('SELECT S_SECTION FROM SECTION WHERE S_SECTION="'+CodeSect+'" AND S_AXE="'+Axe+'"') then Exit ;
-TOBS:=TOB.Create('SECTION',Nil,-1) ;
-TOBS.PutValue('S_SECTION',CodeSect) ;
-TOBS.PutValue('S_LIBELLE',Copy(Libelle,1,35)) ;
-TOBS.PutValue('S_ABREGE',Copy(Libelle,1,17)) ;
-TOBS.PutValue('S_SENS','M') ;
-TOBS.PutValue('S_AXE',Axe) ;
-TOBS.PutValue('S_CREERPAR','AFF') ;
-TOBS.PutValue('S_SOLDEPROGRESSIF','X') ;
-TOBS.PutValue('S_CODEIMPORT',CodeSect) ;
-// CEGID V9
-TOBS.PutValue('S_INVISIBLE','-') ;
-// ---
-Result:=TOBS.InsertDB(Nil) ;
-TOBS.Free ;
+  if VH^.LiaisonY2ViaShare then
+  begin
+    if ExisteSQL('SELECT CSP_SECTION FROM CSECTION WHERE CSP_SECTION="'+CodeSect+'" AND CSP_AXE="'+Axe+'"') then Exit ;
+    SousSection := GetSousSectionUnique(Axe);
+    TOBS:=TOB.Create('CSECTION',Nil,-1) ;
+    TOBS.PutValue('CSP_SECTION',CodeSect) ;
+    TOBS.PutValue('CSP_SOUSPLAN',SousSection) ;
+    TOBS.PutValue('CSP_LIBELLE',Copy(Libelle,1,35)) ;
+    TOBS.PutValue('CSP_ABREGE',Copy(Libelle,1,17)) ;
+    TOBS.PutValue('CSP_SENS','M') ;
+    TOBS.PutValue('CSP_AXE',Axe) ;
+    TOBS.PutValue('CSP_CREERPAR','AFF') ;
+    TOBS.PutValue('CSP_SOLDEPROGRESS','X') ;
+    TOBS.PutValue('CSP_CODEIMPORT',CodeSect) ;
+    // CEGID V9
+    TOBS.PutValue('CSP_INVISIBLE','-') ;
+    // ---
+    Result:=TOBS.InsertDB(Nil) ;
+    TOBS.Free ;
+  end else
+  begin
+    if ExisteSQL('SELECT S_SECTION FROM SECTION WHERE S_SECTION="'+CodeSect+'" AND S_AXE="'+Axe+'"') then Exit ;
+    TOBS:=TOB.Create('SECTION',Nil,-1) ;
+    TOBS.PutValue('S_SECTION',CodeSect) ;
+    TOBS.PutValue('S_LIBELLE',Copy(Libelle,1,35)) ;
+    TOBS.PutValue('S_ABREGE',Copy(Libelle,1,17)) ;
+    TOBS.PutValue('S_SENS','M') ;
+    TOBS.PutValue('S_AXE',Axe) ;
+    TOBS.PutValue('S_CREERPAR','AFF') ;
+    TOBS.PutValue('S_SOLDEPROGRESSIF','X') ;
+    TOBS.PutValue('S_CODEIMPORT',CodeSect) ;
+    // CEGID V9
+    TOBS.PutValue('S_INVISIBLE','-') ;
+    // ---
+    Result:=TOBS.InsertDB(Nil) ;
+    TOBS.Free ;
+  end;
 END ;
 
 Procedure AttribCotation ( TOBP : TOB ) ;
@@ -3095,8 +3154,14 @@ begin
   case vFB of
    fbGene : result := 'GENERAUX' ;
    fbAux  : result := 'TIERS' ;
-   fbSect : result := 'SECTION' ;
-   fbAxe1..fbAxe5 : result := 'SECTION' ;
+   fbSect : begin
+              if VH^.LiaisonY2ViaShare then result := 'CSECTION'
+                                       else result := 'SECTION' ;
+            end;
+   fbAxe1..fbAxe5 : begin
+                      if VH^.LiaisonY2ViaShare then result := 'CSECTION'
+                                               else result := 'SECTION' ;
+                    end;
    fbJal  : result := 'JOURNAL' ;
    else result := '' ;
    end ;

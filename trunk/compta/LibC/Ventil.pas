@@ -183,7 +183,7 @@ Var F : THGrid ;
     CompteAna:  array[1..MaxAxe] of String;      {FP 29/12/2005}
     {b FP 19/04/2006 FQ17725}
     QrySansFiltre:  String;
-    OrderBy:        String;
+    OrderBy,ChpLibelle:String;
     {e FP 19/04/2006}
 BEGIN
 FillChar(CompteAna, sizeof(CompteAna), #0);       {FP 29/12/2005}
@@ -193,8 +193,20 @@ for i:=1 to MaxAxe do
     F:=THGrid(FindComponent('FListe'+IntToStr(i))) ; F.VidePile(false) ;
     sax:='A'+IntToStr(i) ;
     {b FP 19/04/2006 FQ17725: Requête sans filtre sur la restriction analytique}
-    QrySansFiltre := 'SELECT VENTIL.*,S_LIBELLE FROM VENTIL, SECTION WHERE VENTIL.V_NATURE="'+Nat+IntToStr(i)+'" '
-        + 'AND VENTIL.V_COMPTE="'+Cpte+'" AND S_SECTION=V_SECTION AND S_AXE="'+sax+'"';
+    if VH^.LiaisonY2ViaShare then
+    begin
+      QrySansFiltre := 'SELECT VENTIL.*,CSP_LIBELLE '+
+                       'FROM VENTIL '+
+                       'LEFT JOIN SECTION ON V_SECTION=CSP_SECTION '+
+                       'WHERE V_NATURE="'+Nat+IntToStr(i)+'" AND '+
+                       'V_COMPTE="'+Cpte+'" AND CSP_AXE="'+sax+'"';
+      ChpLibelle := 'CSP_LIBELLE';
+    end else
+    begin
+      QrySansFiltre := 'SELECT VENTIL.*,S_LIBELLE FROM VENTIL, SECTION WHERE VENTIL.V_NATURE="'+Nat+IntToStr(i)+'" '
+          + 'AND VENTIL.V_COMPTE="'+Cpte+'" AND S_SECTION=V_SECTION AND S_AXE="'+sax+'"';
+      ChpLibelle := 'S_LIBELLE';
+    end;
     SQL := QrySansFiltre
        {b FP 29/12/2005}
        +' AND ' + FRestriction.GetClauseCompteAutorise(
@@ -217,7 +229,7 @@ for i:=1 to MaxAxe do
        BEGIN
        F.Cells[GV_NUM,F.RowCount-1]   := QVentil.FindField('V_NUMEROVENTIL').AsString ;
        F.Cells[GV_SECT,F.RowCount-1]  := QVentil.FindField('V_SECTION').AsString ;
-       F.Cells[GV_LIB,F.RowCount-1]   := QVentil.FindField('S_LIBELLE').AsString ;
+       F.Cells[GV_LIB,F.RowCount-1]   := QVentil.FindField(ChpLibelle).AsString ;
        // 19/04/07 Paie rajout des natures SA et PG
        if (Nat = 'TY') or (Nat = 'GE') or (Nat = 'SA') or (Nat = 'PG') then // DEV 4158 : Alimentation de l'Unité d'Oeuvre depuis V_MONTANT
          F.Cells[GV_UOE,F.RowCount-1] := StrFMontant( QVentil.FindField('V_MONTANT').AsFloat,     15, V_PGI.OkDecQ, '', True ) ;

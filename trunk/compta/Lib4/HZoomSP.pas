@@ -15,7 +15,7 @@ uses
   {$IFDEF MODENT1}
   , CPTypeCons
   {$ENDIF MODENT1}
-  ,uEntCommun
+  ,uEntCommun, TntStdCtrls, TntButtons
    ;
 
 Type TValSousPlan = Array[1..MaxSousPlan] Of String ;

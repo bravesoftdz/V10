@@ -270,8 +270,8 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'Nouvelle cat'#233'gorie'
-        DisplayMode = dmGlyphOnly
         Caption = 'Nouvelle cat'#233'gorie'
+        DisplayMode = dmGlyphOnly
         Flat = False
         ParentShowHint = False
         ShowHint = True
@@ -284,8 +284,8 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'Supprimer'
-        DisplayMode = dmGlyphOnly
         Caption = 'Supprimer'
+        DisplayMode = dmGlyphOnly
         Flat = False
         ParentShowHint = False
         ShowHint = True
@@ -298,8 +298,8 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'Annuler la derni'#232're action'
-        DisplayMode = dmGlyphOnly
         Caption = 'Annuler contenu'
+        DisplayMode = dmGlyphOnly
         Flat = False
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clBlack
@@ -321,9 +321,9 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'Valider le contenu'
+        Caption = 'Valider'
         Default = True
         DisplayMode = dmGlyphOnly
-        Caption = 'Valider'
         Flat = False
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clBlack
@@ -346,9 +346,9 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'Fermer'
+        Caption = 'Fermer'
         Cancel = True
         DisplayMode = dmGlyphOnly
-        Caption = 'Fermer'
         Flat = False
         ParentShowHint = False
         ShowHint = True
@@ -361,8 +361,8 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'Aide'
-        DisplayMode = dmGlyphOnly
         Caption = 'Aide'
+        DisplayMode = dmGlyphOnly
         Flat = False
         ParentShowHint = False
         ShowHint = True
@@ -375,8 +375,8 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'G'#233'n'#233'ration automatique du contenu des plans'
-        DisplayMode = dmGlyphOnly
         Caption = 'G'#233'n'#233'rer'
+        DisplayMode = dmGlyphOnly
         Flat = False
         ParentShowHint = False
         ShowHint = True
@@ -391,8 +391,8 @@ object FStructure: TFStructure
         Hint = 
           'G'#233'n'#233'ration des sections analytiques incluant le sous plan s'#233'lect' +
           'ionn'#233
-        DisplayMode = dmGlyphOnly
         Caption = 'G'#233'n'#233'ration sections'
+        DisplayMode = dmGlyphOnly
         Flat = False
         ParentShowHint = False
         ShowHint = True
@@ -405,8 +405,8 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'G'#233'n'#233'ration simple des sections analytiques'
-        DisplayMode = dmGlyphOnly
         Caption = 'G'#233'n'#233'ration simple'
+        DisplayMode = dmGlyphOnly
         Flat = False
         ParentShowHint = False
         ShowHint = True
@@ -419,8 +419,8 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'Annuler la derni'#232're action sur le plan'
-        DisplayMode = dmGlyphOnly
         Caption = 'Annuler plan'
+        DisplayMode = dmGlyphOnly
         Flat = False
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clBlack
@@ -442,8 +442,8 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'Nouveau plan'
-        DisplayMode = dmGlyphOnly
         Caption = 'Nouveau plan'
+        DisplayMode = dmGlyphOnly
         Flat = False
         ParentShowHint = False
         ShowHint = True
@@ -456,8 +456,8 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'Supprimer'
-        DisplayMode = dmGlyphOnly
         Caption = 'Supprimer'
+        DisplayMode = dmGlyphOnly
         Flat = False
         ParentShowHint = False
         ShowHint = True
@@ -470,8 +470,8 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'Valider le plan'
-        DisplayMode = dmGlyphOnly
         Caption = 'Valider le plan'
+        DisplayMode = dmGlyphOnly
         Flat = False
         NumGlyphs = 2
         ParentShowHint = False
@@ -485,8 +485,8 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'Imprimer le plan des sous-sections'
-        DisplayMode = dmGlyphOnly
         Caption = 'Imprimer le plan des sous-sections'
+        DisplayMode = dmGlyphOnly
         Flat = False
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clBlack
@@ -505,8 +505,8 @@ object FStructure: TFStructure
         Width = 28
         Height = 27
         Hint = 'Imprimer le contenu d'#39'un sous plan'
-        DisplayMode = dmGlyphOnly
         Caption = 'Imprimer le contenu d'#39'un sous plan'
+        DisplayMode = dmGlyphOnly
         Flat = False
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clBlack

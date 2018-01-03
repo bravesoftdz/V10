@@ -1875,38 +1875,44 @@ Procedure VentilLigneTOB ( TOBAna : TOB ; Section : String ; NumVentil,NbDec : i
 Var XP,XD : double ;
     qte1, qte2 : double;
 BEGIN
-TOBAna.PutValue('Y_SECTION',Section) ;
-TOBAna.PutValue('Y_NUMVENTIL',NumVentil) ;
-TOBAna.PutValue('Y_POURCENTAGE',Pourc) ;
-//SG6 Gestion mode croisaxe
-TOBAna.PutValue('Y_SOUSPLAN1', splan1);
-TOBAna.PutValue('Y_SOUSPLAN2', splan2);
-TOBAna.PutValue('Y_SOUSPLAN3', splan3);
-TOBAna.PutValue('Y_SOUSPLAN4', splan4);
-TOBAna.PutValue('Y_SOUSPLAN5', splan5);
-//SG6 Prise en compte des quantités
-TOBAna.PutValue('Y_POURCENTQTE1',PourQte1);
-TOBAna.PutValue('Y_POURCENTQTE2',PourQte2);
-//Calcul dse quantites effectives
-qte1 := TOBAna.GetDouble('Y_TOTALQTE1');
-qte2 := TOBAna.GetDouble('Y_TOTALQTE2');
-TOBAna.PutValue('Y_QTE1', Arrondi(PourQte1 * qte1 / 100.0, V_PGI.OkDecQ));
-TOBAna.PutValue('Y_QTE2', Arrondi(PourQte2 * qte2 / 100.0, V_PGI.OkDecQ));
-XP:=Arrondi(Pourc*TOBAna.GetValue('Y_TOTALECRITURE')/100.0,V_PGI.OkDecV) ;
-XD:=Arrondi(Pourc*TOBAna.GetValue('Y_TOTALDEVISE')/100.0,NbDec) ;
-if Debit then
-   BEGIN
-   TOBAna.PutValue('Y_DEBIT',XP) ; TOBAna.PutValue('Y_DEBITDEV',XD) ;
-   TOBAna.PutValue('Y_CREDIT',0) ; TOBAna.PutValue('Y_CREDITDEV',0) ;
-   END else
-   BEGIN
-   TOBAna.PutValue('Y_DEBIT',0)   ; TOBAna.PutValue('Y_DEBITDEV',0)   ;
-   TOBAna.PutValue('Y_CREDIT',XP) ; TOBAna.PutValue('Y_CREDITDEV',XD) ;
-   END ;
-// V9 CEGID
-TOBAna.PutValue('Y_DATPER',iDate1900) ;
-TOBAna.PutValue('Y_ENTITY',0) ;
-TOBAna.PutValue('Y_REFGUID','') ;
+  TOBAna.PutValue('Y_SECTION',Section) ;
+  TOBAna.PutValue('Y_NUMVENTIL',NumVentil) ;
+  TOBAna.PutValue('Y_POURCENTAGE',Pourc) ;
+  //SG6 Gestion mode croisaxe
+  if VH^.LiaisonY2ViaShare then
+  begin
+    TOBAna.PutValue('Y_SOUSPLAN1', Section);
+  end else
+  begin
+    TOBAna.PutValue('Y_SOUSPLAN1', splan1);
+  end;
+  TOBAna.PutValue('Y_SOUSPLAN2', splan2);
+  TOBAna.PutValue('Y_SOUSPLAN3', splan3);
+  TOBAna.PutValue('Y_SOUSPLAN4', splan4);
+  TOBAna.PutValue('Y_SOUSPLAN5', splan5);
+  //SG6 Prise en compte des quantités
+  TOBAna.PutValue('Y_POURCENTQTE1',PourQte1);
+  TOBAna.PutValue('Y_POURCENTQTE2',PourQte2);
+  //Calcul dse quantites effectives
+  qte1 := TOBAna.GetDouble('Y_TOTALQTE1');
+  qte2 := TOBAna.GetDouble('Y_TOTALQTE2');
+  TOBAna.PutValue('Y_QTE1', Arrondi(PourQte1 * qte1 / 100.0, V_PGI.OkDecQ));
+  TOBAna.PutValue('Y_QTE2', Arrondi(PourQte2 * qte2 / 100.0, V_PGI.OkDecQ));
+  XP:=Arrondi(Pourc*TOBAna.GetValue('Y_TOTALECRITURE')/100.0,V_PGI.OkDecV) ;
+  XD:=Arrondi(Pourc*TOBAna.GetValue('Y_TOTALDEVISE')/100.0,NbDec) ;
+  if Debit then
+  BEGIN
+    TOBAna.PutValue('Y_DEBIT',XP) ; TOBAna.PutValue('Y_DEBITDEV',XD) ;
+    TOBAna.PutValue('Y_CREDIT',0) ; TOBAna.PutValue('Y_CREDITDEV',0) ;
+  END else
+  BEGIN
+    TOBAna.PutValue('Y_DEBIT',0)   ; TOBAna.PutValue('Y_DEBITDEV',0)   ;
+    TOBAna.PutValue('Y_CREDIT',XP) ; TOBAna.PutValue('Y_CREDITDEV',XD) ;
+  END ;
+  // V9 CEGID
+  TOBAna.PutValue('Y_DATPER',iDate1900) ;
+  TOBAna.PutValue('Y_ENTITY',0) ;
+  TOBAna.PutValue('Y_REFGUID','') ;
 END ;
 
 
@@ -2130,8 +2136,9 @@ begin
        end
      else if ( vInAxe = 1 ) and  ( vTOBEcr.FieldExists('SECTION') ) then
       lStSection := vTOBEcr.GetValue('SECTION')
-       else
-        lStSection := GetInfoCpta(AxeToFb('A'+IntToStr(vInAxe))).Attente ;
+     else
+      lStSection := GetInfoCpta(AxeToFb('A'+IntToStr(vInAxe))).Attente ;
+     // 
      lInNumVentil   := 1 ;
      lRdPourcentage := 100.0 ;
      lPourcQte1     := 100.0 ;
@@ -2569,7 +2576,7 @@ begin
          EcrVersAna(TOBEcr,TOBAna) ;
 
          if ((TOBEcr.FieldExists('SECTION'))) then Section:=TOBEcr.GetValue('SECTION')
-                                                             else Section := GetInfoCpta(fb).Attente ;
+                                              else Section := GetInfoCpta(fb).Attente ;
          NumVentil:=1 ; Pourcentage:=100.0 ;
 
          VentilLigneTOB(TOBAna,Section,NumVentil,NbDec,Pourcentage,TOBEcr.GetValue('E_DEBIT')<>0,0.0,0.0,SecAttente[1],SecAttente[2],SecAttente[3],SecAttente[4],SecAttente[5]) ;
@@ -2672,6 +2679,11 @@ if Fic='TZSECTION2'          then Result:=fbAxe2 else
 if Fic='TZSECTION3'          then Result:=fbAxe3 else
 if Fic='TZSECTION4'          then Result:=fbAxe4 else
 if Fic='TZSECTION5'          then Result:=fbAxe5 else
+if Fic='TZCSECTION'           then Result:=fbAxe1 else
+if Fic='TZCSECTION2'          then Result:=fbAxe2 else
+if Fic='TZCSECTION3'          then Result:=fbAxe3 else
+if Fic='TZCSECTION4'          then Result:=fbAxe4 else
+if Fic='TZCSECTION5'          then Result:=fbAxe5 else
 if ((Fic='TZBUDGEN') or (Fic='TZBUDGENATT')) then Result:=fbBudGen else
 if ((Fic='TZBUDSEC1') or (Fic='TZBUDSECATT1')) then Result:=fbBudSec1 else
 if ((Fic='TZBUDSEC2') or (Fic='TZBUDSECATT2')) then Result:=fbBudSec2 else

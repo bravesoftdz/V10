@@ -116,7 +116,8 @@ begin
     if pszAxe <> '' then szSQL := szSQL + ' WHERE S_AXE="'+pszAxe+'"';
     if Table = 'GENERAUX' then szSQL := szSQL + ' ORDER BY G_GENERAL'
     else if Table = 'TIERS' then szSQL := szSQL + ' ORDER BY T_AUXILIAIRE'
-    else if Table = 'SECTION' then szSQL := szSQL + ' ORDER BY S_SECTION';
+    else if Table = 'SECTION' then szSQL := szSQL + ' ORDER BY S_SECTION'
+    else if Table = 'CSECTION' then szSQL := szSQL + ' ORDER BY CSP_SECTION';
     Q := OpenSQL (szSQL,True,-1,'',true);
     T.LoadDetailDB (Table,'','',Q,False);
     Ferme (Q);
@@ -200,7 +201,7 @@ begin
     if stDPSTD <>'' then stSQL := stSQL + ' AND '+ stDPSTD;
     ExecuteSQL (stSQL);
 {$IFDEF COMPTA}
-    if ((Table='GENERAUX') or (Table='TIERS') or (Table='SECTION')) then    // fiche 10301
+    if ((Table='GENERAUX') or (Table='TIERS') or (Table='SECTION') or (Table='CSECTION')) then    // fiche 10301
         MAJHistoparam (Table,  '');
 {$ENDIF}
 
@@ -459,6 +460,7 @@ begin
   UpdateChampCompte ('IECRANA', ['ILA_SECTION1','ILA_SECTION2','ILA_SECTION3','ILA_SECTION4','ILA_SECTION5'] , Bourre, Lg,pszAxe,PO, '');
   UpdateChampCompte ('INTERCOMPTA', ['GIC_SECTANA1','GIC_SECTANA2','GIC_SECTANA3','GIC_SECTANA4','GIC_SECTANA5'] , Bourre, Lg,pszAxe,PO, ' AND GIC_NATUREPIECEG LIKE "%'+pszAxe[2]+'"');
   UpdateChampCompte ('PAIEVENTIL', ['PAV_SECTION'] , Bourre, Lg,pszAxe,PO, ' AND PAV_NATURE LIKE "%'+pszAxe[2]+'"');
+  if VH^.LiaisonY2ViaShare then UpdateChampCompte ('CSECTION', ['CSP_SECTION'] , Bourre, Lg,pszAxe,PO, ' AND CSP_AXE="'+pszAxe+'"');
   UpdateChampCompte ('SECTION', ['S_SECTION'] , Bourre, Lg,pszAxe,PO, ' AND S_AXE="'+pszAxe+'"');
   UpdateChampCompte ('SECTIONREF', ['SRE_SECTION'] , Bourre, Lg,pszAxe,PO, ' AND SRE_AXE="'+pszAxe+'"');
   UpdateChampCompte ('VENTANA', ['YVA_SECTION'] , Bourre, Lg,pszAxe,PO, ' AND YVA_AXE="'+pszAxe+'"');

@@ -1309,23 +1309,46 @@ BEGIN
                   END ;
                end ;
       fbSect : begin
-               lStTable := GetTableDossier( FRM.Dossier, 'SECTION') ;
-               if Not Ano then
-                  BEGIN
-                  SQL:='UPDATE ' + lStTable + ' SET S_DEBITDERNMVT='+StrFPoint(FRM.Deb)+',  S_CREDITDERNMVT='+StrFPoint(FRM.Cre)+', '
-                     +'S_DATEDERNMVT="'+USDateTime(FRM.DateD)+'", S_NUMDERNMVT='+IntToStr(FRM.NumD)+', S_LIGNEDERNMVT='+IntToStr(FRM.LigD)+', '
-                     +'S_TOTALDEBIT=S_TOTALDEBIT+'+StrFPoint(FRM.DE+FRM.DS)+', S_TOTALCREDIT=S_TOTALCREDIT+'+StrFPoint(FRM.CE+FRM.CS)+', '
-                     +'S_TOTDEBE=S_TOTDEBE+'+StrFPoint(FRM.DE)+', S_TOTCREE=S_TOTCREE+'+StrFPoint(FRM.CE)+', '
-                     +'S_TOTDEBS=S_TOTDEBS+'+StrFPoint(FRM.DS)+', S_TOTCRES=S_TOTCRES+'+StrFPoint(FRM.CS)+', '
-                     +'S_TOTDEBP=S_TOTDEBP+'+StrFPoint(FRM.DP)+', S_TOTCREP=S_TOTCREP+'+StrFPoint(FRM.CP)+' '
-                     +'WHERE S_AXE="'+FRM.Axe+'" AND S_SECTION="'+FRM.Cpt+'" ' ;
-                  END else
-                  BEGIN
-                  SQL:='UPDATE ' + lStTable + ' SET S_TOTDEBANO=S_TOTDEBANO+'+StrFPoint(FRM.Deb)+', S_TOTCREANO=S_TOTCREANO+'+StrFPoint(FRM.Cre)+', '
-                      +'S_TOTALDEBIT=S_TOTALDEBIT+'+StrFPoint(FRM.Deb)+', S_TOTALCREDIT=S_TOTALCREDIT+'+StrFPoint(FRM.Cre)+', '
-                      +'S_TOTDEBE=S_TOTDEBE+'+StrFPoint(FRM.Deb)+', S_TOTCREE=S_TOTCREE+'+StrFPoint(FRM.Cre)+' '
-                      +'WHERE S_AXE="'+FRM.Axe+'" AND S_SECTION="'+FRM.Cpt+'" ' ;
-                  END ;
+                if VH^.LiaisonY2ViaShare then
+                begin
+                   lStTable := GetTableDossier( FRM.Dossier, 'CSECTION') ;
+                   if Not Ano then
+                   BEGIN
+                      SQL:='UPDATE ' + lStTable + ' SET CSP_DEBITDERNMVT='+StrFPoint(FRM.Deb)+',  CSP_CREDITDERNMVT='+StrFPoint(FRM.Cre)+', '
+                         +'CSP_DATEDERNMVT="'+USDateTime(FRM.DateD)+'", CSP_NUMDERNMVT='+IntToStr(FRM.NumD)+', CSP_LIGNEDERNMVT='+IntToStr(FRM.LigD)+', '
+                         +'CSP_TOTALDEBIT=CSP_TOTALDEBIT+'+StrFPoint(FRM.DE+FRM.DS)+', CSP_TOTALCREDIT=CSP_TOTALCREDIT+'+StrFPoint(FRM.CE+FRM.CS)+', '
+                         +'CSP_TOTDEBE=CSP_TOTDEBE+'+StrFPoint(FRM.DE)+', CSP_TOTCREE=CSP_TOTCREE+'+StrFPoint(FRM.CE)+', '
+                         +'CSP_TOTDEBS=CSP_TOTDEBS+'+StrFPoint(FRM.DS)+', CSP_TOTCRES=CSP_TOTCRES+'+StrFPoint(FRM.CS)+', '
+                         +'CSP_TOTDEBP=CSP_TOTDEBP+'+StrFPoint(FRM.DP)+', CSP_TOTCREP=CSP_TOTCREP+'+StrFPoint(FRM.CP)+' '
+                         +'WHERE CSP_AXE="'+FRM.Axe+'" AND CSP_SECTION="'+FRM.Cpt+'" ' ;
+                   END else
+                   BEGIN
+                      SQL:='UPDATE ' + lStTable + ' SET S_TOTDEBANO=S_TOTDEBANO+'+StrFPoint(FRM.Deb)+', S_TOTCREANO=S_TOTCREANO+'+StrFPoint(FRM.Cre)+', '
+                          +'S_TOTALDEBIT=S_TOTALDEBIT+'+StrFPoint(FRM.Deb)+', S_TOTALCREDIT=S_TOTALCREDIT+'+StrFPoint(FRM.Cre)+', '
+                          +'S_TOTDEBE=S_TOTDEBE+'+StrFPoint(FRM.Deb)+', S_TOTCREE=S_TOTCREE+'+StrFPoint(FRM.Cre)+' '
+                          +'WHERE S_AXE="'+FRM.Axe+'" AND S_SECTION="'+FRM.Cpt+'" ' ;
+                   END ;
+
+                end else
+                begin
+                   lStTable := GetTableDossier( FRM.Dossier, 'SECTION') ;
+                   if Not Ano then
+                   BEGIN
+                      SQL:='UPDATE ' + lStTable + ' SET S_DEBITDERNMVT='+StrFPoint(FRM.Deb)+',  S_CREDITDERNMVT='+StrFPoint(FRM.Cre)+', '
+                         +'S_DATEDERNMVT="'+USDateTime(FRM.DateD)+'", S_NUMDERNMVT='+IntToStr(FRM.NumD)+', S_LIGNEDERNMVT='+IntToStr(FRM.LigD)+', '
+                         +'S_TOTALDEBIT=S_TOTALDEBIT+'+StrFPoint(FRM.DE+FRM.DS)+', S_TOTALCREDIT=S_TOTALCREDIT+'+StrFPoint(FRM.CE+FRM.CS)+', '
+                         +'S_TOTDEBE=S_TOTDEBE+'+StrFPoint(FRM.DE)+', S_TOTCREE=S_TOTCREE+'+StrFPoint(FRM.CE)+', '
+                         +'S_TOTDEBS=S_TOTDEBS+'+StrFPoint(FRM.DS)+', S_TOTCRES=S_TOTCRES+'+StrFPoint(FRM.CS)+', '
+                         +'S_TOTDEBP=S_TOTDEBP+'+StrFPoint(FRM.DP)+', S_TOTCREP=S_TOTCREP+'+StrFPoint(FRM.CP)+' '
+                         +'WHERE S_AXE="'+FRM.Axe+'" AND S_SECTION="'+FRM.Cpt+'" ' ;
+                   END else
+                   BEGIN
+                      SQL:='UPDATE ' + lStTable + ' SET S_TOTDEBANO=S_TOTDEBANO+'+StrFPoint(FRM.Deb)+', S_TOTCREANO=S_TOTCREANO+'+StrFPoint(FRM.Cre)+', '
+                          +'S_TOTALDEBIT=S_TOTALDEBIT+'+StrFPoint(FRM.Deb)+', S_TOTALCREDIT=S_TOTALCREDIT+'+StrFPoint(FRM.Cre)+', '
+                          +'S_TOTDEBE=S_TOTDEBE+'+StrFPoint(FRM.Deb)+', S_TOTCREE=S_TOTCREE+'+StrFPoint(FRM.Cre)+' '
+                          +'WHERE S_AXE="'+FRM.Axe+'" AND S_SECTION="'+FRM.Cpt+'" ' ;
+                   END ;
+                end;
                end ;
        fbJal : begin
                lStTable := GetTableDossier( FRM.Dossier, 'JOURNAL') ;

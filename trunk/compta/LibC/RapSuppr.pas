@@ -36,7 +36,7 @@ uses
 {$IFNDEF GCGC}
   RappType, // TInfoMvt
 {$ENDIF}
-  UTob
+  UTob, TntButtons, TntGrids
   ;
 
 Procedure RapportdeSuppression(Laliste : TList ; OkSupp : Byte) ;

@@ -1,6 +1,6 @@
 object FFacture: TFFacture
-  Left = 24
-  Top = 42
+  Left = 287
+  Top = 53
   Width = 1011
   Height = 698
   HelpContext = 119000017
@@ -3177,6 +3177,8 @@ object FFacture: TFFacture
             Width = 28
             Height = 27
             Hint = 'Voir les totalisations documents'
+            Glyph.Data = {00000000}
+            GlyphMask.Data = {00000000}
             ImageIndex = 0
             Images = HimgTOT
             Opaque = False
@@ -3459,6 +3461,9 @@ object FFacture: TFFacture
         '0\fnil Times New Roman;}}'
       '{\*\generator Riched20 6.3.9600}\viewkind4\uc1 '
       '\pard\f0\fs20 '
+      '\par '
+      '\par '
+      '\par '
       '\par '
       '\par '
       '\par '
@@ -4875,6 +4880,9 @@ object FFacture: TFFacture
         '\par '
         '\par '
         '\par '
+        '\par '
+        '\par '
+        '\par '
         '\par }')
     end
   end
@@ -5162,6 +5170,13 @@ object FFacture: TFFacture
     OwnerDraw = True
     Left = 44
     Top = 301
+    object POPYTS: TMenuItem
+      Caption = 'Avenants / TS'
+      OnClick = POPYTSClick
+    end
+    object SEPNN: TMenuItem
+      Caption = '-'
+    end
     object RepriseAvancPreGlob: TMenuItem
       Caption = 'Reprise avancement situation pr'#233'c'#233'dente'
       Visible = False

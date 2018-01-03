@@ -4024,7 +4024,13 @@ BEGIN
   begin
     FF:=TForm(CC.Owner) ;
     CodeAxe := thvalcombobox(cc).value;
-    THEdit(GetFromNam('SO_BTCPTANALSTOCK',FF)).DataType := 'TZSECTION'+Copy(CodeAxe,2,1);;
+    if VH^.LiaisonY2ViaShare then
+    begin
+      THEdit(GetFromNam('SO_BTCPTANALSTOCK',FF)).DataType := 'TZCSECTION'+Copy(CodeAxe,2,1);;
+    end else
+    begin
+      THEdit(GetFromNam('SO_BTCPTANALSTOCK',FF)).DataType := 'TZSECTION'+Copy(CodeAxe,2,1);;
+    end;
   end else if NamChpExit='SO_OPTANALSTOCK' then
   begin
     FF:=TForm(CC.Owner) ;

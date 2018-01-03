@@ -24,8 +24,8 @@ object FRapsuppr: TFRapsuppr
   object FListe2: THGrid
     Left = 0
     Top = 0
-    Width = 592
-    Height = 171
+    Width = 584
+    Height = 166
     Align = alClient
     DefaultRowHeight = 18
     FixedCols = 0
@@ -60,8 +60,8 @@ object FRapsuppr: TFRapsuppr
   object FListe: THGrid
     Left = 0
     Top = 0
-    Width = 592
-    Height = 171
+    Width = 584
+    Height = 166
     Align = alClient
     ColCount = 3
     DefaultRowHeight = 18
@@ -91,8 +91,8 @@ object FRapsuppr: TFRapsuppr
   end
   object Pbouton: TPanel
     Left = 0
-    Top = 171
-    Width = 592
+    Top = 166
+    Width = 584
     Height = 35
     Align = alBottom
     BevelInner = bvLowered
@@ -114,7 +114,7 @@ object FRapsuppr: TFRapsuppr
       WordWrap = True
     end
     object Panel1: TPanel
-      Left = 459
+      Left = 451
       Top = 2
       Width = 131
       Height = 31

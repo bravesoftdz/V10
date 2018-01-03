@@ -207,7 +207,7 @@ Type
                ttdAdresse, ttdRevision, ttdVariable, ttdLigneCompl, TtdLignePhase,
                TTdRepartmill,ttdLigneBase,ttdOuvrageP,ttdLignefac,ttdVarDoc,ttdLigneMetre,
                ttdPieceTrait,ttdTimbres,ttdLigneOUVP,ttdPieceInterv,ttdPieceDemPrix,TTdArticleDemPrix,
-               TtdDetailDemPrix,TtdFournDemprix,ttdVteColl,ttdReajAnal,ttdEntRAnal);
+               TtdDetailDemPrix,TtdFournDemprix,ttdVteColl,ttdReajAnal,ttdEntRAnal,ttdTSPOC,ttdTSDetPOC);
 
   TCaligment = (TalLeft,TalCenter,TalRight);
   TListeTypeDat =(TCNomChps,TClibChps,TClargChps,TCAligmentChps,TCNumChps);
@@ -574,7 +574,12 @@ procedure GetInfoChamps (NomChamps : string;var TypeInfo : string;  var Libelle 
 var QQ : TQuery;
     NBC : integer;
 begin
-  if NomChamps = 'POURCENTMARG' then
+  if NomChamps = 'SUMTOTALTS' then
+  begin
+    Libelle:= 'Total TS';
+    TypeInfo := 'DOUBLE';
+    Taille := 12;
+  end else if NomChamps = 'POURCENTMARG' then
   begin
     Libelle:= '% Marge';
     TypeInfo := 'RATE';

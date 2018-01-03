@@ -138,7 +138,7 @@ Type
 
 Implementation
 
-uses TntStdCtrls;
+uses TntStdCtrls,EntGC;
 
 function CompareNames(Item1, Item2: Pointer): Integer;
 begin
@@ -452,6 +452,7 @@ var UneListe,UnRecord,UR,UnChamps,Modif,Libelle,TypeInfo : string;
     UnElt : TChps;
 begin
   UneListe := LISTCHPS;
+  if VH_GC.BTCODESPECIF = '001' then UneListe := UneListe + ';SUMTOTALTS|N'; // ajout colonne total des avenants sur ligne pour POC
   repeat
     UnRecord := READTOKENST(UneListe);
     if Unrecord <> '' then

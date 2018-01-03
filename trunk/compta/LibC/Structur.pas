@@ -15,7 +15,7 @@ uses
   {$IFNDEF DBXPRESS} dbtables, {$ELSE} uDbxDataSet, {$ENDIF}
   Hctrls, ComCtrls, SaisComm,
   ExtCtrls, Buttons, DBCtrls, HCompte, HEnt1, HDB, HSysMenu, Hqry, HTB97, HPanel, UiUtil, PrintDBG,
-  ADODB ;
+  ADODB, TntDBGrids ;
 
 Procedure ParamPlanAnal(Faxe : String) ;
 

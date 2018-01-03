@@ -404,7 +404,14 @@ if Cpt ='' then BEGIN Exit; Result := False; END;
 VenteAchat:=GetInfoParPiece(TobPiece.getvalue('GP_NATUREPIECEG'),'GPP_VENTEACHAT') ;
 
 // mcd 21/11/02 teste en plus axe ... idem fct créersectionvolee if ExisteSQL('Select S_SECTION from SECTION where S_SECTION="'+ Cpt + '"') then exit;
-if ExisteSQL('Select S_SECTION from SECTION where S_SECTION="'+ Cpt +'" AND S_AXE="A'+IntToStr(NumA)+'"') then exit;
+if VH^.LiaisonY2ViaShare then
+begin
+  if ExisteSQL('Select CSP_SECTION from SECTION where CSP_SECTION="'+ Cpt +'" AND S_AXE="A'+IntToStr(NumA)+'"') then exit;
+end else
+begin
+  if ExisteSQL('Select S_SECTION from SECTION where S_SECTION="'+ Cpt +'" AND S_AXE="A'+IntToStr(NumA)+'"') then exit;
+
+end;
 // *** Création de la section ***
 // Définition du libellé analytique (par Etab + Axe puis par Axe seul)
 if Etab <> '' then
@@ -418,7 +425,7 @@ Result := CreerSectionVolee ( Cpt,Libelle,NumA );
 if Result then
     BEGIN
     // Création des sous sections associées
-    CreatLesSousSections (NumA,Cpt,TobStrucCode,TOBPiece,TOBL,TOBA,TOBTiers );
+    if not VH^.LiaisonY2ViaShare then CreatLesSousSections (NumA,Cpt,TobStrucCode,TOBPiece,TOBL,TOBA,TOBTiers );
     END;
 TobStrucLib.Free;
 END;
