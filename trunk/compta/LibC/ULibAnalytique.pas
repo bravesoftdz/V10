@@ -2746,7 +2746,7 @@ begin
       else
         FChampAna[i] := Prefix+'_SECTION'
       end
-    else if (TableAna = 'SECTION') or (TableAna = 'ANAGUI') then
+    else if (TableAna = 'SECTION') or (TableAna = 'CSECTION') or(TableAna = 'ANAGUI') then
       begin
       if FAxeCroise then
         begin

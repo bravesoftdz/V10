@@ -645,18 +645,30 @@ if StE=GetEncours.Code then begin DE := XD ; CE := XC; end else
 
 if not(GetAnaCroisaxe) then
 begin
-  if not EstTablePartagee( 'SECTION' ) then
-    begin
-    SQL:='UPDATE SECTION SET S_DEBITDERNMVT='+StrfPoint(XD)+',  S_CREDITDERNMVT='+StrfPoint(XC)+', '
-      +'S_DATEDERNMVT="'+UsDateTime(DateC)+'", S_NUMDERNMVT='+IntToStr(Num)+', S_LIGNEDERNMVT='+IntToStr(Lig)+', '
-      +'S_TOTALDEBIT=S_TOTALDEBIT+'+StrfPoint(XD)+', S_TOTALCREDIT=S_TOTALCREDIT+'+StrfPoint(XC)+', '
-      +'S_TOTDEBE=S_TOTDEBE+'+StrfPoint(DE)+', S_TOTCREE=S_TOTCREE+'+StrfPoint(CE)+', '
-      +'S_TOTDEBS=S_TOTDEBS+'+Strfpoint(DS)+', S_TOTCRES=S_TOTCRES+'+StrfPoint(CS)+', '
-      +'S_TOTDEBP=S_TOTDEBP+'+StrfPoint(DP)+', S_TOTCREP=S_TOTCREP+'+StrfPoint(CP)+' WHERE S_AXE="'+AX+'" AND S_SECTION="'+Section+'"' ;
-    if ExecuteSQL(SQL)<>1
-      then V_PGI.IoError:=oeSaisie ;
-    end
-  else CUpdateCumulsMS( fbSect, Section, Ax, XD, XC, DP, CP, DE, CE, DS, CS, False, aDossier ) ;
+  if VH^.LiaisonY2ViaShare then
+  begin
+    SQL:='UPDATE CSECTION SET CSP_DEBITDERNMVT='+StrfPoint(XD)+',  CSP_CREDITDERNMVT='+StrfPoint(XC)+', '
+      +'CSP_DATEDERNMVT="'+UsDateTime(DateC)+'", CSP_NUMDERNMVT='+IntToStr(Num)+', CSP_LIGNEDERNMVT='+IntToStr(Lig)+', '
+      +'CSP_TOTALDEBIT=CSP_TOTALDEBIT+'+StrfPoint(XD)+', CSP_TOTALCREDIT=CSP_TOTALCREDIT+'+StrfPoint(XC)+', '
+      +'CSP_TOTDEBE=S_TOTDEBE+'+StrfPoint(DE)+', CSP_TOTCREE=CSP_TOTCREE+'+StrfPoint(CE)+', '
+      +'CSP_TOTDEBS=S_TOTDEBS+'+Strfpoint(DS)+', CSP_TOTCRES=CSP_TOTCRES+'+StrfPoint(CS)+', '
+      +'CSP_TOTDEBP=CSP_TOTDEBP+'+StrfPoint(DP)+', CSP_TOTCREP=CSP_TOTCREP+'+StrfPoint(CP)+' WHERE CSP_AXE="'+AX+'" AND CSP_SECTION="'+Section+'"' ;
+    if ExecuteSQL(SQL)<>1 then V_PGI.IoError:=oeSaisie ;
+  end else
+  begin
+    if not EstTablePartagee( 'SECTION' ) then
+      begin
+      SQL:='UPDATE SECTION SET S_DEBITDERNMVT='+StrfPoint(XD)+',  S_CREDITDERNMVT='+StrfPoint(XC)+', '
+        +'S_DATEDERNMVT="'+UsDateTime(DateC)+'", S_NUMDERNMVT='+IntToStr(Num)+', S_LIGNEDERNMVT='+IntToStr(Lig)+', '
+        +'S_TOTALDEBIT=S_TOTALDEBIT+'+StrfPoint(XD)+', S_TOTALCREDIT=S_TOTALCREDIT+'+StrfPoint(XC)+', '
+        +'S_TOTDEBE=S_TOTDEBE+'+StrfPoint(DE)+', S_TOTCREE=S_TOTCREE+'+StrfPoint(CE)+', '
+        +'S_TOTDEBS=S_TOTDEBS+'+Strfpoint(DS)+', S_TOTCRES=S_TOTCRES+'+StrfPoint(CS)+', '
+        +'S_TOTDEBP=S_TOTDEBP+'+StrfPoint(DP)+', S_TOTCREP=S_TOTCREP+'+StrfPoint(CP)+' WHERE S_AXE="'+AX+'" AND S_SECTION="'+Section+'"' ;
+      if ExecuteSQL(SQL)<>1
+        then V_PGI.IoError:=oeSaisie ;
+      end
+    else CUpdateCumulsMS( fbSect, Section, Ax, XD, XC, DP, CP, DE, CE, DS, CS, False, aDossier ) ;
+  end;
 end
 else
 begin
@@ -1420,8 +1432,15 @@ begin
              lPref     := 'T' ;
              end ;
     fbSect : begin
-             lNomTable := 'SECTION' ;
-             lPref     := 'S' ;
+              if VH^.LiaisonY2ViaShare then
+              begin
+               lNomTable := 'CSECTION' ;
+               lPref     := 'CSP' ;
+              end else
+              begin
+               lNomTable := 'SECTION' ;
+               lPref     := 'S' ;
+              end;
              end ;
     else Exit ;
     end ;

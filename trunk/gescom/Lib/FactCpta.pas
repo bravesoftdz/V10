@@ -3590,7 +3590,7 @@ BEGIN
     BEGIN
       sRang:=IntToStr(TOBC.GetValue('GCP_RANG')) ;
       SQLAnal:='SELECT * FROM VENTIL WHERE (V_NATURE like "'+NatV+'%" OR V_NATURE LIKE "ST%") AND V_COMPTE="'+sRang+'"' ;
-      Q:=OpenSQL(SQLAnal,True,-1, '', True) ;
+      Q:=OpenSQL(SQLAnal,True,-1, '', True);
       if Not Q.EOF then
       BEGIN
         TOBEcr:=TOBC.Detail[0] ; TOBStk:=TOBC.Detail[1] ;

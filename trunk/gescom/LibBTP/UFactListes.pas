@@ -528,6 +528,7 @@ var UneListe,UnRecord,UR,UnChamps,Modif : string;
     UnElt : TChps;
 begin
   UneListe := LISTCHPS;
+  if VH_GC.BTCODESPECIF = '001' then UneListe := UneListe + ';SUMTOTALTS|N'; // ajout colonne total des avenants sur ligne pour POC
   repeat
     UnRecord := READTOKENST(UneListe);
     if Unrecord <> '' then

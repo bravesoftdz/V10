@@ -116,13 +116,19 @@ procedure MemoriseChampsSupLigneETL (NaturePiece : string;WithLigneCompl:boolean
 var WithLigneFac : boolean;
 		Sql : String;
     QQ : TQuery;
+    Document : Tdocument;
+
 begin
+  Document := Tdocument.Create;
+  //
+  Document.cledoc.NaturePiece := NaturePiece;
   WithLigneFac := (pos(NaturePiece,'FBT;DAC;FBP;BAC')>0);
-	Sql := MakeSelectLigneBtp (WithLigneCompl,WithEntete,WithLigneFac);
+	Sql := MakeSelectLigneBtp (WithLigneCompl,WithEntete,WithLigneFac,false);
   Sql := Sql + ' WHERE 1=2'; // pour ne recup que la structure
   QQ := OpenSQL(Sql, True,-1, '', True);
   SMemoriseChampsSupLigneETL(QQ);
   ferme (QQ);
+  Document.Free;
 end;
 
 

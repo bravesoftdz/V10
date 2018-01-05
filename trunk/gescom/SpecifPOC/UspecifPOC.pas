@@ -31,9 +31,11 @@ function GetInfoMarcheST(Affaire,Fournisseur,CodeMarche,Champs : string) : Varia
 procedure LibereMemContratST;
 procedure AppelsBAST;
 function GetNextNumSituation (TOBPiece : TOB) : integer;
+procedure LoadLesTOBTS (Cledoc : R_CLEDOC;TOBTSPOC : TOB);
+procedure GestionTsPOC(OneTOB,TOBTSPOC : TOB);
 
 implementation
-uses FactComm,UtilPGI,FactTOB,FactPiece,FactRG,FactUtil,ParamSOc,ENt1,AglInit,M3FP,cbpPath,LicUtil;
+uses FactComm,UtilPGI,FactTOB,FactPiece,FactRG,FactUtil,ParamSOc,ENt1,AglInit,M3FP,cbpPath,LicUtil,UtilTOBPiece;
 
 procedure GetCoefPoc (Affaire : string; var COEFFG,COEFMARGE : double);
 var fCOEFFG,COEFFS,COEFSAV,COEFFD : double;
@@ -480,6 +482,84 @@ begin
   ServerName := GetServerName;
   TheLance := IncludeTrailingBackslash(TcbpPath.GetCegid)+'Specif-POC\APP\MarcheST.exe /userLSE='+V_PGI.User +' /Serveur='+ServerName+' /EmailPwd='+EmailPasswd+' /BaseDeDonnees='+DBName+' /Action=S';
   FileExecAndWait (TheLance);
+end;
+
+function CreTOBTS (TheNumOrdre : string; TOBTSPOC : TOB) : TOB;
+begin
+  result := TOB.Create('UNE LIGNE',TOBTSPOC,-1);
+  result.AddChampSupValeur('NUMORDRE',TheNumOrdre);
+  result.AddChampSupValeur('TOTALTS',0);
+  result.AddChampSupValeur('MODIFIED','-');
+end;
+
+procedure LoadLesTOBTS (Cledoc : R_CLEDOC;TOBTSPOC : TOB);
+var QQ : TQuery;
+    SQL : String;
+    TOBDET,TOBT,TOBE,TOBED,TOBEP,TOBDT : TOB;
+    II : Integer;
+    LastRef,TheRef : string;
+    LastFather : TOB;
+begin
+  if (Cledoc.NaturePiece <> 'BCE') or (VH_GC.BTCODESPECIF <> '001') then Exit;
+  LastFather := nil;
+  LastRef := '';
+  TOBDET := TOB.Create ('LES DETAILS',nil,-1);
+  TOBE := TOB.Create ('LES Ent',nil,-1);
+  //
+  SQL := 'SELECT * FROM BLIGNEETS WHERE '+WherePiece(Cledoc,ttdTSPOC,false);
+  QQ := OpenSQL(SQL,true,-1,'',true);
+  if not QQ.eof then TOBE.LoadDetailDB('BLIGNEETS','','',QQ,false);
+  ferme (QQ);
+  if TOBE.detail.count > 0 then
+  begin
+    repeat
+      TOBED := TOBE.detail[0];
+      TheRef := TOBED.GetString('BLE_NUMORDRE');
+      TOBEP := TOBTSPOC.findfirst(['NUMORDRE'],[TheRef],True);
+      if TOBEP = nil then
+      begin
+        TOBEP := CreTOBTS (TheRef,TOBTSPOC);
+      end;
+      TOBED.ChangeParent(TOBEP,-1);
+      TOBEP.SetDouble('TOTALTS',TOBEP.GetDouble('TOTALTS')+TOBED.GetDouble('BLE_MONTANT'));
+    until TOBE.Detail.count =0;
+    //
+    SQL := 'SELECT * FROM BLIGNETS WHERE '+WherePiece(Cledoc,ttdTSDetPOC,false);
+    QQ := OpenSQL(SQL,true,-1,'',true);
+    if not QQ.eof then TOBDET.LoadDetailDB('BLIGNETS','','',QQ,false);
+    ferme (QQ);
+    if not TOBDET.detail.Count <> 0 then
+    begin
+      repeat
+        TOBT := TOBDET.detail[0];
+        TheRef := TOBT.GetString('BLT_NUMORDRE');
+        TOBEP := TOBTSPOC.findfirst(['NUMORDRE'],[TheRef],True);
+        if TOBEP = nil then BEGIN TOBT.Free; Continue; end;  // pas de ligne associée ????
+        TOBDT := TOBEP.FindFirst(['BLE_REFERENCETS'],[TOBT.GetString('BLT_REFERENCETS')],true);
+        if TOBDT = nil then BEGIN TOBT.free; continue; end;// pas de ref ts associé ??
+        TOBT.ChangeParent(TOBDT,-1);
+      until TOBDET.detail.Count = 0;
+    end;
+  end;
+  TOBDET.Free;
+  TOBE.free;
+end;
+
+procedure GestionTsPOC(OneTOB,TOBTSPOC : TOB);
+var TheTOBC : TOB;
+    TheNumOrdre : String;
+begin
+  TheNumOrdre := OneTOB.GetString('GL_NUMORDRE');
+  TheTOBC := TOBTSPOC.findfirst(['NUMORDRE'],[TheNumordre],True);
+  if TheTOBC = nil then
+  begin
+    TheTOBC := CreTOBTS(TheNumOrdre,TOBTSPOC);
+  end;
+  TheTOB := TheTOBC;
+  AGLLanceFiche('BTP','BTMULPOCTS','','','ACTION=MODIFICATION');
+  TheTOB := nil;
+  OneTOB.SetDouble('SUMTOTALTS',TheTOBC.GetDouble('TOTALTS'));
+  if TheTOBC.Detail.count = 0 then TheTOBC.Free;
 end;
 
 

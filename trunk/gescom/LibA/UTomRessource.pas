@@ -219,7 +219,8 @@ uses
   {$ENDIF}
   wCommuns,
   BTPUtil,
-  HrichOle
+  HrichOle,
+  Ent1
   ;
 
 var
@@ -347,7 +348,13 @@ begin
      end;
 
   CodeAxe := GetparamSocSecur('SO_BTAXEANALSTOCK','TX1');
-  THEdit(GetControl('BRS_SECTION')).DataType := 'TZSECTION'+Copy(CodeAxe,2,1);
+  if VH^.LiaisonY2ViaShare then
+  begin
+    THEdit(GetControl('BRS_SECTION')).DataType := 'TZCSECTION'+Copy(CodeAxe,2,1);
+  end else
+  begin
+    THEdit(GetControl('BRS_SECTION')).DataType := 'TZSECTION'+Copy(CodeAxe,2,1);
+  end;
 
 //uniquement en line
 //  if (GetControl('ARS_CALCULPR') <> nil) then  SetControlText('ARS_CALCULPR', 'X');

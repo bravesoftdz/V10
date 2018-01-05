@@ -1782,7 +1782,13 @@ Begin
       SetControlProperty('BAppelVariable', 'Visible', False);
      end;
      CodeAxe := GetparamSocSecur('SO_BTAXEANALSTOCK','TX1');
-     THDbEdit(GetControl('GA_SECTION')).DataType := 'TZSECTION'+Copy(CodeAxe,2,1);
+      if VH^.LiaisonY2ViaShare then
+      begin
+        THDbEdit(GetControl('GA_SECTION')).DataType := 'TZCSECTION'+Copy(CodeAxe,2,1);
+      end else
+      begin
+        THDbEdit(GetControl('GA_SECTION')).DataType := 'TZSECTION'+Copy(CodeAxe,2,1);
+      end;
      end
   Else if (copy(ecran.name, 1, 13) = 'BTARTPOURCENT') then
      Begin

@@ -154,7 +154,7 @@ type
   }
 
 implementation
-uses TiersUtil;
+uses TiersUtil,UtilPgi,ENt1;
 
 {***********A.G.L.Privé.*****************************************
 Auteur  ...... : Paie Pgi
@@ -528,15 +528,29 @@ begin
   //   PT2 09/10/01 PH Rajout traitement ligne Analytique
   if GetParamSoc('SO_PGANALYTIQUE') then // PT24
   begin
-    st := 'SELECT S_AXE,S_SECTION FROM SECTION ORDER BY S_AXE,S_SECTION';
-    Q := opensql(st, true);
-    if not Q.eof then
+    if VH^.LiaisonY2ViaShare then
     begin
-      Tob_section := TOB.Create('Table des sections', nil, -1);
-      if tob_section <> nil then
-        Tob_section.loaddetaildb('SECTION', '', '', Q, false, false, -1, 0);
+      st := 'SELECT CSP_AXE,CSP_SECTION FROM CSECTION ORDER BY CSP_AXE,CSP_SECTION';
+      Q := opensql(st, true);
+      if not Q.eof then
+      begin
+        Tob_section := TOB.Create('Table des sections', nil, -1);
+        if tob_section <> nil then
+          Tob_section.loaddetaildb('CSECTION', '', '', Q, false, false, -1, 0);
+      end;
+      Ferme(Q);
+    end else
+    begin
+      st := 'SELECT S_AXE,S_SECTION FROM SECTION ORDER BY S_AXE,S_SECTION';
+      Q := opensql(st, true);
+      if not Q.eof then
+      begin
+        Tob_section := TOB.Create('Table des sections', nil, -1);
+        if tob_section <> nil then
+          Tob_section.loaddetaildb('SECTION', '', '', Q, false, false, -1, 0);
+      end;
+      Ferme(Q);
     end;
-    Ferme(Q);
   end;
   // FIN PT2
   while not Eof(F) do //Deuxieme passage
@@ -1333,47 +1347,80 @@ function TOF_PGIMPORTFIC.ExisteSection(Axe, Section, LibSect: string): boolean;
 var
   T, T1: tob;
   ll: Integer;
+  SousSection : string;
 begin
   result := false;
-  //  if not PgImpnotVide(tob_section, true) then exit; // PT24
   T := Tob_section.findfirst(['S_AXE', 'S_SECTION'], [Axe, Section], true);
   if T = nil then
   begin
     // PT14   04/06/2003 PH Création automatique des sections analytiques lors de l'import si autorisé
     if GetParamSoc('SO_PGCREATIONSECTION') then // PT24
     begin
-      T := TOB.Create('LES SECTIONS', nil, -1);
-      // PT15   25/08/2003 PH Correction creation automatique des sections analytiques
-      T1 := TOB.Create('SECTION', T, -1);
-      T1.PutValue('S_SECTION', Section);
-      //PT16   28/08/2003 PH Création des sections en récupérant le libellé de la section
-      if LibSect <> '' then
+      if VH^.LiaisonY2ViaShare then
       begin
-        T1.PutValue('S_LIBELLE', LibSect);
-        ll := StrLen(PChar(LibSect));
-        if ll > 17 then ll := 17;
-        if ll > 0 then T1.PutValue('S_ABREGE', Copy(LibSect, 1, ll))
-        else T1.PutValue('S_ABREGE', 'Section paie ');
-      end
-      else
+        SousSection := GetSousSectionUnique (Axe);
+        T := TOB.Create('LES SECTIONS', nil, -1);
+        T1 := TOB.Create('CSECTION', T, -1);
+        T1.PutValue('CSP_SECTION', Section);
+        if LibSect <> '' then
+        begin
+          T1.PutValue('CSP_LIBELLE', LibSect);
+          ll := StrLen(PChar(LibSect));
+          if ll > 17 then ll := 17;
+          if ll > 0 then T1.PutValue('CSP_ABREGE', Copy(LibSect, 1, ll))
+          else T1.PutValue('CSP_ABREGE', 'Section paie ');
+        end
+        else
+        begin
+          T1.PutValue('CSP_LIBELLE', 'Section paie ' + Section);
+          T1.PutValue('CSP_ABREGE', 'Section paie ');
+        end;
+        T1.PutValue('CSP_SECTION',SousSection) ;
+        T1.PutValue('CSP_SENS', 'M');
+        T1.PutValue('CSP_SOLDEPROGRESSIF', 'X');
+        T1.PutValue('CSP_AXE', Axe);
+        // CEGID V9
+        T1.PutValue('CSP_INVISIBLE','-') ;
+        T.InsertDB(nil, FALSE);
+        T1.ChangeParent(Tob_section, -1);
+        Tob_section.Detail.Sort('CSP_AXE;CSP_SECTION');
+        FreeAndNil(T);
+        result := true;
+      end else
       begin
-        T1.PutValue('S_LIBELLE', 'Section paie ' + Section);
-        T1.PutValue('S_ABREGE', 'Section paie ');
-      end;
-      // FIN PT16
-      T1.PutValue('S_SENS', 'M');
-      T1.PutValue('S_SOLDEPROGRESSIF', 'X');
-      T1.PutValue('S_AXE', Axe);
-      // CEGID V9
-      T1.PutValue('S_INVISIBLE','-') ;
-      // ---
+        T := TOB.Create('LES SECTIONS', nil, -1);
+        // PT15   25/08/2003 PH Correction creation automatique des sections analytiques
+        T1 := TOB.Create('SECTION', T, -1);
+        T1.PutValue('S_SECTION', Section);
+        //PT16   28/08/2003 PH Création des sections en récupérant le libellé de la section
+        if LibSect <> '' then
+        begin
+          T1.PutValue('S_LIBELLE', LibSect);
+          ll := StrLen(PChar(LibSect));
+          if ll > 17 then ll := 17;
+          if ll > 0 then T1.PutValue('S_ABREGE', Copy(LibSect, 1, ll))
+          else T1.PutValue('S_ABREGE', 'Section paie ');
+        end
+        else
+        begin
+          T1.PutValue('S_LIBELLE', 'Section paie ' + Section);
+          T1.PutValue('S_ABREGE', 'Section paie ');
+        end;
+        // FIN PT16
+        T1.PutValue('S_SENS', 'M');
+        T1.PutValue('S_SOLDEPROGRESSIF', 'X');
+        T1.PutValue('S_AXE', Axe);
+        // CEGID V9
+        T1.PutValue('S_INVISIBLE','-') ;
+        // ---
 
-      T.InsertDB(nil, FALSE);
-      T1.ChangeParent(Tob_section, -1);
-      Tob_section.Detail.Sort('S_AXE;S_SECTION');
-      FreeAndNil(T);
-      // PT15   25/08/2003 PH Creation section OK
-      result := true;
+        T.InsertDB(nil, FALSE);
+        T1.ChangeParent(Tob_section, -1);
+        Tob_section.Detail.Sort('S_AXE;S_SECTION');
+        FreeAndNil(T);
+        // PT15   25/08/2003 PH Creation section OK
+        result := true;
+      end;
     end
     else // AB 16/10/03
       Writeln(FR, 'Vous n''êtes pas autoriser à créer des sections analytiques dans les paramètres société comptable PAIE.');

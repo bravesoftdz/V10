@@ -58,7 +58,7 @@ Type
     end ;
 
 Implementation
-uses Paramsoc;
+uses Paramsoc,ENt1;
 
 procedure TOM_DEPOTS.OnNewRecord ;
 begin
@@ -108,8 +108,14 @@ begin
 
   CodeDepot := THEdit(Getcontrol('GDE_DEPOT'));
   Bdelete   := TToolBarButton97(Getcontrol('BDELETE'));
- CodeAxe := GetparamSocSecur('SO_BTAXEANALSTOCK','TX1');
- THDbEdit(GetControl('GDE_SECTION')).DataType := 'TZSECTION'+Copy(CodeAxe,2,1);
+  CodeAxe := GetparamSocSecur('SO_BTAXEANALSTOCK','TX1');
+  if VH^.LiaisonY2ViaShare then
+  begin
+    THDbEdit(GetControl('GDE_SECTION')).DataType := 'TZCSECTION'+Copy(CodeAxe,2,1);
+  end else
+  begin
+    THDbEdit(GetControl('GDE_SECTION')).DataType := 'TZSECTION'+Copy(CodeAxe,2,1);
+  end;
 
 end ;
 

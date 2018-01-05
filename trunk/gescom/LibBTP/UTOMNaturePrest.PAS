@@ -49,7 +49,7 @@ const
                      );
 
 Implementation
-uses BTPUtil;
+uses BTPUtil,ENt1;
 
 procedure TOM_NATUREPREST.OnNewRecord ;
 begin
@@ -152,8 +152,14 @@ begin
 
   Code := THedit (ecran.FindComponent ('BNP_NATUREPRES'));
   Code.OnExit := CodeExit;
- CodeAxe := GetparamSocSecur('SO_BTAXEANALSTOCK','TX1');
- THDbEdit(GetControl('BNP_SECTION')).DataType := 'TZSECTION'+Copy(CodeAxe,2,1);
+  CodeAxe := GetparamSocSecur('SO_BTAXEANALSTOCK','TX1');
+  if VH^.LiaisonY2ViaShare then
+  begin
+    THDbEdit(GetControl('BNP_SECTION')).DataType := 'TZCSECTION'+Copy(CodeAxe,2,1);
+  end else
+  begin
+    THDbEdit(GetControl('BNP_SECTION')).DataType := 'TZSECTION'+Copy(CodeAxe,2,1);
+  end;
 end ;
 
 procedure TOM_NATUREPREST.MetPvchange ( Sender : Tobject);

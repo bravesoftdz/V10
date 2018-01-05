@@ -384,13 +384,13 @@ begin
   if WithLigneCompl then
     Sql := MakeSelectLigne;
 {$ENDIF GPAOLIGHT}
+  Document.cledoc := CledocLigne;
 	if FromExcel then
   begin
-		Document.cledoc := CledocLigne;
 		Sql := MakeSelectLigneBtp (WithLigneCompl,false,WithLigneFac,true,Document);
   end else
   begin
-		Sql := MakeSelectLigneBtp (WithLigneCompl,false,WithLigneFac);
+		Sql := MakeSelectLigneBtp (WithLigneCompl,false,WithLigneFac,False,Document);
   end;
   Sql := Sql + ' WHERE ' + WherePiece(CleDocLigne, ttdLigne,QueLaLigne,WithLigneCompl) + ' ORDER BY GL_NUMLIGNE';
   Q := OpenSQL(Sql, True,-1, '', True);
@@ -451,13 +451,14 @@ begin
 end;
 
 function MakeSelectLigneBtp (WithLigneCOmpl : boolean;WithEntetePiece : boolean = false;WithLigneFac : boolean=false;FromExcel : boolean = false;Document : Tdocument = nil) : string;
-var stdocument : string;
+var stdocument,NaturepieceG : string;
 begin
   stDocument := '';
   if (fromExcel) and (Document  <> nil) then
   begin
 		stDocument := EncodeRefPiece (Document.cledoc);
   end;
+  if Document <> nil then NaturepieceG := Document.cledoc.NaturePiece;
   Result := 'SELECT LIGNE.*,N.BNP_TYPERESSOURCE,N.BNP_LIBELLE,';
   if WithLigneCompl then Result := Result + 'LIGNECOMPL.*,';
   if WithLigneFac then result := result + 'LIGNEFAC.*,BLF_MTSITUATION AS OLD_MTSITUATION, BLF_QTESITUATION AS OLD_QTESITUATION,';
@@ -473,6 +474,19 @@ begin
   result := result + 'IIF(GL_COEFMARG=0,0,(GL_COEFMARG -1) * 100) AS POURCENTMARG, ';
   result := result + 'IIF(GL_PUHT=0,0,((GL_PUHT-GL_DPR)/GL_PUHT)*100) AS POURCENTMARQ,';
   result := result + 'IIF(GL_GESTIONPTC="X", GL_MONTANTHTDEV , 0 ) AS MONTANTPTC, (SELECT GA_RELIQUATMT FROM ARTICLE WHERE GA_ARTICLE=GL_ARTICLE) AS GESTRELIQUAT ';
+  if (VH_GC.BTCODESPECIF = '001') and (NaturepieceG ='BCE') then
+  begin
+    Result := Result +','+
+              '('+
+                'SELECT SUM(BLE_MONTANT) '+
+                'FROM BLIGNEETS '+
+                'WHERE '+
+                'BLE_NATUREPIECEG=GL_NATUREPIECEG AND BLE_SOUCHE=GL_SOUCHE AND BLE_NUMERO=GL_NUMERO AND BLE_INDICEG=GL_INDICEG AND BLE_NUMORDRE=GL_NUMORDRE'+
+              ') AS SUMTOTALTS ';
+  end else
+  begin
+    Result := Result +',0 AS SUMTOTALTS ';
+  end;
   if WithLigneCompl Then
   begin
     result := result + ',IIF(SUBSTRING(GL_TYPELIGNE,1,2)="TP",GLC_MTMOPA,(GL_QTEFACT * GLC_MTMOPA)) AS TOTALMOPA,';
@@ -850,6 +864,18 @@ begin
           + ' AND BOP_INDICEG=' + IntToStr(CleDoc.Indice) + ' ';
         if Totale then
           St := St + ' AND BOP_NUMORDRE=' + IntToStr(CleDoc.NumOrdre) + ' ';
+      end;
+	  ttdTSPOC :
+      begin
+        St := ' BLE_NATUREPIECEG="' + CleDoc.NaturePiece + '" AND BLE_SOUCHE="' + CleDoc.Souche + '" '
+          + ' AND BLE_NUMERO=' + IntToStr(CleDoc.NumeroPiece)
+          + ' AND BLE_INDICEG=' + IntToStr(CleDoc.Indice) + ' ';
+      end;
+	  ttdTSDetPOC :
+      begin
+        St := ' BLT_NATUREPIECEG="' + CleDoc.NaturePiece + '" AND BLT_SOUCHE="' + CleDoc.Souche + '" '
+          + ' AND BLT_NUMERO=' + IntToStr(CleDoc.NumeroPiece)
+          + ' AND BLT_INDICEG=' + IntToStr(CleDoc.Indice) + ' ';
       end;
   end;
   Result := St;

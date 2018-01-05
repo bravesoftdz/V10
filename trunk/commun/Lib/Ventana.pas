@@ -181,8 +181,16 @@ for i:=0 to TOBAna.Detail.Count-1 do
     FListe.Cells[0,FListe.RowCount-1]:=IntToStr(TOBA.GetValue('YVA_NUMVENTIL')) ;
     Section:=TOBA.GetValue('YVA_SECTION') ;
     FListe.Cells[1,FListe.RowCount-1]:=Section ;
-    if FListe=FListe1 then FListe.Cells[2,FListe.RowCount-1]:=RechDom('TZSECTION',Section,False)
-                      else FListe.Cells[2,FListe.RowCount-1]:=RechDom('TZSECTION2',Section,False) ;
+    if VH^.LiaisonY2ViaShare then
+    begin
+      if FListe=FListe1 then FListe.Cells[2,FListe.RowCount-1]:=RechDom('TZCSECTION',Section,False)
+                        else FListe.Cells[2,FListe.RowCount-1]:=RechDom('TZCSECTION2',Section,False) ;
+    end else
+    begin
+      if FListe=FListe1 then FListe.Cells[2,FListe.RowCount-1]:=RechDom('TZSECTION',Section,False)
+                        else FListe.Cells[2,FListe.RowCount-1]:=RechDom('TZSECTION2',Section,False) ;
+    end;
+
     FListe.Cells[3,FListe.RowCount-1]:=StrFMontant(TOBA.GetValue('YVA_POURCENTAGE'),15,4,'',TRUE) ;
     FListe.RowCount:=FListe.RowCount+1 ;
     END ;
@@ -342,17 +350,17 @@ BEGIN
 	if GS=FListe1 then
   begin
     Cache.ZoomTable:=tzSection;
-    StType:='tzSection' ;
+    if VH^.LiaisonY2ViaShare then StType:='tzCSection'  else StType:='tzSection' ;
 	end
   else if GS=FListe2 then
   begin
     Cache.ZoomTable:=tzSection2;
-    StType:='tzSection2';
+    if VH^.LiaisonY2ViaShare then StType:='tzCSection2'  else StType:='tzSection2' ;
   end
   else
   begin
     Cache.ZoomTable:=tzSection3;
-    StType:='tzSection3';
+    if VH^.LiaisonY2ViaShare then StType:='tzCSection3'  else StType:='tzSection3' ;
   end;
 
 	if GChercheCompte(Cache,Nil) then
@@ -383,21 +391,52 @@ Var St,sWhere : String ;
     bb   : boolean ;
     StType : String ;
 BEGIN
-ChercheSect:=0 ;
-St:=uppercase(GS.Cells[C,L]) ;
-if GS=FListe1 then BEGIN NumA:=1 ; StType:='tzSection' ; END else
- if GS=FListe2 then BEGIN NumA:=2 ; StType:='tzSection2' ; END else
-    BEGIN NumA:=3 ; StType:='tzSection3' ; END ;
-sWhere:='S_SECTION LIKE "'+St+'%" AND S_AXE="A'+IntToStr(NumA)+'" AND S_FERME<>"X"' ;
-OldCol:=GS.Col ; OldRow:=GS.Row ; GS.Col:=C ; GS.Row:=L ;
-bb:=LookupList(GS,MsgBox.Mess[7],'SECTION','S_SECTION','S_LIBELLE',sWhere,'S_SECTION',True,0) ;
-if bb then
-   BEGIN
-   ChercheSect:=1 ;
-   GS.Cells[2,L]:=RechDom(StType,GS.Cells[C,L],False) ;
-   GS.Col:=OldCol ; GS.Row:=OldRow ;
-   END ;
-END ; 
+  if VH^.LiaisonY2ViaShare then
+  begin
+    ChercheSect:=0 ;
+    St:=uppercase(GS.Cells[C,L]) ;
+    if GS=FListe1 then BEGIN NumA:=1 ; StType:='tzCSection' ; END else
+    if GS=FListe2 then BEGIN NumA:=2 ; StType:='tzCSection2' ; END else
+    BEGIN NumA:=3 ; StType:='tzCSection3' ; END ;
+    sWhere:='CSP_SECTION LIKE "'+St+'%" AND CSP_AXE="A'+IntToStr(NumA)+'" AND CSP_FERME<>"X"' ;
+    OldCol:=GS.Col ; OldRow:=GS.Row ; GS.Col:=C ; GS.Row:=L ;
+    bb:=LookupList(GS,MsgBox.Mess[7],'CSECTION','CSP_SECTION','CSP_LIBELLE',sWhere,'CSP_SECTION',True,0) ;
+    if bb then
+    BEGIN
+      ChercheSect:=1 ;
+      GS.Cells[2,L]:=RechDom(StType,GS.Cells[C,L],False) ;
+      GS.Col:=OldCol ; GS.Row:=OldRow ;
+    END ;
+  end else
+  begin
+    ChercheSect:=0 ;
+    St:=uppercase(GS.Cells[C,L]) ;
+    if GS=FListe1 then BEGIN NumA:=1 ; if VH^.LiaisonY2ViaShare then StType:='tzCSection'  else StType:='tzSection' ; END else
+    if GS=FListe2 then BEGIN NumA:=2 ; if VH^.LiaisonY2ViaShare then StType:='tzCSection2'  else StType:='tzSection2' ; END else
+    BEGIN NumA:=3 ; if VH^.LiaisonY2ViaShare then StType:='tzCSection3'  else StType:='tzSection3'; END ;
+    if VH^.LiaisonY2ViaShare then
+    begin
+      sWhere:='CSP_SECTION LIKE "'+St+'%" AND CSP_AXE="A'+IntToStr(NumA)+'" AND CSP_FERME<>"X"' ;
+    end else
+    begin
+      sWhere:='S_SECTION LIKE "'+St+'%" AND S_AXE="A'+IntToStr(NumA)+'" AND S_FERME<>"X"' ;
+    end;
+    OldCol:=GS.Col ; OldRow:=GS.Row ; GS.Col:=C ; GS.Row:=L ;
+    if VH^.LiaisonY2ViaShare then
+    begin
+      bb:=LookupList(GS,MsgBox.Mess[7],'CSECTION','CSP_SECTION','CSP_LIBELLE',sWhere,'CSP_SECTION',True,0) ;
+    end else
+    begin
+      bb:=LookupList(GS,MsgBox.Mess[7],'SECTION','S_SECTION','S_LIBELLE',sWhere,'S_SECTION',True,0) ;
+    end;
+    if bb then
+    BEGIN
+      ChercheSect:=1 ;
+      GS.Cells[2,L]:=RechDom(StType,GS.Cells[C,L],False) ;
+      GS.Col:=OldCol ; GS.Row:=OldRow ;
+    END ;
+  end;
+END ;
 {$ENDIF}
 {$ENDIF EAGLSERVER}
 
@@ -502,27 +541,51 @@ Var Q : TQuery ;
     ii      : integer ;
     FListe  : THGrid ;
 BEGIN
-if Action=taConsult then Exit ;
-if FType.Value='' then Exit ;
-for ii:=1 to 3 do
+  if Action=taConsult then Exit ;
+  if FType.Value='' then Exit ;
+  if VH^.LiaisonY2ViaShare then
+  begin
+    for ii:=1 to 3 do
     BEGIN
-    if ii=1 then BEGIN FListe:=FListe1 ; StDom:='TZSECTION' ; END else
-     if ii=2 then BEGIN FListe:=FListe2 ; StDom:='TZSECTION2' ; END else
-                   BEGIN FListe:=FListe3 ; StDom:='TZSECTION3' ; END ;
-    FListe.VidePile(True) ;
-    Q:=OpenSQL('SELECT * FROM VENTIL WHERE V_NATURE="TY'+IntToStr(ii)+'" AND V_COMPTE="'+FType.Value+'" ORDER BY V_NUMEROVENTIL',True) ;
-    While Not Q.EOF do
-       BEGIN
-       FListe.Cells[0,FListe.RowCount-1]:=IntToStr(Q.FindField('V_NUMEROVENTIL').AsInteger) ;
-       Section:=Q.FindField('V_SECTION').AsString ;
-       FListe.Cells[1,FListe.RowCount-1]:=Section ;
-       FListe.Cells[2,FListe.RowCount-1]:=RechDom('TZSECTION',Section,False) ;
-       FListe.Cells[3,FListe.RowCount-1]:=StrFMontant(Q.FindField('V_TAUXMONTANT').AsFloat,15,4,'',TRUE) ;
-       FListe.RowCount:=FListe.RowCount+1 ;
-       Q.Next ;
-       END ;
-    Ferme(Q) ;
+      if ii=1 then BEGIN FListe:=FListe1 ; StDom:='TZCSECTION' ; END else
+      if ii=2 then BEGIN FListe:=FListe2 ; StDom:='TZCSECTION2' ; END else
+      BEGIN FListe:=FListe3 ; StDom:='TZCSECTION3' ; END ;
+      FListe.VidePile(True) ;
+      Q:=OpenSQL('SELECT * FROM VENTIL WHERE V_NATURE="TY'+IntToStr(ii)+'" AND V_COMPTE="'+FType.Value+'" ORDER BY V_NUMEROVENTIL',True) ;
+      While Not Q.EOF do
+      BEGIN
+        FListe.Cells[0,FListe.RowCount-1]:=IntToStr(Q.FindField('V_NUMEROVENTIL').AsInteger) ;
+        Section:=Q.FindField('V_SECTION').AsString ;
+        FListe.Cells[1,FListe.RowCount-1]:=Section ;
+        FListe.Cells[2,FListe.RowCount-1]:=RechDom('TZCSECTION',Section,False) ;
+        FListe.Cells[3,FListe.RowCount-1]:=StrFMontant(Q.FindField('V_TAUXMONTANT').AsFloat,15,4,'',TRUE) ;
+        FListe.RowCount:=FListe.RowCount+1 ;
+        Q.Next ;
+      END ;
+      Ferme(Q) ;
     END ;
+  end else
+  begin
+    for ii:=1 to 3 do
+    BEGIN
+      if ii=1 then BEGIN FListe:=FListe1 ; StDom:='TZSECTION' ; END else
+      if ii=2 then BEGIN FListe:=FListe2 ; StDom:='TZSECTION2' ; END else
+      BEGIN FListe:=FListe3 ; StDom:='TZSECTION3' ; END ;
+      FListe.VidePile(True) ;
+      Q:=OpenSQL('SELECT * FROM VENTIL WHERE V_NATURE="TY'+IntToStr(ii)+'" AND V_COMPTE="'+FType.Value+'" ORDER BY V_NUMEROVENTIL',True) ;
+      While Not Q.EOF do
+      BEGIN
+        FListe.Cells[0,FListe.RowCount-1]:=IntToStr(Q.FindField('V_NUMEROVENTIL').AsInteger) ;
+        Section:=Q.FindField('V_SECTION').AsString ;
+        FListe.Cells[1,FListe.RowCount-1]:=Section ;
+        FListe.Cells[2,FListe.RowCount-1]:=RechDom('TZSECTION',Section,False) ;
+        FListe.Cells[3,FListe.RowCount-1]:=StrFMontant(Q.FindField('V_TAUXMONTANT').AsFloat,15,4,'',TRUE) ;
+        FListe.RowCount:=FListe.RowCount+1 ;
+        Q.Next ;
+      END ;
+      Ferme(Q) ;
+    END ;
+  end;
 end;
 
 procedure TFVentAna.BFermerClick(Sender: TObject);

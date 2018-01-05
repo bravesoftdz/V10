@@ -1470,6 +1470,7 @@ VH_GC.MTobParPieceDomaine.load;
 VH_GC.MTOBParPieceComp.Load;
 VH_GC.MGCTobDim.load;
 VH_GC.MGCTobAna.load;
+VH_GC.MGCTOBAna.Detail.Sort('GDA_AXE;GDA_ETABLISSEMENT;GDA_TYPESTRUCRANA;GDA_TYPECOMPTE');
 VH_GC.MTobChpsOblig.load;
 VH_GC.MTobMEA.Load;
 end;

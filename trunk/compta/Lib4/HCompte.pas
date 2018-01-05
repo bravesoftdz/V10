@@ -126,6 +126,7 @@ Type TGSection = Class
        Confidentiel : String[1] ;
        constructor create(StCompte : String ; StAxe : TZoomTable) ;
        Procedure QueryToSection ( S_Query : TQuery ) ;
+       procedure QueryY2ToSection(S_Query: TQuery);
        end ;
 
 Type TGBudSect = Class
@@ -245,6 +246,7 @@ function  LongMax ( fb : TFichierBase ) : integer ;
 function  SelectGene : String ;
 function  SelectAuxi : String ;
 function  SelectSection : String ;
+function SelectSectionY2 : String ;
 function  SelectBudSect : String ;
 function  SelectBudGene : String ;
 Function  RecupWhere( tt : TZoomTable) : string ;
@@ -448,11 +450,26 @@ Case tt Of
   tzJAna4       : Result:='AND J_NATUREJAL="ODA" AND J_AXE="A4"' ;
   tzJAna5       : Result:='AND J_NATUREJAL="ODA" AND J_AXE="A5"' ;
   {Sections}
-  tzSection     : Result:='AND S_AXE="A1"' ;
-  tzSection2    : Result:='AND S_AXE="A2"' ;
-  tzSection3    : Result:='AND S_AXE="A3"' ;
-  tzSection4    : Result:='AND S_AXE="A4"' ;
-  tzSection5    : Result:='AND S_AXE="A5"' ;
+  tzSection     : begin
+                    if VH^.LiaisonY2ViaShare then Result:='AND CSP_AXE="A1"'
+                                             else Result:='AND S_AXE="A1"' ;
+                  end;
+  tzSection2    : begin
+                    if VH^.LiaisonY2ViaShare then Result:='AND CSP_AXE="A2"'
+                                             else Result:='AND S_AXE="A2"' ;
+                  end;
+  tzSection3    : begin
+                    if VH^.LiaisonY2ViaShare then Result:='AND CSP_AXE="A3"'
+                                             else Result:='AND S_AXE="A3"' ;
+                  end;
+  tzSection4    : begin
+                    if VH^.LiaisonY2ViaShare then Result:='AND CSP_AXE="A4"'
+                                             else Result:='AND S_AXE="A4"' ;
+                  end;
+  tzSection5    : begin
+                    if VH^.LiaisonY2ViaShare then Result:='AND CSP_AXE="A5"'
+                                             else Result:='AND S_AXE="A5"' ;
+                  end;
   {Budget}
   tzBudGenAtt   : Result:='AND BG_ATTENTE="X"' ;
   tzBudSecAtt1  : Result:='AND BS_ATTENTE="X" AND BS_AXE="A1"' ;
@@ -595,7 +612,13 @@ Case tt Of
     // Sections
     tzSection, tzSection2, tzSection3, tzSection4, tzSection5 :
                begin
-               Result := Result + ' AND S_FERME="-"';
+                 if VH^.LiaisonY2ViaShare then
+                 begin
+                  Result := Result + ' AND CSP_FERME="-"';
+                 end else
+                 begin
+                  Result := Result + ' AND S_FERME="-"';
+                 end;
                end ;
     // Journaux
     tzJournal,tzJvente,tzJachat,tzJbanque,tzJcaisse,tzJOD,tzJAN,tzJCloture,
@@ -624,7 +647,15 @@ Case tt Of
   Case CaseFic(tt) of
      fbGene   : nc:='GENERAUX' ;
      fbAux    : nc:='TIERS' ;
-     fbAxe1..fbAxe5 : nc:='SECTION' ;
+     fbAxe1..fbAxe5 : begin
+                        if VH^.LiaisonY2ViaShare then
+                        begin
+                          nc:='CSECTION' ;
+                        end else
+                        begin
+                          nc:='SECTION' ;
+                        end;
+                      end;
      fbBudGen : nc:='BUDGENE' ;
      fbBudSec1..fbBudSec5 : nc:='BUDSECT' ;
      else nc:='' ;
@@ -716,7 +747,19 @@ else if (ZoomTable in [tzSection, tzSection2, tzSection3, tzSection4, tzSection5
 Case Casefic(ZoomTable) Of
   fbGene         : BEGIN FNomCode:='G_GENERAL'      ; FNomLibelle:='G_LIBELLE' ; FNomTable:='GENERAUX' ; END ;
   fbAux          : BEGIN FNomCode:='T_AUXILIAIRE'   ; FNomLibelle:='T_LIBELLE' ; FNomTable:='TIERS'    ; END ;
-  fbAxe1..fbAxe5 : BEGIN FNomCode:='S_SECTION'      ; FNomLibelle:='S_LIBELLE' ; FNomTable:='SECTION'  ; END ;
+  fbAxe1..fbAxe5 : BEGIN
+                    if VH^.LiaisonY2ViaShare then
+                    begin
+                      FNomCode:='CSP_SECTION'      ;
+                      FNomLibelle:='CSP_LIBELLE' ;
+                      FNomTable:='CSECTION'  ;
+                    end else
+                    begin
+                      FNomCode:='S_SECTION'      ;
+                      FNomLibelle:='S_LIBELLE' ;
+                      FNomTable:='SECTION'  ;
+                    end;
+                  END ;
   fbJal          : BEGIN FNomCode:='J_JOURNAL'      ; FNomLibelle:='J_LIBELLE' ; FNomTable:='JOURNAL'  ; END ;
   fbBudGen       : BEGIN FNomCode:='BG_BUDGENE'     ; FNomLibelle:='BG_LIBELLE' ; FNomTable:='BUDGENE'   ; END ;
   fbBudSec1..fbBudSec5 : BEGIN FNomCode:='BS_BUDSECT'     ; FNomLibelle:='BS_LIBELLE' ; FNomTable:='BUDSECT'   ; END ;
@@ -1015,7 +1058,15 @@ begin
                       else QuelChamp := 'T_AUXILIAIRE' ;
                      SQL:='SELECT T_AUXILIAIRE, T_LIBELLE From TIERS WHERE ' + QuelChamp ;
                      end ;
-    fbAxe1..fbAxe5 : SQL:='SELECT S_SECTION, S_LIBELLE From SECTION WHERE S_SECTION' ;
+    fbAxe1..fbAxe5 : BEGIN
+                        if VH^.LiaisonY2ViaShare then
+                        begin
+                          SQL:='SELECT CSP_SECTION, CSP_LIBELLE From CSECTION WHERE CSP_SECTION' ;
+                        end else
+                        begin
+                          SQL:='SELECT S_SECTION, S_LIBELLE From SECTION WHERE S_SECTION' ;
+                        end;
+                     END;
     fbJal          : SQL:='SELECT J_JOURNAL, J_LIBELLE From JOURNAL WHERE J_JOURNAL' ;
     fbBudGen       : SQL:='SELECT BG_BUDGENE, BG_LIBELLE From BUDGENE WHERE BG_BUDGENE' ;
     fbBudSec1..fbBudSec5 : SQL:='SELECT BS_BUDSECT, BS_LIBELLE From BUDSECT WHERE BS_BUDSECT' ;
@@ -1514,6 +1565,20 @@ BEGIN
   BudSect				:= S_Query.FindField('S_BUDSECT').AsString ;
 END ;
 
+Procedure TGSection.QueryY2ToSection ( S_Query : TQuery ) ;
+BEGIN
+// Modif eAGL (Fields remplacer par FindField)
+  Axe						:= S_Query.FindField('CSP_AXE').AsString ;
+  Sect					:= S_Query.FindField('CSP_SECTION').AsString ;
+  Libelle				:= S_Query.FindField('CSP_LIBELLE').AsString ;
+  TotalDebit		:= S_Query.FindField('CSP_TOTALDEBIT').AsFloat ;
+  TotalCredit		:= S_Query.FindField('CSP_TOTALCREDIT').AsFloat ;
+  Ferme					:= S_Query.FindField('CSP_FERME').AsString='X' ;
+  Abrege				:= S_Query.FindField('CSP_ABREGE').AsString ;
+  Confidentiel	:= S_Query.FindField('CSP_CONFIDENTIEL').AsString ;
+  BudSect				:= S_Query.FindField('CSP_BUDSECT').AsString ;
+END ;
+
 Constructor TGSection.Create(StCompte : String ; StAxe : TZoomTable) ;
 Var S_Query : TQuery ;
 BEGIN
@@ -1526,11 +1591,19 @@ Case StAxe Of
 Sect:='' ; Libelle:='' ; TotalDebit:=0 ; TotalCredit:=0 ;
 if StCompte='' then exit ;
 // Modif eAGL
-  if EstTablePartagee( 'SECTION' )
-    then S_Query := OpenSQL(SelectSection + ' FROM SECTIONMS WHERE S_SECTION="'+StCompte+'" AND S_AXE="'+AXE+'"', True,-1, '', True)
-    else S_Query := OpenSQL(SelectSection + ' FROM SECTION WHERE S_SECTION="'+StCompte+'" AND S_AXE="'+AXE+'"', True,-1, '', True);
-  If Not S_Query.Eof Then QueryToSection(S_Query) ;
-  HCtrls.Ferme(S_Query);
+  if VH^.LiaisonY2ViaShare then
+  begin
+    S_Query := OpenSQL(SelectSectionY2 + ' FROM CSECTION WHERE CSP_SECTION="'+StCompte+'" AND CSP_AXE="'+AXE+'"', True,-1, '', True);
+    If Not S_Query.Eof Then QueryY2ToSection(S_Query) ;
+    HCtrls.Ferme(S_Query);
+  end else
+  begin
+    if EstTablePartagee( 'SECTION' )
+      then S_Query := OpenSQL(SelectSection + ' FROM SECTIONMS WHERE S_SECTION="'+StCompte+'" AND S_AXE="'+AXE+'"', True,-1, '', True)
+      else S_Query := OpenSQL(SelectSection + ' FROM SECTION WHERE S_SECTION="'+StCompte+'" AND S_AXE="'+AXE+'"', True,-1, '', True);
+    If Not S_Query.Eof Then QueryToSection(S_Query) ;
+    HCtrls.Ferme(S_Query);
+  end;
 END ;
 
 {=====================================================================}
@@ -1635,6 +1708,11 @@ END ;
 function SelectSection : String ;
 BEGIN
 SelectSection:='Select S_AXE, S_SECTION, S_LIBELLE, S_TOTALDEBIT, S_TOTALCREDIT, S_FERME , S_ABREGE, S_CONFIDENTIEL, S_BUDSECT ' ;
+END ;
+
+function SelectSectionY2 : String ;
+BEGIN
+  Result :='Select CSP_AXE, CSP_SECTION, CSP_LIBELLE, CSP_TOTALDEBIT, CSP_TOTALCREDIT, CSP_FERME , CSP_ABREGE, CSP_CONFIDENTIEL, CSP_BUDSECT ' ;
 END ;
 
 function SelectBudSect : String ;
@@ -1887,10 +1965,19 @@ begin
                      end ;
     // Axes analytiques
     fbAxe1..fbAxe5 : begin
-                     vStTable   := 'SECTION' ;
-                     vStColonne := 'S_SECTION' ;
-                     vStSelect  := 'S_LIBELLE' ;
-                     vStOrder   := 'S_SECTION' ;
+                      if VH^.LiaisonY2ViaShare then
+                      begin
+                       vStTable   := 'CSECTION' ;
+                       vStColonne := 'CSP_SECTION' ;
+                       vStSelect  := 'CSP_LIBELLE' ;
+                       vStOrder   := 'CSP_SECTION' ;
+                      end else
+                      begin
+                       vStTable   := 'SECTION' ;
+                       vStColonne := 'S_SECTION' ;
+                       vStSelect  := 'S_LIBELLE' ;
+                       vStOrder   := 'S_SECTION' ;
+                      end;
                      end ;
     // Journaux
     fbJal          : begin

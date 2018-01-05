@@ -547,6 +547,8 @@ type
     MnBSVVISU: TMenuItem;
     BGED: TToolbarButton97;
     PAIESTPOC: TMenuItem;
+    SEPNN: TMenuItem;
+    POPYTS: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -787,6 +789,7 @@ type
     procedure BZoomCatalogClick(Sender: TObject);
     procedure MnBSVVISUClick(Sender: TObject);
     procedure MnBSVSTOCKEClick(Sender: TObject);
+    procedure POPYTSClick(Sender: TObject);
 //    procedure TImprimableClick(Sender: TObject);
 
   private
@@ -1006,6 +1009,7 @@ type
     TOBrevisions : TOB;
     TOBEvtsMat : TOB;
     TOBVTECOLLECTIF : TOB;
+    TOBTSPOC : TOB;
     // MODIF BTP
     PresentSousDetail : integer;
     ModifSousDetail   : boolean;
@@ -2445,7 +2449,7 @@ begin
   TOBrevisions.SetAllModifie(false);
   TOBEvtsMat.SetAllModifie(false);
   // -----
-  
+  TOBTSPOC.SetAllModifie(false);
 end;
 
 procedure TFFacture.InitToutModif(Datemaj : TdateTime = 0);
@@ -2499,6 +2503,7 @@ begin
   TOBrevisions.SetAllModifie(true);
   //
   TOBCpta.clearDetail;
+  TOBTSPOC.SetAllModifie(true); 
 end;
 
 procedure TFFacture.ChargeMultiple;
@@ -2626,6 +2631,7 @@ begin
   LoadLaTOBAffaireInterv(TOBAffaireInterv,TOBPiece.getValue('GP_AFFAIRE'));
   LoadLesrevisions (TOBPiece,TOBrevisions);
   if SaisieCM then loadlesEvtsmat(TOBPiece,TOBEvtsMat);
+  LoadLesTOBTS (Cledoc,TOBTSPOC);
 end;
 
 procedure TFFacture.LoadTOBCond(RefUnique: string);
@@ -6264,6 +6270,7 @@ begin
   // --
   TOBrevisions := TOB.Create ('LES REVISIONS',nil,-1);
   TOBEvtsMat := TOB.Create ('LES EVTS MATS',nil,-1);
+  TOBTSPOC := TOB.Create ('LES TOB TS',nil,-1);
 end;
 
 procedure TFFacture.ToutLiberer;
@@ -6441,6 +6448,7 @@ begin
   //
   TOBrevisions.Free;
   TOBEvtsMat.Free;
+  TOBTSPOC.free;
 end;
 
 procedure TFFacture.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -15304,6 +15312,8 @@ begin
   RecalcAvanc.visible := false;
   RepriseAvancPreGlob.visible := false;
   Sep11.visible := false;
+  SEPNN.Visible := (VH_GC.BTCODESPECIF='001') and (TOBPiece.GetString('GP_NATUREPIECEG')='BCE');
+  POPYTS.Visible := (VH_GC.BTCODESPECIF='001') and (TOBPiece.GetString('GP_NATUREPIECEG')='BCE');
   BZoomArticle.Enabled := (GetCodeArtUnique(TOBPiece, ARow) <> '');
   BZoomPiece.Enabled := (not TransfoPiece) and (not TransfoMultiple) and (not GenAvoirFromSit) and (action in [taModif, taConsult]);
   if (Ctxscot in V_PGI.PGIContexte) or (CtxBTP in V_PGI.PGIContexte) or (CtxCHR in V_PGI.PGIContexte) then BZoomPiece.Enabled := False; // mcd bl rh 14/10/2003
@@ -15430,7 +15440,7 @@ begin
     RemplTypeLigne.SetLigne (Arow);
   end;
   BVentil.Enabled := ((VPiece.Enabled) or (VLigne.Enabled) or (SPiece.Enabled) or (SLigne.Enabled));
-
+  POPYTS.Enabled := (POPYTS.Visible) and (TOBL.GetString ('GL_TYPELIGNE')='ART');
 {$IFNDEF UTILS}
   VoirBPXSpigao.Visible := SPIGAOOBJ.TestAffaire  (TOBPiece.GetValue('GP_AFFAIRE'));
 {$ELSE}
@@ -29721,6 +29731,14 @@ begin
   	CalculeTimbres (TOBTimbres,TOBpiece,TOBEches);
     GP_TOTALTIMBRES.Value := GetTotalTimbres(TOBTimbres,TOBpiece,TOBEches);
   end;
+end;
+
+procedure TFFacture.POPYTSClick(Sender: TObject);
+var OneTOB : TOB;
+begin
+  OneTOB := GetTOBLigne(TOBpiece,GS.row);
+  GestionTsPOC(OneTOB,TOBTSPOC);
+  AfficheLaLigne(GS.row);
 end;
 
 initialization

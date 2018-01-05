@@ -519,6 +519,7 @@ Type LaVariableHalley = RECORD
       Revision : TCPREvision;
 
      Lequel : string ;
+     LiaisonY2ViaShare : Boolean;
      END ;
 
 {$IFNDEF NOVH}
@@ -2451,6 +2452,19 @@ Ferme(QLoc) ;
 END ;
 {$ENDIF}
 
+procedure CheckLiaisonComptableY2;
+var QQ: TQuery;
+begin
+  // si pas de partage de la table CSOUSSECTION(Y2) alors pas de liaison avec Y2 via deshare
+  VH^.LiaisonY2ViaShare := false;
+  if not ExisteSQL('SELECT 1 FROM DESHARE WHERE DS_NOMTABLE="CSECTION"') then Exit;
+  QQ := OpenSQL('SELECT COUNT(*) AS NBR FROM CSECTION',True,1,'',true);
+  if not QQ.Eof then
+  begin
+    VH^.LiaisonY2ViaShare := (QQ.Fields[0].AsInteger >0);
+  end;
+  ferme (QQ);
+end;
 
 {***********A.G.L.***********************************************
 Auteur  ...... : ?
@@ -2527,6 +2541,9 @@ Ferme(Q) ;
 V_PGI.CergEF:=FALSE ;
 {$IFNDEF EAGLSERVER}
 PbBoot:=False ;
+//
+CheckLiaisonComptableY2; // LSLSLSLS
+//
 {$ENDIF EAGLSERVER}
 if ((V_PGI.User='000') and (V_PGI.UserName='00000000') and (V_PGI.PassWord='000')) then
    BEGIN
@@ -3539,7 +3556,13 @@ Case fb Of
            Cpt:='J_JOURNAL' ; LaTable:='JOURNAL' ; Where:=' ' ;
            END ;
   fbAxe1..fbAxe5 : BEGIN
-                   Cpt:='S_SECTION' ; LaTable:='SECTION' ; Where:=' WHERE S_AXE="'+'A'+IntToStr(ord(fb)+1)+'" ' ;
+                    if VH^.LiaisonY2ViaShare then
+                    begin
+                      Cpt:='CSP_SECTION' ; LaTable:='CSECTION' ; Where:=' WHERE CSP_AXE="'+'A'+IntToStr(ord(fb)+1)+'" ' ;
+                    end else
+                    begin
+                      Cpt:='S_SECTION' ; LaTable:='SECTION' ; Where:=' WHERE S_AXE="'+'A'+IntToStr(ord(fb)+1)+'" ' ;
+                    end;
                    END ;
   fbBudgen : BEGIN
              Cpt:='BG_BUDGENE' ; LaTable:='BUDGENE' ; Where:=' ' ;
@@ -4228,7 +4251,7 @@ begin
 Result:=tzGeneral ;
 if (s='GENERAL') or (s='GENERAUX') then result := tzGeneral else
 if (s='AUXILIAIRE') or (s='TIERS') then result := tzTiers  else
-if (s='SECTION') or (s='SECTION1') then result := tzSection else
+if (s='SECTION') or (s='SECTION1') or (s='CSECTION1') then result := tzSection else
 if (s='JOURNAL') or (s='JOURNAUX') then result := tzJournal ;
 //vt à compléter
 end ;

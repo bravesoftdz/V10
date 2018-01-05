@@ -1354,7 +1354,6 @@ CleDocAffaire,Cledoc : R_CleDoc;
 {Numeropiece,Indice,}IndiceOuv : integer;
 Q : Tquery;
 begin
-
   //Non en line
   if not ExistReplacePou then exit;
 
