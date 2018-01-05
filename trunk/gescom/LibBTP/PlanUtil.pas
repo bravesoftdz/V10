@@ -97,8 +97,8 @@ procedure TobFree(var T: TOB);
 
 function AffecteDataType(NomChamp: string): string;
 function AnalyseChamp(Tobligne: TOB; ListeChamps: string; Formats: string): string;
-Function ChargeFamres : String;
-Function ChargeFamMat : String;
+Function ChargeFamres   : String;
+Function ChargeFamMat   : String;
 Function ChargeFonction : String;
 
 function ChargeStrByTablette(CodeTablette,ZoneARecuperer: String): String;
@@ -202,19 +202,19 @@ begin
     R.ToBres.InitValeurs(false); 
   end;
 
-  NumLigneTO := -1;
-  NumYield := -1;
+  NumLigneTO  := -1;
+  NumYield    := -1;
 
   // Barre de patiente
   InitMove(10, 'Chargement du planning en cours');
 
   //Mise en place de la gestion du surbooking et des Week-end à revoir
   with P do
-    begin
-    SurBooking := True;
-    ActiveSaturday := True;
-    ActiveSunday := True;
-    end;
+  begin
+    SurBooking      := True;
+    ActiveSaturday  := True;
+    ActiveSunday    := True;
+  end;
 
   // MAJ regroupement de date
   //P.ActiveLigneGroupeDate := TobParametres.Getvalue('HPP_AFFDATEGROUP') = 'X';
@@ -224,7 +224,7 @@ begin
   else if pos(P.TypePlanning, 'PFO') > 0 then
     P.Famres := ChargeFonction
   else
-  P.Famres := ChargeFamRes;
+    P.Famres := ChargeFamRes;
 
   // Changement date d'un séjour sur planning possible O/N
   P.MoveHorizontal := True;
@@ -291,10 +291,10 @@ begin
   else if P.TypePlanning ='PAR' then
     P.RowFieldID      := 'R_AFFAIRE'
   else
-  P.RowFieldID := 'R_RESSOURCE';
+    P.RowFieldID      := 'R_RESSOURCE';
 
-  P.RowFieldReadOnly := 'R_RO';
-  P.RowFieldColor := 'R_COLOR';
+  P.RowFieldReadOnly  := 'R_RO';
+  P.RowFieldColor     := 'R_COLOR';
 
   MoveCur(FALSE);
 
@@ -307,8 +307,8 @@ begin
   // Champ des items
   P.ChampdateDebut  := 'BPL_DATEAFFDEB';
   P.ChampDateFin    := 'BPL_DATEAFFFIN';
-    P.MultiLine       := False;
-    P.ChampLibelle    := 'LIBELLE';
+  P.MultiLine       := False;
+  P.ChampLibelle    := 'LIBELLE';
 
   GestionAffichageZoneItem(T.Getvalue('HPP_CONTENUITEM'));
   if pos('#13#10', ContenuItem) <> 0 then P.MultiLine := True;
@@ -316,24 +316,24 @@ begin
   GestionAffichageZoneHint(T.Getvalue('HPP_CONTENUHINT'));
 
   // Champ des Type Actions
-  P.EtatChampCode := 'BTA_BTETAT';
-  P.EtatChampLibelle := 'BTA_LIBELLE';
-  P.EtatChampBackGroundColor := 'BTA_COULEURFOND';
-  P.EtatChampFontColor := 'BTA_COULEUR';
-  P.EtatChampFontName := 'BTA_FONTE';
-  P.EtatChampFontSize := 'BTA_FONTESIZE';
-  P.EtatChampFontStyle := 'BTA_FONTESTYLE';
-  P.EtatChampIcone := 'BTA_NUMEROICONE';
+  P.EtatChampCode             := 'BTA_BTETAT';
+  P.EtatChampLibelle          := 'BTA_LIBELLE';
+  P.EtatChampBackGroundColor  := 'BTA_COULEURFOND';
+  P.EtatChampFontColor        := 'BTA_COULEUR';
+  P.EtatChampFontName         := 'BTA_FONTE';
+  P.EtatChampFontSize         := 'BTA_FONTESIZE';
+  P.EtatChampFontStyle        := 'BTA_FONTESTYLE';
+  P.EtatChampIcone            := 'BTA_NUMEROICONE';
 
   MoveCur(FALSE);
 
   // Gestion des évenements (Salons, concert, ...)
-  P.ChampCodeEvenement := 'HEV_EVENEMENT';
-  P.ChampLibelleEvenement := 'HEV_LIBELLE';
-  P.ChampDateDebutEvenement := 'HEV_DATEDEBUT';
-  P.ChampDateDeFinEvenement := 'HEV_DATEFIN';
-  P.ChampCouleurEvenement := 'HEV_COULEUR';
-  P.ChampStyleEvenement := 'HEV_STYLE';
+  P.ChampCodeEvenement        := 'HEV_EVENEMENT';
+  P.ChampLibelleEvenement     := 'HEV_LIBELLE';
+  P.ChampDateDebutEvenement   := 'HEV_DATEDEBUT';
+  P.ChampDateDeFinEvenement   := 'HEV_DATEFIN';
+  P.ChampCouleurEvenement     := 'HEV_COULEUR';
+  P.ChampStyleEvenement       := 'HEV_STYLE';
 
   MoveCur(FALSE);
 
@@ -350,14 +350,14 @@ begin
   Req := ChargeColonneFixe(TypRes, P);
 
   //chargement des "ressources"
-  QRessource := OpenSQL(req, True,-1,'',true);
+  QRessource  := OpenSQL(req, True,-1,'',true);
   R.TobRes.LoadDetailDB('', '', '', Qressource, True);
   ferme(Qressource);
 
   IconesExiste := False;
 
   if R.TobRes.Detail.Count = 0 then
-     begin
+  begin
     if Pos(P.TypePlanning, 'PMA;PFM') > 0 then
       PGIError('Le Code Famille ' + P.CodeOnglet + ' ne dispose d''aucune ressource', 'Erreur Planning')
     else if Pos(P.TypePlanning, 'PAR,PLA;PTA;PTR;PRA') > 0 then
@@ -372,8 +372,8 @@ begin
       PGIError('aucune ressource a afficher', 'Erreur Planning');
     P.parent.Visible := false;
 
-     Exit;
-     end;
+    Exit;
+  end;
 
   MoveCur(FALSE);
 
@@ -381,19 +381,19 @@ begin
 
   //Affichage du libellé pour un tri par sous famille ressource en fonction parametrage Planning
   if TypRes = 'X' then
-     Begin
-     NomDuChamp[1]  := 'BTR_LIBELLE';
+  Begin
+    NomDuChamp[1]  := 'BTR_LIBELLE';
     LibDuChamp[1]  := 'Ss-Type Ressource';
-     TypeduChamp[1] := 'VARCHAR(35)';
+    TypeduChamp[1] := 'VARCHAR(35)';
     TailleChamp[1] := 150;
-     Ind := 1;
-     end;
+    Ind := 1;
+  end;
 
   // Récupératon des libéllés des champs pour les colonnes d'entete
   for boucle := 1 to NbCf do
-      begin
-      StrTempo := '';
-      NomHpp := 'HPP_LIBCOLENT';
+  begin
+    StrTempo := '';
+    NomHpp := 'HPP_LIBCOLENT';
     //
     if pos(P.TypePlanning, 'PMA;PFM;PPA') > 0 then
     begin
@@ -411,53 +411,53 @@ begin
       LibZone := LectLibCol('CC', 'BLI', T.Getvalue(NomHpp + IntToStr(Boucle + 3)), 'CC_LIBELLE');
     end;
     //
-      TailleColFixe := StrToInt(format('%2.2d', [Integer(T.Getvalue('HPP_TAILLECOLENT' + IntToStr(Boucle+3)))]));
+    TailleColFixe := StrToInt(format('%2.2d', [Integer(T.Getvalue('HPP_TAILLECOLENT' + IntToStr(Boucle+3)))]));
     //
-      for i := 1 to Boucle do
-         Begin
-         StrTempo := StrTempo + NomDuChamp[i];
-         end;
+    for i := 1 to Boucle do
+    Begin
+      StrTempo := StrTempo + NomDuChamp[i];
+    end;
     //
-      if pos(ZoneRes, StrTempo) = 0 then
-         Begin
-         Ind := Ind + 1;
-         NomDuChamp[Ind]  := ZoneRes;
-         LibDuChamp[Ind]  := LibZone;
-         TypeduChamp[Ind] := ChampToType(ZoneRes);
-         TailleChamp[Ind] := TailleColFixe;
-         end
-      end;
+    if pos(ZoneRes, StrTempo) = 0 then
+    Begin
+      Ind := Ind + 1;
+      NomDuChamp[Ind]  := ZoneRes;
+      LibDuChamp[Ind]  := LibZone;
+      TypeduChamp[Ind] := ChampToType(ZoneRes);
+      TailleChamp[Ind] := TailleColFixe;
+    end
+  end;
 
   MoveCur(FALSE);
 
   P.DisplayEnteteColFixed := True;
-  P.SortOnColFixed := True;
+  P.SortOnColFixed        := True;
 
   if pos(P.TypePlanning, 'PMA;PFM;PPA') > 0 then
     P.ResChampID := 'BMA_CODEMATERIEL'
   else if pos(P.TypePlanning, 'PAR') > 0 then
     P.ResChampID := 'AFF_AFFAIRE'
   else
-  P.ResChampID := 'ARS_RESSOURCE';
+    P.ResChampID := 'ARS_RESSOURCE';
 
   // Initalisation des colonnes d'entete
   for Boucle := 1 to Ind do //NbCf do
-      begin
-      if Boucle = 1 then
-         Begin
-         P.TokenFieldColFixed := NomDuChamp[Boucle];
-         P.TokenSizeColFixed := IntToStr(TailleChamp[Boucle]);
-         P.TokenAlignColFixed := 'C';
-         P.TokenFieldColEntete := LibDuChamp[Boucle];
-         end
-      else
-         begin
-         P.TokenFieldColFixed := P.TokenFieldColFixed + ';' + NomDuChamp[Boucle];
-         P.TokenSizeColFixed := P.TokenSizeColFixed + ';' + IntToStr(TailleChamp[Boucle]);
-         P.TokenAlignColFixed := P.TokenAlignColFixed + ';C';
-         P.TokenFieldColEntete := P.TokenFieldColEntete + '; ' + LibDuChamp[Boucle];
-         end;
-      end;
+  begin
+    if Boucle = 1 then
+    Begin
+      P.TokenFieldColFixed  := NomDuChamp[Boucle];
+      P.TokenSizeColFixed   := IntToStr(TailleChamp[Boucle]);
+      P.TokenAlignColFixed  := 'C';
+      P.TokenFieldColEntete := LibDuChamp[Boucle];
+    end
+    else
+    begin
+      P.TokenFieldColFixed  := P.TokenFieldColFixed + ';' + NomDuChamp[Boucle];
+      P.TokenSizeColFixed   := P.TokenSizeColFixed + ';' + IntToStr(TailleChamp[Boucle]);
+      P.TokenAlignColFixed  := P.TokenAlignColFixed + ';C';
+      P.TokenFieldColEntete := P.TokenFieldColEntete + '; ' + LibDuChamp[Boucle];
+    end;
+  end;
 
   // la précédente tob des Ressources n'a pas été vidé il faut donc la vider
   P.TobRes := R.TobRes;
@@ -473,11 +473,11 @@ begin
   if T.Getvalue('HPP_AFFICHEICONE') = 'X' then P.ChampIcone := 'ICONETYPDOS';
 
   // MAJ Taille des colonnes largeurs
-  P.ColSizeData := T.Getvalue('HPP_TAILLECOLONNE');
+  P.ColSizeData   := T.Getvalue('HPP_TAILLECOLONNE');
   P.ColSizeEntete := T.Getvalue('HPP_TAILLECOLENTET');
 
   // MAJ Taille des colonnes largeurs
-  P.RowSizeData := T.Getvalue('HPP_HAUTLIGNEDATA');
+  P.RowSizeData   := T.Getvalue('HPP_HAUTLIGNEDATA');
   P.RowSizeEntete := T.Getvalue('HPP_HAUTLIGNEENT');
 
   if pos(P.TypePlanning, 'PMA;PFM;PPA') > 0 then
@@ -560,10 +560,13 @@ Begin
 
   QRecupFamRes := OpenSQL(Req, True,-1,'',true);
 
-  if not QRecupFamRes.eof then
+  if Result <> 'GEN' then
+  begin
+    if not QRecupFamRes.eof then
     begin
-    LibFamRes := QRecupFamRes.findfield('HFR_LIBELLE').Asstring;
+      LibFamRes := QRecupFamRes.findfield('HFR_LIBELLE').Asstring;
     end;
+  end;
 
   ferme(QRecupFamRes);
 
@@ -608,8 +611,8 @@ function ConstitueRequeteAbsenceConges (P :THPlanningBTP;DateD,DateF : TdateTime
 begin
 	result := '( '+ // 1
             '(PCN_DATEDEBUTABS>="' + UsDateTime(DateD) + '" AND PCN_DATEDEBUTABS<="' + UsDateTime(DateF) + '") OR '+
-						'(PCN_DATEFINABS>="' + USDateTime(DateD) + '" AND PCN_DATEFINABS<="' + USDateTime(DateF) + '") OR ' +
-						'(PCN_DATEDEBUTABS<="' + UsDateTime(DateD) + '" AND PCN_DATEFINABS>="' + UsDateTime(DateF) + '")' +
+						'(PCN_DATEFINABS>="'   + USDateTime(DateD) + '" AND PCN_DATEFINABS<="'   + USDateTime(DateF) + '") OR ' +
+						'(PCN_DATEDEBUTABS<="' + UsDateTime(DateD) + '" AND PCN_DATEFINABS>="'   + UsDateTime(DateF) + '")' +
             ')'; //1
 end;
 
@@ -737,7 +740,7 @@ var MaRequete : string;
     NumAction : Integer;
 begin
 
-	result := true;
+	result  := true;
 
   if not IsModifiable (TobLigItem) then
   begin
@@ -818,145 +821,145 @@ begin
   TOBICone.LoadDetailDB('BTETAT','','',QQ,false);
   Ferme (QQ);
   TRY
-  if P.tobres = nil then
-  begin
-    P.parent.Visible := false;
-    Exit;
-  end;
+    if P.tobres = nil then
+    begin
+      P.parent.Visible := false;
+      Exit;
+    end;
 
-  P.ACtivate := False;
-  if R.TobItems = nil then
-  begin
-    R.TobItems := Tob.Create('EVENEMENTS PLANNING', nil, -1);
-  end else
-  begin
-    R.TobItems.ClearDetail;
-    R.TobItems.InitValeurs(false);
-  end;
+    P.ACtivate := False;
+    if R.TobItems = nil then
+    begin
+      R.TobItems := Tob.Create('EVENEMENTS PLANNING', nil, -1);
+    end else
+    begin
+      R.TobItems.ClearDetail;
+      R.TobItems.InitValeurs(false);
+    end;
 
-  P.Activate := False;
-  P.IntervalDebut := DateEnCours - (T.GetValue('HPP_INTERVALLEDEB'));
-  P.IntervalFin := DateEnCours + (T.GetValue('HPP_INTERVALLEFIN'));
-  P.DateOfStart := DateEnCours;
-  Civilite := '';
+    P.Activate      := False;
+    P.IntervalDebut := DateEnCours - (T.GetValue('HPP_INTERVALLEDEB'));
+    P.IntervalFin   := DateEnCours + (T.GetValue('HPP_INTERVALLEFIN'));
+    P.DateOfStart   := DateEnCours;
+    Civilite        := '';
 
-  //Chargement des données (items) comprises dans l'intervalle choisi
-  // Calcul de la date de debut et de fin
+    //Chargement des données (items) comprises dans l'intervalle choisi
+    // Calcul de la date de debut et de fin
     //HeureDeb  := StrToTime('00:00:00');
     //HeureFin  := StrToTime('23:59:59');
     //Quite à prendre une heure autant utiliser celles du paramètre société...
     HeureDeb := GetParamSocSecur('SO_BTAMDEBUT', '08:30');
     HeureFin := GetParamSocSecur('SO_BTPMFIN',   '17:30');
 
-  DateDebut := DateEncours - T.getvalue('HPP_INTERVALLEDEB');
-  DateFin := T.getvalue('HPP_INTERVALLEFIN') + DateEncours;
+    DateDebut := DateEncours - T.getvalue('HPP_INTERVALLEDEB');
+    DateFin   := T.getvalue('HPP_INTERVALLEFIN') + DateEncours;
 
     DateDebut := Trunc(DateDebut); // + HeureDeb;
     DateFin   := Trunc(DateFin);   // + HeureFin;
 
-  AfficheLFixe(P, T);
+    AfficheLFixe(P, T);
 
-  //Lectures des tables évènement en fonction des type de Planning
-  if (p.TypePlanning = 'PMA') then
-    MaRequete := ChargeRequeteEventMat(P, DateDebut, DateFin)
-  else if p.TypePlanning = 'PFM' then
-    MaRequete := ChargeRequeteFamilleMat(P, DateDebut, DateFin)
-  else if p.TypePlanning = 'PPA' then
-    MaRequete := ChargeRequeteTypeAction(P, DateDebut, DateFin)
-  else if p.TypePlanning = 'PRA' then
-    MaRequete := ChargeRequeteRessourceChantier(P, DateDebut, DateFin)
-  else if p.TypePlanning = 'PAR' then
-    MaRequete := ChargeRequeteRessourceChantier(P, DateDebut, DateFin)
-  else if p.TypePlanning = 'PFO' then
-    MaRequete := ChargeRequeteRessourceChantier(P, DateDebut, DateFin)
-  else
-    MaRequete := ChargeRequeteIntervention(P, DateDebut, DateFin);
+    //Lectures des tables évènement en fonction des type de Planning
+    if (p.TypePlanning = 'PMA') then
+      MaRequete := ChargeRequeteEventMat(P, DateDebut, DateFin)
+    else if p.TypePlanning = 'PFM' then
+      MaRequete := ChargeRequeteFamilleMat(P, DateDebut, DateFin)
+    else if p.TypePlanning = 'PPA' then
+      MaRequete := ChargeRequeteTypeAction(P, DateDebut, DateFin)
+    else if p.TypePlanning = 'PRA' then
+      MaRequete := ChargeRequeteRessourceChantier(P, DateDebut, DateFin)
+    else if p.TypePlanning = 'PAR' then
+      MaRequete := ChargeRequeteRessourceChantier(P, DateDebut, DateFin)
+    else if p.TypePlanning = 'PFO' then
+      MaRequete := ChargeRequeteRessourceChantier(P, DateDebut, DateFin)
+    else
+      MaRequete := ChargeRequeteIntervention(P, DateDebut, DateFin);
 
-  QItem := OpenSQL(MaRequete, True,-1,'',true);
+    QItem := OpenSQL(MaRequete, True,-1,'',true);
 
-  TobEvent := Tob.Create('LES EVENEMENTS', nil, -1);
-  TRY
-  TobEvent.LoadDetailDB('BTITEMS', '', '', QItem, True);
-
-  Ferme(QItem);
-    P.TobItems := nil;
-
-  if (T.getValue('HPP_FAMRES')='SAL') or (T.getValue('HPP_FAMRES')='') then
-  begin
-    if (T.GetBoolean('HPP_AFFABSSAL')) then
-  begin
-      MaRequete := ChargeRequeteAbsSalaries (P,DateDebut,DateFin);
-      QItem := OpenSQL(MaRequete, True,-1,'',true);
+    TobEvent := Tob.Create('LES EVENEMENTS', nil, -1);
+    TRY
       TobEvent.LoadDetailDB('BTITEMS', '', '', QItem, True);
-      Ferme(Qitem);
-    end;
-    if (T.GetBoolean('HPP_AFFACTGRC')) then
-  begin
-      MaRequete := ChargeRequeteActionsGRC (P,DateDebut,DateFin);
-      QItem := OpenSQL(MaRequete, True,-1,'',true);
-      TobEvent.LoadDetailDB('BTITEMS', '', '', QItem, True);
-  Ferme(Qitem);
-     end;
-           end;
 
-  //On affiche les événements Parc/Matériel en plus de ceux du planning initial
-    If pos(P.TypePlanning, 'PFM;PMA;PPA') = 0 then
-    Begin
-  if (T.GetBoolean('HPP_AFFEVTMAT')) then
-     Begin
-    MaRequete := ChargeRequeteEventMat(P, DateDebut, DateFin);
-    QItem := OpenSQL(MaRequete, True,-1,'',true);
-    TobEvent.LoadDetailDB('BTITEMS', '', '', QItem, True);
-    Ferme(Qitem);
-     end;
-    end;
-  //
-  //On affiche les événements Chantier en plus de ceux du planning initial
-    If pos(P.TypePlanning, 'PAR;PRA;PFO') = 0 then
-    begin
-  if (T.GetBoolean('HPP_AFFEVTCHA')) then
-     Begin
-    MaRequete := ChargeRequeteRessourceChantier(P, DateDebut, DateFin);
-    QItem := OpenSQL(MaRequete, True,-1,'',true);
-    TobEvent.LoadDetailDB('BTITEMS', '', '', QItem, True);
-    Ferme(Qitem);
-     end;
-    end;
-  //
-  //On affiche les événement Intervention en plus de ceux du planning initial
-    If pos(P.TypePlanning, 'PLA;PSF;PTA;PTR') = 0 then
-    begin
-  if (T.GetBoolean('HPP_AFFEVTINT')) then
-  Begin
-    MaRequete := ChargeRequeteIntervention(P, DateDebut, DateFin);
-    QItem := OpenSQL(MaRequete, True,-1,'',true);
-    TobEvent.LoadDetailDB('BTITEMS', '', '', QItem, True);
-    Ferme(Qitem);
-  end;
-    end;
+      Ferme(QItem);
+      P.TobItems := nil;
 
-  //chargement de la table des items avec les informations des tables events...
-  for Indice := 0 to  TobEvent.Detail.count -1 do
-  begin
-    TransformeEvenementEnItem(R.TobItems, TobEvent.detail[Indice]);
-  end;
+      if (T.getValue('HPP_FAMRES')='SAL') or (T.getValue('HPP_FAMRES')='') then
+      begin
+        if (T.GetBoolean('HPP_AFFABSSAL')) then
+        begin
+          MaRequete := ChargeRequeteAbsSalaries (P,DateDebut,DateFin);
+          QItem := OpenSQL(MaRequete, True,-1,'',true);
+          TobEvent.LoadDetailDB('BTITEMS', '', '', QItem, True);
+          Ferme(Qitem);
+        end;
+        if (T.GetBoolean('HPP_AFFACTGRC')) then
+        begin
+          MaRequete := ChargeRequeteActionsGRC (P,DateDebut,DateFin);
+          QItem := OpenSQL(MaRequete, True,-1,'',true);
+          TobEvent.LoadDetailDB('BTITEMS', '', '', QItem, True);
+          Ferme(Qitem);
+        end;
+      end;
+
+      //On affiche les événements Parc/Matériel en plus de ceux du planning initial
+      If pos(P.TypePlanning, 'PFM;PMA;PPA') = 0 then
+      Begin
+        if (T.GetBoolean('HPP_AFFEVTMAT')) then
+        Begin
+          MaRequete := ChargeRequeteEventMat(P, DateDebut, DateFin);
+          QItem := OpenSQL(MaRequete, True,-1,'',true);
+          TobEvent.LoadDetailDB('BTITEMS', '', '', QItem, True);
+          Ferme(Qitem);
+        end;
+      end;
+      //
+      //On affiche les événements Chantier en plus de ceux du planning initial
+      If pos(P.TypePlanning, 'PAR;PRA;PFO') = 0 then
+      begin
+        if (T.GetBoolean('HPP_AFFEVTCHA')) then
+        Begin
+          MaRequete := ChargeRequeteRessourceChantier(P, DateDebut, DateFin);
+          QItem := OpenSQL(MaRequete, True,-1,'',true);
+          TobEvent.LoadDetailDB('BTITEMS', '', '', QItem, True);
+          Ferme(Qitem);
+        end;
+      end;
+      //
+      //On affiche les événement Intervention en plus de ceux du planning initial
+      If pos(P.TypePlanning, 'PLA;PSF;PTA;PTR') = 0 then
+      begin
+        if (T.GetBoolean('HPP_AFFEVTINT')) then
+        Begin
+          MaRequete := ChargeRequeteIntervention(P, DateDebut, DateFin);
+          QItem := OpenSQL(MaRequete, True,-1,'',true);
+          TobEvent.LoadDetailDB('BTITEMS', '', '', QItem, True);
+          Ferme(Qitem);
+        end;
+      end;
+
+      //chargement de la table des items avec les informations des tables events...
+      for Indice := 0 to  TobEvent.Detail.count -1 do
+      begin
+        TransformeEvenementEnItem(R.TobItems, TobEvent.detail[Indice]);
+      end;
 
       if R.TOBItems.Detail.count > 1 then R.TOBItems.detail.Sort('BPL_DATEAFFDEB');
-  FINALLY
-    TobEvent.free;
-  P.TobItems := R.TobItems;
+    FINALLY
+      TobEvent.free;
+      P.TobItems := R.TobItems;
 
-  // Gestion et chargement des evenements (Salon, congrès,...)
-  //ChargeEvent(R, P);
+      // Gestion et chargement des evenements (Salon, congrès,...)
+      //ChargeEvent(R, P);
 
-  P.DisplayOptionLier               := False;
-  P.DisplayOptionSuppressionLiaison := False;
-  P.DisplayOptionLiaison            := False;
+      P.DisplayOptionLier               := False;
+      P.DisplayOptionSuppressionLiaison := False;
+      P.DisplayOptionLiaison            := False;
 
-  FINIMOVE;
+      FINIMOVE;
 
-  P.Activate := True;
-  END;
+      P.Activate := True;
+    END;
   FINALLY
     TobIcone.free;
   END;
@@ -1156,9 +1159,9 @@ begin
     Ferme(QQ);
 
     for I := 0 to TTab.Detail.Count-1 do
-        Begin
+    Begin
         Result := Result + TTab.detail[i].GetValue(ZoneARecuperer) + ',';
-        end;
+    end;
 
     if result = '' then 
        Result := '*'
@@ -1257,14 +1260,14 @@ Var DateDebE	  : TDateTime;
 Begin
 
   // Gestion de la date et l'heure (Decalage pour la gestion de l'affichage)
-  DateDebE := StrToDate(DateToStr(DateDebut));
-  HeureDeb := StrTotime(TimetoStr(DateDebut));
+  DateDebE    := StrToDate(DateToStr(DateDebut));
+  HeureDeb    := StrTotime(TimetoStr(DateDebut));
   //Si jamais il y a un calendrier sur la ressource celui-ci ne sera pas pris en compte ici...
-  HeureDebAm := GetDebutMatinee;
-  HeureFinAm := GetFinMatinee;
-  HeureDebPm := GetDebutApresMidi;
-  HeurefinPm := GetfinApresMidi;
-  HeureDebJr := HeureDebAm;
+  HeureDebAm  := GetDebutMatinee;
+  HeureFinAm  := GetFinMatinee;
+  HeureDebPm  := GetDebutApresMidi;
+  HeurefinPm  := GetfinApresMidi;
+  HeureDebJr  := HeureDebAm;
 
 
   if (pos(Cadencement,'001;002;003')>0) then
@@ -1904,7 +1907,7 @@ begin
     TobEvent.putvalue('BPL_HEUREAFFFIN', HeureF);
     //
     TobEvent.putvalue('LIBACTION',   rechDom('RTTYPEACTIONALL', TOBEvent.getValue('RAC_TYPEACTION'),false));
-    TobEvent.putvalue('LIBEVENEMENT',       TOBEvent.getValue('LIBACTION') + '#13#10' + TOBEvent.getValue('LIBTIERS') + ' (' + TOBEvent.getValue('VILLE') + ')#13#10' + TOBEvent.getValue('LIBACTION'));
+    TobEvent.putvalue('LIBEVENEMENT',    TOBEvent.getValue('LIBACTION') + '#13#10' + TOBEvent.getValue('LIBTIERS') + ' (' + TOBEvent.getValue('VILLE') + ')#13#10' + TOBEvent.getValue('LIBACTION'));
   end
   else
   begin
@@ -1942,7 +1945,7 @@ begin
   begin
     If TOBEvent.GetString('ORIGINEITEM') <> 'PARCMAT' then
     begin
-      Lib := RechDom('AFTTYPERESSOURCE', TOBEvent.GetString('FAMILLEMAT'), True);
+      Lib := RechDom('AFTTYPERESSOURCE',    TOBEvent.GetString('FAMILLEMAT'), True);
       TOBItem.PutValue('BPL_LIBFAMILLEMAT', Lib);
     end;
   end
@@ -1970,7 +1973,7 @@ begin
   TOBItem.putvalue('BPL_STANDCALEN',        TOBEvent.GetString('STANDCALEN'));
   TOBItem.putvalue('BPL_CALENSPECIF',       TOBEvent.GetString('CALENSPECIF'));
   TOBItem.putvalue('BPL_TYPERESSOURCE',     TOBEvent.GetString('TYPERESSOURCE'));
-  TOBItem.putvalue('BPL_STYPERESSOURCE',     TOBEvent.GetString('STYPERESSOURCE'));
+  TOBItem.putvalue('BPL_STYPERESSOURCE',    TOBEvent.GetString('STYPERESSOURCE'));
   TOBItem.putvalue('BPL_TYPEACTION',        TOBEvent.GetString('TYPEACTION'));
 
   TOBItem.putvalue('BPL_TYPEMVT',           TOBEvent.GetString('TYPEMVT'));
@@ -2035,9 +2038,9 @@ Procedure CreationZoneTobItem(TobTmp : Tob);
 begin
 
   // Contrôle si l'ensemble des zones obligatoires sont présentes
-  if not TobTmp.FieldExists('LIBELLE')      then 	TobTmp.AddChampSupValeur('LIBELLE', '');
-  if not TobTmp.FieldExists('HINT')         then  TobTmp.AddChampSupValeur('HINT', '');
-  if not Tobtmp.FieldExists('ICONETYPDOS')  then  TobTmp.AddChampSupValeur('ICONETYPDOS', '');
+  if not TobTmp.FieldExists('LIBELLE')          then 	TobTmp.AddChampSupValeur('LIBELLE', '');
+  if not TobTmp.FieldExists('HINT')             then  TobTmp.AddChampSupValeur('HINT', '');
+  if not Tobtmp.FieldExists('ICONETYPDOS')      then  TobTmp.AddChampSupValeur('ICONETYPDOS', '');
   
   if not TobTmp.FieldExists('BPL_DATEAFFDEB')   then 	TobTmp.AddChampSupValeur('BPL_DATEAFFDEB',  '');
   if not TobTmp.FieldExists('BPL_DATEAFFFIN')   then 	TobTmp.AddChampSupValeur('BPL_DATEAFFFIN',  '');
@@ -2130,7 +2133,7 @@ Var DateDebE	: string;
 begin
   if R.TobEvents = nil then
   begin
-  TobFree(R.TobEvents);
+    TobFree(R.TobEvents);
   end else
   begin
     R.TobEvents := TOB.Create('la tob', nil, -1);
@@ -2220,13 +2223,13 @@ begin
     P.interval := piDemiJour;
   end
   else if (Cadencement = '005') then
-    begin
+  begin
     P.Interval    := piJour;
     FormatDate    := T.Getvalue('HPP_FORMATDATECOL0');
     P.DateFormat  := Rechdom('HRFORMATDATE', FormatDate, True);
-    end
+  end
   else if (Cadencement = '006') then
-    begin
+  begin
     P.Interval    := piSemaine;
     P.DateFormat  := 'dd/mm/yyyy';
   end
@@ -2275,7 +2278,7 @@ begin
       P.CumulInterval := pciTrimestre
     else
       P.CumulInterval := pciNone;
-      end;
+  end;
 
   if pos(cadencement,'001;002;003;004;005') > 0 then
   begin
@@ -2287,7 +2290,7 @@ begin
        P.JourneeFin := GetParamSoc('SO_HEUREFIN')
     else
        P.JourneeFin := T.Getvalue('HPP_HEUREFIN');
-    end;
+  end;
 
 end;
 
@@ -2332,22 +2335,22 @@ begin
     LibTypAct  := TOBIcone.GetString('BTA_LIBELLE');
   end else
   begin
-  Icone     := -1;
-  LibTypAct := '';
+    Icone     := -1;
+    LibTypAct := '';
 
-  StSQL := 'SELECT BTA_NUMEROICONE, BTA_LIBELLE FROM BTETAT ';
-  StSQl := StSQL + ' WHERE BTA_BTETAT     = "'  + TobItem.getValue('BPL_BTETAT');
-  StSQl := StSQL + '"  AND BTA_TYPEACTION = "'  + TypeAction;
-  StSQl := StSQl + '"  AND BTA_ASSOSRES   = "X" ORDER BY BTA_BTETAT';
+    StSQL := 'SELECT BTA_NUMEROICONE, BTA_LIBELLE FROM BTETAT ';
+    StSQl := StSQL + ' WHERE BTA_BTETAT     = "'  + TobItem.getValue('BPL_BTETAT');
+    StSQl := StSQL + '"  AND BTA_TYPEACTION = "'  + TypeAction;
+    StSQl := StSQl + '"  AND BTA_ASSOSRES   = "X" ORDER BY BTA_BTETAT';
 
-  // Gestion des icones selon type d'évènement
-  QIcone   := OpenSQL(StSQL, True,-1,'',true);
+    // Gestion des icones selon type d'évènement
+    QIcone   := OpenSQL(StSQL, True,-1,'',true);
 
-  if not QIcone.Eof then
-  begin
-    Icone      := QIcone.FindField('BTA_NUMEROICONE').AsInteger;
-    LibTypAct  := QIcone.findfield('BTA_LIBELLE').AsString;
-  end;
+    if not QIcone.Eof then
+    begin
+      Icone      := QIcone.FindField('BTA_NUMEROICONE').AsInteger;
+      LibTypAct  := QIcone.findfield('BTA_LIBELLE').AsString;
+    end;
   end;
   TobItem.PutValue('ICONETYPDOS', Icone);
 
@@ -2515,20 +2518,20 @@ begin
     else
        P.SetLinkColFixed(I-1, Regroupement);
     //
-  if pos(P.TypePlanning, 'PMA;PFM;PPA') > 0 then
+    if pos(P.TypePlanning, 'PMA;PFM;PPA') > 0 then
       ZoneTri := LectLibCol('CC', 'BMA', TobParametres.getvalue('HPP_LIBCOL' + IntToStr(I)), 'CC_LIBRE')
     else if P.TypePlanning = 'PAR' then
       ZoneTri := LectLibCol('CC', 'BAR', TobParametres.getvalue('HPP_LIBCOL' + IntToStr(I)), 'CC_LIBRE')
-  else
+    else
       zoneTri := LectLibCol('CC', 'BLI', TobParametres.getvalue('HPP_LIBCOL' + IntToStr(I)), 'CC_LIBRE');
     //
     if (ZoneTri <> '') then
-  begin
+    begin
       if (SQLOrder <> '') then
         SQLOrder := SQLOrder + ',' + ZoneTri
-    else
+      else
         SQLOrder := ZoneTri;
-  end;
+    end;
   end;
 
   if (SQLOrder = '') then
@@ -2613,7 +2616,7 @@ begin
   if P.Famres <> 'GEN' then
     Result := Result + ' AND ARS_TYPERESSOURCE = "' + p.FamRes + '" '
   Else
-    Result := Result + ' AND ARS_TYPERESSOURCE in ("INT", "SAL", "LOC", "ST")';
+    Result := Result + ' AND ARS_TYPERESSOURCE in ("INT", "SAL", "LOC", "ST", "MAT")';
 
 
 end;
@@ -2628,9 +2631,9 @@ begin
   //
   Result  := 'SELECT "PARCMAT" AS ORIGINEITEM, ';
   Result  := Result + ZoneRes + ' FROM BTMATERIEL ';
-  Result := Result + ' LEFT JOIN BTFAMILLEMAT ON (BMA_CODEFAMILLE=BFM_CODEFAMILLE) ';
-  Result := Result + ' LEFT JOIN RESSOURCE    ON (BMA_RESSOURCE=ARS_RESSOURCE) ';
-  Result := Result + ' WHERE BMA_FERME="-" ';
+  Result  := Result + ' LEFT JOIN BTFAMILLEMAT ON (BMA_CODEFAMILLE=BFM_CODEFAMILLE) ';
+  Result  := Result + ' LEFT JOIN RESSOURCE    ON (BMA_RESSOURCE=ARS_RESSOURCE) ';
+  Result  := Result + ' WHERE BMA_FERME="-" ';
 
   //Gestion des conditions de selection des enregistrement
   Condition := LectLibCol('CO', 'BMP', p.TypePlanning,'CO_LIBRE') + '="' + P.CodeOnglet + '"';
