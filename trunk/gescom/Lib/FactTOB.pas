@@ -115,6 +115,7 @@ const
   SG_COEFCOND : integer = -1;
   SG_CODECOND : integer = -1;
   SG_CODEMARCHE : integer = -1;
+  SG_TOTALTS : integer = -1;
 
 implementation
 uses
@@ -748,6 +749,7 @@ begin
   SG_COEFCOND := -1;
   SG_CODECOND := -1;
   SG_CODEMARCHE := -1;
+  SG_TOTALTS := -1;
 {$ENDIF}
 end;
 

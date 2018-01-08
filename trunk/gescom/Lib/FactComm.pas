@@ -2357,6 +2357,7 @@ begin
       begin
         if NomCol = 'POURCENTMARG'      then SG_POURMARG := icol;
         if NomCol = 'POURCENTMARQ'      then SG_POURMARQ := icol;
+        if NomCol = 'TOTALTS'           then SG_TOTALTS := icol;
       end;
     end;
     Inc(icol);
