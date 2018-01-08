@@ -130,27 +130,39 @@ begin
 end;
 
 procedure TOF_BTMULPOCTS.BINSERTCLick(SEnder: TObject);
-var OneTOB : TOB;
+var OneTOB,OneDetail : TOB;
 begin
-  OneTOB := TOB.Create ('BLIGNETS',TOBDet,-1);
+  OneTOB := TOB.Create ('BLIGNEETS',nil,-1); OneTOB.AddChampSupValeur ('OK','-');
+  OneTOB.SetInteger('BLE_NUMORDRE',TOBDet.GetInteger('NUMORDRE'));
   TheTOB := OneTOB;
+  OneTOB.Data := TOBDet;
   AGLLanceFiche('BTP','BTSAISPOCTS','','','ACTION=CREATION');
   TheTOB := nil;
-  AfficheLaGrille;
-  CalcMontantCumul (OneTOB);
-  CalcMontantGlob;
+  if OneTOB.GetString('OK') = 'X' then
+  begin
+    CalcMontantCumul (OneTOB);
+    OneTOB.ChangeParent(TOBDet,-1);
+    AfficheLaGrille;
+    CalcMontantGlob;
+  end else OneTOB.Free;
+
 end;
 
 procedure TOF_BTMULPOCTS.GSDblClick(Sender: Tobject);
 var OneTOB : TOB;
 begin
   OneTOB := TOBDet.Detail[GS.row-1];
+  if not OneTOB.FieldExists('OK') then OneTOB.AddChampSupValeur ('OK','-')
+                                  else OneTOB.SetString ('OK','-');
   TheTOB := OneTOB;
   AGLLanceFiche('BTP','BTSAISPOCTS','','','ACTION=MODIFICATION');
   TheTOB := nil;
-  AfficheLaGrille;
-  CalcMontantCumul (OneTOB);
-  CalcMontantGlob;
+  if OneTOB.GetString('OK')= 'X' then
+  begin
+    CalcMontantCumul (OneTOB);
+    AfficheLaGrille;
+    CalcMontantGlob;
+  end;
 end;
 
 procedure TOF_BTMULPOCTS.CalcMontantCumul(TOBD: TOB);
@@ -208,7 +220,7 @@ begin
   //
   GS.Cells[3,0] := 'Montant';
   GS.ColWidths[3] := 30;
-  GS.ColFormats[3] := 'FFP;FFP; ;';
+  GS.ColFormats[3] := FFP+';'+FFP+'; ;';
   GS.ColAligns  [3] := taRightJustify;
   //
 end;

@@ -197,6 +197,7 @@ type R_Col = record
     SG_COEFCOND : integer;
     SG_CODECOND : Integer;
     SG_CODEMARCHE : Integer;
+    SG_TOTALTS : Integer;
   end;
 
 const StColNameGSA = 'CB;LIBELLE;QTE;';
@@ -6597,6 +6598,7 @@ begin
   RCOL.SG_COEFCOND :=  SG_COEFCOND ;
   RCOL.SG_CODECOND :=  SG_CODECOND ;
   RCOL.SG_CODEMARCHE :=  SG_CODECOND ;
+  RCOL.SG_TOTALTS := SG_TOTALTS;
 end;
 
 procedure TFFacture.RestoreColList;
@@ -6672,6 +6674,7 @@ begin
   SG_COEFCOND :=  RCOL.SG_COEFCOND ;
   SG_CODECOND :=  RCOL.SG_CODECOND ;
   SG_CODEMARCHE :=  RCOL.SG_CODEMARCHE ;
+  SG_TOTALTS := RCOL.SG_TOTALTS;
 
 	MemoriseChampsSupLigneETL (cledoc.NaturePiece,true);
   MemoriseChampsSupLigneOUV (cledoc.NaturePiece);
@@ -8406,7 +8409,7 @@ begin
   if not Cancel then
   begin
     SetEntreeLigne (Arow,ACol);
-        end;
+  end;
 end;
 
 procedure TFFacture.GSCellExit(Sender: TObject; var ACol, ARow: Integer; var Cancel: Boolean);
@@ -15440,7 +15443,7 @@ begin
     RemplTypeLigne.SetLigne (Arow);
   end;
   BVentil.Enabled := ((VPiece.Enabled) or (VLigne.Enabled) or (SPiece.Enabled) or (SLigne.Enabled));
-  POPYTS.Enabled := (POPYTS.Visible) and (TOBL.GetString ('GL_TYPELIGNE')='ART');
+  POPYTS.Enabled := (POPYTS.Visible) and (TOBL <> nil) and (TOBL.GetString ('GL_TYPELIGNE')='ART');
 {$IFNDEF UTILS}
   VoirBPXSpigao.Visible := SPIGAOOBJ.TestAffaire  (TOBPiece.GetValue('GP_AFFAIRE'));
 {$ELSE}
@@ -20701,6 +20704,18 @@ begin
       end;
     END;
   end;
+  if (V_PGI.IOError = Oeok) and (VH_GC.BTCODESPECIF = '001') then
+  begin
+    try
+      ValideLesTOBTS (TOBPiece,TOBTSPOC);
+    except
+      on E: Exception do
+      begin
+        PgiError('Erreur SQL : ' + E.Message, 'validation nomenclatures');
+      end;
+    end;
+  end;
+
   {$IFDEF BTP}
   // Modif BTP
   if fmodeAudit then fAuditPerf.Debut('MODIF SITUATIONS');
@@ -27654,6 +27669,10 @@ begin
   begin
     GS.Colwidths[SG_NATURETRAVAIL] := 20;
     GS.ColLengths[SG_NATURETRAVAIL] := 20;
+  end;
+  if (SG_TOTALTS <> -1) and (TOBPiece.GetString('GP_NATUREPIECEG') <> 'BCE') or (VH_GC.BTCODESPECIF <> '001')  then
+  begin
+    GS.Colwidths[SG_TOTALTS] := -1;
   end;
   if (SG_CODEMARCHE <> -1) and (GS.Colwidths[SG_CODEMARCHE]>0) then
   begin

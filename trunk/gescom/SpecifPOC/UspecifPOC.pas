@@ -33,6 +33,7 @@ procedure AppelsBAST;
 function GetNextNumSituation (TOBPiece : TOB) : integer;
 procedure LoadLesTOBTS (Cledoc : R_CLEDOC;TOBTSPOC : TOB);
 procedure GestionTsPOC(OneTOB,TOBTSPOC : TOB);
+procedure ValideLesTOBTS ( TOBPiece,TOBTSPOC : TOB);
 
 implementation
 uses FactComm,UtilPGI,FactTOB,FactPiece,FactRG,FactUtil,ParamSOc,ENt1,AglInit,M3FP,cbpPath,LicUtil,UtilTOBPiece;
@@ -492,6 +493,66 @@ begin
   result.AddChampSupValeur('MODIFIED','-');
 end;
 
+procedure DeleteLesTOBTS (cledoc : r_cledoc);
+var SQL : string;
+begin
+  if ExisteSQL('SELECT 1 FROM BLIGNEETS WHERE '+WherePiece(Cledoc,ttdTSPOC,false)) then
+  begin
+    ExecuteSQL ('DELETE FROM BLIGNEETS WHERE '+WherePiece(Cledoc,ttdTSPOC,false));
+  end;
+  if ExisteSQL('SELECT 1 FROM BLIGNETS WHERE '+WherePiece(Cledoc,ttdTSDetPOC,false)) then
+  begin
+    ExecuteSQL ('DELETE FROM BLIGNETS WHERE '+WherePiece(Cledoc,ttdTSDetPOC,false));
+  end;
+end;
+
+procedure ValideLesTOBTS ( TOBPiece,TOBTSPOC : TOB);
+
+  procedure ValideUnDetailTS(TOBPiece,TOBENT : TOB);
+  var TOBD : TOB;
+      II : Integer;
+  begin
+    for II := 0 to TOBENT.Detail.count - 1 do
+    begin
+      TOBD := TOBENT.detail[II];
+      TOBD.SetString('BLT_NATUREPIECEG',TOBPiece.GetString('GP_NATUREPIECEG'));
+      TOBD.SetString('BLT_SOUCHE',TOBPiece.GetString('GP_SOUCHE'));
+      TOBD.SetInteger('BLT_NUMERO',TOBPiece.GetInteger('GP_NUMERO'));
+      TOBD.SetInteger('BLT_INDICEG',TOBPiece.GetInteger('GP_INDICEG'));
+      TOBD.SetString('BLT_REFERENCETS',TOBENT.GetString('BLE_REFERENCETS'));
+    end;
+  end;
+
+  procedure ValideLesTS(TOBPiece,TOBLIG : TOB);
+  var TOBE : TOB;
+      II : Integer;
+  begin
+    for II := 0 to TOBLIG.Detail.count - 1 do
+    begin
+      TOBE := TOBLIG.detail[II];
+      TOBE.SetString('BLE_NATUREPIECEG',TOBPiece.GetString('GP_NATUREPIECEG'));
+      TOBE.SetString('BLE_SOUCHE',TOBPiece.GetString('GP_SOUCHE'));
+      TOBE.SetInteger('BLE_NUMERO',TOBPiece.GetInteger('GP_NUMERO'));
+      TOBE.SetInteger('BLE_INDICEG',TOBPiece.GetInteger('GP_INDICEG'));
+      ValideUnDetailTS(TOBPiece,TOBE);
+    end;
+  end;
+
+var II : Integer;
+    TOBLIG: TOB;
+    cledoc : R_CLEDOC;
+begin
+  if (TOBpiece.GetString('GP_NATUREPIECEG') <> 'BCE') or (VH_GC.BTCODESPECIF <> '001') then Exit;
+  for II := 0 to TOBTSPOC.Detail.count - 1 do
+  begin
+    TOBLIG := TOBTSPOC.detail[II];
+    ValideLesTS(TOBPiece,TOBLIG);
+  end;
+  cledoc := TOB2CleDoc(TOBPiece);
+  DeleteLesTOBTS (cledoc);
+  TOBTSPOC.InsertDbByNivel(false); 
+end;
+
 procedure LoadLesTOBTS (Cledoc : R_CLEDOC;TOBTSPOC : TOB);
 var QQ : TQuery;
     SQL : String;
@@ -524,7 +585,7 @@ begin
       TOBEP.SetDouble('TOTALTS',TOBEP.GetDouble('TOTALTS')+TOBED.GetDouble('BLE_MONTANT'));
     until TOBE.Detail.count =0;
     //
-    SQL := 'SELECT * FROM BLIGNETS WHERE '+WherePiece(Cledoc,ttdTSDetPOC,false);
+    SQL := 'SELECT *,"-" AS NEW FROM BLIGNETS WHERE '+WherePiece(Cledoc,ttdTSDetPOC,false);
     QQ := OpenSQL(SQL,true,-1,'',true);
     if not QQ.eof then TOBDET.LoadDetailDB('BLIGNETS','','',QQ,false);
     ferme (QQ);
@@ -548,6 +609,7 @@ end;
 procedure GestionTsPOC(OneTOB,TOBTSPOC : TOB);
 var TheTOBC : TOB;
     TheNumOrdre : String;
+    II : integer;
 begin
   TheNumOrdre := OneTOB.GetString('GL_NUMORDRE');
   TheTOBC := TOBTSPOC.findfirst(['NUMORDRE'],[TheNumordre],True);
@@ -558,6 +620,11 @@ begin
   TheTOB := TheTOBC;
   AGLLanceFiche('BTP','BTMULPOCTS','','','ACTION=MODIFICATION');
   TheTOB := nil;
+  TheTOBC.SetDouble('TOTALTS',0);
+  for II := 0 to TheTOBC.detail.count -1 do
+  begin
+    TheTOBC.SetDouble('TOTALTS',TheTOBC.GetDouble('TOTALTS')+TheTOBC.detail[II].getDouble('BLE_MONTANT'));
+  end;
   OneTOB.SetDouble('SUMTOTALTS',TheTOBC.GetDouble('TOTALTS'));
   if TheTOBC.Detail.count = 0 then TheTOBC.Free;
 end;
