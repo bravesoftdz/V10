@@ -808,7 +808,9 @@ begin
    if Forplus then
    begin
      if BLC then Result := ' AND GPP_NATUREPIECEG IN ("CF","BLF","FF","AF","BLC")'
-            else Result := ' AND GPP_NATUREPIECEG IN ("CF","BLF","FF","AF","AFS")';
+            //FV1 : 08/01/2018 - FS#2832 - JPG - manque commandes regroupées dans consultations lignes
+            else Result := ' AND GPP_NATUREPIECEG IN ("CF","CFR","LFR","BLF","FF","AF","AFS")';
+            //else Result := ' AND GPP_NATUREPIECEG IN ("CF","BLF","FF","AF","AFS")';
    end
    else
    begin
