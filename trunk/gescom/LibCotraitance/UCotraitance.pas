@@ -1315,6 +1315,7 @@ begin
     TOBP.PutValue('BPI_SOUCHE', Souche);
     TOBP.PutValue('BPI_NUMERO', Numero);
     TOBP.PutValue('BPI_INDICEG', Indice);
+    TOBP.PutValue('BPI_ORDRE', I+1);
   end;
   TOBSSTrait.SetAllModifie(true);
   okok := false;
@@ -2371,6 +2372,7 @@ end;
 procedure TPieceCotrait.SetInfoSoustraitancelig(TOBL: TOB; Fournisseur,ModePaie,CodeMarche,LibelleFou: string; var Ligne: integer; PrixBloque,FromExcel : boolean);
 var LigneInit : integer;
     CodeFamille2 : string;
+    MtPaiementDir : double;
 begin
   CodeFamille2 := '';
   LigneInit := Ligne;
@@ -2389,6 +2391,8 @@ begin
   begin
     CodeFamille2 := GetInfoMarcheST (TOBL.GetString('GL_AFFAIRE'),Fournisseur,CodeMarche,'FAMILLENIV2');
     if CodeFamille2 <> #0 then TOBL.putvalue('GL_FAMILLENIV2',CodeFamille2);
+    MtPaiementDir := GetMtPaiementDir (TOBL.GetString('GL_AFFAIRE'),Fournisseur,CodeMarche);
+    if MtPaiementDir <> 0 then TOBL.SetDouble('GL_DPA',MtPaiementDir);
   end;
 
   if TOBL.fieldExists('BLF_NATURETRAVAIL') then

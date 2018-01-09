@@ -28,13 +28,13 @@ function RestitueAvancePOC(TOBFacture,TOBAffaire,TOBPOrcs,TOBBases : TOB;Pourcen
 function GetTauxAffairePOC(CodeAffaire : string; DatePiece : TdateTime) : Double;
 procedure EnregistreSit0POC(TOBFacture,TOBSituations : TOB; DEV : Rdevise);
 function GetInfoMarcheST(Affaire,Fournisseur,CodeMarche,Champs : string) : Variant;
+function GetMtPaiementDir (Affaire,Fournisseur,CodeMarche : string) : double;
 procedure LibereMemContratST;
 procedure AppelsBAST;
 function GetNextNumSituation (TOBPiece : TOB) : integer;
 procedure LoadLesTOBTS (Cledoc : R_CLEDOC;TOBTSPOC : TOB);
 procedure GestionTsPOC(OneTOB,TOBTSPOC : TOB);
 procedure ValideLesTOBTS ( TOBPiece,TOBTSPOC : TOB);
-
 implementation
 uses FactComm,UtilPGI,FactTOB,FactPiece,FactRG,FactUtil,ParamSOc,ENt1,AglInit,M3FP,cbpPath,LicUtil,UtilTOBPiece;
 
@@ -468,6 +468,21 @@ begin
   if TT = nil then Exit;
   Result := TT.GetValue('BM0_'+Champs);
 end;
+
+function GetMtPaiementDir (Affaire,Fournisseur,CodeMarche : string) : double;
+var QQ: TQuery;
+    SQL : string;
+begin
+  Result := 0;
+  SQL := 'SELECT BM1_MTPAIEDIR FROM BTMARCHESTDET WHERE BM1_AFFAIRE="'+Affaire+'" AND BM1_FOURNISSEUR="'+Fournisseur+'" AND BM1_CODEMARCHE="'+CodeMarche+'"';
+  QQ := OpenSQL(SQL,True,1,'',true);
+  if not QQ.eof then
+  begin
+    Result := QQ.fields[0].AsFloat;
+  end;
+  ferme (QQ);
+end;
+
 
 procedure LibereMemContratST;
 begin

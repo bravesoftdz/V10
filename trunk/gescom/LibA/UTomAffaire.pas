@@ -3577,7 +3577,6 @@ begin
   end;
 
   if not (DS.State in [dsInsert] ) then DerniereCreate := '';
-
   // Modified by f.vautrain 29/09/2017 10:10:19
   if (StatutAffaire = 'AFF') AND (VH_GC.BTCODESPECIF='001') then
   begin
