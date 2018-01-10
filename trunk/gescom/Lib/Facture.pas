@@ -8650,6 +8650,8 @@ Begin
 
   Result := AppelMetre(TOBL, True);
 
+  TOBL.PutValue('GL_QTEFACT', Result);
+
   if TOBL.getValue('GL_TYPEARTICLE') = 'OUV' then      
   begin
     if TOBL.getValue('GLC_VOIRDETAIL') = 'X' then
@@ -8665,6 +8667,9 @@ Begin
       Cancel := false;
       GSRowEnter(GS, GS.Row, Cancel, False);
       BouttonVisible(GS.row);
+    end else
+    begin
+      AfficheLaLigne(GS.row);
     end;
   end;
 
@@ -15677,6 +15682,13 @@ begin
       OkArt := IdentifierArticle(ACol, ARow, Cancel, true, False);  //Procédure appel mul recherche
       if ((OkArt) and (not Cancel)) then
       begin
+        //FV1 : 10/01/2018 - FS#2806 - DELABOUDINIERE - Avertissement si utilisation d'un article non tenu en stock en saisie livraison
+        if not ArticleEnStock(TOBPiece, TOBArticles, CleDoc.NaturePiece, ARow) then
+        Begin
+          PGIError('L''article n''est pas tenu en Stock !', Caption);
+          VideCodesLigne(TOBPiece, ARow);
+          InitialiseTOBLigne(TOBPiece, TOBTiers, TOBAffaire, ARow);
+        end;
         if not ArticleAutorise(TOBPiece, TOBArticles, CleDoc.NaturePiece, ARow) then
         begin
           HPiece.Execute(2, Caption, '');
@@ -16039,9 +16051,19 @@ end;
 procedure TFFacture.ZoomRepres(Repres: string);
 var Crits: string;
 begin
-	crits := '';
-	if TypeCom <> '' then Crits := ';GCL_TYPECOMMERCIAL="' + TypeCom + '"';
-  AGLLanceFiche('GC', 'GCCOMMERCIAL', '', Repres, 'ACTION=CONSULTATION' + Crits);
+  if BZoomRessource.Enabled then
+  BEGIN
+  	crits := '';
+ 	  Crits := ';ARS_TYPERESSOURCE="SAL"';
+    AGLLanceFiche('BTP', 'BTRESSOURCE', '', Repres, 'ACTION=CONSULTATION' + Crits);
+  end
+  ELSE
+  Begin
+  	crits := '';
+	  if TypeCom <> '' then Crits := ';GCL_TYPECOMMERCIAL="' + TypeCom + '"';
+    AGLLanceFiche('GC', 'GCCOMMERCIAL', '', Repres, 'ACTION=CONSULTATION' + Crits);
+  end;
+
 end;
 
 {==============================================================================================}
@@ -17526,7 +17548,10 @@ end;
 
 procedure TFFacture.BZoomCommercialClick(Sender: TObject);
 begin
-  ZoomRepres(GP_REPRESENTANT.Text);
+  if BZoomRessource.Enabled then
+    ZoomRepres(GP_RESSOURCE.Text)
+  else
+    ZoomRepres(GP_REPRESENTANT.Text);
 end;
 
 procedure TFFacture.BZoomTiersClick(Sender: TObject);
@@ -23722,8 +23747,11 @@ begin
   Texte.clear;
   TRY
     StringToRich(Texte, TOBL.GetValue('GL_BLOCNOTE'));
-    Texte.lines.Strings [0] := TOBL.GetString('GL_LIBELLE');
-    TOBL.PutValue('GL_BLOCNOTE', ExRichToString(Texte));
+    if copy(Texte.lines.Strings [0],1,70) <> TOBL.GetString('GL_LIBELLE') then
+    begin
+      Texte.lines.Strings [0] := TOBL.GetString('GL_LIBELLE');
+      TOBL.PutValue('GL_BLOCNOTE', ExRichToString(Texte));
+    end;
   FINALLY
     Texte.free;
   END;
