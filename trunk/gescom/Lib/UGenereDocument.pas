@@ -1225,6 +1225,7 @@ procedure TGenerePiece.ConstituePieceFromBast(TOBBAST: TOB; DateFac : TDateTime)
     TOBL.SetString('GL_TYPEDIM', 'NOR');
     TOBL.PutValue('GL_FAMILLETAXE1', TOBBAST.GetValue('BM4_FAMILLETAXE1'));
     TOBL.PutValue('GL_FAMILLENIV2', TOBBAST.GetValue('BM4_FAMILLENIV2'));
+    TOBL.SetInteger('GL_IDENTIFIANTWOL', -1); // ajout LS pour génération des livraison chantier 
   end;
 
   function  AjouteLignePort (TOBPiece,TOBPorcs,TLBAST,TParam : TOB ; var NbTrait : Integer) : boolean;
@@ -1379,6 +1380,7 @@ begin
   TT := CreerTOBPieceVide (cledoc,TOBBAST.GetString ('BM4_FOURNISSEUR'),TOBBAST.GetString ('BM4_AFFAIRE'),VH^.EtablisDefaut,'',True,False,1);
   TRY
     TOBPiece.Dupliquer(TT,false,true);
+    TOBPiece.SetDouble('GP_ESCOMPTE',0); // afin d'éviter de récupérer le taux d'escompte de la fiche fournisseur
     TOBPiece.SetDateTime('GP_DATEPIECE',DateFac);
     TOBPiece.SetDateTime('GP_DATECREATION',TOBBAST.GetDateTime('BM4_DATEVALID'));
     TOBPiece.SetString('GP_REFEXTERNE',TOBBAST.GetString('BM3_NUMERODOC'));

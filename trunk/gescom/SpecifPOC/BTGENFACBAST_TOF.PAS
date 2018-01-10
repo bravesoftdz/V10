@@ -62,7 +62,7 @@ Type
   private
     Rapport : TFBTRapport;
     procedure BVAliderClick (Sender : TObject);
-    procedure GenereFacture(CodeAffaire,CodeMarche,Fournisseur : string; NumSituation : integer ; PaimentPoc:  Boolean; Result : TResultB);
+    procedure GenereFacture(CodeAffaire,CodeMarche,Fournisseur : string; NumSituation : integer ; PaimentPoc:  Boolean; DateFac : TDateTime; Result : TResultB);
     procedure AddResultToRapport (Result : TResultB);
   end ;
 
@@ -122,7 +122,11 @@ var Q : TQuery;
     i : Integer;
     Result : TResultB;
     XX : TFPatience;
+    DateFac : TDateTime;
 begin
+  //
+  if Not DemandeDatesFacturation(DateFac) then exit;
+  //
   Rapport.MemoRapport.lines.Clear;
   XX := FenetrePatience('Gestion des BAST',aoMilieu, False,true);
   XX.lAide.Caption := 'Validation comptable des BAST ...';
@@ -144,7 +148,7 @@ begin
         PaiementPoc := (Q.FindField('BM4_PAIEMENTPOC').AsString ='X');
         //
         Result.Clear;
-        GenereFacture(CodeAffaire,CodeMarche,Fournisseur,NumSituation,PaiementPoc,Result);
+        GenereFacture(CodeAffaire,CodeMarche,Fournisseur,NumSituation,PaiementPoc,DateFac,Result);
         AddResultToRapport (Result);
         Q.NEXT;
       END;
@@ -161,7 +165,7 @@ begin
         PaiementPoc:=(TFMul(Ecran).Fliste.datasource.dataset.FindField('BM4_PAIEMENTPOC').AsString='X');
         //
         Result.Clear;
-        GenereFacture(CodeAffaire,CodeMarche,Fournisseur,NumSituation,PaiementPoc,Result);
+        GenereFacture(CodeAffaire,CodeMarche,Fournisseur,NumSituation,PaiementPoc,DateFac,Result);
         AddResultToRapport (Result);
       end;
     end;
@@ -182,20 +186,18 @@ begin
   fMessage := '';
 end;
 
-procedure TOF_BTGENFACBAST.GenereFacture(CodeAffaire,CodeMarche,Fournisseur: string; NumSituation: integer; PaimentPoc: Boolean; Result: TResultB);
+procedure TOF_BTGENFACBAST.GenereFacture(CodeAffaire,CodeMarche,Fournisseur: string; NumSituation: integer; PaimentPoc: Boolean; DateFac : TDateTime; Result: TResultB);
 var TT : TOB;
     QQ : TQuery;
     SQL : String;
     XX : TGenerePiece;
     TheResult : Tresult;
-    DateFac : TDateTime;
 begin
   Result.result := -1;
   Result.MessageRet := 'Abandonné par l''utilisateur';
   Result.fNumBast := '';
   Result.fNumSituation := 0;
   //
-  if Not DemandeDatesFacturation(DateFac) then exit;
 
   TT := TOB.Create('BASTENT',nil,-1);
   TRY
