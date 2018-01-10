@@ -301,13 +301,13 @@ begin
   CodeAffaire3 := GetControltext('BTBAFFAIRE3');
   CodeAvenant  := GetControltext('BTBAVENANT');
 
-  CodeClient := GetControltext('BTBTIERS');
+  CodeClient   := GetControltext('BTBTIERS');
   
   Etablissement:= GetControltext('GP_ETABLISSEMENT');
   
   // Ajout LS
-  DateMVTDeb := StrtoDate(GetControltext('DATEMVTDEB'));
-  DateMVTFin := StrtoDate(GetControltext('DATEMVTDEB_'));
+  DateMVTDeb   := StrtoDate(GetControltext('DATEMVTDEB'));
+  DateMVTFin   := StrtoDate(GetControltext('DATEMVTDEB_'));
 
   OptionChoixPrevuAvanc := [OptGlobal];
 
@@ -377,8 +377,8 @@ begin
   //
   if ecran.name  = 'BTRESULTATS' then
     THAffaire0 := THEdit(GetControl('BTBAFFAIRE0'))
-    else
-  THAffaire0 := THEdit(GetControl('AFF_AFFAIRE0'));
+  else
+    THAffaire0 := THEdit(GetControl('AFF_AFFAIRE0'));
 
   THAffaire1 := THEdit(GetControl('BTBAFFAIRE1'));
   THAffaire2 := THEdit(GetControl('BTBAFFAIRE2'));
@@ -472,21 +472,36 @@ end;
 
 
 Procedure TOF_BTTABLEAUBORD.ExitResponsable(Sender: TObject);
-Var Lib1, Lib2 : string;
+Var Lib1, Lib2  : string;
+    Zmail       : String;
+    Zmail1      : string;
+    Zmail2      : string;
 begin
 
   if TResponsable = nil then Exit;
 
   if LibResponsable = nil then Exit;
 
+  LibResponsable.Caption  := '';
+  THLabel(GetControl('ZMRESSOURCE')).caption := '';
+
   IF TResponsable.text <> '' then
   begin
     LibelleRessource(TResponsable.text, lib1, lib2);
     LibResponsable.Visible := True;
     LibResponsable.caption := Lib1 + ' ' + Lib2;
-  end
-  else
-    LibResponsable.Caption := '';
+    //
+    //FV1 : 09/01/2018 - FS#2840 - FLIPO - afficher l'adresse mail du responsable à l'édition du tableau de bord
+    EmailRessource(TResponsable.text, Zmail);
+    if pos('@', Zmail) <> 0 then
+    begin
+      Zmail1 := Copy(Zmail, 0, Pos('@', Zmail)-1);
+      Zmail2 := Copy(Zmail, Pos('@', Zmail)+1, Length(Zmail) - Pos('@', Zmail)+1);
+    end;
+    THLabel(GetControl('ZMAIL1')).caption := Zmail1;
+    THLabel(GetControl('ZMAIL2')).caption := Zmail2;
+  end;
+
 
 end;
 
