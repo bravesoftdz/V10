@@ -5233,7 +5233,9 @@ begin
       Begin
         if (PgiAsk('Ce document est bloqué par l''utilisateur '+ UserDoc +', Voulez-vous le débloquer ?', 'Document Bloqué') = mrYes) Then
         Begin
-          NumeroGUID:=ForceDeblocageDoc(cledoc.NaturePiece, cledoc.Souche + ';' + IntToSTr(Cledoc.NumeroPiece));
+          //NumeroGUID := BlocageDoc(cledoc.NaturePiece, CleDoc.Souche + ';' + IntToSTr(Cledoc.NumeroPiece), UserDoc);
+          NumeroGUID := CreationBlocage(Cledoc.NaturePiece, CleDoc.Souche + ';' + IntToSTr(Cledoc.NumeroPiece), UserDoc);
+          //NumeroGUID:=ForceDeblocageDoc(cledoc.NaturePiece, cledoc.Souche + ';' + IntToSTr(Cledoc.NumeroPiece));
         End else
           Action := taConsult;
       End;
@@ -16852,10 +16854,24 @@ begin
 end;
 
 procedure TFFacture.BDeleteClick(Sender: TObject); { NEWPIECE }
-var
-  St: string;
-  NumL: Integer;
+var St: string;
+    UserDoc:String;
+    NumL: Integer;
 begin
+
+  //FV1 - 11/01/20018 - FS#2650 - LAFOSSE : pb avec blocage sur document
+  //Avant de faire quoique ce soit on vérifie si un autre utilisateur n'est pas sur la saisie
+  UserDoc := V_PGI.User;
+  St := CtrlBlocageDelDoc(cledoc.NaturePiece, CleDoc.Souche + ';' + IntToSTr(Cledoc.NumeroPiece), UserDoc);
+  if St = 'BLOQUE' then
+  Begin
+    if V_PGI.User <> UserDoc then
+    begin
+      PGIError('Ce document est bloqué par l''utilisateur '+ UserDoc +', La suppression est interdite !', 'Document Bloqué');
+      Exit;
+    end;
+  end;
+
   {$IFDEF BTP}
   if not ControleChantierBTP(TOBPiece, BTTSuppress) then Exit;
   {$ENDIF}
