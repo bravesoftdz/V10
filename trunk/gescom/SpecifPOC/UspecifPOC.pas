@@ -429,7 +429,7 @@ begin
   CodeMarche := parms[2];
   DBName := V_PGI.DBName;
   ServerName := GetServerName;
-  TheLance := IncludeTrailingBackslash(TcbpPath.GetCegid)+'Specif-POC\APP\MarcheST.exe /userLSE='+V_PGI.User+' /EmailPwd='+EmailPasswd +' /Serveur='+ServerName+' /BaseDeDonnees='+DBName+' /CodeChantier="'+CodeChantier+'" /SousTraitant='+SousTrait+' /CodeMarche='+CodeMarche+' /Action=M';
+  TheLance := IncludeTrailingBackslash(TcbpPath.GetCegid)+'Specif-POC\APP\MarcheST.exe /userLSE='+V_PGI.User+' /EmailPwd='+EmailPasswd +' /Serveur='+ServerName+' /BaseDeDonnees='+DBName+' /CodeChantier="'+CodeChantier+'" /SousTraitant="'+SousTrait+'" /CodeMarche="'+CodeMarche+'" /Action=M';
   FileExecAndWait (TheLance);
 end;
 
