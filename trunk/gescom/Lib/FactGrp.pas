@@ -3705,6 +3705,8 @@ begin
   if VH_GC.BTCODESPECIF = '001' then
   begin
     CalculeDonneelignePOC (TOBL,CoefPaPr,CoefPrPv);
+    if CoefPaPr = 0 then CoefPaPr := 1;
+    if CoefPrPv = 0 then CoefPrPv := 1;
     TOBL.putValue('GL_COEFFG',CoefPaPr-1);
     TOBL.putValue('GL_COEFMARG',CoefPrPv);
     TOBL.PutValue('POURCENTMARG',Arrondi((TOBL.GetValue('GL_COEFMARG')-1)*100,2));

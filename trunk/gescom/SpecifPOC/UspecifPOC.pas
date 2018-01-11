@@ -49,12 +49,12 @@ begin
     StockeCetteAffaire (Affaire);
     TOBAffaire := FindCetteAffaire (Affaire);
   end;
-  fCOEFFG := TOBAffaire.GetDouble('AFF_COEFFG');
-  COEFFS := TOBAffaire.GetDouble('AFF_COEFFS');
-  COEFSAV := TOBAffaire.GetDouble('AFF_COEFSAV');
-  COEFFD := TOBAffaire.GetDouble('AFF_COEFFD');
+  fCOEFFG := TOBAffaire.GetDouble('AFF_COEFFG'); if fCOEFFG = 0 then fCOEFFG := 1;
+  COEFFS := TOBAffaire.GetDouble('AFF_COEFFS'); if COEFFS = 0 then CoefFS := 1;
+  COEFSAV := TOBAffaire.GetDouble('AFF_COEFSAV'); if COEFSAV = 0 then COEFSAV := 1;
+  COEFFD := TOBAffaire.GetDouble('AFF_COEFFD');  if COEFFD = 0 then COEFFD := 1;
   COEFFG := ARRONDI(fCOEFFG * COEFFS * COEFSAV * COEFFD,4);
-  COEFMARGE := TOBAffaire.GetDouble('AFF_COEFMARG');
+  COEFMARGE := TOBAffaire.GetDouble('AFF_COEFMARG'); if COEFMARGE = 0 then COEFMARGE := 1;
 end;
 
 procedure CalculeDonneelignePOC (TOBL : TOB; var COEFFG,COEFMARGE : double);
