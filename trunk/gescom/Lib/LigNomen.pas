@@ -1173,7 +1173,6 @@ begin
 
     TCODEDIM.Caption := '';
     //Cancel := False;
-
   // Suppression de la fille contenant les infos de la pièce en cas de nomenclature
   // sans composants
   if (TobVide(TobLig)) and (TobLig.Detail.Count=1) then TobLig.Detail[0].free;

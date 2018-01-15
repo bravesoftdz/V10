@@ -6276,7 +6276,7 @@ end;
 
 procedure TFFacture.ToutLiberer;
 begin
-  GS.VidePile(False);
+  //GS.VidePile(False);
   PurgePop(POPZ);
   TOBVTECOLLECTIF.free;
   TheSituations.free;
@@ -7666,7 +7666,6 @@ begin
       begin
       	if (TOBL.GetValue('GL_NATUREPIECEG') <> 'BCE') then InformeErreurOuvrage (self,TOBL,Arect);
       end;
-//      if IsArticlePrixPose (TOBL) 
     end;
   end;
   {$ENDIF}
@@ -13244,8 +13243,8 @@ begin
     if TOBL.GetString('GL_NATUREPIECEG')='BBO' then TOBL.PutValue('GL_REMISABLELIGNE','X');
     // Modif BTP
     if TraiteLesOuv(Arow) then
-    begin
-      AfficheLaLigne(Arow);
+       begin
+         AfficheLaLigne(Arow);
     end else
     begin
       VideCodesLigne(TOBPiece, ARow);
@@ -27699,9 +27698,9 @@ begin
     GS.Colwidths[SG_NATURETRAVAIL] := 20;
     GS.ColLengths[SG_NATURETRAVAIL] := 20;
   end;
-  if (SG_TOTALTS <> -1) then
+  if (SG_TOTALTS <> -1) and (TOBPiece.GetString('GP_NATUREPIECEG') <> 'BCE') or (VH_GC.BTCODESPECIF <> '001')  then
   begin
-    if (TOBPiece.GetString('GP_NATUREPIECEG') <> 'BCE') or (VH_GC.BTCODESPECIF <> '001')  then GS.Colwidths[SG_TOTALTS] := -1;
+    GS.Colwidths[SG_TOTALTS] := -1;
   end;
   if (SG_CODEMARCHE <> -1) and (GS.Colwidths[SG_CODEMARCHE]>0) then
   begin

@@ -534,7 +534,7 @@ begin
     begin
       if V_PGI.IOError = OeOk then
       begin
-        if TOBPiece.GetString('GP_AFFAIRE') <> '' then ExecuteSQL('UPDATE AFFAIRE SET AFF_DATEMODIF='+USDATETIME(Nowh)+' WHERE AFF_AFFAIRE="'+TOBPiece.GetString('GP_AFFAIRE')+'"' );
+        if TOBPiece.GetString('GP_AFFAIRE') <> '' then ExecuteSQL('UPDATE AFFAIRE SET AFF_DATEMODIF="'+USDATETIME(Nowh)+'" WHERE AFF_AFFAIRE="'+TOBPiece.GetString('GP_AFFAIRE')+'"' );
       end;
     end;
   end;
