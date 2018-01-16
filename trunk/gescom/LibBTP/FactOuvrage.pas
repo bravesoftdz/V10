@@ -141,6 +141,7 @@ procedure PositionneLigneOuvVariante (TOBL,TOBOuvrage : TOB ; variante : boolean
 procedure PositionneVarianteOuv (TobOuv : TOB;variante : boolean);
 function IsOuvrage (TOBL : TOB) : boolean;
 function IsOuvrageComptabiliseDetail (TOBL : TOB) : boolean;
+function IsArticlePrixPose (TOBL : TOB) : boolean;
 function GetQteDetailOuv (TOBL,TOBOUvrages : TOB) : integer;
 procedure PosQteDetailAndCalcule (TOBLig,TOBOUvrages : TOB;QteDetail : double;DEV: RDevise);
 (* OPTIMIZATION *)
@@ -1659,7 +1660,7 @@ begin
     NomChamp := (FieldList.Current as IFieldCOM).name;
     if (Nomchamp <> '') and (Pos(NomChamp,'BLO_N1;BLO_N2;BLO_N3;BLO_N4;BLO_N5')=0) then
     begin
-    	TOBDEST.PutValeur (i,TOBREF.Getvaleur(i));
+    	TOBDEST.PutValue (NomChamp,TOBREF.Getvalue(NomChamp));
     end;
   end;
   TOBDest.Putvalue ('UTILISE',TOBREF.GetValue('UTILISE')) ;
@@ -1697,6 +1698,17 @@ begin
   TOBDest.Putvalue ('GA_HEURE',TOBREF.GetValue('GA_HEURE')) ;
   TOBDest.Putvalue ('GF_PRIXUNITAIRE',TOBREF.GetValue('GF_PRIXUNITAIRE')) ;
   TOBDest.Putvalue ('BLO_TPSUNITAIRE',TOBREF.GetValue('BLO_TPSUNITAIRE')) ;
+  TOBDest.Putvalue ('BLO_TYPEARTICLE',TOBREF.GetValue('BLO_TYPEARTICLE')) ;
+  //
+  TOBDest.Putvalue ('BLO_ARTICLE',TOBREF.GetValue('BLO_ARTICLE')) ;
+  TOBDest.Putvalue ('BLO_CODEARTICLE',TOBREF.GetValue('BLO_CODEARTICLE')) ;
+  TOBDest.Putvalue ('BLO_REFARTSAISIE',TOBREF.GetValue('BLO_REFARTSAISIE')) ;
+  TOBDest.Putvalue ('BLO_AFFAIRE1',TOBREF.GetValue('BLO_AFFAIRE1')) ;
+  TOBDest.Putvalue ('BLO_AFFAIRE2',TOBREF.GetValue('BLO_AFFAIRE2')) ;
+  TOBDest.Putvalue ('BLO_AFFAIRE3',TOBREF.GetValue('BLO_AFFAIRE3')) ;
+  TOBDest.Putvalue ('BLO_AVENANT',TOBREF.GetValue('BLO_AVENANT')) ;
+  TOBDest.Putvalue ('BLO_LIBELLE',TOBREF.GetValue('BLO_LIBELLE')) ;
+  TOBDest.Putvalue ('BLO_FOURNISSEUR',TOBREF.GetValue('BLO_FOURNISSEUR')) ;
 end;
 
 
@@ -1879,6 +1891,7 @@ BEGIN
     begin
       recupInfoLigneOuv (TOBDEPART,TOBDEPART.Detail[0]);
       TOBDEPART.PutValue('BLO_NATUREPIECEG',TOBDEPART.detail[0].GetValue('BLO_NATUREPIECEG'));
+      TOBDEPART.PutValue('BLO_QTEFACT',1) ;
       TOBDEPART.PutValue('BLO_NIVEAU',1) ;
       TOBDEPART.PutValue('BLO_NUMORDRE',1) ;
       TOBDEPART.PutValue('BLO_QTEDUDETAIL',1) ;
@@ -2974,7 +2987,7 @@ BEGIN
       else if LigneN5 = 0 then Findpere (TOBGroupeNomen,LigneN1,LigneN2,LigneN3,LigneN4,5);
       if TOBPere = nil then TOBpere := TOBGroupeNomen;
     end;
-    if (TOBPere<>Nil) and (TOBLN.getValue('BLO_ARTICLE')<>'') then
+    if (TOBPere<>Nil) {and (TOBLN.getValue('BLO_ARTICLE')<>'')} then
     BEGIN
       // OPTIMISATIONS LS
       InsertionChampSupOuv (TOBLN,false);
@@ -5759,6 +5772,16 @@ begin
 
   PositionneVarianteOuv (TobLoc,variante);
 
+end;
+
+function IsArticlePrixPose (TOBL : TOB) : boolean;
+var TypeArticle : string;
+		prefixe : string;
+begin
+result := false;
+prefixe := GetPrefixeTable(TOBL);
+TypeArticle := TOBL.getValue(Prefixe+'_TYPEARTICLE');
+if (TypeArticle = 'ARP') or (TypeArticle = 'ARV') then result := true;
 end;
 
 

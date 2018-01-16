@@ -5233,9 +5233,7 @@ begin
       Begin
         if (PgiAsk('Ce document est bloqué par l''utilisateur '+ UserDoc +', Voulez-vous le débloquer ?', 'Document Bloqué') = mrYes) Then
         Begin
-          //NumeroGUID := BlocageDoc(cledoc.NaturePiece, CleDoc.Souche + ';' + IntToSTr(Cledoc.NumeroPiece), UserDoc);
-          NumeroGUID := CreationBlocage(Cledoc.NaturePiece, CleDoc.Souche + ';' + IntToSTr(Cledoc.NumeroPiece), UserDoc);
-          //NumeroGUID:=ForceDeblocageDoc(cledoc.NaturePiece, cledoc.Souche + ';' + IntToSTr(Cledoc.NumeroPiece));
+          NumeroGUID:=ForceDeblocageDoc(cledoc.NaturePiece, cledoc.Souche + ';' + IntToSTr(Cledoc.NumeroPiece));
         End else
           Action := taConsult;
       End;
@@ -6278,7 +6276,7 @@ end;
 
 procedure TFFacture.ToutLiberer;
 begin
-  GS.VidePile(False);
+  //GS.VidePile(False);
   PurgePop(POPZ);
   TOBVTECOLLECTIF.free;
   TheSituations.free;
@@ -7668,7 +7666,6 @@ begin
       begin
       	if (TOBL.GetValue('GL_NATUREPIECEG') <> 'BCE') then InformeErreurOuvrage (self,TOBL,Arect);
       end;
-//      if IsArticlePrixPose (TOBL) 
     end;
   end;
   {$ENDIF}
@@ -13246,8 +13243,8 @@ begin
     if TOBL.GetString('GL_NATUREPIECEG')='BBO' then TOBL.PutValue('GL_REMISABLELIGNE','X');
     // Modif BTP
     if TraiteLesOuv(Arow) then
-    begin
-      AfficheLaLigne(Arow);
+       begin
+         AfficheLaLigne(Arow);
     end else
     begin
       VideCodesLigne(TOBPiece, ARow);
@@ -16855,24 +16852,10 @@ begin
 end;
 
 procedure TFFacture.BDeleteClick(Sender: TObject); { NEWPIECE }
-var St: string;
-    UserDoc:String;
-    NumL: Integer;
+var
+  St: string;
+  NumL: Integer;
 begin
-
-  //FV1 - 11/01/20018 - FS#2650 - LAFOSSE : pb avec blocage sur document
-  //Avant de faire quoique ce soit on vérifie si un autre utilisateur n'est pas sur la saisie
-  UserDoc := V_PGI.User;
-  St := CtrlBlocageDelDoc(cledoc.NaturePiece, CleDoc.Souche + ';' + IntToSTr(Cledoc.NumeroPiece), UserDoc);
-  if St = 'BLOQUE' then
-  Begin
-    if V_PGI.User <> UserDoc then
-    begin
-      PGIError('Ce document est bloqué par l''utilisateur '+ UserDoc +', La suppression est interdite !', 'Document Bloqué');
-      Exit;
-    end;
-  end;
-
   {$IFDEF BTP}
   if not ControleChantierBTP(TOBPiece, BTTSuppress) then Exit;
   {$ENDIF}
@@ -27715,9 +27698,9 @@ begin
     GS.Colwidths[SG_NATURETRAVAIL] := 20;
     GS.ColLengths[SG_NATURETRAVAIL] := 20;
   end;
-  if (SG_TOTALTS <> -1) then
+  if (SG_TOTALTS <> -1) and (TOBPiece.GetString('GP_NATUREPIECEG') <> 'BCE') or (VH_GC.BTCODESPECIF <> '001')  then
   begin
-    if (TOBPiece.GetString('GP_NATUREPIECEG') <> 'BCE') or (VH_GC.BTCODESPECIF <> '001')  then GS.Colwidths[SG_TOTALTS] := -1;
+    GS.Colwidths[SG_TOTALTS] := -1;
   end;
   if (SG_CODEMARCHE <> -1) and (GS.Colwidths[SG_CODEMARCHE]>0) then
   begin
