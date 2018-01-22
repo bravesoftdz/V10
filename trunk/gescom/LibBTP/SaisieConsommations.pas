@@ -4414,7 +4414,6 @@ begin
 
   if result then
   begin
-    TOBL.putValue('BCO_RESSOURCE',trim(valeur));
 	  ChargeResource (Valeur);
     // -----------
     if (OkSaisEquipe) and
@@ -4426,6 +4425,25 @@ begin
       TOBL.putValue('BCO_LINKEQUIPE',TOBRessource.GetString('ARS_EQUIPERESS')+';'+DateTimeToStr(Now));
     end;
     // -----------
+    //
+    if TOBL.GetValue('BCO_RESSOURCE') <> Trim(valeur) then
+    Begin
+      TOBL.PutValue('MODIF', 'X');
+      TOBL.PutValue('TYPEMODIF', 'Q');
+    end
+    else
+    Begin
+      if Action = TaCreat then
+      begin
+        TOBL.PutValue('MODIF', 'X');
+        TOBL.PutValue('TYPEMODIF', 'Q');
+      end
+      else
+        TOBL.PutValue('MODIF', '-');
+    end;
+
+    TOBL.putValue('BCO_RESSOURCE', trim(valeur));
+    result := true;
   end;
 
 end;
@@ -4672,7 +4690,10 @@ begin
   Begin
     TOBL.PutValue('MODIF', 'X');
     TOBL.PutValue('TYPEMODIF', 'P');
-  end;
+  end
+  else
+    TOBL.PutValue('MODIF', '-');
+
 
   if IsExistePhaseAffaire (TOBL.GetValue('BCO_AFFAIRE'),valeur) then
      TOBL.PutValue('BCO_PHASETRA',valeur)
@@ -4692,7 +4713,10 @@ begin
   Begin
     TOBL.PutValue('MODIF', 'X');
     TOBL.PutValue('TYPEMODIF', 'X');
-  end;
+  end
+  Else
+    TOBL.PutValue('MODIF', '-');
+
 
   TOBL.PutValue('BCO_MONTANTPR', valeur(TheValeur));
 
@@ -4724,7 +4748,10 @@ begin
   Begin
     TOBL.PutValue('MODIF', 'X');
     TOBL.PutValue('TYPEMODIF', 'X');
-  end;
+  end
+  Else
+    TOBL.PutValue('MODIF', '-');
+
 
   TOBL.PutValue('BCO_DPR', valeur(TheValeur));
   calculeLaLigne (TOBL,0,LastprPv);
@@ -4746,7 +4773,18 @@ begin
   Begin
     TOBL.PutValue('MODIF', 'X');
     TOBL.PutValue('TYPEMODIF', 'Q');
+  end
+  else
+  Begin
+    if Action = TaCreat then
+    begin
+      TOBL.PutValue('MODIF', 'X');
+      TOBL.PutValue('TYPEMODIF', 'Q');
+    end
+    else
+      TOBL.PutValue('MODIF', '-');
   end;
+
   TOBL.PutValue('BCO_QUANTITE',Valeur (TheValeur));
   result := true;
 
@@ -4933,10 +4971,10 @@ begin
   END;
 *)
 
-  if (OkSaisEquipe) and (TOBL.GetString('BCO_LINKEQUIPE')<>'')then
-  begin
-    TraiteLigneEquipe (TOBL);
-  end;
+  //if (OkSaisEquipe) and (TOBL.GetString('BCO_LINKEQUIPE')<>'')then
+  //begin
+  //  TraiteLigneEquipe (TOBL);
+  //end;
 
 end;
 
@@ -6764,10 +6802,15 @@ begin
     //   Begin
     //   if not VerifFacturable(TOBL,ZoneGrille) then cancel := true
        end;
-  if (OkSaisEquipe) and (TOBL.GetString('BCO_LINKEQUIPE')<>'')then
+
+  If TOBL.GetString('MODIF') = 'X' Then
   begin
-    TraiteLigneEquipe (TOBL);
-  end;
+    if (OkSaisEquipe) and (TOBL.GetString('BCO_LINKEQUIPE')<>'')then
+    begin
+      TraiteLigneEquipe (TOBL);
+    end;
+  End;
+
 end;
 
 procedure TOF_BTSAISIECONSO.RechArticleGrid(Grille: THGrid; TOBL: TOB);
@@ -6947,10 +6990,11 @@ begin
     	if LigneFromPieces(TOBLigne) and (Acol <> G_LIBELLE) and (Acol <> G_PHASE) then AfficheLaLigne (TOBLigne,Grille,stColListe,Arow); // modif BRL 150609 : on autorise tjs la modif du libelle et de la phase
     //Modif FV pour passage qté grille en qté à facturer qualque soit l'onglet de saisie (19062007)
     if ACol = G_QTE then
-       Begin
-       QTEFACTURE.Text := ZoneGrille;
-       TOBLigne.putvalue('BCO_QTEFACTUREE', QTEFACTURE.text);
-       end;
+    Begin
+      QTEFACTURE.Text := ZoneGrille;
+      TOBLigne.putvalue('BCO_QTEFACTUREE', QTEFACTURE.text);
+    end;
+
     if TheMode = TgsMO then
     begin
     end
@@ -7633,6 +7677,7 @@ begin
 
     if (Pos(TOBL.GetValue('BCO_NATUREMOUV'),'MO;RES;EXT')>0)  then
     begin
+      TOBL.PutValue('MODIF', 'X');
       if (CHOIX_CHANTIER.Checked) OR (CHOIX_CONTRAT.Checked) OR (CHOIX_APPEL.Checked) then
       begin
         // Dans ce cadre on enregistre dans les bonnes TOB (en creation ou en mise a jour)
