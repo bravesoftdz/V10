@@ -2,7 +2,7 @@ unit UBTPSequenceCpta;
 
 interface
 uses uTob, HEnt1, HCtrls, StdCtrls, Ent1,
-     DB,SysUtils,CbpMCD,
+     DB,SysUtils,CbpMCD,ADODB,Forms,
     {$IFNDEF DBXPRESS} dbtables {$ELSE} uDbxDataSet {$ENDIF}
 ;
 // COMPTA
@@ -19,17 +19,45 @@ function ConstitueCodeSequenceGC (TypeSouche,CodeSouche : string) : string;
 
 
 implementation
+uses galsystem;
+
+function GetPartage (NomTable : string) : string;
+var QQ : TQuery;
+begin
+  Result := '';
+  TRY
+    QQ := OpenSQL('SELECT DS_NOMBASE FROM DESHARE WHERE DS_NOMTABLE="'+NomTable+'"',True,1,'',true);
+    if not QQ.eof then
+    begin
+      Result := QQ.fields[0].AsString;
+    end;
+    Ferme(QQ);
+  EXCEPT
+    Exit;
+  end;
+end;
+
 
 function wExistTable(Const TableName:String): Boolean;
 {$IFDEF V10}
 var  Mcd : IMCDServiceCOM;
-    Table     : ITableCOM ;
+     Table     : ITableCOM ;
+     partage,NomReel : string;
 {$ENDIF}
 begin
 {$IFDEF V10}
-  MCD := TMCD.GetMcd;
-  if not mcd.loaded then mcd.WaitLoaded();
-  Result := Mcd.TableExists(TableName);
+  partage := GetPartage(TableName);
+  if partage = '' then
+  begin
+    MCD := TMCD.GetMcd;
+    if not mcd.loaded then mcd.WaitLoaded();
+    Result := Mcd.TableExists(TableName);
+  end else
+  begin
+    if partage <> '' then NomReel := Partage+'.dbo.'+TableName
+                     else NomReel := TableName;
+    Result := ISTablePhysExiste (NomReel);
+  end;
 {$ELSE}
 	Result := TableToNum(TableName) <> 0;
 {$ENDIF}
@@ -60,13 +88,24 @@ begin
 end;
 
 function ExistSequence(Cle: string; Entite : integer=0) : Boolean;
+var NomPartage,NomReel,NomReel1 : string;
 begin
   if wExistTable ('CPSEQCORRESP') then
   begin
-	  Result := ExisteSQL('SELECT DSQ_CODE FROM DESEQUENCES WHERE DSQ_CODE=(SELECT CSC_SEQUENCE FROM CPSEQCORRESP WHERE CSC_METIER="'+Cle+'")');
+    NomPartage := GetPartage('DESEQUENCES');
+    if NomPartage <> '' then NomReel := NomPartage+'.dbo.DESEQUENCES'
+                        else NomReel := 'DESEQUENCES';
+    NomPartage := GetPartage('CPSEQCORRESP');
+    if NomPartage <> '' then NomReel1 := NomPartage+'.dbo.CPSEQCORRESP'
+                        else NomReel1 := 'CPSEQCORRESP';
+
+	  Result := ExisteSQL('SELECT DSQ_CODE FROM '+NomReel+' WHERE DSQ_CODE=(SELECT CSC_SEQUENCE FROM '+NomReel1+' WHERE CSC_METIER="'+Cle+'")');
   end else
   begin
-	  Result := ExisteSQL('SELECT DSQ_CODE FROM DESEQUENCES WHERE DSQ_CODE="'+Cle+'"');
+    NomPartage := GetPartage('DESEQUENCES');
+    if NomPartage <> '' then NomReel := NomPartage+'.dbo.DESEQUENCES'
+                        else NomReel := 'DESEQUENCES';
+	  Result := ExisteSQL('SELECT DSQ_CODE FROM '+NomReel+' WHERE DSQ_CODE="'+Cle+'"');
   end;
 end;
 
@@ -119,45 +158,82 @@ begin
 end;
 
 function GetNextSequence(Cle: string; nombre : integer; Entity : integer=0) : integer;
-var II ,lastValue,Nbr,Increment: Integer;
-    Okok : Boolean;
-    SQL : string;
-    // 50 tentatives maximum avant de sortir en erreur
+var CNX : TADOConnection;
+    QQ : TADOQuery;
+    NbRec : integer;
+    SQL,NomPartage,Nomreel,NomReel1 : string;
 begin
   Result := -1;
-  Nbr := 0;
-  okOk := false;
-  repeat
-    lastValue := ReadCurrentSequence(Cle,Entity);
-    if lastValue = -1 then
-    begin
-      raise Exception.Create(traduirememoire('Problème lecture de sequence '+Cle));
-      break;
+  CNX := TADOConnection.Create(application);
+  Cnx.ConnectionString :=DBSOC.ConnectionString;
+  CNX.LoginPrompt := false;
+  TRY
+    CNX.Connected := True;
+    Cnx.BeginTrans;
+    TRY
+      if wExistTable ('CPSEQCORRESP') then
+      begin
+        NomPartage := GetPartage('DESEQUENCES');
+        if NomPartage <> '' then NomReel := NomPartage+'.dbo.DESEQUENCES'
+                            else NomReel := 'DESEQUENCES';
+        NomPartage := GetPartage('CPSEQCORRESP');
+        if NomPartage <> '' then NomReel1 := NomPartage+'.dbo.CPSEQCORRESP'
+                            else NomReel1 := 'CPSEQCORRESP';
+        SQL := 'UPDATE '+NomReel+' SET DSQ_VALEUR=(DSQ_VALEUR+DSQ_INCREMENT) WHERE DSQ_CODE=(SELECT CSC_SEQUENCE FROM '+NomReel1+' WHERE CSC_METIER='''+Cle+''')';
+      end else
+      begin
+        NomPartage := GetPartage('DESEQUENCES');
+        if NomPartage <> '' then NomReel := NomPartage+'.dbo.DESEQUENCES'
+                            else NomReel := 'DESEQUENCES';
+        SQL := 'UPDATE '+NomReel+' SET DSQ_VALEUR=DSQ_VALEUR+DSQ_INCREMENT WHERE DSQ_CODE='''+Cle+'''';
+      end;
+      //
+      CNX.Execute(SQl,NbRec);
+      //
+      QQ := TADOQuery.Create(Application);
+      QQ.Connection := CNX;
+      if wExistTable ('CPSEQCORRESP') then
+      begin
+        NomPartage := GetPartage('DESEQUENCES');
+        if NomPartage <> '' then NomReel := NomPartage+'.dbo.DESEQUENCES'
+                            else NomReel := 'DESEQUENCES';
+        NomPartage := GetPartage('CPSEQCORRESP');
+        if NomPartage <> '' then NomReel1 := NomPartage+'.dbo.CPSEQCORRESP'
+                            else NomReel1 := 'CPSEQCORRESP';
+        SQL := 'SELECT DSQ_VALEUR FROM '+NomReel+' WHERE DSQ_CODE=(SELECT CSC_SEQUENCE FROM '+NomReel1+' WHERE CSC_METIER='''+Cle+''')';
+      end else
+      begin
+        NomPartage := GetPartage('DESEQUENCES');
+        if NomPartage <> '' then NomReel := NomPartage+'.dbo.DESEQUENCES'
+                            else NomReel := 'DESEQUENCES';
+        SQL := 'SELECT DSQ_VALEUR FROM '+NomReel+' WHERE DSQ_CODE='''+Cle+'''';
+      end;
+      QQ.SQL.Text := SQL;
+      QQ.Prepared := True;
+      QQ.Open;
+      TRY
+        if not QQ.Eof then
+        begin
+          Result := QQ.Fields[0].AsInteger;
+        end;
+      FINALLY
+        QQ.Close;
+        QQ.Free;
+      end;
+      CNX.CommitTrans;
+    EXCEPT
+      on E:Exception do
+      begin
+        Application.MessageBox (PAnsiChar('Erreur '+#10#13+E.message),'') ;
+        CNX.RollbackTrans;
+        Raise;
+      end;
     end;
-    II := lastValue + ReadIncrementSequence(Cle,Entity);
+  finally
+    CNX.Close;
+    Cnx.Free;
+  end;
 
-    if wExistTable ('CPSEQCORRESP') then
-    begin
-      SQL := 'UPDATE DESEQUENCES SET DSQ_VALEUR='+IntToStr(II)+' WHERE DSQ_CODE=(SELECT CSC_SEQUENCE FROM CPSEQCORRESP WHERE CSC_METIER="'+Cle+'") AND DSQ_VALEUR='+IntToStr(lastValue);
-    end else
-    begin
-      SQL := 'UPDATE DESEQUENCES SET DSQ_VALEUR='+IntToStr(II)+' WHERE DSQ_CODE="'+Cle+'" AND DSQ_VALEUR='+IntToStr(lastValue);
-    end;
-
-
-    if ExecuteSQL(SQL) > 0 then
-    begin
-    	OkOk := true;
-      Result := II;
-    end;
-    if (not OkOk) and (Nbr < 50) then Sleep(100); // wait de 150 ms
-    if (not okOk) and (Nbr >= 50) then
-    begin
-      nombre := Nbr;
-      raise Exception.Create(traduirememoire('Erreur écriture séquence '+Cle));
-      break;
-    end;
-  until okOk
 end;
 
 function CreateSequence(Cle: string; valeur : integer; xx : integer=0; entity : integer=0) : Boolean;

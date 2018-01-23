@@ -104,6 +104,7 @@ function  GetFullRegKey (const RegValueName : String ) : String ;
 function  AffecteGroupe (nodoss:string; strGroupeConf:string) : string;
 function  IsNoDossierOk(stNoDossier: string): boolean;
 function  JaiBloque(Niveau: string): boolean;
+function ISTablePhysExiste (NomTbl : string) : Boolean;
 
 
 
@@ -726,6 +727,19 @@ end;
 {$IFDEF EAGLCLIENT}
   // #### A FAIRE EAGL
 {$ELSE}
+function ISTablePhysExiste (NomTbl : string) : Boolean;
+var Q: TQuery;
+begin
+  Result := False;
+  Q := OpenSQL('select object_id('''+nomtbl+''') as resultat', True,-1,'',True,'',true);
+  if Q<>Nil then
+  begin
+    if Not Q.Eof then
+      Result := Not VarIsNull(Q.FindField('resultat').AsVariant);
+    Ferme(Q);
+  end;
+end;
+
 function DBTablePhysExiste(nomtbl: String; DB: TDatabase): Boolean;
 // teste existence table physique directement dans la base
 var Q: TQuery;
