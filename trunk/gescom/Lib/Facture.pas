@@ -27698,9 +27698,9 @@ begin
     GS.Colwidths[SG_NATURETRAVAIL] := 20;
     GS.ColLengths[SG_NATURETRAVAIL] := 20;
   end;
-  if (SG_TOTALTS <> -1) and (TOBPiece.GetString('GP_NATUREPIECEG') <> 'BCE') or (VH_GC.BTCODESPECIF <> '001')  then
+  if (SG_TOTALTS <> -1) then
   begin
-    GS.Colwidths[SG_TOTALTS] := -1;
+    if (TOBPiece.GetString('GP_NATUREPIECEG') <> 'BCE') or (VH_GC.BTCODESPECIF <> '001')  then GS.Colwidths[SG_TOTALTS] := -1;
   end;
   if (SG_CODEMARCHE <> -1) and (GS.Colwidths[SG_CODEMARCHE]>0) then
   begin

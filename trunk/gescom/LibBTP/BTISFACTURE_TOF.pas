@@ -47,7 +47,12 @@ Type
   	TOBresultat      : TOB;
   	ISFACTURE        : TCheckBox;
   	FACTURE,FACTURE_ : THEDIT;
+    DatePIECE        : THEdit;
+    DatePIECE_       : THEdit;
     GP_NATUREPIECEG  : THValComboBox;
+    GRPOPTIONS       : TGroupBox;
+    ChkAvoir         : TCheckBox;
+    ChkFactHd        : TCheckBox;
     //
     Prorata     : String;
     Revision    : String;
@@ -57,12 +62,14 @@ Type
     procedure AddChampTOB (UneTOB : TOB);
     function  EncodeRefPieceDBTLoc (TOBP : TOB) : string;
     procedure GenerelaTOBPourDBT;
-    procedure GenerelaTOBPourRAN;
     procedure AjouteDBTResultat(TOBD, TOBF: TOB);
     procedure chargelesPieces(TOBL, TOBIni : TOB);
     procedure GenerelaTOBPourFBT;
     procedure AjouteFBTResultat(TOBF, TOBD : TOB);
     function  FindLibelleAffaire(CodeAffaire: string): string;
+    procedure ChargeRAN(TOBDep, TOBRAN: TOB);
+    procedure ChargeAvoir(TOBDep, TOBAVC: TOB);
+    procedure ChargeFactureHorsDevis(TOBDep, TOBFACHD: TOB);
   end ;
 
 Implementation
@@ -96,15 +103,23 @@ end ;
 procedure TOF_BTISFACTURE.OnArgument (S : String ) ;
 begin
   Inherited ;
-  TOBresultat := TOB.create ('LA TOB',nil,-1);
-  ISFACTURE := TCheckBox (GetCONTROL('ISFACTURE'));
-  FACTURE := THEDit(GetControl('FACTURE'));
-  FACTURE_ := THEDit(GetControl('FACTURE_'));
+  //
+  TOBresultat     := TOB.create ('LA TOB',nil,-1);
+  //
+  ISFACTURE       := TCheckBox (GetCONTROL('ISFACTURE'));
+  FACTURE         := THEDit(GetControl('FACTURE'));
+  FACTURE_        := THEDit(GetControl('FACTURE_'));
+  DatePIECE       := THEDit(GetControl('GP_DATEPIECE'));
+  DatePiece_      := THEDit(GetControl('GP_DATEPIECE_'));
+  GRPOPTIONS      := TGroupBox(GetControl('GRPOPTIONS'));
+  ChkAvoir        := TCheckBox(GetControl('CHKAVOIR'));
+  ChkFactHd       := TCheckBox(GetControl('CHKFACTHD'));
+  //
   GP_NATUREPIECEG := THValComboBox (GetCOntrol('GP_NATUREPIECEG'));
   GP_NATUREPIECEG.OnChange := NaturePieceChanged;
   //
-  Prorata := FabriqueConditionIn(GetParamSocSecur('SO_PRORATA',''));
-  Revision:= FabriqueConditionIn(GetParamSocSecur('SO_REVISION',''));
+  Prorata   := FabriqueConditionIn(GetParamSocSecur('SO_PRORATA',''));
+  Revision  := FabriqueConditionIn(GetParamSocSecur('SO_REVISION',''));
   //
 end ;
 
@@ -130,10 +145,12 @@ begin
   begin
   	ISFACTURE.visible := false;
     TgroupBox(GetControl('GBFACTURE')).visible := false;
+    GRPOPTIONS.Visible := True;
   end else
   begin
   	ISFACTURE.visible := True;
     TgroupBox(GetControl('GBFACTURE')).visible := true;
+    GRPOPTIONS.Visible:= False;
   end;
 end;
 
@@ -148,7 +165,7 @@ begin
 
 end;
 
-procedure TOF_BTISFACTURE.chargelesPieces (TOBL,TOBIni : TOB);
+procedure TOF_BTISFACTURE.ChargeLesPieces (TOBL,TOBIni : TOB);
 var Req : string;
 		QQ : TQuery;
     TOBLig,TOBP,TOBUP : TOB;
@@ -159,13 +176,29 @@ begin
 
 	TOBIni.ClearDetail;
 
+  //chargement des revisions
+  If Revision <> '' Then
+  Begin
+    TOBL.AddChampSupValeur('MTREVISION', 0);
+    Req := Req + 'SELECT SUM(GPT_TOTALHTDEV) AS MTREVISION  FROM PIEDPORT ';
+    Req := Req + 'WHERE GPT_NATUREPIECEG="' + TOBL.getValue('GP_NATUREPIECEG') + '"';
+    Req := Req + '  AND GPT_SOUCHE="' + TOBL.getValue('GP_SOUCHE') + '"';
+    Req := Req + '  AND GPT_NUMERO= ' + IntToStr(TOBL.getValue('GP_NUMERO'));
+    Req := Req + '  AND GPT_FRAISREPARTIS="-" AND GPT_CODEPORT IN ' + Revision;
+    QQ := OpenSQL(Req, True);
+    If not QQ.eof then TOBL.PutValue('MTREVISION', QQ.FindField('MTREVISION').AsFloat);
+    Ferme(QQ);
+  end;
+
 	TOBLig := TOB.Create ('LES LIGNES',nil,-1);
 
-  Req := 'SELECT GL_NATUREPIECEG,GL_SOUCHE,GL_NUMERO,GL_INDICEG,GL_DATEPIECE,GL_PIECEPRECEDENTE,GP_TOTALHTDEV FROM LIGNE LEFT JOIN PIECE ON GP_NATUREPIECEG=GL_NATUREPIECEG '+
-         'AND GP_SOUCHE=GL_SOUCHE AND GP_NUMERO=GL_NUMERO AND GP_INDICEG=GL_INDICEG WHERE '+
-         'GL_NATUREPIECEG="'+TOBL.getValue('GP_NATUREPIECEG') +'" and GL_SOUCHE="'+TOBL.getValue('GP_SOUCHE')+'" '+
-         'AND GL_NUMERO='+IntToStr(TOBL.getValue('GP_NUMERO'))+ ' AND GL_INDICEG='+IntToStr(TOBL.getValue('GP_INDICEG'))+' '+
-         'AND GL_PIECEPRECEDENTE<>""';
+  Req := 'SELECT GL_NATUREPIECEG,GL_SOUCHE,GL_NUMERO,GL_INDICEG,GL_DATEPIECE,GL_PIECEPRECEDENTE,GP_TOTALHTDEV ';
+  Req := Req + ' FROM LIGNE LEFT JOIN PIECE ON GP_NATUREPIECEG=GL_NATUREPIECEG ';
+  Req := Req + '  AND GP_SOUCHE=GL_SOUCHE AND GP_NUMERO=GL_NUMERO AND GP_INDICEG=GL_INDICEG ';
+  Req := Req + 'WHERE GL_NATUREPIECEG="'+TOBL.getValue('GP_NATUREPIECEG') +'" and GL_SOUCHE="'+TOBL.getValue('GP_SOUCHE')+'" ';
+  Req := Req + '  AND GL_NUMERO='+IntToStr(TOBL.getValue('GP_NUMERO'))+ ' AND GL_INDICEG=' + IntToStr(TOBL.getValue('GP_INDICEG')) + ' ';
+  Req := Req + '  AND GL_PIECEPRECEDENTE<>""';
+
   QQ := OpenSql (req,true);
   TOBLIG.loadDetailDb ('LIGNE','','',QQ,false);
   ferme (QQ);
@@ -177,11 +210,15 @@ begin
     TOBUP := TOBIni.findFirst(['GP_SOUCHE','GP_NUMERO','GP_INDICEG'],[cledoc.souche,cledoc.NumeroPiece,cledoc.Indice],true);
     if TOBUP = nil then
     begin
-      QQ := OPenSql ('SELECT GP_SOUCHE,GP_NATUREPIECEG,GP_NUMERO,GP_INDICEG,GP_DATEPIECE,GP_TOTALHTDEV FROM PIECE '+
-      							 'WHERE GP_NATUREPIECEG="'+cledoc.NaturePiece+'" AND GP_SOUCHE="'+Cledoc.Souche+'" '+
-                     'AND GP_NUMERO='+IntToStr(cledoc.NumeroPiece)+' AND GP_INDICEG='+IntToStr(Cledoc.Indice),true);
-    	TOBUP := TOB.Create ('PIECE',TOBINI,-1);
+      Req := 'SELECT GP_SOUCHE,GP_NATUREPIECEG,GP_NUMERO,GP_INDICEG,GP_DATEPIECE,GP_TOTALHTDEV ';
+      Req := Req + ' FROM PIECE WHERE GP_NATUREPIECEG="'+cledoc.NaturePiece+'" AND GP_SOUCHE="'+Cledoc.Souche+'" ';
+      Req := Req + '  AND GP_NUMERO='+IntToStr(cledoc.NumeroPiece)+' AND GP_INDICEG='+IntToStr(Cledoc.Indice);
+
+      QQ := OPenSql (Req, True);
+
+      TOBUP := TOB.Create ('PIECE',TOBINI,-1);
       TOBUP.SelectDB ('',QQ);
+      
       ferme (QQ);
     end;
   end;
@@ -205,10 +242,10 @@ begin
     TOBI.PutValue ('AFFAIRE',TOBF.GetValue('GP_AFFAIRE'));
     TOBI.PutValue ('LIBAFFAIRE',copy(FindLibelleAffaire(TOBF.GetValue('GP_AFFAIRE')),1,35));
     TOBI.PutValue ('NUMEROPIECED',TOBF.GetValue('GP_NUMERO'));
-    TOBI.PutValue ('MONTANTD',TOBF.GetDouble('GP_TOTALHTDEV'));
-  	TOBI.Putvalue ('DATEPIECEF',TOBF.GetValue('GP_DATEPIECE'));
-    Libelle := ' Affaire : '+TOBI.GetValue ('LIBAFFAIRE')+' '+TOBI.GetValue('LIBNATUREPIECED')+' '+
-    					 IntToStr(TOBF.GetValue('GP_NUMERO'))+
+    TOBI.PutValue ('MONTANTD',    TOBF.GetDouble('GP_TOTALHTDEV'));
+  	TOBI.Putvalue ('DATEPIECEF',  TOBF.GetValue('GP_DATEPIECE'));
+    TOBI.Putvalue ('REVISION',    TOBF.GetValue('MTREVISION'));
+    Libelle := ' Affaire : '+ TOBI.GetValue ('LIBAFFAIRE')+' '+TOBI.GetValue('LIBNATUREPIECED')+' '+ IntToStr(TOBF.GetValue('GP_NUMERO'))+
                ' Montant : '+FloatToStrF (TOBF.GetValue('GP_TOTALHTDEV'),ffNumBer,15,V_PGI.OkDecV);
     TOBI.PutValue ('LIBELLEAFFICHAGED',Libelle);
   end;
@@ -224,41 +261,251 @@ begin
 //               ' Montant : '+FloatToStrF (TOBF.GetValue('GP_TOTALHTDEV'),ffNumBer,15,V_PGI.OkDecV);
     TOBI.PutValue ('LIBELLEAFFICHAGEF',Libelle);
   end;
+
 end;
 
 procedure TOF_BTISFACTURE.GenerelaTOBPourFBT;
-var TOBDep,TOBIni : TOB;
+var TOBDep      : TOB;
+    TOBIni      : TOB;
+    TOBRAN      : TOB;
+    TOBAVC      : TOB;
+    TOBFACHD    : TOB;
 		NaturePiece : string;
     Req : string;
     QQ : TQuery;
     Indice,Ind : integer;
+    OldAffaire : String;
 begin
+
+  OldAffaire  := '';
+
   Req := TFStat(Ecran).stSQL;
+
   NaturePiece := GetCOntrolText('GP_NATUREPIECEG');
+
   TOBresultat.ClearDetail;
+
   TOBDep := TOB.create ('LES DOCUMENTS',nil,-1);
   TOBIni := TOB.create ('LES DBT',nil,-1);
+  TOBRan := TOB.create ('LES RAN',nil,-1);
+  TOBAVC := TOB.create ('LES AVOIRS',nil,-1);
+  TOBFACHD := TOB.create ('LES FACHD',nil,-1);
+
   QQ := OpenSql (req,True);
+
   TOBDep.loadDetailDb ('PIECE','','',QQ,false);
+
   ferme (QQ);
+
   for Indice := 0 to TOBDep.detail.count -1 do
   begin
   	ChargelesPieces (TOBDep.detail[Indice],TOBIni);
+    If OldAffaire <> TOBDep.detail[Indice].GetString('GP_AFFAIRE') then
+    begin
+      ChargeRAN(TOBDep.detail[Indice],TOBRAN);
+      ChargeAvoir(TOBDep.detail[Indice],TOBAVC);
+      if ChkFactHd.Checked then ChargeFactureHorsDevis(TOBDep.detail[Indice],TOBFACHD);
+      OldAffaire := TOBDep.detail[Indice].GetString('GP_AFFAIRE');
+    end;
     for Ind := 0 to TOBini.detail.count -1 do
     begin
       AjouteFBTResultat (TOBDep.detail[Indice],TOBINI.detail[Ind]);
     end;
-    GenerelaTOBPourRAN;
   end;
-  tobdep.free;
-  TOBIni.free;
+
+  tobdep.Free;
+  TOBIni.Free;
+  TOBRAN.Free;
+  TOBAVC.Free;
+  TOBFACHD.Free;
+
 end;
 
-procedure TOF_BTISFACTURE.GenerelaTOBPourRAN;
-Var Req : string;
-    QQ  : TQuery;
+procedure TOF_BTISFACTURE.ChargeRAN(TOBDep, TOBRAN : TOB);
+Var Req     : string;
+    QQ      : TQuery;
+    TOBI    : TOB;
+    TOBLRan : TOB;
+    I       : Integer;
 begin
-  
+
+  if TOBDep = nil then Exit;
+
+  Req := 'SELECT * FROM CONSOMMATIONS WHERE BCO_NATUREMOUV = "RAN" ';
+  Req := Req + '    AND BCO_AFFAIRE= "' + TOBDEP.GetString('GP_AFFAIRE') + '" ';
+  Req := Req + '    AND BCO_DATEMOUV BETWEEN "'+ USDATETIME (strtodate(DatePiece.Text)) + '"';
+  Req := Req + '    AND "' + USDATETIME (strtodate(DatePiece_.Text)) + '"';
+
+  QQ := OpenSql (req,True);
+  TOBRAN.loadDetailDb ('La RECETTE ANNEXE','','',QQ,false);
+  ferme (QQ);
+
+  For i := 0 TO TobRan.detail.count -1 do
+  begin
+    TOBLRan := TobRan.detail[I];
+    TOBI := TOB.Create ('UNE LIGNE', TOBresultat, -1);
+    AddChampTOB (TOBI);
+    TOBI.PutValue ('ETATFACTURE','Facturé');
+    //
+    TOBI.PutValue ('NATUREPIECED',      'RAN');
+    TOBI.PutValue ('LIBNATUREPIECED',   'Recettes annexes');
+    TOBI.PutValue ('NUMEROPIECED',      0);
+    TOBI.PutValue ('AFFAIRE',           TOBLRan.GetValue('BCO_AFFAIRE'));
+    TOBI.PutValue ('LIBAFFAIRE',        copy(FindLibelleAffaire(TOBLRan.GetValue('BCO_AFFAIRE')),1,35));
+    TOBI.PutValue ('MONTANTRAN',        TOBLRan.GetValue('BCO_MONTANTHT')*-1);
+    TOBI.PutValue ('LIBELLEAFFICHAGED', TOBLRan.GetString('BCO_LIBELLE'));
+  end;
+
+end;
+
+procedure TOF_BTISFACTURE.ChargeAvoir(TOBDep, TOBAVC : TOB);
+Var Req     : string;
+    QQ      : TQuery;
+    TOBI    : TOB;
+    TOBLI   : TOB;
+    TOBLAVC : TOB;
+    Libelle : String;
+    I       : Integer;
+    MontantHT : Double;
+    Numero    : Integer;
+begin
+
+  if TOBDep = nil then Exit;
+
+  Numero := 0;
+
+  Req := 'SELECT GL_NATUREPIECEG, GL_SOUCHE, GL_NUMERO, GL_INDICEG, GL_MONTANTHTDEV FROM LIGNE WHERE ';
+  Req := Req + '     GL_NATUREPIECEG="ABT" ';
+  Req := Req + '    AND GL_AFFAIRE="'    + TOBDEP.GetString('GP_AFFAIRE') + '" ';
+  Req := Req + '    AND GL_DATEPIECE BETWEEN "'+ USDATETIME (strtodate(DatePiece.Text)) + '"';
+  Req := Req + '    AND "' + USDATETIME (strtodate(DatePiece_.Text)) + '"';
+  Req := Req + '    AND GL_TYPELIGNE="ART"';
+
+  QQ := OpenSql (req,True);
+  TOBAVC.loadDetailDb ('AVOIR','','',QQ,false);
+  ferme (QQ);
+
+  For i := 0 to TobAVC.detail.count -1 do
+  begin
+    TOBLAVC := TOBAVC.Detail[I];
+    if Numero <> TOBLAVC.GetValue('GL_NUMERO') then
+    begin
+      TOBI := TOB.Create ('UNE LIGNE', TOBresultat, -1);
+      AddChampTOB (TOBI);
+      TOBI.PutValue ('ETATFACTURE','Facturé');
+      TOBI.PutValue ('NATUREPIECED',      TOBLAVC.GetString('GL_NATUREPIECEG'));
+      TOBI.PutValue ('LIBNATUREPIECED',   Rechdom ('GCNATUREPIECEG', TOBLAVC.GetValue('GL_NATUREPIECEG'),false) );
+      TOBI.PutValue ('NUMEROPIECED',      TOBLAVC.GetInteger('GL_NUMERO'));
+      TOBI.PutValue ('AFFAIRE',           TOBDEP.GetString('GP_AFFAIRE'));
+      TOBI.PutValue ('LIBAFFAIRE',        copy(FindLibelleAffaire(TOBDEP.GetString('GP_AFFAIRE')),1,35));
+      TOBI.PutValue ('MONTANTA',          TOBLAVC.GetDouble('GL_MONTANTHTDEV'));
+      Libelle := ' Affaire : '+ TOBI.GetValue ('LIBAFFAIRE')+' '+ TOBI.GetValue('LIBNATUREPIECED')+' '+ IntToStr(TOBLAVC.GetValue('GL_NUMERO'));
+      TOBI.PutValue ('LIBELLEAFFICHAGED',Libelle);
+      Numero  := TOBLAVC.GetInteger('GL_NUMERO');
+    end
+    else
+    begin
+      TOBLI := TOBResultat.FindFirst(['NATUREPIECED','NUMEROPIECED'],[TOBLAVC.GetValue('GL_NATUREPIECEG'), TOBLAVC.GetValue('GL_NUMERO')],false);
+      IF TOBLI = nil then
+      begin
+        TOBI := TOB.Create ('UNE LIGNE', TOBresultat, -1);
+        AddChampTOB (TOBI);
+        TOBI.PutValue ('ETATFACTURE','Facturé');
+        TOBI.PutValue ('NATUREPIECED',      TOBLAVC.GetString('GL_NATUREPIECEG'));
+        TOBI.PutValue ('LIBNATUREPIECED',   Rechdom ('GCNATUREPIECEG', TOBLAVC.GetValue('GL_NATUREPIECEG'),false) );
+        TOBI.PutValue ('NUMEROPIECED',      TOBLAVC.GetInteger('GL_NUMERO'));
+        TOBI.PutValue ('AFFAIRE',           TOBDEP.GetString('GP_AFFAIRE'));
+        TOBI.PutValue ('LIBAFFAIRE',        copy(FindLibelleAffaire(TOBDEP.GetString('GP_AFFAIRE')),1,35));
+        TOBI.PutValue ('MONTANTA',          TOBLAVC.GetDouble('GL_MONTANTHTDEV'));
+        Libelle := ' Affaire : '+ TOBI.GetValue ('LIBAFFAIRE')+' '+ TOBI.GetValue('LIBNATUREPIECED')+' '+ IntToStr(TOBLAVC.GetValue('GL_NUMERO'));
+        TOBI.PutValue ('LIBELLEAFFICHAGED',Libelle);
+        Numero  := TOBLAVC.GetInteger('GL_NUMERO');
+      end
+      else
+      begin
+        MontantHT := TOBLI.Getdouble('MONTANTA');
+        MontantHT := MontantHT + TOBLAVC.Getdouble('GL_MONTANTHTDEV');
+        TOBLI.PutValue('MONTANTA', MontantHT);
+      end;
+    end;
+
+  end;
+
+end;
+
+procedure TOF_BTISFACTURE.ChargeFactureHorsDevis(TOBDep, TOBFACHD : TOB);
+Var Req     : string;
+    QQ      : TQuery;
+    TOBI    : TOB;
+    TOBLI    : TOB;
+    TOBLFACHD : TOB;
+    Libelle : String;
+    I       : Integer;
+    MontantHT : Double;
+    Numero    : Integer;
+begin
+
+  if TOBDep = nil then Exit;
+
+  Numero := 0;
+
+  //Chargement des Factures Hors-devis
+  Req := 'SELECT  GL_NATUREPIECEG, GL_SOUCHE, GL_NUMERO, GL_INDICEG, GL_QTEFACT * GL_PUHTDEV AS FACTURE FROM LIGNE ';
+  Req := Req + '  WHERE GL_NATUREPIECEG = "FBT"';
+  Req := Req + '    AND GL_DATEPIECE BETWEEN "'+ USDATETIME (strtodate(DatePiece.Text)) + '"';
+  Req := Req + '    AND "' + USDATETIME (strtodate(DatePiece_.Text)) + '"';
+  Req := Req + '    AND GL_TYPELIGNE="ART" AND GL_PIECEORIGINE = ""';
+  Req := Req + '    AND GL_AFFAIRE = "' + TOBDEP.GetString('GP_AFFAIRE') + '"';
+
+  QQ := OpenSql (req,True);
+  TOBFACHD.loadDetailDb ('Les Factures Hors Devis','','',QQ,false);
+  ferme (QQ);
+
+  For i := 0 to TOBFACHD.detail.count -1 do
+  begin
+    TOBLFACHD := TOBFACHD.Detail[I];
+    if Numero <> TOBLFACHD.GetValue('GL_NUMERO') then
+    begin
+      TOBI := TOB.Create ('UNE LIGNE', TOBresultat, -1);
+      AddChampTOB (TOBI);
+      TOBI.PutValue ('ETATFACTURE', 'Facturé');
+      TOBI.PutValue ('NATUREPIECED',      TOBLFACHD.GetString('GL_NATUREPIECEG'));
+      TOBI.PutValue ('LIBNATUREPIECED',   'Facture hors devis');
+      TOBI.PutValue ('NUMEROPIECED',      TOBLFACHD.GetInteger('GL_NUMERO'));
+      TOBI.PutValue ('AFFAIRE',           TOBDEP.GetString('GP_AFFAIRE'));
+      TOBI.PutValue ('LIBAFFAIRE',        copy(FindLibelleAffaire(TOBDEP.GetString('GP_AFFAIRE')),1,35));
+      TOBI.PutValue ('MONTANTF',          TOBLFACHD.GetDouble('FACTURE'));
+      Libelle := ' Affaire : '+ TOBI.GetValue ('LIBAFFAIRE')+' '+ TOBI.GetValue('LIBNATUREPIECED')+' '+ IntToStr(TOBI.GetValue('NUMEROPIECED'));
+      TOBI.PutValue ('LIBELLEAFFICHAGED', Libelle);
+      Numero  := TOBLFACHD.GetInteger('GL_NUMERO');
+    end
+    else
+    begin
+      TOBLI := TOBResultat.FindFirst(['NATUREPIECED','NUMEROPIECED'],[TOBLFACHD.GetValue('GL_NATUREPIECEG'), TOBLFACHD.GetValue('GL_NUMERO')],false);
+      IF TOBLI = nil then
+      begin
+        TOBI := TOB.Create ('UNE LIGNE', TOBresultat, -1);
+        AddChampTOB (TOBI);
+        TOBI.PutValue ('ETATFACTURE','Facturé');
+        TOBI.PutValue ('NATUREPIECED',      TOBLFACHD.GetString('GL_NATUREPIECEG'));
+        TOBI.PutValue ('LIBNATUREPIECED',   'Facture hors devis');
+        TOBI.PutValue ('NUMEROPIECED',      TOBLFACHD.GetInteger('GL_NUMERO'));
+        TOBI.PutValue ('AFFAIRE',           TOBDEP.GetString('GP_AFFAIRE'));
+        TOBI.PutValue ('LIBAFFAIRE',        copy(FindLibelleAffaire(TOBDEP.GetString('GP_AFFAIRE')),1,35));
+        TOBI.PutValue ('MONTANTF',          TOBLFACHD.GetDouble('FACTURE'));
+        Libelle := ' Affaire : '+ TOBI.GetValue ('LIBAFFAIRE')+' '+ TOBI.GetValue('LIBNATUREPIECED')+' '+ IntToStr(TOBI.GetValue('NUMEROPIECED'));
+        TOBI.PutValue ('LIBELLEAFFICHAGED',Libelle);
+        Numero  := TOBLFACHD.GetInteger('GL_NUMERO');
+      end
+      else
+      begin
+        MontantHT := TOBLI.Getdouble('MONTANTF');
+        MontantHT := MontantHT + TOBLFACHD.Getdouble('FACTURE');
+        TOBLI.PutValue('MONTANTF', MontantHT);
+      end;
+    end;
+  end;
+
 end;
 
 procedure TOF_BTISFACTURE.GenerelaTOBPourDBT;
@@ -292,11 +539,21 @@ begin
     //Req := 'SELECT DISTINCT GL_NATUREPIECEG,GL_NUMERO,GL_INDICEG,GP_TOTALHTDEV,GL_DATEPIECE FROM LIGNE LEFT JOIN PIECE ON GP_NATUREPIECEG=GL_NATUREPIECEG '+
     // Modified by f.vautrain 19/10/2017 10:46:43 - FS#2734 - GUINIER : pointage devis & factures, montant facturé incorrect si plusieurs devis sur facture
     Req := 'SELECT DISTINCT L0.GL_NATUREPIECEG, L0.GL_NUMERO, L0.GL_INDICEG, GP_TOTALHTDEV,';
-    Req := Req + '(Select SUM(L1.GL_MONTANTHTDEV) FROM LIGNE AS L1 WHERE L1.GL_NUMERO=L0.GL_NUMERO AND L1.GL_PIECEPRECEDENTE LIKE "' + ATrouver + '%" AND (L1.GL_NATUREPIECEG="FBT" OR L1.GL_NATUREPIECEG="ABT") AND L1.GL_TYPELIGNE = "ART") As MONTANTFAC,';
+    Req := Req + '(Select SUM(L1.GL_MONTANTHTDEV) FROM LIGNE AS L1 WHERE L1.GL_NUMERO=L0.GL_NUMERO AND L1.GL_PIECEPRECEDENTE LIKE "' + ATrouver + '%"';
+    //
+    if ChkAvoir.Checked then
+      Req := Req + ' AND (L1.GL_NATUREPIECEG="FBT" OR L1.GL_NATUREPIECEG="ABT") AND L1.GL_TYPELIGNE = "ART") As MONTANTFAC,'
+    else
+      Req := Req + ' AND L1.GL_NATUREPIECEG="FBT" AND L1.GL_TYPELIGNE = "ART") As MONTANTFAC,';
+    //
     Req := Req + 'L0.GL_DATEPIECE FROM LIGNE AS L0 LEFT JOIN PIECE ON GP_NATUREPIECEG=L0.GL_NATUREPIECEG ';
     Req := Req + 'AND GP_SOUCHE=L0.GL_SOUCHE AND GP_NUMERO=L0.GL_NUMERO AND GP_INDICEG=L0.GL_INDICEG WHERE ';
     //FV1 - 28/12/2015 : FS#1830 - ECAL : Devis manquants sur Pointage des factures et devis
-    Req := Req + 'L0.GL_PIECEORIGINE LIKE "'+Atrouver+'%" AND (L0.GL_NATUREPIECEG="FBT" OR L0.GL_NATUREPIECEG="ABT")';
+    if ChkAvoir.Checked then
+      Req := Req + 'L0.GL_PIECEORIGINE LIKE "'+Atrouver+'%" AND (L0.GL_NATUREPIECEG="FBT" OR L0.GL_NATUREPIECEG="ABT")'
+    else
+      Req := Req + 'L0.GL_PIECEORIGINE LIKE "'+Atrouver+'%" AND L0.GL_NATUREPIECEG="FBT"';
+
     req := Req + ' AND L0.GL_DATEPIECE >="'+ USDATETIME (strtodate(FACTURE.Text)) + '"';
     Req := Req + ' AND L0.GL_DATEPIECE <="'+ USDATETIME (strtodate(FACTURE_.Text))+ '"';
     Req := Req + ' AND GL_TYPELIGNE = "ART"';
@@ -336,7 +593,7 @@ begin
   UneTOB.AddChampSupValeur ('MONTANTD',0.0);
   UneTOB.AddChampSupValeur ('MONTANTF',0.0);
   //
-  UneTOB.AddChampSupValeur ('RECETTEANNEXE',0.0);
+  UneTOB.AddChampSupValeur ('MONTANTRAN',0.0);
   UneTOB.AddChampSupValeur ('MONTANTA',0.0);
   UneTOB.AddChampSupValeur ('FACTUREHD',0.0);
   UneTOB.AddChampSupValeur ('REVISION',0.0);
@@ -359,8 +616,6 @@ begin
       + IntToStr(TOBP.GetValue('GP_NUMERO')) + ';' + IntToStr(TOBP.GetValue('GP_INDICEG')) +';';
 end;
 
-
-
 function TOF_BTISFACTURE.FindLibelleAffaire(CodeAffaire : string) : string;
 var QQ : Tquery;
 begin
@@ -372,7 +627,6 @@ end;
 
 procedure TOF_BTISFACTURE.AjouteDBTResultat (TOBD, TOBF : TOB);
 var TOBI : TOB;
-    TOBL  : TOB;
 		Libelle : string;
 begin
 	TOBI := TOB.Create ('UNE LIGNE', TOBresultat, -1);
