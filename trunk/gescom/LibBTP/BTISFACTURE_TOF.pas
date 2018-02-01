@@ -303,7 +303,7 @@ begin
     If OldAffaire <> TOBDep.detail[Indice].GetString('GP_AFFAIRE') then
     begin
       ChargeRAN(TOBDep.detail[Indice],TOBRAN);
-      ChargeAvoir(TOBDep.detail[Indice],TOBAVC);
+      if ChkAvoir.Checked  then ChargeAvoir(TOBDep.detail[Indice],TOBAVC);
       if ChkFactHd.Checked then ChargeFactureHorsDevis(TOBDep.detail[Indice],TOBFACHD);
       OldAffaire := TOBDep.detail[Indice].GetString('GP_AFFAIRE');
     end;
