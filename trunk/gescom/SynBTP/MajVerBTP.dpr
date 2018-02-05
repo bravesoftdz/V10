@@ -18,6 +18,7 @@ uses
   SplashG {SplashScreen},
   Tablette {FTablette},
   Vierge {FVierge},
+  Ulog in '..\..\commun\Lib\Ulog.pas',
   utilPGI in '..\..\COMMUN\LIB\utilPGI.pas',
   AJOUTSOCRGT_TOF in '..\..\COMMUN\LIB\AJOUTSOCRGT_TOF.pas',
   EntGC in '..\..\commun\lib\EntGC.pas',
@@ -536,7 +537,16 @@ uses
   UCryptage in '..\..\WebServices\Commun\Lib\UCryptage.pas',
   URapport in '..\LibBTP\URapport.pas' {FBTRapport},
   UspecifPOC in '..\SpecifPOC\UspecifPOC.pas',
-  BTGENFACBAST_TOF in '..\SpecifPOC\BTGENFACBAST_TOF.PAS';
+  BTGENFACBAST_TOF in '..\SpecifPOC\BTGENFACBAST_TOF.PAS',
+  BDEPENSESPOC_TOM in '..\SpecifPOC\BDEPENSESPOC_TOM.PAS',
+  BSAISIEAVANCPOC_TOF in '..\SpecifPOC\BSAISIEAVANCPOC_TOF.PAS',
+  BTSAISPAIMENTPOC_TOF in '..\SpecifPOC\BTSAISPAIMENTPOC_TOF.PAS',
+  BTSELMOISAVANC_TOF in '..\SpecifPOC\BTSELMOISAVANC_TOF.PAS',
+  BTSAISMOIAVANC_TOF in '..\SpecifPOC\BTSAISMOIAVANC_TOF.PAS',
+  BTMULPOCTS_TOF in '..\SpecifPOC\BTMULPOCTS_TOF.PAS',
+  BTSAISPOCTS_TOF in '..\SpecifPOC\BTSAISPOCTS_TOF.PAS',
+  UTransferts in '..\SpecifPOC\UTransferts.pas',
+  BTSAISTRFPOC_TOF in '..\SpecifPOC\BTSAISTRFPOC_TOF.PAS';
 
 {$R *.RES}
 

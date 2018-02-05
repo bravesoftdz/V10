@@ -74,7 +74,7 @@ Type
 
 Implementation
 
-uses DateUtils,factcpta,UtilTOBPiece;
+uses DateUtils,factcpta,UtilTOBPiece,UspecifPOC;
 
 procedure TOF_BTGETREGLCPTA.OnNew ;
 begin
@@ -339,7 +339,6 @@ end;
 procedure TOF_BTGETREGLCPTA.GetPiecesRegl (TOBR : TOB);
 var Req : String;
     QQ : TQuery;
-    II : integer;
 begin
     Req := 'SELECT * '+
            'FROM ECRITURE '+
@@ -384,6 +383,11 @@ begin
   repeat
       TOBDRD := TOBR.detail[I];
       if (TOBDRD.getString('E_NATUREPIECE')='FC') and (TOBDRD.GEtDouble('E_DEBITDEV')<>0) then
+      begin
+        refPiece := TOBDRD.GetString('E_REFGESCOM');
+        if refpiece <> '' then TOBDRD.ChangeParent(TOBINT,-1)
+                          else TOBDRD.free;
+      end else if (TOBDRD.getString('E_NATUREPIECE')='FF') and (TOBDRD.GEtDouble('E_CREDITDEV')<>0) then
     begin
         refPiece := TOBDRD.GetString('E_REFGESCOM');
         if refpiece <> '' then TOBDRD.ChangeParent(TOBINT,-1)
@@ -492,6 +496,10 @@ begin
     EcritInfosDoc (TOBAcomptes,TOBPiece);
     if V_PGI.IOError <> OEOk then Exit;
     if refPieceATT <> '' then EcritInfoAttachements (RefPieceATT,TOBAcomptes);
+    if (VH_GC.BTCODESPECIF = '001') and (TOBPiece.GetString('GP_NATUREPIECEG')='FF') then
+    begin
+      SetFactureReglePOC (TOBpiece);
+    end;
     MsgDocument := 'Reglements pour la '+
                    rechdom('GCNATUREPIECEG',TOBpiece.getValue('GP_NATUREPIECEG'),false)+' N° '+
                    InttoStr(TOBPiece.getInteger('GP_NUMERO'))+' '+

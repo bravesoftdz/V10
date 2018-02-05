@@ -101,7 +101,7 @@ uses {$IFDEF VER150} variants,{$ENDIF}
   FactRemplTypeLigne,UfactGestionAff,UAuditPerf,UtilsRapport, TntButtons,
   TntExtCtrls, TntGrids, TntComCtrls,
   UtilNumParag,UrectifSituations, TntMenus,
-  UtilsMetresXLS,StrUtils,UFactListes
+  UtilsMetresXLS,StrUtils,UFactListes,UTransferts
   ;
 type
 	TmsFrais = (TmsFValide,TmsFAnul,TmsSuppr,TmsNone); // les 3 seuls mode de gestion
@@ -867,6 +867,7 @@ type
     TheLivFromRecepStock : TLivraisonFromRecepStock;
 		MultiSel_SilentMode : Boolean;
     fGestionAff : TAffichageDoc;
+    TTransfertPOC : TGestTransfert;
     function  Multicompteur (Naturepiece : string) : boolean;
     procedure Insere_SDP;
     {$ENDIF}
@@ -1011,6 +1012,7 @@ type
     TOBEvtsMat : TOB;
     TOBVTECOLLECTIF : TOB;
     TOBTSPOC : TOB;
+    TOBTRFPOC : TOB;
     // MODIF BTP
     PresentSousDetail : integer;
     ModifSousDetail   : boolean;
@@ -1427,6 +1429,7 @@ type
     property TheTOBAdresses   : TOB read TOBAdresses write TOBAdresses;
     property TheTOBliensOle   : TOB read TOBLIENOLE write TOBLIENOLE;
     property XTOBVTECOLL      : TOB read TOBVTECOLLECTIF write TOBVTECOLLECTIF;
+    property XTOBTRFPOC       : TOB read TOBTRFPOC write TOBTRFPOC;
 
     // Demande de prix
     property ThePieceDemPrix  : TOB read TOBPieceDemPrix ;
@@ -1504,6 +1507,8 @@ type
 	  function IsEcritLesOuvPlat : boolean;
     procedure BeforeEnreg;
     procedure RecalculeEcheances; 
+    procedure CalculeThisLigne (TOBL : TOB);
+    procedure AfficheLaGrille;
   end;
 
 implementation
@@ -2451,6 +2456,7 @@ begin
   TOBEvtsMat.SetAllModifie(false);
   // -----
   TOBTSPOC.SetAllModifie(false);
+  TOBTRFPOC.SetAllModifie(false);
 end;
 
 procedure TFFacture.InitToutModif(Datemaj : TdateTime = 0);
@@ -2505,6 +2511,7 @@ begin
   //
   TOBCpta.clearDetail;
   TOBTSPOC.SetAllModifie(true); 
+  TOBTRFPOC.SetAllModifie(true); 
 end;
 
 procedure TFFacture.ChargeMultiple;
@@ -2633,6 +2640,7 @@ begin
   LoadLesrevisions (TOBPiece,TOBrevisions);
   if SaisieCM then loadlesEvtsmat(TOBPiece,TOBEvtsMat);
   LoadLesTOBTS (Cledoc,TOBTSPOC);
+  LoadLesTOBTRF(CleDoc,TOBTRFPOC);
 end;
 
 procedure TFFacture.LoadTOBCond(RefUnique: string);
@@ -4524,6 +4532,7 @@ begin
   FClosing := False;
   // Modif BTP
 //  NbLignesGrille := 10;
+  TTransfertPOC := TGestTransfert.create (self);
   CopierColler := TCopieColleDoc.create(Self);
   with CopierColler do
   begin
@@ -5511,6 +5520,7 @@ begin
     MnBSVVISU.enabled := (VH_GC.BSVOpenDoc) and (ExistRefBSV(TOBPiece));
   end;
 
+  TTransfertPOC.SetPiece(TOBPiece.GetString('GP_NATUREPIECEG'));
   if TOBOUvrage.detail.count = 0 then CTRLOUV.Enabled := false;
 
   fIsAcompte := ((Pos(NewDoc.NaturePiece, 'B00;DBT;')>0) and (GetParamSocSecur ('SO_BTFACTUREACOMPTE',false)));
@@ -6274,6 +6284,8 @@ begin
   TOBrevisions := TOB.Create ('LES REVISIONS',nil,-1);
   TOBEvtsMat := TOB.Create ('LES EVTS MATS',nil,-1);
   TOBTSPOC := TOB.Create ('LES TOB TS',nil,-1);
+  TOBTRFPOC := TOB.Create ('LES TOB TRF',nil,-1);
+
 end;
 
 procedure TFFacture.ToutLiberer;
@@ -6452,6 +6464,7 @@ begin
   TOBrevisions.Free;
   TOBEvtsMat.Free;
   TOBTSPOC.free;
+  TOBTRFPOC.free;
 end;
 
 procedure TFFacture.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -6492,6 +6505,7 @@ begin
   // ----
   RemplTypeLigne.free;
   CopierColler.Free;
+  TTransfertPOC.free;
   PPInfosLigne.Clear;
   PPInfosLigne.Free;
   PPInfosLigne := nil;
@@ -8273,6 +8287,7 @@ begin
   TheApplicDetOuv.Ligne := TOBL;
   TheGestRemplArticle.Ligne := TOBL;
   TTNUMP.SetPopMenu (TOBL); 
+  TTransfertPOC.DefiniMenu(TOBL);  
 {$IFDEF BTP}
   if tModeSaisieBordereau in SaContexte then TheBordereauMen.Ligne := TOBL;
 	TheRgpBesoin.ligne := TOBL;
@@ -20767,7 +20782,19 @@ begin
     except
       on E: Exception do
       begin
-        PgiError('Erreur SQL : ' + E.Message, 'validation nomenclatures');
+        PgiError('Erreur SQL : ' + E.Message, 'validation TS POC');
+      end;
+    end;
+  end;
+
+  if (V_PGI.IOError = Oeok) and (VH_GC.BTCODESPECIF = '001') then
+  begin
+    try
+      ValideLesTOBTRF (TOBPiece,TOBTRFPOC);
+    except
+      on E: Exception do
+      begin
+        PgiError('Erreur SQL : ' + E.Message, 'validation Transferts POC');
       end;
     end;
   end;
@@ -29819,6 +29846,19 @@ begin
   AfficheLaLigne(GS.row);
 end;
 
+procedure TFFacture.CalculeThisLigne(TOBL: TOB);
+begin
+  CalculeLaLigne (TOBAffaire,TOBPiece,TOBpieceTrait,TOBSSTRAIT, TOBOUvrage,TOBOuvragesP,TOBBases,TOBBasesL,TOBTiers,TOBARticles,TOBPOrcs,TOBPieceRG,TOBBasesRG,TOBL,TOBVTECOLLECTIF,DEV, DEV.Decimale,SaisieTypeAvanc,ModifAvanc,self);
+end;
+
+procedure TFFacture.AfficheLaGrille;
+var I : Integer;
+begin
+  for I := 0 to TOBPiece.detail.count -1 do
+  begin
+  	AfficheLaLigne(I+1);
+  end;
+end;
 initialization
   InitFacGescom();
 end.

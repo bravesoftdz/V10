@@ -4,7 +4,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ComCtrls,WinHttp_TLB,UTOB,HMsgBox,XMLDoc,xmlintf,
-  ParamSoc,DateUtils,ENTGC,SHellApi,XeroTypes;
+  ParamSoc,DateUtils,ENTGC,SHellApi,XeroTypes,Ulog;
 
 type
 //  TConnectionSource = (Web, Outlook, Word, Excel, Scan, Custom, Mobile);
@@ -12,10 +12,12 @@ type
 
   TArchive = class (TObject)
   private
+    FDescription: WideString;
     FName: WideString;
     FId: integer;
   published
     constructor create;
+    property Description: WideString read FDescription write FDescription;
     property Name: WideString read FName write FName;
     property Id: integer read FId write FId;
   end;
@@ -42,6 +44,7 @@ type
     fcookie_session : WideString;
     fUId : WideString;
     fArchives : TlistArchive;
+    fWorkflows : TlistArchive;
     //
     function GetPort: string;
     procedure SetPort(const Value: string);
@@ -53,7 +56,9 @@ type
     function GetError(HTTPresponse: WideString): string;
     function GetResponseConArchive(HTTPresponse: WideString;ArchiveId: integer): Boolean; overload;
     function GetResponseConArchive(HTTPresponse: WideString; ArchiveId: integer;var UploadRight, ViewRight: boolean): Boolean; overload;
-    function SearchDocument (BSVDocumentID : WideString) : boolean;
+    function SearchDocument (BSVDocumentID : WideString) : boolean; overload;
+    function SearchDocument (BSVDocumentID : WideString; TOBDatas:TOB) : boolean; overload;
+    function FiltreDatas(Src: string): string;
   public
     constructor create;
     destructor destroy; override;
@@ -64,40 +69,59 @@ type
     property User : string read fuser write fuser;
     property Archive: integer read fArchive write SetDossier;
     property LesArchives : TlistArchive read fArchives;
+    property LesWorkflows : TlistArchive read fWorkflows;
+    procedure AddFileToWorkFlow (TheWorkFlowId : Integer;DocumentId : WideString;TOBFields,TOBPARAMBSV : TOB);
     procedure DisconnectUser ;
-    procedure ResetCookies ;
     //
     function ConnectToServer (login: WideString; password: WideString; talkTo : Boolean=true): Boolean;
-    procedure GetArchivesList ;
     function ConnectToArchive (ArchiveID : Integer;var UploadRight : Boolean; var ViewRight : boolean) : Boolean; overload;
     function ConnectToArchive (ArchiveID : Integer) : Boolean; overload;
     procedure GetTOBFieldsUpload (TOBParamsBSV : TOB);
     procedure GetTOBFieldList (TOBP : TOB);
     function GetDocumentExtFromId (BSVDocumentID : WideString) : WideString;
     function GetDocumentFromId (BSVDocumentID,Extension : WideString) : WideString;
+    function ChangeEtatZeDoc (BSVDocumentID : string ; TOBDatas: TOB; TheChps,TheValeurReg : string) : boolean;
     procedure Disconnect;
     function FinalizeNewDocument (FileName : string) : Boolean;
+    procedure GetArchivesList ;
+    function GetDocumentId : WideString;
+    procedure GetWorkFlowList (ArchiveId : Integer);
+    procedure ResetCookies ;
     function SetNumChunks (NBchunks : Integer) : boolean;
     function SendChunk (NumChunk : Integer; Base64Part : AnsiString): boolean;
-    function UploadDocument (FileName : string) : boolean;
-    function GetDocumentId : WideString;
     function SetFields (TOBFields,TOBPARAMBSV : TOB) : boolean;
     function SetArchiveId : boolean;
     function SetDocumentMD5Hash (FileName : string) : boolean;
     //
     function StockeThisPdf ( FileName : Widestring) : WideString;
     //
+    function UploadDocument (FileName : string) : boolean;
   end;
 
+function GetEmail (CodeUser : string) : string;
 function GetParamsUserBSV (var UploadRight : Boolean; var ViewRight : boolean) : boolean;
-procedure GetParamsUploadBSV (TOBParamsBSV : TOB);
+procedure GetParamsUploadBSV (TOBParamsBSV : TOB; ZeXX : TconnectBSV = nil);
+function SetFactureRegleBSV (BSVDocumentID : string) : boolean;
 procedure VisuDocumentBSV (TOBPiece : TOB);
 function StoreDocumentBSV (FileName : string; TOBFields : TOB) : WideString;
 procedure GetParamStockageBSV (TOBFIelds : TOB; NaturePiece : string);
+
 implementation
 
 uses Hctrls,Aglinit,Hent1,db, {$IFNDEF DBXPRESS} dbtables {$ELSE} uDbxDataSet,FactComm,
   XeroBase64 {$ENDIF}, UdefServices, UCryptage,LicUtil;
+
+function GetEmail (CodeUser : string) : string;
+var QQ: TQuery;
+begin
+  Result :='';
+  QQ := OpenSQl ('SELECT US_EMAIL FROM UTILISAT WHERE US_ABREGE="'+CodeUser+'"',True,1,'',true);
+  if not QQ.eof then
+  begin
+    Result := QQ.fields[0].AsString;
+  end;
+  Ferme(QQ);
+end;
 
 procedure GetParamStockageBSV (TOBFIelds : TOB; NaturePiece : string);
 var QQ : Tquery;
@@ -115,10 +139,11 @@ function StoreDocumentBSV (FileName : string; TOBFields : TOB) : WideString;
 var QQ : TQuery;
     XX : TconnectBSV;
     Currentpasswd : Widestring;
-    TheArchive : Integer;
+    TheArchive,TheWorkFlowId : Integer;
     TOBParamsBSV : TOB;
 begin
   TheArchive := 0;
+  TheWorkFlowId := 0;
   TOBParamsBSV := TOB.Create('LES PARAMS',nil,-1);
   XX := TconnectBSV.create;
   TRY
@@ -129,6 +154,7 @@ begin
         XX.BSVServer := QQ.findfield('BP2_SERVERNAME').AsString;
         XX.BSVPORT := QQ.findfield('BP2_PORT').AsString;
         TheArchive := QQ.findfield('BP2_ARCHIVE').AsInteger;
+        TheWorkFlowId := QQ.findfield('BP2_WFVALIDBAST').AsInteger;
       end;
     FINALLY
       ferme (QQ);
@@ -137,7 +163,7 @@ begin
     //
     Currentpasswd := AnsiLowerCase_(MD5(DeCryptageSt(V_PGI.Password)));
     Currentpasswd := FindEtReplace(Currentpasswd,'-','',true);
-    if not XX.ConnectToServer(V_PGI.UserLogin,Currentpasswd,false) then Exit;
+    if not XX.ConnectToServer(GetEmail(V_PGI.UserLogin),Currentpasswd,false) then Exit;
     if Not XX.ConnectToArchive(TheArchive) then Exit;
     if Not XX.SetArchiveId then Exit;
 
@@ -146,6 +172,10 @@ begin
     if not XX.SetFields (TOBFields,TOBParamsBSV) then Exit;
     if not  XX.UploadDocument (FileName) then Exit;
     Result := XX.GetDocumentId;
+    if (Result <> '') and (TheWorkFlowId <> 0)then
+    begin
+      XX.AddFileToWorkFlow (TheWorkFlowId,Result,TOBFields,TOBParamsBSV);
+    end;
   FINALLY
     TOBParamsBSV.free;
     XX.Disconnect;
@@ -153,6 +183,48 @@ begin
   END;
 end;
 
+function SetFactureRegleBSV (BSVDocumentID : string): boolean;
+var QQ : TQuery;
+    XX : TconnectBSV;
+    Currentpasswd,Extension : Widestring;
+    DocName : string;
+    TheArchive : Integer;
+    TheChps,TheValeurReg : string;
+    TT : TOB;
+begin
+  TheArchive := 0;
+  TT := TOB.Create ('LES DATAS FIC',nil,-1);
+  XX := TconnectBSV.create;
+  TRY
+    QQ := OpenSQL('SELECT * FROM BSVSERVER',True,1,'',true);
+    TRY
+      if not QQ.eof then
+      begin
+        XX.BSVServer := QQ.findfield('BP2_SERVERNAME').AsString;
+        XX.BSVPORT := QQ.findfield('BP2_PORT').AsString;
+        TheArchive := QQ.findfield('BP2_ARCHIVE').AsInteger;
+        TheChps := QQ.findfield('BP2_CHPSETAT').AsString;
+        TheValeurReg := QQ.findfield('BP2_VALETATREG').AsString;
+      end;
+    FINALLY
+      ferme (QQ);
+    end;
+    if (XX.BSVServer='') or (XX.BSVPORT='0') or (TheArchive=0) or (TheChps = '') or (TheValeurReg='') then Exit;
+    //
+    Currentpasswd := AnsiLowerCase_(MD5(DeCryptageSt(V_PGI.Password)));
+    Currentpasswd := FindEtReplace(Currentpasswd,'-','',true);
+    if not XX.ConnectToServer(GetEmail(V_PGI.UserLogin),Currentpasswd,false) then Exit;
+    if Not XX.ConnectToArchive(TheArchive) then Exit;
+    if not XX.SearchDocument (BSVDocumentID,TT) then exit;
+    if Not XX.SetArchiveId then Exit;
+    //
+    result := XX.ChangeEtatZeDoc (BSVDocumentID,TT,TheChps,TheValeurReg);
+    XX.Disconnect;
+  FINALLY
+    XX.Free;
+    TT.Free;
+  END;
+end;
 
 procedure VisuDocumentBSV (TOBpiece : TOB);
 var QQ : TQuery;
@@ -181,7 +253,7 @@ begin
     //
     Currentpasswd := AnsiLowerCase_(MD5(DeCryptageSt(V_PGI.Password)));
     Currentpasswd := FindEtReplace(Currentpasswd,'-','',true);
-    if not XX.ConnectToServer(V_PGI.UserLogin,Currentpasswd,false) then Exit;
+    if not XX.ConnectToServer(GetEmail(V_PGI.UserLogin),Currentpasswd,false) then Exit;
     if Not XX.ConnectToArchive(TheArchive) then Exit;
     Extension := XX.GetDocumentExtFromId (BSVDocumentID);
     if Extension <> '' then
@@ -200,14 +272,15 @@ begin
 end;
 
 
-procedure GetParamsUploadBSV (TOBParamsBSV : TOB);
+procedure GetParamsUploadBSV (TOBParamsBSV : TOB; ZeXX : TconnectBSV = nil);
 var QQ : TQuery;
     XX : TconnectBSV;
     Currentpasswd : Widestring;
     TheArchive,II : Integer;
 begin
   TheArchive := 0;
-  XX := TconnectBSV.create;
+  if ZeXX = nil then XX := TconnectBSV.create
+                else XX := ZeXX;
   TRY
     QQ := OpenSQL('SELECT * FROM BSVSERVER',True,1,'',true);
     TRY
@@ -224,7 +297,7 @@ begin
     //
     Currentpasswd := AnsiLowerCase_(MD5(DeCryptageSt(V_PGI.Password)));
     Currentpasswd := FindEtReplace(Currentpasswd,'-','',true);
-    if not XX.ConnectToServer(V_PGI.UserLogin,Currentpasswd,false) then Exit;
+    if not XX.ConnectToServer(GetEmail(V_PGI.UserLogin),Currentpasswd,false) then Exit;
     if Not XX.ConnectToArchive(TheArchive) then Exit;
     XX.GetTOBFieldsUpload(TOBParamsBSV);
     for II := 0 to TOBParamsBSV.detail.count -1 do
@@ -234,9 +307,9 @@ begin
         XX.GetTOBFieldList(TOBParamsBSV.detail[II]);
       end;
     end;
-    XX.Disconnect;
+    if ZeXX = nil then XX.Disconnect;
   FINALLY
-    XX.Free;
+    if ZeXX=nil then XX.Free;
   END;
 
 end;
@@ -267,7 +340,7 @@ begin
       //
       Currentpasswd := AnsiLowerCase_(MD5(DeCryptageSt(V_PGI.Password)));
       Currentpasswd := FindEtReplace(Currentpasswd,'-','',true);
-      if not XX.ConnectToServer(V_PGI.UserLogin,Currentpasswd,false) then Exit;
+      if not XX.ConnectToServer(GetEmail(V_PGI.UserLogin),Currentpasswd,false) then Exit;
       Result := true;
       XX.ConnectToArchive(TheArchive,UploadRight,ViewRight);
       XX.Disconnect;
@@ -727,6 +800,7 @@ constructor TconnectBSV.create;
 var UID : TGUID;
 begin
   fArchives := TlistArchive.create;
+  fWorkflows := TlistArchive.create;
   fServer := '';
   fServerConnected := false;
   fArchiveConnected := false;
@@ -740,6 +814,7 @@ destructor TconnectBSV.destroy;
 begin
   if fServerConnected then Disconnect;
   fArchives.Free;
+  fWorkflows.free;
   inherited;
 end;
 
@@ -974,6 +1049,125 @@ begin
   end;
 
 end;
+
+procedure TconnectBSV.GetWorkFlowList (ArchiveId : Integer);
+
+  function ConstitueTheMessage (ArchiveId : Integer) : WideString;
+  begin
+
+    Result := '<?xml version="1.0" encoding="utf-8"?>'+
+              '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'+
+              '<soap:Body>'+
+              '<GetWorkflowListFromArchiveId xmlns="http://tempuri.org/">'+
+              '<archiveId>'+InttoStr(ArchiveId)+'</archiveId>'+
+              '</GetWorkflowListFromArchiveId>'+
+              '</soap:Body>'+
+              '</soap:Envelope>';
+    Result := UTF8Encode(Result);
+  end;
+
+  procedure GetResponse (HTTPresponse : WideString; ArchiveList : TlistArchive) ;
+  var XmlDoc : IXMLDocument ;
+      NodeFolder,OneNode,ArchivesListResult,ArchiveMinInfo : IXMLNode;
+      II,JJ,KK,LL,MM : Integer;
+      OneArchive : TArchive;
+  begin
+    XmlDoc := NewXMLDocument();
+    TRY
+      TRY
+        XmlDoc.LoadFromXML(HTTPResponse);
+      EXCEPT
+        On E: Exception do
+        begin
+          PgiError('Erreur durant Chargement XML : ' + E.Message );
+        end;
+      end;
+      if not XmlDoc.IsEmptyDoc then
+      begin
+        For II := 0 to Xmldoc.DocumentElement.ChildNodes.Count -1 do
+        begin
+          NodeFolder := XmlDoc.DocumentElement.ChildNodes[II]; // Liste des <Folder>
+          if NodeFolder.NodeName = 'soap:Body' then
+          begin
+            for JJ := 0 to NodeFolder.ChildNodes.Count -1 do
+            begin
+              OneNode := NodeFolder.ChildNodes [JJ];
+              if OneNode.NodeName = 'GetWorkflowListFromArchiveIdResponse' then
+              begin
+                for KK := 0 to OneNode.ChildNodes.Count -1 do
+                begin
+                  ArchivesListResult := OneNode.ChildNodes [KK];
+                  if ArchivesListResult.NodeName = 'GetWorkflowListFromArchiveIdResult' then
+                  begin
+                    for LL := 0 to ArchivesListResult.ChildNodes.Count -1 do
+                    begin
+                      ArchiveMinInfo := ArchivesListResult.ChildNodes [LL];
+                      if ArchiveMinInfo.NodeName = 'WorkFlowProcess' then
+                      begin
+                        OneArchive := TArchive.Create;
+                        for MM := 0 to ArchiveMinInfo.ChildNodes.Count -1 do
+                        begin
+                          if ArchiveMinInfo.ChildNodes [MM].NodeName = 'Description' then OneArchive.Description := ArchiveMinInfo.ChildNodes [MM].nodeValue
+                          else if ArchiveMinInfo.ChildNodes [MM].NodeName = 'Name' then OneArchive.Name := ArchiveMinInfo.ChildNodes [MM].nodeValue
+                          else if ArchiveMinInfo.ChildNodes [MM].NodeName = 'Id' then OneArchive.Id := ArchiveMinInfo.ChildNodes [MM].NodeValue;
+                        end;
+                        if (OneArchive.Name <> '') and (OneArchive.ID <> 0) then
+                        begin
+                          ArchiveList.Add(OneArchive);
+                        end else OneArchive.Free;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    FINALLY
+      XmlDoc:= nil;
+    end;
+  end;
+  
+var http: IWinHttpRequest;
+    url : string;
+    TheXml : WideString;
+begin
+  if not fServerConnected then Exit;
+  url := Format(WORFLOWURL,[fServer,fport]);
+  http := CoWinHttpRequest.Create;
+  try
+    http.SetAutoLogonPolicy(2); // Disable SSO
+    http.Open('POST', url, False);
+    http.SetRequestHeader('Content-Type', 'text/xml');
+    http.SetRequestHeader('charset', 'utf8');
+    http.SetRequestHeader('Accept', 'text/xml,*/*');
+    TheXml := constitueTheMessage (ArchiveId);
+    http.SetRequestHeader('Content-Length',IntToStr(length(TheXml)));
+    http.SetRequestHeader('SOAPAction','http://tempuri.org/GetWorkflowListFromArchiveId');
+    http.SetRequestHeader('Cookie','ASP.NET_SessionId='+fcookie_session);
+    TRY
+      http.Send(TheXml);
+    EXCEPT
+      on E: Exception do
+      begin
+        ShowMessage(E.Message);
+        exit;
+      end;
+    END;
+    if http.status = 200 then
+    begin
+      GetResponse(http.ResponseText,fWorkflows);
+    end else
+    begin
+      ShowMessage(GetError(http.ResponseText));
+    end;
+  finally
+    http := nil;
+  end;
+
+end;
+
 
 function TconnectBSV.GetPort: string;
 begin
@@ -1587,16 +1781,15 @@ var NbChunks : Integer;
     TheMemFile : TmemoryStream;
     II : Integer;
     realSize,MaxSize,BuffSize,TrfSize : Integer;
-    TT : PAnsiChar;
     PP : array of char;
-    TheBlockO,TheBlockI : AnsiString;
+    TheBlockO: AnsiString;
 begin
   Result := false;
   TheMemFile := TmemoryStream.Create;
   TRY
     TheMemFile.LoadFromFile(FileName);
     if TheMemFile.Size = 0 then Exit;
-    realSize := TheMemFile.Size;
+//    realSize := TheMemFile.Size;
     if TheMemFile.Size > chunkSize then
     begin
       if (TheMemFile.Size mod chunkSize) > 0 then NbChunks := (TheMemFile.Size div chunkSize) +1
@@ -1629,7 +1822,15 @@ begin
   result := true;
 end;
 
+function TconnectBSV.FiltreDatas (Src : string) : string;
+begin
+  Result := StringReplace_(Src,'&','et',[rfReplaceAll]);
+  Result := StringReplace_(result,'<',' ',[rfReplaceAll]);
+  Result := StringReplace_(result,'>',' ',[rfReplaceAll]);
+end;
+
 function TconnectBSV.SetFields(TOBFields,TOBPARAMBSV: TOB): boolean;
+
 
   function ConstitueTheMessage(TOBFields,TOBPARAMBSV : TOB) : WideString;
   var II : Integer;
@@ -1666,7 +1867,7 @@ function TconnectBSV.SetFields(TOBFields,TOBPARAMBSV: TOB): boolean;
                 [
                 TOBL.GetString('BP3_LIBELLE'),
                 TOBL.GetInteger('BP3_CODE'),
-                TOBL.GetString('BP3_VALEUR'),
+                FiltreDatas(TOBL.GetString('BP3_VALEUR')),
                 TOBP.GetString('TYPE'),
                 TOBP.GetString('INVISIBLE'),
                 TOBP.GetString('MASK'),
@@ -1689,11 +1890,8 @@ function TconnectBSV.SetFields(TOBFields,TOBPARAMBSV: TOB): boolean;
 
 var
   http: IWinHttpRequest;
-  url : string;
+  url,Resp : string;
   TheXml : WideString;
-//  OneFile : TFileStream;
-//  resFile : string;
-//  flags : Word;
 begin
   Result := false;
   if fServer = '' then
@@ -1710,17 +1908,7 @@ begin
     http.SetRequestHeader('charset', 'utf8');
     http.SetRequestHeader('Accept', 'text/xml,*/*');
     TheXml := constitueTheMessage(TOBFields,TOBPARAMBSV);
-    (*
-    resFile := 'c:\LSE-BSV\Result.xml';
-    Flags := fmOpenReadWrite;
-    if not FileExists(resFile) then Flags := Flags or fmCreate;
-    OneFile := TFileStream.Create(resFile,Flags);
-    TRY
-      OneFile.WriteBuffer(Pointer(TheXml)^,length(TheXml));
-    FINALLY
-      OneFile.Free;
-    END;
-    *)
+    ecritLog ('C:\PGI01\',TheXml,'REsult.xml');
     http.SetRequestHeader('Content-Length',IntToStr(length(TheXml)));
     http.SetRequestHeader('Cookie','ASP.NET_SessionId='+fcookie_session);
     http.SetRequestHeader('SOAPAction','http://ZeDOC.fr/ZeDOCNetSolution/SetFields');
@@ -1738,7 +1926,9 @@ begin
       Result := True;
     end else
     begin
-      ShowMessage(GetError(http.ResponseText));
+      Resp := GetError(http.ResponseText);
+      if http.ResponseText <> '' then ShowMessage(Resp)
+                                 else ShowMessage(http.StatusText);
     end;
   finally
     http := nil;
@@ -2342,6 +2532,439 @@ begin
   finally
     http := nil;
   end;
+end;
+
+procedure TconnectBSV.AddFileToWorkFlow(TheWorkFlowId: Integer; DocumentId: WideString;TOBFields,TOBPARAMBSV : TOB);
+
+  function ConstitueTheMessage (TheWorkFlowId: Integer; DocumentId: WideString;TOBFields,TOBPARAMBSV : TOB) : WideString;
+  var Part1,Part2,Part3 : WideString;
+      II : Integer;
+      TOBL,TOBP : TOB;
+  begin
+    Part1 := '<?xml version="1.0" encoding="utf-8"?>'+
+             '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'+
+             '<soap:Body>'+
+             '<AddFileToBpmnProcess xmlns="http://tempuri.org/">'+
+             '<wfBpmnProcessId>'+InttoStr(TheWorkFlowId)+'</wfBpmnProcessId>'+
+             '<dbDocumentId>'+DocumentId+'</dbDocumentId>'+
+             '<filename></filename>'+
+             '<documentFields>';
+    //
+    Part2 := '';
+    for II := 0 to TOBFields.Detail.Count -1 do
+    begin
+      TOBL := TOBFields.Detail[II];
+      TOBP := TOBPARAMBSV.findfirst(['ID'],[TOBL.GetString('BP3_CODE')],true); if TOBP = nil then continue;
+      Part2  := Part2 +
+                format('<FieldMinInfo>'+
+                '<Name>%s</Name>'+
+                '<Id>%d</Id>'+
+                '<Value>%s</Value>'+
+                '<Type>%s</Type>'+
+                '<Invisible>%s</Invisible>'+
+                '<Mask>%s</Mask>'+
+                '<OpenList>%s</OpenList>'+
+                '<ListPath>%s</ListPath>'+
+                '<IsOdbcLinkAffectedOnChange>%s</IsOdbcLinkAffectedOnChange>'+
+                '<IsOdbcLinkAffectedOnLoad>%s</IsOdbcLinkAffectedOnLoad>'+
+                '<OdbcLinkQuery></OdbcLinkQuery>'+
+                '<OdbcLinkId></OdbcLinkId>'+
+                '<TriggerFieldId></TriggerFieldId>'+
+                '<ListMaximumSelectableValueNumber>%s</ListMaximumSelectableValueNumber>'+
+                '<alphabetical_list_sort_on_upload>%s</alphabetical_list_sort_on_upload>'+
+                '<Required>true</Required>'+
+                '</FieldMinInfo>',
+                [
+                TOBL.GetString('BP3_LIBELLE'),
+                TOBL.GetInteger('BP3_CODE'),
+                TOBL.GetString('BP3_VALEUR'),
+                TOBP.GetString('TYPE'),
+                TOBP.GetString('INVISIBLE'),
+                TOBP.GetString('MASK'),
+                TOBP.GetString('OPENLIST'),
+                TOBP.GetString('LISTPATH'),
+                TOBP.GetString('ISODBCLINKAFFECTEDONCHANGE'),
+                TOBP.GetString('ISODBCLINKAFFECTEDONLOAD'),
+                TOBP.GetString('LISTMAXIMUMSELECTABLEVALUENUMBER'),
+                TOBP.GetString('ALPHABETICALLISTSORTONUPLOAD')
+                ]);
+
+    end;
+    //
+    Part3 := '</documentFields>'+
+             '<connectionId>'+fUId+'</connectionId>'+
+             '</AddFileToBpmnProcess>'+
+             '</soap:Body>'+
+             '</soap:Envelope>';
+    Result := UTF8Encode(Part1+Part2+Part3);
+  end;
+
+  function GetResponse (HTTPresponse : WideString) : boolean ;
+  var XmlDoc : IXMLDocument ;
+      NodeFolder,OneNode,OneErr : IXMLNode;
+      II,JJ,KK : Integer;
+  begin
+    Result := false;
+    XmlDoc := NewXMLDocument();
+    TRY
+      TRY
+        XmlDoc.LoadFromXML(HTTPResponse);
+      EXCEPT
+        On E: Exception do
+        begin
+          PgiError('Erreur durant Chargement XML : ' + E.Message );
+        end;
+      end;
+      if not XmlDoc.IsEmptyDoc then
+      begin
+        For II := 0 to Xmldoc.DocumentElement.ChildNodes.Count -1 do
+        begin
+          NodeFolder := XmlDoc.DocumentElement.ChildNodes[II]; // Liste des <Folder>
+          if NodeFolder.NodeName = 'soap:Body' then
+          begin
+            for JJ := 0 to NodeFolder.ChildNodes.Count -1 do
+            begin
+              OneNode := NodeFolder.ChildNodes [JJ];
+              if OneNode.NodeName = 'AddFileToBpmnProcessResponse' then
+              begin
+                for KK := 0 to OneNode.ChildNodes.Count -1 do
+                begin
+                  OneErr := OneNode.ChildNodes [KK];
+                  if OneErr.NodeName = 'AddFileToBpmnProcessResult' then
+                  begin
+                    result := (OneErr.NodeValue='true');
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    FINALLY
+      XmlDoc:= nil;
+    end;
+  end;
+  
+var http: IWinHttpRequest;
+    url : string;
+    TheXml : WideString;
+begin
+  if not fServerConnected then Exit;
+  url := Format(WORFLOWURL,[fServer,fport]);
+  http := CoWinHttpRequest.Create;
+  try
+    http.SetAutoLogonPolicy(2); // Disable SSO
+    http.Open('POST', url, False);
+    http.SetRequestHeader('Content-Type', 'text/xml');
+    http.SetRequestHeader('charset', 'utf8');
+    http.SetRequestHeader('Accept', 'text/xml,*/*');
+    TheXml := constitueTheMessage (TheWorkFlowId,DocumentId,TOBFields,TOBPARAMBSV);
+    http.SetRequestHeader('Content-Length',IntToStr(length(TheXml)));
+    http.SetRequestHeader('SOAPAction','http://tempuri.org/AddFileToBpmnProcess');
+    http.SetRequestHeader('Cookie','ASP.NET_SessionId='+fcookie_session);
+    TRY
+      http.Send(TheXml);
+    EXCEPT
+      on E: Exception do
+      begin
+        ShowMessage(E.Message);
+        exit;
+      end;
+    END;
+    if http.status = 200 then
+    begin
+      if not GetResponse(http.ResponseText) then
+      begin
+//        ShowMessage('Erreur --> Worflow');
+      end;
+    end else
+    begin
+      ShowMessage(GetError(http.ResponseText));
+    end;
+  finally
+    http := nil;
+  end;
+
+end;
+
+function TconnectBSV.ChangeEtatZeDoc(BSVDocumentID : string;TOBDatas: TOB;  TheChps,TheValeurReg: string) : boolean;
+
+  function ConstitueTheMessage (TOBDatas : TOB; BSVDocumentID, TheChps,TheValeurReg: string) : WideString;
+  var Part1,Part2,Part3 : WideString;
+      II : Integer;
+      TOBL,TOBP : TOB;
+  begin
+
+    Part1 := '<?xml version="1.0" encoding="utf-8"?>'+
+             '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'+
+             '<soap:Body>'+
+             '<UpdateDocumentFields xmlns="http://ZeDOC.fr/ZeDOCNetSolution/">'+
+             '<documentId>0</documentId>'+
+             '<jsonParam>'+
+             '[';
+     Part2 := '';
+     for II := 0 to TOBDatas.detail.count -1 do
+     begin
+       TOBL := TOBDatas.detail[II];
+//       if TOBL.GetString('VALUE')='' then continue;
+       if Part2 <> '' then Part2 := Part2 + ',';
+       if TOBL.GetString('NAME') <>TheChps then
+       begin
+         Part2 := Part2 + '{'+
+                           '"Name":"zns'+TOBL.GetString('NAME')+'",'+
+                           '"Type":"'+TOBL.GetString('TYPE')+'",'+
+                           '"ListMaximumSelectableValueNumber":"'+TOBL.GetString('ListMaximumSelectableValueNumber')+'",'+
+                           '"Value":"'+FiltreDatas(TOBL.GetString('Value'))+'"'+
+                           '}';
+       end else
+       begin
+         Part2 := Part2 + '{'+
+                           '"Name":"zns'+TOBL.GetString('NAME')+'",'+
+                           '"Type":"'+TOBL.GetString('TYPE')+'",'+
+                           '"ListMaximumSelectableValueNumber":"'+TOBL.GetString('ListMaximumSelectableValueNumber')+'",'+
+                           '"Value":"'+FiltreDatas(TheValeurReg)+'"'+
+                           '}';
+       end;
+     end;
+
+     Part3 :=']'+
+             '</jsonParam>'+
+             '</UpdateDocumentFields>'+
+             '</soap:Body>'+
+             '</soap:Envelope>';
+    Result := UTF8Encode(Part1+Part2+Part3);
+  end;
+
+  function GetResponse (HTTPresponse : WideString) : boolean ;
+  var XmlDoc : IXMLDocument ;
+      NodeFolder,OneNode,OneErr : IXMLNode;
+      II,JJ,KK : Integer;
+  begin
+    Result := false;
+    XmlDoc := NewXMLDocument();
+    TRY
+      TRY
+        XmlDoc.LoadFromXML(HTTPResponse);
+      EXCEPT
+        On E: Exception do
+        begin
+          PgiError('Erreur durant Chargement XML : ' + E.Message );
+        end;
+      end;
+      if not XmlDoc.IsEmptyDoc then
+      begin
+        For II := 0 to Xmldoc.DocumentElement.ChildNodes.Count -1 do
+        begin
+          NodeFolder := XmlDoc.DocumentElement.ChildNodes[II]; // Liste des <Folder>
+          if NodeFolder.NodeName = 'soap:Body' then
+          begin
+            for JJ := 0 to NodeFolder.ChildNodes.Count -1 do
+            begin
+              OneNode := NodeFolder.ChildNodes [JJ];
+              if OneNode.NodeName = 'UpdateDocumentFieldsResponse' then
+              begin
+                for KK := 0 to OneNode.ChildNodes.Count -1 do
+                begin
+                  OneErr := OneNode.ChildNodes [KK];
+                  if OneErr.NodeName = 'UpdateDocumentFieldsResult' then
+                  begin
+                    result := (OneErr.NodeValue='true');
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    FINALLY
+      XmlDoc:= nil;
+    end;
+  end;
+  
+var http: IWinHttpRequest;
+    url : string;
+    TheXml : WideString;
+begin
+  if not fServerConnected then Exit;
+  url := Format(DOCUMENTURL,[fServer,fport]);
+  http := CoWinHttpRequest.Create;
+  try
+    http.SetAutoLogonPolicy(2); // Disable SSO
+    http.Open('POST', url, False);
+    http.SetRequestHeader('Content-Type', 'text/xml');
+    http.SetRequestHeader('charset', 'utf8');
+    http.SetRequestHeader('Accept', 'text/xml,*/*');
+    TheXml := constitueTheMessage (TOBDatas, BSVDocumentID, TheChps,TheValeurReg);
+    http.SetRequestHeader('Content-Length',IntToStr(length(TheXml)));
+    http.SetRequestHeader('SOAPAction','http://ZeDOC.fr/ZeDOCNetSolution/UpdateDocumentFields');
+    http.SetRequestHeader('Cookie','ASP.NET_SessionId='+fcookie_session);
+    TRY
+      http.Send(TheXml);
+    EXCEPT
+      on E: Exception do
+      begin
+        ShowMessage(E.Message);
+        exit;
+      end;
+    END;
+    if http.status = 200 then
+    begin
+      if not GetResponse(http.ResponseText) then
+      begin
+        ShowMessage('Erreur mise à jour état de la facture');
+      end;
+    end else
+    begin
+      ShowMessage(GetError(http.ResponseText));
+    end;
+  finally
+    http := nil;
+  end;
+
+end;
+
+function TconnectBSV.SearchDocument(BSVDocumentID: WideString; TOBDatas: TOB): boolean;
+
+  function ConstitueTheMessage (BSVDocumentID : string) : WideString;
+  begin
+    Result := Format('<?xml version="1.0" encoding="utf-8"?>'+
+              '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'+
+              '<soap:Body>'+
+              '<Search xmlns="http://ZeDOC.fr/ZeDOCNetSolution/">'+
+              '<query>interDBZEDOC contains(%s)</query>'+
+              '<archiveId>%d</archiveId>'+
+              '</Search>'+
+              '</soap:Body>'+
+              '</soap:Envelope>',[BSVDocumentID,fArchive]);
+    Result := UTF8Encode(Result);
+  end;
+
+  procedure GetDatas(ID : string; Datas : WideString; TOBDatas : TOB);
+
+    procedure ConstitueDatas (Nod : IXMLNode; TOBDatas : TOB);
+    var II,JJ : Integer;
+        Data : string;
+        Valeur : string;
+        TT : TOB;
+        S1 : IXMLNode;
+    begin
+      for II := 0 to Nod.ChildNodes.count -1 do
+      begin
+        S1 :=  Nod.ChildNodes[II];
+        TT := TOB.Create ('UN CHAMPS',TOBDatas,-1);
+        for JJ := 0 to S1.ChildNodes.count -1 do
+        begin
+          TT.AddChampSupValeur(S1.childnodes[JJ].NodeName,S1.childnodes[JJ].nodeValue);
+        end;
+      end;
+    end;
+
+  var XmlDoc : IXMLDocument ;
+      S1,S2,S3,S4,S5,S6 : IXMLNode;
+      II,JJ,KK,LL,MM : Integer;
+      RR : string;
+  begin
+    Result := false;
+    TOBDatas.ClearDetail;
+    XmlDoc := NewXMLDocument();
+    TRY
+      TRY
+        XmlDoc.LoadFromXML(Datas);
+      EXCEPT
+        On E: Exception do
+        begin
+          PgiError('Erreur durant Chargement XML : ' + E.Message );
+        end;
+      end;
+      if not XmlDoc.IsEmptyDoc then
+      begin
+        For II := 0 to Xmldoc.DocumentElement.ChildNodes.Count -1 do
+        begin
+          S1 := XmlDoc.DocumentElement.ChildNodes[II]; // Liste des <Folder>
+          if S1.NodeName = 'soap:Body' then
+          begin
+            for JJ := 0 to S1.ChildNodes.Count -1 do
+            begin
+              S2 := S1.ChildNodes [JJ];
+              if S2.NodeName = 'SearchResponse' then
+              begin
+                for KK := 0 to S2.ChildNodes.Count -1 do
+                begin
+                  S3 := S2.ChildNodes [KK];
+                  if S3.NodeName = 'SearchResult' then
+                  begin
+                    for LL := 0 to S3.ChildNodes.count -1 do
+                    begin
+                      S4 := S3.ChildNodes [LL];
+                      if S4.NodeName = 'DocumentMinInfo' then
+                      begin
+                        for MM := 0 to S4.ChildNodes.count -1 do
+                        begin
+                          S5 := S4.ChildNodes [MM];
+                          if S5.NodeName = 'Id' then
+                          begin
+                            if S5.NodeValue <> ID then break;
+                          end;
+                          if S5.NodeName = 'Fields' then
+                          begin
+                            ConstitueDatas (S5,TOBDatas);
+                          end;
+                        end;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    FINALLY
+      XmlDoc:= nil;
+    end;
+  end;
+
+
+var http: IWinHttpRequest;
+    url : string;
+    TheXml : WideString;
+begin
+  Result := false;
+  if not fServerConnected then Exit;
+  url := Format(OPERATIONURL,[fServer,fport]);
+  http := CoWinHttpRequest.Create;
+  try
+    http.SetAutoLogonPolicy(2); // Disable SSO
+    http.Open('POST', url, False);
+    http.SetRequestHeader('Content-Type', 'text/xml');
+    http.SetRequestHeader('charset', 'utf8');
+    http.SetRequestHeader('Accept', 'text/xml,*/*');
+    TheXml := constitueTheMessage(BSVDocumentID);
+    http.SetRequestHeader('Content-Length',IntToStr(length(TheXml)));
+    http.SetRequestHeader('SOAPAction','http://ZeDOC.fr/ZeDOCNetSolution/Search');
+    http.SetRequestHeader('Cookie','ASP.NET_SessionId='+fcookie_session);
+    TRY
+      http.Send(TheXml);
+    EXCEPT
+      on E: Exception do
+      begin
+        ShowMessage(E.Message);
+        exit;
+      end;
+    END;
+    if http.status = 200 then
+    begin
+//      ecritLog('C:\PGI01\pdf', http.ResponseText,'response.txt');
+      GetDatas(BSVDocumentID,http.ResponseText,TOBDatas);
+      result := True;
+    end else
+    begin
+      ShowMessage(GetError(http.ResponseText));
+    end;
+  finally
+    http := nil;
+  end;
+
 end;
 
 { TlistArchive }

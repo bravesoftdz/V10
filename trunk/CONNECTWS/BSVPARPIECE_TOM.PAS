@@ -207,8 +207,8 @@ procedure TOM_BSVPARPIECE.ConstitueTOBPARAMBSV (NaturePiece : string);
         begin
           TOBL.SetString('BP3_TYPEBSV',QQ.findfield('BP3_TYPEBSV').AsString);
           TOBL.SetString('BP3_VALEUR',QQ.findfield('BP3_VALEUR').AsString);
-          QQ.Next;
         end;
+        QQ.Next;
       until QQ.Eof;
     end;
     ferme (QQ);

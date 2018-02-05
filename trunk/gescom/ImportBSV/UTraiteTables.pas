@@ -90,18 +90,95 @@ end;
 
 
 function TraiteFichier (TOBFields: TOB;RepBase,XF,XXML : string; Rapport : THMemo) : integer;
-var TOBI,TT,TOBE : TOB;
+  procedure ChargeAffaire(TOBAFF: TOB; CodeChantier : string);
+  var QQ: TQuery;
+  begin
+    if CodeChantier= '' then Exit;
+    QQ := OpenSQL('SELECT * FROM AFFAIRE WHERE AFF_AFFAIRE="'+CodeChantier+'"',True,1,'',true);
+    if not QQ.eof then
+    begin
+      TOBAFF.SelectDB('',QQ);
+    end;
+    Ferme(QQ);
+  end;
+
+  function GetLibelleChantier (TOBAFF : TOB) : string;
+  begin
+    Result :=  TOBAFF.GetString('AFF_LIBELLE');
+  end;
+
+  function GetEmailConduc (TOBAFF : TOB) : string;
+  var QQ: TQuery;
+  begin
+    Result :='';
+    QQ := OpenSQL('SELECT ARS_EMAIL FROM RESSOURCE WHERE ARS_RESSOURCE="'+TOBAFF.GetString('AFF_RESPONSABLE')+'"',true,1,'',true);
+    if not QQ.eof then Result := QQ.Fields[0].AsString;
+    ferme (QQ);
+  end;
+  
+  function GetEmailDirecteur (TOBAFF : TOB) : string;
+  var QQ: TQuery;
+  begin
+    Result :='';
+    QQ := OpenSQL('SELECT ARS_EMAIL FROM RESSOURCE WHERE ARS_RESSOURCE="'+TOBAFF.GetString('AFF_RESSOURCE2')+'"',true,1,'',true);
+    if not QQ.eof then Result := QQ.Fields[0].AsString;
+    ferme (QQ);
+  end;
+
+  function GetEmailChefGrp (TOBAFF : TOB) : string;
+  var QQ: TQuery;
+  begin
+    Result :='';
+    QQ := OpenSQL('SELECT ARS_EMAIL FROM RESSOURCE WHERE ARS_RESSOURCE="'+TOBAFF.GetString('AFF_RESSOURCE1')+'"',true,1,'',true);
+    if not QQ.eof then Result := QQ.Fields[0].AsString;
+    ferme (QQ);
+  end;
+
+  function GetEmailAssistante (TOBAFF : TOB) : string;
+  var QQ: TQuery;
+  begin
+    Result :='';
+    QQ := OpenSQL('SELECT ARS_EMAIL FROM RESSOURCE WHERE ARS_RESSOURCE="'+TOBAFF.GetString('AFF_RESSOURCE3')+'"',true,1,'',true);
+    if not QQ.eof then Result := QQ.Fields[0].AsString;
+    ferme (QQ);
+  end;
+
+  function GetLibelleFou( Code : string) : string;
+  var Sql : string;
+      Q : TQuery;
+  begin
+    Sql := 'SELECT T_LIBELLE FROM TIERS WHERE T_NATUREAUXI="FOU" AND T_TIERS="'+Code+'"';
+    Q := OpenSQL(Sql, True,-1, '', True);
+    if not Q.eof then
+    begin
+      Result := Q.findField('T_LIBELLE').AsString;
+    end;
+    ferme (Q);
+  end;
+
+  function EncodeDateBsv (DateEnt : string) : string;
+  var TheDate : TdateTime;
+      YY,MM,DD : Word;
+  begin
+    TheDate := StrtoDate(DateEnt);
+    DecodeDate(TheDate,YY,MM,DD);
+    Result := Format('%4d%.02d%.02d',[YY,mm,DD]);
+  end;
+
+var TOBI,TT,TOBE,TOBAFF : TOB;
     XmlDoc : IXMLDocument ;
     NodeFolder : IXMLNode;
     II : Integer;
-    CodeChantier,SousTraitant,CodeMarche,NumSituation,PaiementPOC,DateFacture : string;
+    CodeChantier,SousTraitant,CodeMarche,NumSituation,PaiementPOC,DateFacture,LibDoc,TotalHT : string;
     TheResultID : string;
     QQ : TQuery;
     TF,TXML,REPIN,REPSAV,REPERR : string;
 begin
+  LibDoc := '';
   Result := 0;
   TOBI := TOB.create('LES CHAMPS',nil,-1);
   TOBE := TOB.Create ('BASTENT',nil,-1);
+  TOBAFF := TOB.Create ('AFFAIRE',nil,-1);
   //
   RepIN :=  IncludeTrailingBackslash(RepBase)+'IN';
   RepSAV :=  IncludeTrailingBackslash(RepBase)+'SAV';
@@ -128,14 +205,51 @@ begin
     For II := 0 to Xmldoc.DocumentElement.ChildNodes.Count -1 do
     begin
       NodeFolder := XmlDoc.DocumentElement.ChildNodes[II];
-      if NodeFolder.NodeName = 'Affaire' then
+      if NodeFolder.NodeName = 'MontantHT' then
+      begin
+        TotalHT := NodeFolder.NodeValue;
+        TT := TOBI.FindFirst(['BP3_LIBELLE'],['TotalHT'],true);
+        if TT <> nil then
+        begin
+          TT.SetString('BP3_VALEUR',TotalHT);
+        end;
+      end else if NodeFolder.NodeName = 'Affaire' then
       begin
         CodeChantier := NodeFolder.NodeValue;
+        //
+        ChargeAffaire(TOBAFF,CodeChantier);
+        //
         TT := TOBI.FindFirst(['BP3_LIBELLE'],['Chantier'],true);
         if TT <> nil then
         begin
           TT.SetString('BP3_VALEUR',trim(BTPCodeAffaireAffiche(CodeChantier)));
         end;
+        TT := TOBI.FindFirst(['BP3_LIBELLE'],['LibelleChantier'],true);
+        if TT <> nil then
+        begin
+          TT.SetString('BP3_VALEUR',GetLibelleChantier(TOBAFF));
+        end;
+        TT := TOBI.FindFirst(['BP3_LIBELLE'],['EmailConducteurTravaux'],true);
+        if TT <> nil then
+        begin
+          TT.SetString('BP3_VALEUR',GetEmailConduc(TOBAFF));
+        end;
+        TT := TOBI.FindFirst(['BP3_LIBELLE'],['EmailDirecteurChantier'],true);
+        if TT <> nil then
+        begin
+          TT.SetString('BP3_VALEUR',GetEmailDirecteur(TOBAFF));
+        end;
+        TT := TOBI.FindFirst(['BP3_LIBELLE'],['EmailChefgroupe'],true);
+        if TT <> nil then
+        begin
+          TT.SetString('BP3_VALEUR',GetEmailChefGrp(TOBAFF));
+        end;
+        TT := TOBI.FindFirst(['BP3_LIBELLE'],['EmailAssistanteChantier'],true);
+        if TT <> nil then
+        begin
+          TT.SetString('BP3_VALEUR',GetEmailAssistante(TOBAFF));
+        end;
+
       end else if NodeFolder.NodeName = 'SousTraitant' then
       begin
         SousTraitant := NodeFolder.NodeValue;
@@ -143,6 +257,11 @@ begin
         if TT <> nil then
         begin
           TT.SetString('BP3_VALEUR',SousTraitant);
+        end;
+        TT := TOBI.FindFirst(['BP3_LIBELLE'],['Fournisseur'],true);
+        if TT <> nil then
+        begin
+          TT.SetString('BP3_VALEUR',GetLibelleFou(SousTraitant));
         end;
       end else if NodeFolder.NodeName = 'CodeMarche' then
       begin
@@ -159,7 +278,7 @@ begin
         TT := TOBI.FindFirst(['BP3_LIBELLE'],['DateDocument'],true);
         if TT <> nil then
         begin
-          TT.SetString('BP3_VALEUR',DateFacture);
+          TT.SetString('BP3_VALEUR',EncodeDateBsv(DateFacture));
         end;
       end;
     end;
@@ -187,7 +306,6 @@ begin
       Result := -1;
       Exit;
     end;
-
     TheResultID := StoreDocumentBSV(TF,TOBI);
     if TheResultId <> '' then
     begin
@@ -199,10 +317,10 @@ begin
       Rapport.lines.Add('Erreur d''envoi dans la GED : Fournisseur : '+SousTraitant+' Code Marché : '+CodeMarche+' Situation : '+NumSituation);
       Result := -1;
     end;
-
   FINALLY
     TOBI.free;
     TOBE.free;
+    TOBAFF.Free;
     XmlDoc := nil;
   end;
 end;

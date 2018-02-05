@@ -113,7 +113,14 @@ begin
                  'BST_NATUREPIECE=GP_NATUREPIECEG AND '+
                  'BST_SOUCHE=GP_SOUCHE AND '+
                  'BST_NUMEROFAC=GP_NUMERO '+
-               ') AS NUMEROSIT '+
+               ') AS NUMEROSIT,'+
+               '(SELECT MAX(BT2_UNIQUE) FROM BTRFENTETE '+
+               ' WHERE '+
+               ' BT2_NATUREPIECEG=GP_NATUREPIECEG AND '+
+               ' BT2_SOUCHE=GP_SOUCHE AND '+
+               ' BT2_NUMERO=GP_NUMERO AND '+
+               ' BT2_INDICEG=GP_INDICEG '+
+               ') AS MAXUNIQUE '+
   						 'FROM PIECE '+
                'LEFT JOIN AFFAIRE ON AFF_AFFAIRE=GP_AFFAIREDEVIS ';
   Req := Req + 'WHERE ' + WherePiece(Cledoc, ttdPiece, False);
@@ -478,6 +485,28 @@ begin
   begin
     Result := Result +','+
               '('+
+                      'SELECT BT3_UNIQUE '+
+                      'FROM BTRFDETAIL '+
+                      'WHERE '+
+                      'BT3_NATUREPIECEG=GL_NATUREPIECEG AND '+
+                      'BT3_SOUCHE=GL_SOUCHE AND '+
+                      'BT3_NUMERO=GL_NUMERO AND '+
+                      'BT3_INDICEG=GL_INDICEG AND '+
+                      'BT3_NUMORDRE=GL_NUMORDRE '+
+                      ') AS NUMTRANSFERT, ';
+    Result := result +
+                      '('+
+                      'SELECT SUM(BT3_MTTRANSFERT) '+
+                      'FROM BTRFDETAIL '+
+                      'WHERE '+
+                      'BT3_NATUREPIECEG=GL_NATUREPIECEG AND '+
+                      'BT3_SOUCHE=GL_SOUCHE AND '+
+                      'BT3_NUMERO=GL_NUMERO AND '+
+                      'BT3_INDICEG=GL_INDICEG AND '+
+                      'BT3_NUMORDRE=GL_NUMORDRE '+
+                      ') AS MTTRANSFERT, ';
+    Result := Result +
+                      '('+
                 'SELECT SUM(BLE_MONTANT) '+
                 'FROM BLIGNEETS '+
                 'WHERE '+
@@ -485,7 +514,7 @@ begin
               ') AS SUMTOTALTS ';
   end else
   begin
-    Result := Result +',0 AS SUMTOTALTS ';
+    Result := Result +',0 AS NUMTRANSFERT,0 AS MTTRANSFERT, 0 AS SUMTOTALTS ';
   end;
   if WithLigneCompl Then
   begin
@@ -619,6 +648,18 @@ var St: string;
 begin
   St := '';
   case ttd of
+    ttdTRFEntPOC :
+    begin
+      St := ' BT2_NATUREPIECEG="' + CleDoc.NaturePiece + '" AND BT2_SOUCHE="' + CleDoc.Souche + '" '
+          + ' AND BT2_NUMERO=' + IntToStr(CleDoc.NumeroPiece)
+          + ' AND BT2_INDICEG=' + IntToStr(CleDoc.Indice) + ' ';
+    end;
+    ttdTRFDetPOC :
+    begin
+      St := ' BT3_NATUREPIECEG="' + CleDoc.NaturePiece + '" AND BT3_SOUCHE="' + CleDoc.Souche + '" '
+          + ' AND BT3_NUMERO=' + IntToStr(CleDoc.NumeroPiece)
+          + ' AND BT3_INDICEG=' + IntToStr(CleDoc.Indice) + ' ';
+    end;
     ttdEntRAnal :
     begin
       St := ' BER_NATUREPIECEG="' + CleDoc.NaturePiece + '" AND BER_SOUCHE="' + CleDoc.Souche + '" '

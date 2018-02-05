@@ -452,7 +452,10 @@ var UneListe,UnRecord,UR,UnChamps,Modif,Libelle,TypeInfo : string;
     UnElt : TChps;
 begin
   UneListe := LISTCHPS;
-  if VH_GC.BTCODESPECIF = '001' then UneListe := UneListe + ';SUMTOTALTS|N'; // ajout colonne total des avenants sur ligne pour POC
+  if VH_GC.BTCODESPECIF = '001' then
+  begin
+    UneListe := UneListe + ';SUMTOTALTS|N;MTTRANSFERT|N;NUMTRANSFERT|N;'; // ajout colonne total des avenants sur ligne pour POC
+  end;
   repeat
     UnRecord := READTOKENST(UneListe);
     if Unrecord <> '' then

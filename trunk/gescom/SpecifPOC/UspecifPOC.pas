@@ -35,8 +35,9 @@ function GetNextNumSituation (TOBPiece : TOB) : integer;
 procedure LoadLesTOBTS (Cledoc : R_CLEDOC;TOBTSPOC : TOB);
 procedure GestionTsPOC(OneTOB,TOBTSPOC : TOB);
 procedure ValideLesTOBTS ( TOBPiece,TOBTSPOC : TOB);
+function SetFactureReglePOC (TOBPiece : TOB) : boolean;
 implementation
-uses FactComm,UtilPGI,FactTOB,FactPiece,FactRG,FactUtil,ParamSOc,ENt1,AglInit,M3FP,cbpPath,LicUtil,UtilTOBPiece;
+uses FactComm,UtilPGI,FactTOB,FactPiece,FactRG,FactUtil,ParamSOc,ENt1,AglInit,M3FP,cbpPath,LicUtil,UtilTOBPiece,UconnectBSV;
 
 procedure GetCoefPoc (Affaire : string; var COEFFG,COEFMARGE : double);
 var fCOEFFG,COEFFS,COEFSAV,COEFFD : double;
@@ -509,7 +510,6 @@ begin
 end;
 
 procedure DeleteLesTOBTS (cledoc : r_cledoc);
-var SQL : string;
 begin
   if ExisteSQL('SELECT 1 FROM BLIGNEETS WHERE '+WherePiece(Cledoc,ttdTSPOC,false)) then
   begin
@@ -572,7 +572,6 @@ procedure LoadLesTOBTS (Cledoc : R_CLEDOC;TOBTSPOC : TOB);
 var QQ : TQuery;
     SQL : String;
     TOBDET,TOBT,TOBE,TOBED,TOBEP,TOBDT : TOB;
-    II : Integer;
     LastRef,TheRef : string;
     LastFather : TOB;
 begin
@@ -644,6 +643,15 @@ begin
   if TheTOBC.Detail.count = 0 then TheTOBC.Free;
 end;
 
+function SetFactureReglePOC (TOBPiece : TOB) : boolean;
+var TheIDZeDoc : string;
+begin
+  result := True;
+  if TOBPiece.getString('GP_NATUREPIECEG')<>'FF' then exit;
+  TheIDZeDoc := GetIDBSVDOC (TOBPiece);
+  if TheIDZeDoc = '' then Exit;
+  result :=  SetFactureRegleBSV (TheIDZeDoc);
+end;
 
 Initialization
  TOBlesContratsST := TOB.create ('LES CONTRATS ST',nil,-1);

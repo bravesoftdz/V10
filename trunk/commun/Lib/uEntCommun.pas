@@ -207,7 +207,7 @@ Type
                ttdAdresse, ttdRevision, ttdVariable, ttdLigneCompl, TtdLignePhase,
                TTdRepartmill,ttdLigneBase,ttdOuvrageP,ttdLignefac,ttdVarDoc,ttdLigneMetre,
                ttdPieceTrait,ttdTimbres,ttdLigneOUVP,ttdPieceInterv,ttdPieceDemPrix,TTdArticleDemPrix,
-               TtdDetailDemPrix,TtdFournDemprix,ttdVteColl,ttdReajAnal,ttdEntRAnal,ttdTSPOC,ttdTSDetPOC);
+               TtdDetailDemPrix,TtdFournDemprix,ttdVteColl,ttdReajAnal,ttdEntRAnal,ttdTSPOC,ttdTSDetPOC,ttdTRFEntPOC,ttdTRFDetPOC);
 
   TCaligment = (TalLeft,TalCenter,TalRight);
   TListeTypeDat =(TCNomChps,TClibChps,TClargChps,TCAligmentChps,TCNumChps);
@@ -574,7 +574,17 @@ procedure GetInfoChamps (NomChamps : string;var TypeInfo : string;  var Libelle 
 var QQ : TQuery;
     NBC : integer;
 begin
-  if NomChamps = 'SUMTOTALTS' then
+  if NomChamps = 'NUMTRANSFERT' then
+  begin
+    Libelle:= 'N° transfert';
+    TypeInfo := 'VARCHAR(6)';
+    Taille := 6;
+  end else if NomChamps = 'MTTRANSFERT' then
+  begin
+    Libelle:= 'Mt Transfert';
+    TypeInfo := 'DOUBLE';
+    Taille := 12;
+  end else if NomChamps = 'SUMTOTALTS' then
   begin
     Libelle:= 'Total TS';
     TypeInfo := 'DOUBLE';
