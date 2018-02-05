@@ -3464,6 +3464,7 @@ object FFacture: TFFacture
       '\par '
       '\par '
       '\par '
+      '\par '
       '\par }')
   end
   object BZoomRessource: THBitBtn
@@ -3472,7 +3473,7 @@ object FFacture: TFFacture
     Top = 152
     Width = 25
     Height = 29
-    Hint = 'Voir commercial'
+    Hint = 'Voir Ressource'
     Caption = 'Ressource'
     Enabled = False
     ParentShowHint = False
@@ -4230,8 +4231,8 @@ object FFacture: TFFacture
     end
   end
   object TDescriptif: TToolWindow97
-    Left = 384
-    Top = 250
+    Left = 536
+    Top = 394
     ClientHeight = 259
     ClientWidth = 315
     Caption = 'Descriptif d'#233'taill'#233
@@ -4267,6 +4268,7 @@ object FFacture: TFFacture
           '0\fnil Times New Roman;}}'
         '{\*\generator Riched20 6.3.9600}\viewkind4\uc1 '
         '\pard\f0\fs20 '
+        '\par '
         '\par '
         '\par '
         '\par '
