@@ -244,7 +244,7 @@ begin
     TOBI.PutValue ('NUMEROPIECED',TOBF.GetValue('GP_NUMERO'));
     TOBI.PutValue ('MONTANTD',    TOBF.GetDouble('GP_TOTALHTDEV'));
   	TOBI.Putvalue ('DATEPIECEF',  TOBF.GetValue('GP_DATEPIECE'));
-    TOBI.Putvalue ('REVISION',    TOBF.GetValue('MTREVISION'));
+    //TOBI.Putvalue ('REVISION',    TOBF.GetValue('MTREVISION'));
     Libelle := ' Affaire : '+ TOBI.GetValue ('LIBAFFAIRE')+' '+TOBI.GetValue('LIBNATUREPIECED')+' '+ IntToStr(TOBF.GetValue('GP_NUMERO'))+
                ' Montant : '+FloatToStrF (TOBF.GetValue('GP_TOTALHTDEV'),ffNumBer,15,V_PGI.OkDecV);
     TOBI.PutValue ('LIBELLEAFFICHAGED',Libelle);
@@ -367,6 +367,7 @@ Var Req     : string;
     Libelle : String;
     I       : Integer;
     MontantHT : Double;
+    MontantAv : Double;
     Numero    : Integer;
 begin
 
@@ -392,15 +393,16 @@ begin
     begin
       TOBI := TOB.Create ('UNE LIGNE', TOBresultat, -1);
       AddChampTOB (TOBI);
-      TOBI.PutValue ('ETATFACTURE','Facturé');
+      TOBI.PutValue ('ETATFACTURE', 'Facturé');
       TOBI.PutValue ('NATUREPIECED',      TOBLAVC.GetString('GL_NATUREPIECEG'));
       TOBI.PutValue ('LIBNATUREPIECED',   Rechdom ('GCNATUREPIECEG', TOBLAVC.GetValue('GL_NATUREPIECEG'),false) );
       TOBI.PutValue ('NUMEROPIECED',      TOBLAVC.GetInteger('GL_NUMERO'));
       TOBI.PutValue ('AFFAIRE',           TOBDEP.GetString('GP_AFFAIRE'));
       TOBI.PutValue ('LIBAFFAIRE',        copy(FindLibelleAffaire(TOBDEP.GetString('GP_AFFAIRE')),1,35));
-      TOBI.PutValue ('MONTANTA',          TOBLAVC.GetDouble('GL_MONTANTHTDEV'));
-      Libelle := ' Affaire : '+ TOBI.GetValue ('LIBAFFAIRE')+' '+ TOBI.GetValue('LIBNATUREPIECED')+' '+ IntToStr(TOBLAVC.GetValue('GL_NUMERO'));
+      MontantAv := TOBLAVC.GetDouble('GL_MONTANTHTDEV');
+      Libelle   := ' Affaire : '+ TOBI.GetValue ('LIBAFFAIRE')+' '+ TOBI.GetValue('LIBNATUREPIECED')+' '+ IntToStr(TOBLAVC.GetValue('GL_NUMERO'));
       TOBI.PutValue ('LIBELLEAFFICHAGED',Libelle);
+      TOBI.PutValue ('MONTANTA',          MontantAv);
       Numero  := TOBLAVC.GetInteger('GL_NUMERO');
     end
     else
@@ -410,25 +412,26 @@ begin
       begin
         TOBI := TOB.Create ('UNE LIGNE', TOBresultat, -1);
         AddChampTOB (TOBI);
-        TOBI.PutValue ('ETATFACTURE','Facturé');
+        TOBI.PutValue ('ETATFACTURE', 'Facturé');
         TOBI.PutValue ('NATUREPIECED',      TOBLAVC.GetString('GL_NATUREPIECEG'));
         TOBI.PutValue ('LIBNATUREPIECED',   Rechdom ('GCNATUREPIECEG', TOBLAVC.GetValue('GL_NATUREPIECEG'),false) );
         TOBI.PutValue ('NUMEROPIECED',      TOBLAVC.GetInteger('GL_NUMERO'));
         TOBI.PutValue ('AFFAIRE',           TOBDEP.GetString('GP_AFFAIRE'));
         TOBI.PutValue ('LIBAFFAIRE',        copy(FindLibelleAffaire(TOBDEP.GetString('GP_AFFAIRE')),1,35));
-        TOBI.PutValue ('MONTANTA',          TOBLAVC.GetDouble('GL_MONTANTHTDEV'));
-        Libelle := ' Affaire : '+ TOBI.GetValue ('LIBAFFAIRE')+' '+ TOBI.GetValue('LIBNATUREPIECED')+' '+ IntToStr(TOBLAVC.GetValue('GL_NUMERO'));
+        MontantAv := TOBLAVC.GetDouble('GL_MONTANTHTDEV');
+        Libelle   := ' Affaire : '+ TOBI.GetValue ('LIBAFFAIRE')+' '+ TOBI.GetValue('LIBNATUREPIECED')+' '+ IntToStr(TOBLAVC.GetValue('GL_NUMERO'));
         TOBI.PutValue ('LIBELLEAFFICHAGED',Libelle);
+        TOBI.PutValue ('MONTANTA',       MontantAv);
         Numero  := TOBLAVC.GetInteger('GL_NUMERO');
       end
       else
       begin
-        MontantHT := TOBLI.Getdouble('MONTANTA');
-        MontantHT := MontantHT + TOBLAVC.Getdouble('GL_MONTANTHTDEV');
-        TOBLI.PutValue('MONTANTA', MontantHT);
+        MontantAv := TOBLI.Getdouble('MONTANTA');
+        MontantHT := TOBLAVC.Getdouble('GL_MONTANTHTDEV');
+        MontantAv := MontantHT + MontantAv;
+        TOBLI.PutValue('MONTANTA', MontantAv);
       end;
-    end;
-
+    end;                                  
   end;
 
 end;
@@ -600,10 +603,10 @@ begin
   UneTOB.AddChampSupValeur ('PRORATA',0.0);
   //
   UneTOB.AddChampSupValeur ('NATUREPIECEF','');
-  UneTOB.AddChampSupValeur ('DATEPIECEF','');
+  UneTOB.AddChampSupValeur ('DATEPIECEF', idate1900);
   UneTOB.AddChampSupValeur ('LIBNATUREPIECEF','');
   UneTOB.addChampSupValeur ('LIBELLEAFFICHAGEF','');
-  UneTOB.AddChampSupValeur ('NUMEROPIECEF',0);
+  UneTOB.AddChampSupValeur ('NUMEROPIECEF', 0);
 end;
 
 function TOF_BTISFACTURE.EncodeRefPieceDBTLoc(TOBP: TOB): string;
