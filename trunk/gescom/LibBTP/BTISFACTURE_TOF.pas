@@ -176,10 +176,11 @@ begin
 
 	TOBIni.ClearDetail;
 
+  TOBL.AddChampSupValeur('MTREVISION', 0);
+
   //chargement des revisions
   If Revision <> '' Then
   Begin
-    TOBL.AddChampSupValeur('MTREVISION', 0);
     Req := Req + 'SELECT SUM(GPT_TOTALHTDEV) AS MTREVISION  FROM PIEDPORT ';
     Req := Req + 'WHERE GPT_NATUREPIECEG="' + TOBL.getValue('GP_NATUREPIECEG') + '"';
     Req := Req + '  AND GPT_SOUCHE="' + TOBL.getValue('GP_SOUCHE') + '"';
@@ -244,7 +245,7 @@ begin
     TOBI.PutValue ('NUMEROPIECED',TOBF.GetValue('GP_NUMERO'));
     TOBI.PutValue ('MONTANTD',    TOBF.GetDouble('GP_TOTALHTDEV'));
   	TOBI.Putvalue ('DATEPIECEF',  TOBF.GetValue('GP_DATEPIECE'));
-    //TOBI.Putvalue ('REVISION',    TOBF.GetValue('MTREVISION'));
+    TOBI.Putvalue ('REVISION',    TOBF.GetValue('MTREVISION'));
     Libelle := ' Affaire : '+ TOBI.GetValue ('LIBAFFAIRE')+' '+TOBI.GetValue('LIBNATUREPIECED')+' '+ IntToStr(TOBF.GetValue('GP_NUMERO'))+
                ' Montant : '+FloatToStrF (TOBF.GetValue('GP_TOTALHTDEV'),ffNumBer,15,V_PGI.OkDecV);
     TOBI.PutValue ('LIBELLEAFFICHAGED',Libelle);
@@ -431,7 +432,7 @@ begin
         MontantAv := MontantHT + MontantAv;
         TOBLI.PutValue('MONTANTA', MontantAv);
       end;
-    end;                                  
+    end;
   end;
 
 end;
@@ -477,7 +478,7 @@ begin
       TOBI.PutValue ('NUMEROPIECED',      TOBLFACHD.GetInteger('GL_NUMERO'));
       TOBI.PutValue ('AFFAIRE',           TOBDEP.GetString('GP_AFFAIRE'));
       TOBI.PutValue ('LIBAFFAIRE',        copy(FindLibelleAffaire(TOBDEP.GetString('GP_AFFAIRE')),1,35));
-      TOBI.PutValue ('MONTANTF',          TOBLFACHD.GetDouble('FACTURE'));
+      TOBI.PutValue ('MONTANTHD',         TOBLFACHD.GetDouble('FACTURE'));
       Libelle := ' Affaire : '+ TOBI.GetValue ('LIBAFFAIRE')+' '+ TOBI.GetValue('LIBNATUREPIECED')+' '+ IntToStr(TOBI.GetValue('NUMEROPIECED'));
       TOBI.PutValue ('LIBELLEAFFICHAGED', Libelle);
       Numero  := TOBLFACHD.GetInteger('GL_NUMERO');
@@ -495,16 +496,16 @@ begin
         TOBI.PutValue ('NUMEROPIECED',      TOBLFACHD.GetInteger('GL_NUMERO'));
         TOBI.PutValue ('AFFAIRE',           TOBDEP.GetString('GP_AFFAIRE'));
         TOBI.PutValue ('LIBAFFAIRE',        copy(FindLibelleAffaire(TOBDEP.GetString('GP_AFFAIRE')),1,35));
-        TOBI.PutValue ('MONTANTF',          TOBLFACHD.GetDouble('FACTURE'));
+        TOBI.PutValue ('MONTANTHD',         TOBLFACHD.GetDouble('FACTURE'));
         Libelle := ' Affaire : '+ TOBI.GetValue ('LIBAFFAIRE')+' '+ TOBI.GetValue('LIBNATUREPIECED')+' '+ IntToStr(TOBI.GetValue('NUMEROPIECED'));
         TOBI.PutValue ('LIBELLEAFFICHAGED',Libelle);
         Numero  := TOBLFACHD.GetInteger('GL_NUMERO');
       end
       else
       begin
-        MontantHT := TOBLI.Getdouble('MONTANTF');
+        MontantHT := TOBLI.Getdouble('MONTANTHD');
         MontantHT := MontantHT + TOBLFACHD.Getdouble('FACTURE');
-        TOBLI.PutValue('MONTANTF', MontantHT);
+        TOBLI.PutValue('MONTANTHD', MontantHT);
       end;
     end;
   end;
@@ -598,9 +599,9 @@ begin
   //
   UneTOB.AddChampSupValeur ('MONTANTRAN',0.0);
   UneTOB.AddChampSupValeur ('MONTANTA',0.0);
-  UneTOB.AddChampSupValeur ('FACTUREHD',0.0);
+  UneTOB.AddChampSupValeur ('MONTANTHD',0.0);
   UneTOB.AddChampSupValeur ('REVISION',0.0);
-  UneTOB.AddChampSupValeur ('PRORATA',0.0);
+  //UneTOB.AddChampSupValeur ('PRORATA',0.0);
   //
   UneTOB.AddChampSupValeur ('NATUREPIECEF','');
   UneTOB.AddChampSupValeur ('DATEPIECEF', idate1900);
