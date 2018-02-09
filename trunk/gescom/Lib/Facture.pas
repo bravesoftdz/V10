@@ -3974,6 +3974,39 @@ begin
       Wait.Visible := false;
     end;
   end;
+  if (OptimizeOuv <> nil) then
+  begin
+    if OptimizeOuv.Arecalc then
+    begin
+      if Action = taModif then
+      begin
+        WAIT.Visible := true;
+        WAIT.refresh;
+        Label1.Caption := 'Recalcul des anciens ouvrages';
+        //
+        if ((not TransfoMultiple) and (not TransfoPiece) and (not DuplicPiece) and (not GenAvoirFromSit)) then
+        begin
+          for Ind := 0 to TOBPiece.detail.count -1 do
+          begin
+            if isOuvrage(TOBPiece.detail[Ind]) then RecalculeOuvrage(TOBPiece.detail[Ind]); 
+          end;
+          OptimizeOuv.Arecalc := false;
+        end;
+        //
+        ZeroFacture (TOBpiece);
+        ZeroMontantPorts (TOBPorcs);
+        ReinitMontantPieceTrait (TOBPiece,TOBaffaire,TOBPieceTrait);
+        for Ind := 0 to TOBPiece.detail.count -1 do ZeroLigneMontant (TOBPiece.detail[Ind]);
+        TOBBases.ClearDetail;
+        TOBBasesL.ClearDetail;
+        PutValueDetail (TOBpiece,'GP_RECALCULER','X');
+        GereCalculPieceBTP;
+        //
+        Wait.Visible := false;
+      end;
+
+    end;
+  end;
   if fmodeAudit then fAuditPerf.Fin('Controle document OK');
   //
   if not PieceControleModifie then

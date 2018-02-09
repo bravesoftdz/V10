@@ -287,30 +287,30 @@ begin
   begin
     QteDuDetail := TOBL.GetDouble('BLO_QTEDUDETAIL'); if QteDuDetail = 0 then QteDuDetail := 1;
     Qte := TOBL.GetDouble('BLO_QTEFACT'); Qte := Qte / QteDuDetail;
-  TOBL.PutValue('BLO_MTMOPA',Arrondi(Qte*ValLoc[23],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTMOPR',Arrondi(Qte*ValLoc[24],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTMOPV',Arrondi(Qte*ValLoc[25],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTFOUPA',Arrondi(Qte*ValLoc[26],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTFOUPR',Arrondi(Qte*ValLoc[27],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTFOUPV',Arrondi(Qte*ValLoc[28],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTINTPA',Arrondi(Qte*ValLoc[29],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTINTPR',Arrondi(Qte*ValLoc[30],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTINTPV',Arrondi(Qte*ValLoc[31],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTLOCPA',Arrondi(Qte*ValLoc[32],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTLOCPR',Arrondi(Qte*ValLoc[33],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTLOCPV',Arrondi(Qte*ValLoc[34],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTMATPA',Arrondi(Qte*ValLoc[35],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTMATPR',Arrondi(Qte*ValLoc[36],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTMATPV',Arrondi(Qte*ValLoc[37],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTOUTPA',Arrondi(Qte*ValLoc[38],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTOUTPR',Arrondi(Qte*ValLoc[39],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTOUTPV',Arrondi(Qte*ValLoc[40],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTSTPA',Arrondi(Qte*ValLoc[41],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTSTPR',Arrondi(Qte*ValLoc[42],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTSTPV',Arrondi(Qte*ValLoc[43],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTAUTPA',Arrondi(Qte*ValLoc[44],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTAUTPR',Arrondi(Qte*ValLoc[45],V_PGI.okdecV));
-  TOBL.PutValue('BLO_MTAUTPV',Arrondi(Qte*ValLoc[46],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTMOPA',Arrondi(Qte*ValLoc[23],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTMOPR',Arrondi(Qte*ValLoc[24],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTMOPV',Arrondi(Qte*ValLoc[25],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTFOUPA',Arrondi(Qte*ValLoc[26],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTFOUPR',Arrondi(Qte*ValLoc[27],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTFOUPV',Arrondi(Qte*ValLoc[28],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTINTPA',Arrondi(Qte*ValLoc[29],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTINTPR',Arrondi(Qte*ValLoc[30],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTINTPV',Arrondi(Qte*ValLoc[31],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTLOCPA',Arrondi(Qte*ValLoc[32],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTLOCPR',Arrondi(Qte*ValLoc[33],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTLOCPV',Arrondi(Qte*ValLoc[34],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTMATPA',Arrondi(Qte*ValLoc[35],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTMATPR',Arrondi(Qte*ValLoc[36],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTMATPV',Arrondi(Qte*ValLoc[37],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTOUTPA',Arrondi(Qte*ValLoc[38],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTOUTPR',Arrondi(Qte*ValLoc[39],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTOUTPV',Arrondi(Qte*ValLoc[40],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTSTPA',Arrondi(Qte*ValLoc[41],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTSTPR',Arrondi(Qte*ValLoc[42],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTSTPV',Arrondi(Qte*ValLoc[43],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTAUTPA',Arrondi(Qte*ValLoc[44],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTAUTPR',Arrondi(Qte*ValLoc[45],V_PGI.okdecV));
+    TOBL.PutValue('BLO_MTAUTPV',Arrondi(Qte*ValLoc[46],V_PGI.okdecV));
   end;
 end;
 
@@ -2915,7 +2915,7 @@ Procedure CreerLesTOBOuv (TOBL,TOBGroupeNomen,TOBNomen,TOBArticles : TOB ; LaLig
     end;
   end;
 
-Var i,Lig : integer ;
+Var i,Lig,II : integer ;
     TOBLN,TOBPere,TOBLoc,TOBArt,TOBRef : TOB ;
     RefArticle,TypeArticle : String ;
     DEV:Rdevise;
@@ -2925,6 +2925,7 @@ Var i,Lig : integer ;
     LaTOBArticles : TOB;
     QQ : TQuery;
     QteDuDetail : double;
+    valeurs : T_Valeurs;
 BEGIN
 (* OPTIMIZATION *)
 	if (not ForPrint) then
@@ -2993,6 +2994,27 @@ BEGIN
       InsertionChampSupOuv (TOBLN,false);
       TOBLoc := TOBLN;
       //
+      if OptimizeOuv <> nil then
+      begin
+        if (TOBLN.GetDouble('BLO_MONTANTPA') <> 0)  then
+        begin
+          if (TOBLN.GetString('BLO_TYPEARTICLE')='MAR') and (TOBLN.GetDouble('BLO_MTFOUPA')=0) then
+          begin
+            OptimizeOuv.Arecalc := True;
+            StockeMontantTypeSurLigne (TOBLN);
+          end else if (TOBLN.GetString('BLO_TYPEARTICLE')='PRE') then
+          begin
+            if (TOBLN.GetDouble('BLO_MTMOPA')+TOBLN.GetDouble('BLO_MTSTPA')+
+                TOBLN.GetDouble('BLO_MTINTPA')+TOBLN.GetDouble('BLO_MTAUTPA')+
+                TOBLN.GetDouble('BLO_MTLOCPA')+TOBLN.GetDouble('BLO_MTMATPA')+
+                TOBLN.GetDouble('BLO_MTOUTPA')  =0) then
+            begin
+              StockeMontantTypeSurLigne (TOBLN);
+              OptimizeOuv.Arecalc := True;
+            end;
+          end;
+        end;
+      end;
       if TOBL.FieldExists('BLF_POURCENTAVANC') and (TOBLN.FieldExists('BLF_POURCENTAVANC')) and
          (TOBL.getValue('BLF_POURCENTAVANC')<> TOBLN.Getvalue('BLF_POURCENTAVANC')) and
          (TOBLN.Getvalue('BLF_POURCENTAVANC')<>0) AND ((TOBL.Getvalue('BLF_POURCENTAVANC')<>0)) and
@@ -3073,6 +3095,15 @@ BEGIN
       TOBLN.free;
     end;
   until i>=TOBnomen.detail.count;
+  if OptimizeOuv.Arecalc then
+  begin
+    for II := 0 to TOBgroupenomen.detail.count -1 do
+    begin
+      if TOBGroupeNomen.detail[II].detail.count > 0 then
+        CalculOuvFromDetail (TOBGroupeNomen.detail[II],DEV,valeurs);
+    end;
+  end;
+
 END ;
 
 procedure CalculeOuvrageDoc (TOBOuvrage : TOB;Qte,QteDetail:double;recursif:boolean;DEV:RDevise ; var valeurs:T_Valeurs;EnHt : boolean;AvecHt:boolean=true;WithArrondi : boolean=false);

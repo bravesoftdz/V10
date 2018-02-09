@@ -16,7 +16,9 @@ type
     	fTobArticles : TOB;
       fTOBDispo : TOB;
       fTOBFournisseur : TOB;
+      fARecalc : Boolean;
     public
+      property Arecalc: boolean read fARecalc write fARecalc;
       property TOBArticles : TOB read fTobArticles write fTobArticles;
       property TOBDispo : TOB read fTOBDispo write fTOBDispo;
       property TOBFournisseur : TOB read fTOBFournisseur write fTOBFournisseur;
