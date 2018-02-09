@@ -172,9 +172,13 @@ var QQ : TQuery;
     req : String;
     TheNode : TTreeNode;
 begin
+(*
   Req := 'SELECT * FROM PHASESCHANTIER WHERE BPC_AFFAIRE="'+
           TOBParam.getValue('CHANTIER')+'" ORDER BY BPC_PN1,BPC_PN2,BPC_PN3,BPC_PN4,BPC_PN5,BPC_PN6,'+
           'BPC_PN7,BPC_PN8,BPC_PN9';
+*)
+  Req := 'SELECT * FROM PHASESCHANTIER WHERE BPC_AFFAIRE="'+
+          TOBParam.getValue('CHANTIER')+'" ORDER BY BPC_PHASETRA';
   QQ := OpenSql (Req,true,-1,'',true);
   TOBPhases.LoadDetailDB ('PHASESCHANTIER','','',QQ,false,true);
   ferme (QQ);

@@ -189,6 +189,7 @@ function GetNbEcheances (TOBpieceTrait : TOB) : integer;
 function GetMontantEntreprisePDir (TOBpieceTrait : TOB) : double;
 procedure AjoutePaiementDirectMode (var Mode: T_ModeRegl;TOBPiece,TOBTiers,TOBPieceTrait,TOBPieceRG,TOBAcomptes: TOB;DEV: RDevise);
 procedure ReinitReglPieceTrait(TOBpiecetrait : TOB);
+function GetLibelleFou( Code : string) : string;
 
 implementation
 

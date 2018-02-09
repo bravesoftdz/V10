@@ -1392,6 +1392,7 @@ type
     TheGestParag              : TGestParagraphe;
     TheGestRemplArticle       : Tgestremplarticle;
     (* -------------- *)
+    property PieceCoTrait : TPieceCotrait read fPieceCoTrait;
     property AffSousDetailUnitaire : boolean read fAffSousDetailUnitaire;
     property ModeAudit        : Boolean read fModeAudit write fModeAudit;
     property AuditPerf        : TAuditClass read fAuditperf write fAuditPerf;
@@ -1509,6 +1510,7 @@ type
     procedure RecalculeEcheances; 
     procedure CalculeThisLigne (TOBL : TOB);
     procedure AfficheLaGrille;
+    procedure  RefreshGrid (ACol,Arow : Integer);
   end;
 
 implementation
@@ -2640,7 +2642,7 @@ begin
   LoadLesrevisions (TOBPiece,TOBrevisions);
   if SaisieCM then loadlesEvtsmat(TOBPiece,TOBEvtsMat);
   LoadLesTOBTS (Cledoc,TOBTSPOC);
-  LoadLesTOBTRF(CleDoc,TOBTRFPOC);
+  LoadLesTOBTRF(CleDoc,TOBPiece,TOBTRFPOC);
 end;
 
 procedure TFFacture.LoadTOBCond(RefUnique: string);
@@ -10925,25 +10927,25 @@ begin
     end else
     {$ENDIF}
       TOBL.PutValue('GL_PUHTDEV', PuFix);
-      if GereDocEnAchat then
+    if GereDocEnAchat then
+    begin
+      if TOBL.GetValue('GL_DPR')<>0 THEN
       begin
-      	if TOBL.GetValue('GL_DPR')<>0 THEN
-        begin
-          TOBL.PutValue('GL_COEFMARG',Arrondi(PuFIx/TOBL.GetValue('GL_DPR'),4));
-          TOBL.PutValue('POURCENTMARG',Arrondi((TOBL.GetValue('GL_COEFMARG')-1)*100,2));
-        end else TOBL.PutValue('GL_COEFMARG',0);
-        
-        if TOBL.GetValue('GL_PUHT') <> 0 then
-        begin
-          TOBL.PutValue('POURCENTMARQ',Arrondi(((TOBL.GetValue('GL_PUHT')- TOBL.GetValue('GL_DPR'))/TOBL.GetValue('GL_PUHT'))*100,2));
+        TOBL.PutValue('GL_COEFMARG',Arrondi(PuFIx/TOBL.GetValue('GL_DPR'),4));
+        TOBL.PutValue('POURCENTMARG',Arrondi((TOBL.GetValue('GL_COEFMARG')-1)*100,2));
+      end else TOBL.PutValue('GL_COEFMARG',0);
+
+      if TOBL.GetValue('GL_PUHT') <> 0 then
+      begin
+        TOBL.PutValue('POURCENTMARQ',Arrondi(((TOBL.GetValue('GL_PUHT')- TOBL.GetValue('GL_DPR'))/TOBL.GetValue('GL_PUHT'))*100,2));
       end else
       begin
-          TOBL.PutValue('POURCENTMARQ',0);
-        end;
-      end else
-      begin
-      	TOBL.PutValue('GL_COEFMARG',0);
+        TOBL.PutValue('POURCENTMARQ',0);
       end;
+    end else
+    begin
+      TOBL.PutValue('GL_COEFMARG',0);
+    end;
   end else
   begin
     if ((TOBL.getValue('GL_TYPEARTICLE') = 'OUV') or (TOBL.getValue('GL_TYPEARTICLE') = 'ARP')) and
@@ -29892,6 +29894,24 @@ begin
   	AfficheLaLigne(I+1);
   end;
 end;
+
+procedure TFFacture.RefreshGrid (ACol,Arow : Integer);
+var I : Integer;
+begin
+  GS.SynEnabled := false;
+  GS.BeginUpdate;
+  DefiniRowCount (Self,TOBpiece);
+  for I := 0 to TOBPiece.detail.count -1 do
+  begin
+  	AfficheLaLigne(I+1);
+  end;
+  GS.EndUpdate;
+  GoToLigne (Arow,ACol);
+  PosValueCell (GS.Cells[Acol,ARow]) ;
+  GS.SynEnabled := true;
+end;
+
+
 initialization
   InitFacGescom();
 end.

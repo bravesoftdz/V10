@@ -485,7 +485,7 @@ begin
   begin
     Result := Result +','+
               '('+
-                      'SELECT BT3_UNIQUE '+
+                      'SELECT DISTINCT IIF(BT3_TYPELIGNETRF="000" AND BT3_CONTREP="-",NULL,BT3_UNIQUE) '+
                       'FROM BTRFDETAIL '+
                       'WHERE '+
                       'BT3_NATUREPIECEG=GL_NATUREPIECEG AND '+

@@ -26,7 +26,7 @@ type
     procedure DefiniMenuPop(Parent: Tform);
     procedure AjoutTransfert (Sender : TObject);
     procedure DetailTransfert (Sender : TObject);
-    procedure ModifTransfert (Sender : TObject); 
+    procedure ModifTransfert (Sender : TObject);
     function IsTransfert (TOBL : TOB) : boolean;
     procedure ActiveMenu (Etat : boolean);
   public
@@ -35,31 +35,83 @@ type
     constructor create(TT: TForm);
     procedure DefiniMenu (TOBL : TOB);
     procedure SetPiece (NaturePiece : string);
-
   end;
 
 var CurrentTransfert : TGestTransfert;
 
 function FindTransfert (TOBTRFPOC,TOBL : TOB) : TOB;
-procedure LoadLesTOBTRF(CleDoc : r_cledoc;TOBTRFPOC : TOB);
+procedure LoadLesTOBTRF(CleDoc : r_cledoc;TOBPiece,TOBTRFPOC : TOB);
 procedure ValideLesTOBTRF (TOBPiece,TOBTRFPOC : TOB);
+procedure DeleteLesTOBTRF (Cledoc :r_cledoc);
+function LastTransfert (TOBTRFPOC,TOBT : TOB) : boolean;
 
 implementation
 uses Facture,UtilTOBPiece;
 
 
-function FindTransfert (TOBTRFPOC,TOBL : TOB) : TOB;
-var TOBTRFE : TOB;
+function ExisteTransfertSuiv (TOBTRFPOC,TT : TOB) : boolean;
+var TS : TOB;
 begin
-  result := nil;
-  TOBTRFE := TOBTRFPOC.findfirst(['BT2_UNIQUE'],[TOBL.GetInteger('NUMTRANSFERT')],True);
-  if TOBTRFE = nil then Exit;
-  Result := TOBTRFE.FindFirst(['BT3_NUMORDRE'],[TOBL.GetInteger('GL_NUMORDRE')],true)
+  result := false;
+  TS := TOBTRFPOC.findfirst(['BT3_NUMORDRE'],[TT.GetInteger('BT3_NUMORDRE')],true);
+  repeat
+    if TS = nil then break;
+    if TS.GetInteger('BT3_UNIQUE') > TT.GetInteger('BT3_UNIQUE') then
+    begin
+      result := True;
+      Exit;
+    end;
+    TS := TOBTRFPOC.findnext(['BT3_NUMORDRE'],[TT.GetInteger('BT3_NUMORDRE')],true);
+  until TS = nil;
 end;
 
-procedure LoadLesTOBTRF(CleDoc : r_cledoc;TOBTRFPOC : TOB);
+function LastTransfert (TOBTRFPOC,TOBT : TOB) : boolean;
+var II : integer;
+    TT : TOB;
+begin
+  result := true;
+  for II := 0 to TOBT.detail.count -1 do
+  begin
+    TT := TOBT.detail[II];
+    if ExisteTransfertSuiv(TOBTRFPOC,TT) then
+    begin
+      result := false;
+      exit;
+    end;
+  end;
+end;
+
+
+procedure DeleteLesTOBTRF (Cledoc :r_cledoc);
+begin
+  ExecuteSQL('DELETE FROM BTRFENTETE WHERE '+WherePiece(Cledoc,ttdTRFEntPOC,true ));
+  ExecuteSQL('DELETE FROM BTRFDETAIL WHERE '+WherePiece(CleDoc,ttdTRFDetPOC,true));
+end;
+
+
+function FindTransfert (TOBTRFPOC,TOBL : TOB) : TOB;
+begin
+  Result := TOBTRFPOC.findfirst(['BT2_UNIQUE'],[TOBL.GetInteger('NUMTRANSFERT')],True);
+end;
+
+procedure LoadLesTOBTRF(CleDoc : r_cledoc;TOBPiece,TOBTRFPOC : TOB);
+
+  function FindLigneInDoc (TT : TOB) : TOB;
+  var II : Integer;
+  begin
+    Result := nil;
+    for II := 0 to TOBPiece.detail.count -1 do
+    begin
+      if TOBPiece.detail[II].GetInteger('GL_NUMORDRE')= TT.GetInteger('BT3_NUMORDRE') then
+      begin
+        result := TOBPiece.detail[II];
+        break;
+      end;
+    end;
+  end;
+
 var QQ : TQuery;
-    TOBT,TT,ThePere : TOB;
+    TOBT,TT,ThePere,TOBL : TOB;
     LastUnique : integer;
     II : Integer;
 begin
@@ -91,7 +143,12 @@ begin
           end;
           LastUnique := TT.GetInteger('BT3_UNIQUE');
         end;
-        if ThePere <> nil then TT.ChangeParent(ThePere,-1);
+        if ThePere <> nil then
+        begin
+          TT.ChangeParent(ThePere,-1);
+          TOBL := FindLigneInDoc (TT);
+          if TOBL <> nil then TT.Data := TOBL;
+        end;
       until II >= TOBT.detail.Count;
     end;
     ferme (QQ);
@@ -140,39 +197,33 @@ begin
 end;
 
 procedure TGestTransfert.AjoutTransfert(Sender: TObject);
-var TOBT : TOB;
+var TOBT,LastTOBL : TOB;
     TOBPiece : TOB;
     TOBTRFPOC : TOB;
+    Arow,Acol : Integer;
 
   function BeforeTransfert (TOBPiece,TOBTRFPOC,TOBT : TOB) : boolean;
   var II : Integer;
       GS : Thgrid;
-      TOBL,TT,TL  : TOB;
+      TOBL,TL  : TOB;
   begin
     GS := TFFActure(FF).GS;
+    Acol := GS.Col;
     Result := false;
     if GS.nbSelected = 0 then BEGIN PGIInfo('Aucune ligne séléctionné'); Exit; END;
     for II := 1 to GS.RowCount do
     begin
       TOBL := GetTOBLigne(TOBPiece,II);
       if not GS.IsSelected(II) then Continue;
-      if TOBL.GetString('GL_TYPELIGNE')<>'ART' then
+      if TOBL.GetString('GL_TYPELIGNE')<>'ART' then continue;
+      //
+      if (Arrondi(TOBL.GetDouble('GL_MONTANTPA')-TOBL.GetDouble('MTTRANSFERT'),TFFActure(FF).DEV.Decimale)= 0) then
       begin
-        PGIInfo('Seule les lignes de documents sont acceptées');
+        PGIInfo('La ligne '+TOBL.GetString('GL_NUMLIGNE')+' est déjà transférée en totalité');
         Exit;
       end;
-      if TOBL.GetInteger('NUMTRANSFERT') <> 0 then
-      begin
-        TT := FindTransfert (TOBTRFPOC,TOBL);
-        if TT <> nil then
-        begin
-          if TT.GetString('BT3_TYPELIGNETRF')='000' then
-          begin
-            PGIInfo('La ligne '+TOBL.GetString('GL_NUMLIGNE')+' est déjà transférée');
-            Exit;
-          end;
-        end;
-      end;
+      //
+      LastTOBL := TOBL;
       TL := TOB.Create('BTRFDETAIL',TOBT,-1);
       TL.SetInteger('BT3_UNIQUE',TOBT.GetInteger('BT2_UNIQUE'));
       TL.SetString('BT3_TYPELIGNETRF','000');
@@ -185,6 +236,7 @@ var TOBT : TOB;
 begin
   TOBPIece := TFFacture (FF).LaPieceCourante;
   TOBTRFPOC := TFFActure(FF).XTOBTRFPOC;
+  LastTOBL := nil;
   //
   TOBT := TOB.create ('BTRFENTETE',nil,-1);
   TOBT.SetInteger('BT2_UNIQUE',TOBPiece.GetInteger('MAXUNIQUE')+1);
@@ -192,26 +244,33 @@ begin
   TOBT.SetDateTime('BT2_DATEMODIF',NowH);
   TOBT.SetSTring('BT2_CREATEUR',V_PGI.User);
   TOBT.SetSTring('BT2_UTILISATEUR',V_PGI.User);
+  TOBT.AddChampSupValeur('MODE','CREATION');
   TOBT.AddChampSupValeur('OKOK','-');
-  try
-    if not BeforeTransfert (TOBPiece,TOBTRFPOC,TOBT) then exit;
-    //
-    if TOBT.detail.count > 0 then
+  if not BeforeTransfert (TOBPiece,TOBTRFPOC,TOBT) then exit;
+  //
+  if TOBT.detail.count > 0 then
+  begin
+    TheTOB := TOBT;
+    AGLLanceFiche('BTP','BTSAISTRFPOC','','','');
+    TheTOB := nil;
+    if TOBT.GetString('OKOK')='X' then
     begin
-      TheTOB := TOBT;
-      AGLLanceFiche('BTP','BTSAISTRFPOC','','','');
-      TheTOB := nil;
-      if TOBT.GetString('OKOK')='X' then
-      begin
-        TOBT.ChangeParent(TOBTRFPOC,-1);
-        TOBPiece.SetInteger('MAXUNIQUE',TOBT.GetInteger('BT2_UNIQUE'));
-      end;
+      TOBT.ChangeParent(TOBTRFPOC,-1);
+      TFFacture(FF).SupLesLibDetail (TOBpiece);
+      TFFacture(FF).CopierColleObj.deselectionneRows;
+      TOBPiece.SetInteger('MAXUNIQUE',TOBPiece.GetInteger('MAXUNIQUE')+1);
+      TFFacture(FF).AffichageDesDetailOuvrages;  // en TOB
+      Arow := LastTOBL.GetIndex+1;
+      TFFacture(FF).RefreshGrid (Acol,ARow);
+      TFFacture(FF).PieceCoTrait.SetSaisie;
+    end else
+    begin
+      TOBT.free;
     end;
-    TFFacture(FF).CopierColleObj.deselectionneRows;
-  finally
+  end else
+  begin
     TOBT.Free;
   end;
-
 end;
 
 constructor TGestTransfert.create(TT: TForm);
@@ -241,15 +300,20 @@ begin
   if not fusable then Exit;
   for II := 0 to fMaxItems -1 do
   begin
-    if MesMenuItem[fMaxItems].Name = 'mListTransfert' then
+    if MesMenuItem[II].Name = 'mListTransfert' then
     begin
-      if ISTransfert (TOBL) then MesMenuItem[fMaxItems].Enabled := true
-                            else MesMenuItem[fMaxItems].Enabled := false;
+      if ISTransfert (TOBL) then MesMenuItem[II].Enabled := true
+                            else MesMenuItem[II].Enabled := false;
     end;
-    if MesMenuItem[fMaxItems].Name = 'mModifTransfert' then
+    if MesMenuItem[II].Name = 'mModifTransfert' then
     begin
-      if ISTransfert (TOBL) then MesMenuItem[fMaxItems].Enabled := true
-                            else MesMenuItem[fMaxItems].Enabled := false;
+      if ISTransfert (TOBL) then MesMenuItem[II].Enabled := true
+                            else MesMenuItem[II].Enabled := false;
+    end;
+    if MesMenuItem[II].Name = 'mTransfert' then
+    begin
+      if ISTransfert (TOBL) then MesMenuItem[II].Enabled := false
+                            else MesMenuItem[II].Enabled := true;
     end;
   end;
 end;
@@ -321,12 +385,51 @@ function TGestTransfert.IsTransfert(TOBL: TOB): boolean;
 begin
   Result := false;
   if TOBL = nil then exit;
-  Result := (TOBL.GetInteger('NUMTRANSFERT')<>0);
+  Result := (TOBL.Getdouble('NUMTRANSFERT')<>0);
 end;
 
 procedure TGestTransfert.ModifTransfert(Sender: TObject);
+var TOBT,TOBL : TOB;
+    TOBPiece : TOB;
+    TOBTRFPOC : TOB;
+    Arow,Acol : Integer;
 begin
-//
+  TOBPIece := TFFacture (FF).LaPieceCourante;
+  TOBTRFPOC := TFFActure(FF).XTOBTRFPOC;
+  TOBL := TOBPiece.Detail[TFFacture(FF).GS.Row -1];
+  //
+  TOBT := FindTransfert(TOBTRFPOC,TOBL);
+  if TOBT <> nil then
+  begin
+    if not LastTransfert(TOBTRFPOC,TOBT) then
+    begin
+      PgiInfo('Vous ne pouvez modifier que le dernier transfert');
+      exit;
+    end;
+    TOBT.AddChampSupValeur('MODE','MODIFICATION');
+    TOBT.AddChampSupValeur('OKOK','-');
+    TheTOB := TOBT;
+    AGLLanceFiche('BTP','BTSAISTRFPOC','','','');
+    TheTOB := nil;
+    if TOBT.GetString('OKOK')='X' then
+    begin
+      TFFacture(FF).SupLesLibDetail (TOBpiece);
+      TFFacture(FF).CopierColleObj.deselectionneRows;
+      TFFacture(FF).AffichageDesDetailOuvrages;  // en TOB
+      Arow := TOBL.GetIndex+1;
+      TFFacture(FF).RefreshGrid (Acol,ARow);
+      TFFacture(FF).PieceCoTrait.SetSaisie;
+    end else if TOBT.GetString('OKOK')='D' then
+    begin
+      TFFacture(FF).SupLesLibDetail (TOBpiece);
+      TFFacture(FF).CopierColleObj.deselectionneRows;
+      TFFacture(FF).AffichageDesDetailOuvrages;  // en TOB
+      Arow := TOBL.GetIndex+1;
+      TFFacture(FF).RefreshGrid (Acol,ARow);
+      TFFacture(FF).PieceCoTrait.SetSaisie;
+      TOBT.free;
+    end;
+  end;
 end;
 
 procedure TGestTransfert.SetPiece(NaturePiece: string);
@@ -335,6 +438,10 @@ begin
   begin
     ActiveMenu (false);
     fusable := false;
+  end else
+  begin
+    ActiveMenu (true);
+    fusable := true;
   end;
 end;
 
