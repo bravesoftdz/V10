@@ -161,6 +161,13 @@ type
     TypeNomenc      : string;
     //AfficheToutesTailles : string;
 
+    //FV1 : 08/01/2018 - FS#2929 - SES_ETANCHEITE SERVICE : En création article, ne prend pas 3 décimales pour le PU en UA
+  	DecQte				  : String;
+    DecPrix 			  : string;
+   	NBDecPrix			  : Integer;
+    NbdecQte 			  : integer;
+
+
     OldDimMasque      : string; // Ancien GA_DIMMASQUE : test si modif.
     TypeMasque        : string; // Type de masque utilisé passé en paramètre : "TYPEMASQ="
     Top, Left         : integer;
@@ -1304,15 +1311,11 @@ var Critere				: String;
     StArg					: string;
     ChampMul			: String;
     ValMul				: string;
-  	DecQte				: String;
-    DecPrix 			: string;
     PrixUnique		: boolean;
 	  x							: Integer;
     i							: Integer;
     iCol					: Integer;
     pos1					: integer;
-  	NBDecPrix			: Integer;
-    NbdecQte 			: integer;
   {$IFDEF EAGLCLIENT}
   	Chp_Fournisseur	: THEdit;
   {$ELSE}
@@ -1362,10 +1365,10 @@ begin
   if not VH_GC.GCArticlesLies then SetControlProperty ('mnArtLie', 'Visible', False);
   //
   DecQte := '';
-  for i := 1 to GetParamSoc('SO_DECQTE') do DecQte := DecQte + '0';
+  for i := 1 to NBDecQte do DecQte := DecQte + '0';
   //
   DecPrix := '';
-  for i := 1 to GetParamSoc('SO_DECPRIX') do DecPrix := DecPrix + '0';
+  for i := 1 to NBDecPrix do DecPrix := DecPrix + '0';
 
   SetControlProperty('GA_POIDSNET', 'DisplayFormat', '#,##0.' + DecQte);
   SetControlProperty('GA_POIDSBRUT', 'DisplayFormat', '#,##0.' + DecQte);
@@ -1381,6 +1384,9 @@ begin
   SetControlProperty('GA_QPCBPROD', 'DisplayFormat', '#,##0.' + DecQte);
   SetControlProperty('GA_PRIXPOURQTE', 'DisplayFormat', '#,##0.' + DecQte);
   SetControlProperty('GA_PRIXPOURQTEAC', 'DisplayFormat', '#,##0.' + DecQte);
+  //FV1 : 08/02/2018 - FS#2929 - SES_ETANCHEITE SERVICE : En création article, ne prend pas 3 décimales pour le PU en UA
+  SetControlProperty('GA_PAUA','DisplayFormat', '#,##0.' + DecPrix);
+  //
   SetControlProperty('GA_DPA', 'DisplayFormat', '#,##0.' + DecPrix);
   SetControlProperty('GA_DPR', 'DisplayFormat', '#,##0.' + DecPrix);
   SetControlProperty('GA_PVHT', 'DisplayFormat', '#,##0.' + DecPrix);
@@ -1420,10 +1426,36 @@ begin
     THNumEdit(GetControl('TPVHTMO')).NumericType := ntDecimal;
     SetControlProperty('TPVTTCMO','Decimals',NBDecPrix);
     THNumEdit(GetControl('TPVTTCMO')).NumericType := ntDecimal;
+    //
     SetControlProperty('GA_PAHT1','DisplayFormat', '#,##0.' + DecPrix);
     SetControlProperty('GA_DPR1','DisplayFormat', '#,##0.' + DecPrix);
     SetControlProperty('GA_PVHT1','DisplayFormat', '#,##0.' + DecPrix);
     SetControlProperty('GA_PVTTC1','DisplayFormat', '#,##0.' + DecPrix);
+    //
+    //FV1 : 08/02/2018 - FS#2929 - SES_ETANCHEITE SERVICE : En création article, ne prend pas 3 décimales pour le PU en UA
+    SetControlProperty('GA_DPR_',     'Decimals',NBDecPrix);
+    THNumEdit(GetControl('GA_DPR_')).NumericType := ntDecimal;
+    SetControlProperty('GA_PVHT_',    'Decimals',NBDecPrix);
+    THNumEdit(GetControl('GA_PVHT_')).NumericType := ntDecimal;
+    SetControlProperty('GA_PVTTC_',   'Decimals',NBDecPrix);
+    THNumEdit(GetControl('GA_PVTTC_')).NumericType := ntDecimal;
+    SetControlProperty('TOTALPA_',    'Decimals',NBDecPrix);
+    THNumEdit(GetControl('TOTALPA_')).NumericType := ntDecimal;
+    SetControlProperty('TOTALPR_',    'Decimals',NBDecPrix);
+    THNumEdit(GetControl('TOTALPR_')).NumericType := ntDecimal;
+    SetControlProperty('TOTALPVHT_',  'Decimals',NBDecPrix);
+    THNumEdit(GetControl('TOTALPVHT_')).NumericType := ntDecimal;
+    SetControlProperty('TOTALPVTTC_', 'Decimals',NBDecPrix);
+    THNumEdit(GetControl('TOTALPVTTC_')).NumericType := ntDecimal;
+    //
+    SetControlProperty('GA_DPR_1',    'Decimals',NBDecPrix);
+    THNumEdit(GetControl('GA_DPR_1')).NumericType := ntDecimal;
+    SetControlProperty('GA_PVHT_1',   'Decimals',NBDecPrix);
+    THNumEdit(GetControl('GA_PVHT_1')).NumericType := ntDecimal;
+    SetControlProperty('GA_PVTTC_1',  'Decimals',NBDecPrix);
+    THNumEdit(GetControl('GA_PVTTC_1')).NumericType := ntDecimal;
+    SetControlProperty('TOTALPA_1',   'Decimals',NBDecPrix);
+    //
     SetControlProperty('TOTALPA','Decimals',NBDecPrix);
     THNumEdit(GetControl('TOTALPA')).NumericType := ntDecimal;
     SetControlProperty('TOTALPR','Decimals',NBDecPrix);
@@ -1434,10 +1466,14 @@ begin
     THNumEdit(GetControl('TOTALPVTTC')).NumericType := ntDecimal;
     SetControlProperty('DQTEPREST','Decimals',NBDecQte);
     THNumEdit(GetControl('DQTEPREST')).NumericType := ntDecimal;
+    //FV1 : 08/02/2018 - FS#2929 - SES_ETANCHEITE SERVICE : En création article, ne prend pas 3 décimales pour le PU en UA
+    SetControlProperty('GCA_PRIXBASE','DisplayFormat', '#,##0.' + DecPrix);    //
+    SetControlProperty('GF_PRIXUNITAIRE','DisplayFormat', '#,##0.' + DecPrix);    //
+    //
     SetControlProperty('GCA_PRIXBASE','Decimals',NBDecPrix);
-    THNumEdit(GetControl('GCA_PRIXBASE')).NumericType := ntDecimal;
+    //THNumEdit(GetControl('GCA_PRIXBASE')).NumericType := ntDecimal;
     SetControlProperty('GF_PRIXUNITAIRE','Decimals',NBDecPrix);
-    THNumEdit(GetControl('GF_PRIXUNITAIRE')).NumericType := ntDecimal;
+    //THNumEdit(GetControl('GF_PRIXUNITAIRE')).NumericType := ntDecimal;
   end;
 
   SetControlProperty('GA_PCB', 'DisplayFormat', '#,##0');
@@ -7685,8 +7721,9 @@ begin
   	if GetField('GA_CALCAUTOHT')='X' then SetField('GA_PVHT', FloatToStr(BaseTarifHT));
 
     // Ajout LS
-    SetField('GA_PVHT', arrondi(GetField('GA_PVHT'), GetParamSoc('SO_DECPRIX')));
-//    SetField('GA_PVHT', arrondi(GetField('GA_PVHT'), V_PGI.OkDecV));
+    SetField('GA_PVHT', arrondi(GetField('GA_PVHT'), NbDecPrix));
+
+    //SetField('GA_PVHT', arrondi(GetField('GA_PVHT'), V_PGI.OkDecV));
     // --
     ClickActuPrix := Click;
   end;
@@ -7765,7 +7802,7 @@ begin
     BaseTarifTTC := ArrondirPrix(CodeArrondi, BaseTarifTTC);
     SetField('GA_PVTTC', FloatToStr(BaseTarifTTC));
     // Ajout LS
-    if GetField('GA_CALCAUTOTTC')='X' then  SetField('GA_PVTTC', arrondi(GetField('GA_PVTTC'), GetParamSoc('SO_DECPRIX')));
+    if GetField('GA_CALCAUTOTTC')='X' then  SetField('GA_PVTTC', arrondi(GetField('GA_PVTTC'), NBDecPrix));
     if (GetField('GA_CALCAUTOTTC') = 'X') then SetControlProperty('GA_PVTTC', 'Color', clbtnFace)
                                       	  else SetControlProperty('GA_PVTTC', 'Color', clWindow);
 //    SetField('GA_PVTTC', arrondi(GetField('GA_PVTTC'), V_PGI.OkDecV));
@@ -10198,8 +10235,8 @@ begin
     //FV1 : remise à zéro de l'ensemble des zones associées àu fournisseur principal
     TOBCatalog.InitValeurs(false);
     SetControlText('FOURNPRINC', '');
-    SetControlText('GF_PRIXUNITAIRE','0.00');
-    SetControlText('GCA_PRIXBASE','0.00');
+    SetControlText('GF_PRIXUNITAIRE','0');
+    SetControlText('GCA_PRIXBASE','0');
     SetControlText('TUA','');
     SetControlText('GF_CALCULREMISE','0.00');
     //FV1 : 19/02/2015 - Gestion du prix d'achat au niveau de la fiche Article
