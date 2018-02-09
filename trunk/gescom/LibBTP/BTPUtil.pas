@@ -3566,11 +3566,15 @@ begin
               ModeleR:=GetParamsoc('SO_BTETATRECAPDIRECT');
           end;
           end;
-          if ModeleR='' then ModeleR:=Copy(Modele,1,2)+'R';
-          UneTOB := ImpressionViaTOB.TOBRECAP;
-    			if (MultiEtat) and ( NbSSTrait <= 5) then LastPdfBatch ; // inutile si pas de modèle et impression du tableau seul
-          if LanceEtatTOB ('E','GPJ',ModeleR,UneTOB,Bapercu,false,false,nil,'','',false) < 0 then V_PGI.IoError:=oeUnknown ;
-          // ---
+          //FV1 - 09/02/2018 : FS#2930 - TEST BL : Pb d'impression dans le cas d'une situation avec plus de 5 sous-traitants
+          if TableauSituation = 'X' then
+          begin
+            if ModeleR='' then ModeleR:=Copy(Modele,1,2)+'R';
+            UneTOB := ImpressionViaTOB.TOBRECAP;
+            if (MultiEtat) and ( NbSSTrait <= 5) then LastPdfBatch ; // inutile si pas de modèle et impression du tableau seul
+            if LanceEtatTOB ('E','GPJ',ModeleR,UneTOB,Bapercu,false,false,nil,'','',false) < 0 then V_PGI.IoError:=oeUnknown ;
+            // ---
+          end;
           if (NbSSTrait > 5) then
           begin
             ModeleS:=GetParamsoc('SO_BTETATSSTRAITANCE');

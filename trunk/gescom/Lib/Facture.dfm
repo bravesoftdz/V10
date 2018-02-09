@@ -4233,8 +4233,8 @@ object FFacture: TFFacture
     end
   end
   object TDescriptif: TToolWindow97
-    Left = 536
-    Top = 394
+    Left = 544
+    Top = 210
     ClientHeight = 259
     ClientWidth = 315
     Caption = 'Descriptif d'#233'taill'#233
