@@ -3669,7 +3669,8 @@ begin
   DefiniMenuCotraitance;
   {$ENDIF LINE}
   // Fait expres tant que la duplication dnas la fiche ne fait pas le mm chose que dans le menu
-  SetCOntrolVisible('BDUPLICATION',false);
+  //FV1 - 07/02/2018 : FS#2918 - SCETEC - Le bouton duplication de la fiche affaire a disparu
+  //SetCOntrolVisible('BDUPLICATION',false);
   // Fait expres tant que la duplication dnas la fiche ne fait pas le mm chose que dans le menu
   //SetCOntrolVisible('BDUPLICATION',false);
   Risque.text := GetEtatRisqueClient (GetControlText('AFF_TIERS')) ;
