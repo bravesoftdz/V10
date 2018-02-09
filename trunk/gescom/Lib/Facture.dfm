@@ -1,6 +1,6 @@
 object FFacture: TFFacture
-  Left = 287
-  Top = 53
+  Left = 341
+  Top = 157
   Width = 1011
   Height = 698
   HelpContext = 119000017
@@ -3177,8 +3177,6 @@ object FFacture: TFFacture
             Width = 28
             Height = 27
             Hint = 'Voir les totalisations documents'
-            Glyph.Data = {00000000}
-            GlyphMask.Data = {00000000}
             ImageIndex = 0
             Images = HimgTOT
             Opaque = False
@@ -3461,6 +3459,10 @@ object FFacture: TFFacture
         '0\fnil Times New Roman;}}'
       '{\*\generator Riched20 6.3.9600}\viewkind4\uc1 '
       '\pard\f0\fs20 '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
       '\par '
       '\par '
       '\par '
@@ -4268,6 +4270,10 @@ object FFacture: TFFacture
           '0\fnil Times New Roman;}}'
         '{\*\generator Riched20 6.3.9600}\viewkind4\uc1 '
         '\pard\f0\fs20 '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
         '\par '
         '\par '
         '\par '

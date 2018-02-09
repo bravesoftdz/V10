@@ -114,7 +114,7 @@ procedure TOM_BSVSERVER.OnArgument ( S: String ) ;
 begin
   Inherited ;
   TOBPARAMBSV := TOB.Create ('LES PARAMS BSV',nil,-1);
-  CurrentUser := V_PGI.UserLogin;
+  CurrentUser := GetEmail(V_PGI.UserLogin);
   Currentpasswd := AnsiLowerCase_(MD5(DeCryptageSt(V_PGI.Password)));
   Currentpasswd := FindEtReplace(Currentpasswd,'-','',true);
   THValComboBox (GetControl('TBASENAME')).Enabled := false;

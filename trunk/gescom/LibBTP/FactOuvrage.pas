@@ -218,6 +218,9 @@ procedure InformePTCOuvrage (FF : TForm ; TOBL : TOB; Arect : Trect);
 procedure CumuleLesTypes (TOBL : TOB; var Valloc : T_Valeurs);
 procedure StockeLesTypes (TOBL : TOB; Valloc : T_Valeurs);
 //
+Procedure DerouleOuvrage ( TOBN : TOB ; CodeNomen,RefUnique,Depot : String ; TOBArticles : TOB ; QteDuDetail : Double;DEV:RDevise;VenteAchat : string) ;
+Procedure OuvVersLigOuv ( TOBPIece,TOBL,TOBNOMEN,TOBLN,TOBA : TOB ; Niv,OrdreCompo : integer ;DEV:RDevise;EnHt:Boolean;Prixtraite : string='PUH' ) ;
+//
 implementation
 uses factgrp,FactVariante,Facture,FactureBTP
 {$IFDEF BTP}

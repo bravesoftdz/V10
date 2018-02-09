@@ -41,6 +41,8 @@ const
   TheChampsDest = 'ECCC;ARTSAISIE;SOUSTRAITANT;CODEMARCHE;LIBELLE;QTE;UNITE;PA;MONTANT';
 
 Type
+  TmodeFoncTRF = (TmfCreation,TmfModif);
+  
   TTypeGridSaisie = (TTgsFrom,TTgsDest);
 
   TOF_BTSAISTRFPOC = Class (TOF)
@@ -54,8 +56,10 @@ Type
     procedure OnCancel                 ; override ;
   private
     XX : TForm;
+    ModeFonc : TmodeFoncTRF;
     ThePop : TpopupMenu;
     MtInit,MtTransf,MtEcart : double;
+    SuiteWhere : string;
     TOBNewLigne : TOB;
     TOBTRFPOC,TOBParag : TOB;
     TOBFROM : TOB;
@@ -117,11 +121,17 @@ Type
     procedure BeforeInsertTOB;
     procedure AjouteLesDatas;
     procedure DelChampsSupSaisie(TT: TOB);
+    procedure AfterInsertTOB;
+    procedure AjouteDetailOuv(TOBL : TOB) ;
+    procedure DupliqueDetailOuv(TOBL, TOBNL: TOB);
+    procedure BdeleteClick (Sender : TObject);
 end ;
 
 Implementation
 
-uses Grids,SelectPhase,Facture,FactTOB,UtilArticle,FactArticle,FactUtil,FactFormule,FactPiece,FactCalc,Windows,Messages,FactComm;
+uses Grids,SelectPhase,Facture,FactTOB,UtilArticle,FactArticle,FactUtil,FactFormule,
+     FactPiece,FactCalc,Windows,Messages,FactComm,FactOuvrage,uEntCommun,
+     NomenUtil,FactureBTP,UtilPGI,UCotraitance,USpecifPOC;
 
 procedure TOF_BTSAISTRFPOC.OnNew ;
 begin
@@ -134,7 +144,6 @@ begin
 end ;
 
 procedure TOF_BTSAISTRFPOC.OnUpdate ;
-var I : Integer;
 begin
   Inherited ;
   if ARRONDI(MtEcart,2)<> 0 then
@@ -151,8 +160,9 @@ begin
   end;
   BeforeInsertTOB;
   AjouteLesDatas;
+  AfterInsertTOB;
   NumeroteLignesGC(TFFacture(XX).GS,TOBPiece,false,true);
-  TFFacture(XX).AfficheLaGrille;
+  TOBTRFPOC.SetString('OKOK','X');
 end ;
 
 procedure TOF_BTSAISTRFPOC.OnLoad ;
@@ -171,7 +181,10 @@ begin
     XX := CurrentTransfert.CurrentSaisie as TFFacture;
   end;
   TOBTRFPOC := LaTOB;
+  if TOBTRFPOC.getString('MODE')= 'CREATION' then ModeFonc := TmfCreation
+                                             else ModeFonc := TmfModif;
   TOBPIece := TFFacture (XX).LaPieceCourante;
+  SuiteWhere := FabricWhereNatArt(TOBPiece.getString('GP_NATUREPIECEG'), TOBPiece.getString('GP_DOMAINE'),'');
   //
   CreateTOB;
   ChargeLesParags;
@@ -228,7 +241,7 @@ end;
 
 procedure TOF_BTSAISTRFPOC.DefiniTOBSaisi;
 var II : Integer;
-    TF,TD : TOB;
+    TF,TD,TL,TOBL : TOB;
 begin
   MtInit := 0;
   MtTransf := 0;
@@ -243,9 +256,13 @@ begin
       MtInit := MtInit + TF.GetDouble('MONTANT');
     end else
     begin
+      if TOBTRFPOC.detail[II].GetBoolean('BT3_CONTREP') then Continue; 
       TD := TOB.Create ('BTRFDETAIL',TOBDEST,-1);
       TD.Dupliquer(TOBTRFPOC.detail[II],False,true);
-      TD.Data := TOBTRFPOC.detail[II].Data;
+      TOBL := TOB(TOBTRFPOC.detail[II].Data);
+      TL := NewTOBLigne(TOBNewLigne,0);
+      TL.Dupliquer(TOBL,false,true);
+      TD.Data := TL;
       AddChampsSupSaisie(TD);
       MtTransf := MtTransf + TD.GetDouble('MONTANT');
     end;
@@ -278,11 +295,26 @@ begin
     TT.SetString('ARTICLE',TOBL.GetString('GL_ARTICLE'));
     TT.SetString('LIBELLE',TOBL.GetString('GL_LIBELLE'));
     TT.SetString('UNITE',TOBL.GetString('GL_QUALIFQTEVTE'));
-    TT.SetDouble('QTE',TOBL.GetDouble('GL_QTEFACT'));
     TT.SetDouble('PA',TOBL.GetDouble('GL_DPA'));
-    TT.SetDouble('MONTANTINIT',ARRONDI(TOBL.GetDouble('GL_DPA')*TOBL.GetDouble('GL_QTEFACT'),2));
-    if TT.GetDouble('BT3_MTTRANSFERT') <> 0 then TT.SetDouble('MONTANT',TT.GetDouble('BT3_MTTRANSFERT'))
-                                            else TT.SetDouble('MONTANT',TT.GetDouble('MONTANTINIT'));
+    if TOBL.GetDouble('MTTRANSFERT') <> 0 then
+    begin
+      if ModeFonc = TmfCreation then
+      begin
+        TT.SetDouble('MONTANTINIT',TOBL.GetDouble('GL_MONTANTPA') - TOBL.GetDouble('MTTRANSFERT'));
+        TT.SetDouble('MONTANT',TT.GetDouble('MONTANTINIT'));
+        TT.SetDouble('QTE',ARRONDI(TT.GetDouble('MONTANT')/TT.GetDouble('PA'),V_PGI.OkDecQ));
+      end else
+      begin
+        TT.SetDouble('MONTANTINIT',TOBL.GetDouble('GL_MONTANTPA') - TOBL.GetDouble('MTTRANSFERT') +TT.GetDouble('BT3_MTTRANSFERT'));
+        TT.SetDouble('MONTANT',TT.GetDouble('BT3_MTTRANSFERT'));
+        TT.SetDouble('QTE',ARRONDI(TT.GetDouble('MONTANT')/TT.GetDouble('PA'),V_PGI.OkDecQ));
+      end;
+    end else
+    begin
+      TT.SetDouble('MONTANTINIT',TOBL.GetDouble('GL_MONTANTPA'));
+      TT.SetDouble('MONTANT',TOBL.GetDouble('GL_MONTANTPA'));
+      TT.SetDouble('QTE',TOBL.GetDouble('GL_QTEFACT'));
+    end;
     TT.SetString('SOUSTRAITANT',TOBL.GetString('GL_FOURNISSEUR'));
     TT.SetString('CODEMARCHE',TOBL.GetString('GL_CODEMARCHE'));
   end;
@@ -290,16 +322,16 @@ end;
 
 procedure TOF_BTSAISTRFPOC.DelChampsSupSaisie(TT : TOB);
 begin
-  if not TT.FieldExists('ARTSAISIE') then TT.DelChampSup('ARTSAISIE',false);
-  if not TT.FieldExists('ARTICLE') then TT.DelChampSup('ARTICLE',false);
-  if not TT.FieldExists('LIBELLE') then TT.DelChampSup('LIBELLE',false);
-  if not TT.FieldExists('UNITE') then TT.DelChampSup('UNITE',false);
-  if not TT.FieldExists('QTE') then TT.DelChampSup('QTE',false);
-  if not TT.FieldExists('PA') then TT.DelChampSup('PA',false);
-  if not TT.FieldExists('MONTANTINIT') then TT.DelChampSup('MONTANTINIT',false);
-  if not TT.FieldExists('MONTANT') then TT.DelChampSup('MONTANT',false);
-  if not TT.FieldExists('SOUSTRAITANT') then TT.DelChampSup('SOUSTRAITANT',false);
-  if not TT.FieldExists('CODEMARCHE') then TT.DelChampSup('CODEMARCHE',false);
+  if not TT.FieldExists('ARTSAISIE') then TT.DelChampSup('ARTSAISIE',true);
+  if not TT.FieldExists('ARTICLE') then TT.DelChampSup('ARTICLE',true);
+  if not TT.FieldExists('LIBELLE') then TT.DelChampSup('LIBELLE',true);
+  if not TT.FieldExists('UNITE') then TT.DelChampSup('UNITE',true);
+  if not TT.FieldExists('QTE') then TT.DelChampSup('QTE',true);
+  if not TT.FieldExists('PA') then TT.DelChampSup('PA',true);
+  if not TT.FieldExists('MONTANTINIT') then TT.DelChampSup('MONTANTINIT',true);
+  if not TT.FieldExists('MONTANT') then TT.DelChampSup('MONTANT',true);
+  if not TT.FieldExists('SOUSTRAITANT') then TT.DelChampSup('SOUSTRAITANT',true);
+  if not TT.FieldExists('CODEMARCHE') then TT.DelChampSup('CODEMARCHE',true);
 end;
 
 procedure TOF_BTSAISTRFPOC.RenseigneEcran;
@@ -568,12 +600,14 @@ begin
     ThePop.OnPopup := BeforePopup;
     TmenuItem(GetControl('MnAffectInterne')).OnClick := AffectInterneClick;
     TMenuItem(GetControl('MnAffectST')).OnClick := AffecteST;
+    TToolbarButton97 (GetControl('BdeleteALL')).onclick := BdeleteClick;
   end else
   begin
     BSELDEST.OnClick := nil;
     ThePop.OnPopup := nil;
     TmenuItem(GetControl('MnAffectInterne')).OnClick := nil;
     TMenuItem(GetControl('MnAffectST')).OnClick := nil;
+    TToolbarButton97 (GetControl('BdeleteALL')).onclick := nil;
   end;
 end;
 
@@ -656,7 +690,16 @@ begin
   Result := false;
   TOBL := TOBDEST.Detail[Arow-1];
   TOBA := nil;
+
   if GSDEST.Cells[GSART,ARow] <> '' then StChamps := 'GA_CODEARTICLE=' + Trim(Copy(GSDEST.Cells[GSART,ARow], 1, 18));
+
+  if SuiteWhere <> '' then
+  begin
+    if StChamps <> '' then StChamps := StChamps + ';XX_WHERE= AND (' + SuiteWhere+')'
+                      else StChamps := 'XX_WHERE= AND (' + SuiteWhere+')';
+  end;
+
+
   RefArticle := AGLLanceFiche('BTP', 'BTARTICLE_RECH', '', '', StChamps+';RECHERCHEARTICLE');
   if RefArticle <> '' then
   begin
@@ -735,6 +778,7 @@ begin
   end else if Acol = GSMONTANTD then
   begin
     TraiteMontantDest (Acol,ARow,Cancel);
+    CalculeLaLigne(TOBL,TTgsDest);
   end;
 
   if (not Cancel) and (ZoneCalc(Acol)) then
@@ -854,8 +898,11 @@ begin
         cancel := True;
       end else
       begin
-        SetArticleToLigne(TOBL,TOBA);
         CalculeLaLigne(TOBL,TTgsDest);
+        AjouteLaLigne (TOBL,TTgsDest,TOBL.GetDouble('MONTANT'));
+        AfficheLaLIgne(TOBL,TTgsDest ,GSDEST.row);
+        StCellDest := GSDEST.Cells[GSDEST.col,GSDEST.row];
+        DefiniPied;
       end;
     end;
   end;
@@ -875,7 +922,7 @@ begin
   TOBL := TOBDEST.Detail[Arow-1];
   TOBL.SetDOuble('MONTANT',Valeur(GSDEST.cells[Acol,Arow]));
   if TOBL.GetDouble('QTE') = 0 then TOBL.SetDouble('QTE',1);
-  TOBL.SetDOuble('PA',ARRONDI(TOBL.GetDouble('MONTANT')/TOBL.GetDouble('QTE'),2))
+  TOBL.SetDOuble('PA',ARRONDI(TOBL.GetDouble('MONTANT')/TOBL.GetDouble('QTE'),V_PGI.okdecP));
 end;
 
 procedure TOF_BTSAISTRFPOC.TraiteMontantFrom(ACol, Arow: Integer;var Cancel: boolean);
@@ -884,9 +931,15 @@ var TOBL: TOB;
 begin
   TOBL := TOBFROM.Detail[Arow-1];
   //
+  if Valeur(GSFROM.cells[Acol,Arow]) > TOBL.GetDouble('MONTANTINIT') then
+  begin
+    PGIInfo('Vous ne pouvez pas dépasser le montant initial');
+    Cancel := True;
+    Exit;
+  end;
   TOBL.SetDouble('MONTANT',Valeur(GSFROM.cells[Acol,Arow]));
   if TOBL.GetDouble('PA') = 0 then TOBL.SetDouble('PA',1);
-  VAL := ARRONDI(TOBL.GetDouble('MONTANT')/TOBL.GetDouble('PA'),2);
+  VAL := ARRONDI(TOBL.GetDouble('MONTANT')/TOBL.GetDouble('PA'),V_PGI.okdecP);
   TOBL.SetDOuble('QTE',Val);
   //
   CalculeLaLigne(TOBL,TTgsFrom);
@@ -938,9 +991,10 @@ procedure TOF_BTSAISTRFPOC.CalculeLaLigne(TOBL: TOB; TypeGrid: TTypeGridSaisie);
 begin
   if TypeGrid = TTgsFrom then
   begin
+    TOBL.SetDouble('MONTANT',ARRONDI(TOBL.GetDouble('PA')*TOBL.GetDouble('QTE'),TFFacture(XX).DEV.decimale));
   end else
   begin
-    TOBL.SetDouble('MONTANT',ARRONDI(TOBL.GetDouble('PA')*TOBL.GetDouble('QTE'),2));
+    TOBL.SetDouble('MONTANT',ARRONDI(TOBL.GetDouble('PA')*TOBL.GetDouble('QTE'),TFFacture(XX).DEV.decimale));
   end;
 end;
 
@@ -1109,6 +1163,8 @@ end;
 
 procedure TOF_BTSAISTRFPOC.GSKeyDown(Sender: TObject; var Key: Word;Shift: TShiftState);
 var Vide: Boolean;
+    Acol,Arow : Integer;
+    cancel : boolean;
 begin
   Vide := (Shift = []);
   case Key of
@@ -1121,6 +1177,18 @@ begin
     begin
       Key := 0;
       SupLigneClick;
+    end;
+    VK_F11 : if (Vide) then
+    begin
+      Key := 0;
+      if GSDEST.Col = GSMONTANTD then
+      begin
+        cancel := False;
+        Acol := GSDEST.Col;
+        Arow := GSDEST.Row;
+        GSDEST.Cells [GSDEST.Col,GSDEST.Row] := THNumEdit(GetControl('MTRESTE')).Text;
+        GSCellExitDest(Self,Acol,Arow,cancel);
+      end;
     end;
   end;
 end;
@@ -1159,17 +1227,24 @@ var II,NumLig : Integer;
     GS : THGrid;
 begin
   GS := TFFacture(XX).GS;
-  for II := TOBTRFPOC.Detail.count -1 downto 0 do
+  TFFacture(XX).SupLesLibDetail (TOBpiece);
+  if ModeFonc = TmfModif then
   begin
-    TOBT := TOBTRFPOC.Detail[II];
-    TOBL := TOB(TOBT.Data);
-    if TOBL <> nil then
+    for II := TOBTRFPOC.Detail.count -1 downto 0 do
     begin
-      if TOBT.GetString('BT3_TYPELIGNETRF')='001' then
+      TOBT := TOBTRFPOC.Detail[II];
+      TOBL := TOB(TOBT.Data);
+      if TOBL <> nil then
       begin
-        NumLig := TOBL.GetIndex + 1;
-        GS.DeleteRow(NumLig);
-        TOBL.Free; 
+        if TOBT.GetString('BT3_TYPELIGNETRF')='001' then
+        begin
+          NumLig := TOBL.GetIndex + 1;
+//          GS.DeleteRow(NumLig);
+          TOBL.Free;
+        end else
+        begin
+          TOBL.SetDouble('MTTRANSFERT',TOBL.GetDouble('MTTRANSFERT')- TOBT.GetDouble('BT3_MTTRANSFERT'));
+        end;
       end;
     end;
   end;
@@ -1179,17 +1254,52 @@ end;
 
 procedure TOF_BTSAISTRFPOC.AjouteLesDatas;
 
+  procedure  AddSousTraitant(Fournisseur,CodeMarche : string);
+  var TT : TOB;
+  begin
+    TT := TOB.Create('PIECEINTERV',TFFacture(XX).TheTOBSSTRAIT,-1);
+		AddChampsSupTraitCreat (TT);
+		AddChampsSupTrait (TT);
+    TT.putValue('BPI_NATUREPIECEG',TOBpiece.GetString('GP_NATUREPIECEG'));
+    TT.putValue('BPI_SOUCHE',TOBpiece.GetString('GP_SOUCHE'));
+    TT.putValue('BPI_NUMERO',TOBpiece.GetInteger('GP_NUMERO') );
+    TT.putValue('BPI_INDICEG',TOBpiece.GetInteger('GP_INDICEG'));
+    TT.SetInteger('BPI_ORDRE',TFFacture(XX).TheTOBSSTRAIT.detail.count -1);
+    //
+    TT.putValue('BPI_TYPEINTERV','Y00');
+    TT.putValue('BPI_TYPEPAIE','001');
+    TT.putValue('BPI_DATECONTRAT',V_PGI.DateEntree);
+    TT.SetBoolean('BPI_AUTOLIQUID',true);
+    TT.SetString('BPI_FAMILLETAXE',GetInfoMarcheST(TOBpiece.GetString('GP_AFFAIRE'),Fournisseur,CodeMarche,'FAMILLETAXE1'));
+    TT.SetString('BPI_TIERSFOU',Fournisseur);
+    TT.SetString('BPI_CODEMARCHE',CodeMarche);
+  end;
+
+  procedure  AjouteSousTraitantPOC(TOBL: TOB; Fournisseur,CodeMarche : string);
+  var TT : TOB;
+  begin
+    TT := TFFacture(XX).TheTOBSSTRAIT.FindFirst(['BPI_TYPEINTERV','BPI_TIERSFOU','BPI_CODEMARCHE'],['Y00',Fournisseur,CodeMarche],true);
+    if TT = nil then
+    begin
+      AddSousTraitant(Fournisseur,CodeMarche);
+      TOBL.putvalue('GL_FOURNISSEUR',Fournisseur);
+      TOBL.putvalue('LIBELLEFOU',GetLibelleFou(Fournisseur));
+      TOBL.putvalue('GLC_NATURETRAVAIL','002');
+      TOBL.putvalue('GL_CODEMARCHE',CodeMarche);
+    end;
+  end;
+
 
   function FindLignePhaseFin : Integer;
   var QQ : TQuery;
       Affaire : string;
       II : Integer;
       Val : Integer;
-      LigD,NumOrdre : Integer;
-      TOBL : TOB;
+      NumOrdre : Integer;
       SQL : string;
   begin
     Result := -1;
+    NumOrdre := -1;
     Affaire := TOBPiece.GetString('GP_AFFAIRE');
     SQL := 'SELECT BPC_PN1,BPC_PN2,BPC_PN3,BPC_PN4,BPC_PN5,BPC_PN6,BPC_PN7,BPC_PN8,BPC_PN9 '+
            'FROM PHASESCHANTIER '+
@@ -1210,6 +1320,7 @@ procedure TOF_BTSAISTRFPOC.AjouteLesDatas;
     end;
     Ferme(QQ);
     //
+    if NumOrdre < 0 then exit; 
     for II := 0 to TOBPiece.detail.count -1 do
     begin
       if TOBPiece.detail[II].GetInteger('GL_NUMORDRE')= NumOrdre then
@@ -1221,13 +1332,16 @@ procedure TOF_BTSAISTRFPOC.AjouteLesDatas;
   end;
 
 var II,LigD : Integer;
-    TOBT,TOBTT,TOBL,TOBNL,TOBRL,TOBPAR : TOB;
+    TOBT,TOBTT,TOBL,TOBNL,TOBPAR : TOB;
     MaxNumOrdre : integer;
+    CodeFamille2 : string;
+    CoefPaPr,CoefPrPv : double;
 begin
   II := 0;
+  // déduction ancien montant de la ligne départ pour le cumul
   // TRAITEMENT DES LIGNES PRISENT DANS LE TRANSFERT DEPART
   repeat
-    TOBL := TOB(TOBFROM.detail[II].Data); if TOBL = nil then Exit;
+    TOBL := TOB(TOBFROM.detail[II].Data); if TOBL = nil then break;
     TOBT := TOBFROM.detail[II];
     TOBL.SetDouble('MTTRANSFERT',TOBL.GetDouble('MTTRANSFERT')+TOBT.GetDouble('MONTANT'));
     LigD := TOBL.GetIndex +1;
@@ -1235,8 +1349,10 @@ begin
     TOBT.SetDouble('BT3_MTTRANSFERT',TOBT.GetDouble('MONTANT'));
     TOBT.SetInteger('BT3_UNIQUE',TOBTRFPOC.GetInteger('BT2_UNIQUE'));
     TOBT.SetInteger('BT3_NUMORDRE',TOBL.GetInteger('GL_NUMORDRE'));
+    TOBT.SetBoolean('BT3_CONTREP',false);
     //
     TOBT.ChangeParent(TOBTRFPOC,-1);
+    TOBT.Data := TOBL;
     //
     TOBNL := NewTOBLigne(TOBPiece,LigD+1);
     TOBNL.Dupliquer(TOBL,true,true);
@@ -1248,24 +1364,35 @@ begin
     TOBTT.setString('BT3_TYPELIGNETRF','001');
     TOBTT.SetDouble('BT3_MTTRANSFERT',TOBT.GetDouble('MONTANT')*(-1));
     TOBTT.SetInteger('BT3_NUMORDRE',TOBNL.GetInteger('GL_NUMORDRE'));
+    TOBTT.SetInteger('BT3_UNIQUE',TOBTRFPOC.GetInteger('BT2_UNIQUE'));
+    TOBTT.SetBoolean('BT3_CONTREP',true);
+    TOBTT.data := TOBNL;
     //
     TOBNL.SetInteger('NUMTRANSFERT',TOBTRFPOC.GetInteger('BT2_UNIQUE'));
     TOBNL.SetDouble('MTTRANSFERT',TOBT.GetDouble('BT3_MTTRANSFERT')*(-1));
     TOBNL.SetDouble('GL_QTEFACT',TOBT.GetDouble('QTE')*(-1));
+    TOBNL.SetDouble('GL_QTERESTE',TOBNL.GetDouble('GL_QTEFACT'));
+    TOBNL.SetDouble('GL_QTESTOCK',TOBNL.GetDouble('GL_QTEFACT'));
     TOBNL.SetString('GL_RECALCULER','X');
+    if IsOuvrage(TOBL) then
+    begin
+      DupliqueDetailOuv(TOBL,TOBNL);
+    end;
     DelChampsSupSaisie(TOBT);
+    DelChampsSupSaisie(TOBTT);
   until II >= TOBFROM.detail.count ;
   II := 0;
   //
   LigD := FindLignePhaseFin; if LigD <> -1 then TOBPAR := TOBPiece.detail[Ligd+1];
   repeat
-    TOBL := TOB(TOBDEST.detail[II].Data); if TOBL = nil then Exit;
+    TOBL := TOB(TOBDEST.detail[II].Data); if TOBL = nil then break;
     TOBT := TOBDEST.detail[II];
-    TOBL.SetDouble('MTTRANSFERT',TOBL.GetDouble('MTTRANSFERT')+TOBT.GetDouble('MONTANT'));
+    if (TOBT.getDouble('MONTANT')=0)  then BEGIN TOBT.free; continue; END;
     //
-    TOBT.SetDouble('BT3_MTTRANSFERT',TOBT.GetDouble('MONTANT'));
+    TOBT.SetDouble('BT3_MTTRANSFERT',0);
     TOBT.SetInteger('BT3_UNIQUE',TOBTRFPOC.GetInteger('BT2_UNIQUE'));
-    TOBT.SetInteger('BT3_NUMORDRE',TOBL.GetInteger('GL_NUMORDRE'));
+    TOBT.setString('BT3_TYPELIGNETRF','001');
+    TOBT.SetBoolean('BT3_CONTREP',false);
     //
     TOBT.ChangeParent(TOBTRFPOC,-1);
     //
@@ -1273,22 +1400,243 @@ begin
     TOBNL.Dupliquer(TOBL,true,true);
     MaxNumOrdre:=LireMaxNumOrdre(TOBPiece);
     Inc(MaxNumOrdre);
-    TOBNL.PutValue('GL_NUMORDRE', MaxNumOrdre);
     EcrireMaxNumordre (TOBPiece,MaxNumOrdre);
-    TOBTT := TOB.Create ('BTRFDETAIL',TOBTRFPOC,-1);
-    TOBTT.setString('BT3_TYPELIGNETRF','001');
-    TOBTT.SetInteger('BT3_NUMORDRE',TOBNL.GetInteger('GL_NUMORDRE'));
+    TOBNL.PutValue('GL_NUMORDRE', MaxNumOrdre);
+    TOBT.SetInteger('BT3_NUMORDRE',MaxNumOrdre);
+    TOBT.data := TOBNL;
+    //
+    if IsOuvrage(TOBNL) then
+    begin
+      AjouteDetailOuv(TOBNL);
+      if TOBNL.GetDouble('GL_DPA')<> TOBT.GetDouble('PA') then
+      begin
+        TraitePrixOuvrage(TOBPiece,TOBNL,TFFacture(XX).TheTOBBases,TFFacture(XX).TheTOBBasesL,TFFacture(XX).TheTOBOuvrage, True, TOBT.GetDouble('PA'),0,TFFacture(XX).DEV,true);
+      end;
+    end;
+    if (TOBT.GetString('SOUSTRAITANT') <> '') and (TOBT.GetString('CODEMARCHE') <> '') then
+    begin
+      AjouteSousTraitantPOC (TOBNL,TOBT.GetString('SOUSTRAITANT'),TOBT.GetString('CODEMARCHE'));
+    end;
     //
     TOBNL.SetInteger('NUMTRANSFERT',TOBTRFPOC.GetInteger('BT2_UNIQUE'));
-    TOBNL.SetDouble('MTTRANSFERT',TOBT.GetDouble('BT3_MTTRANSFERT'));
     TOBNL.SetInteger('GL_NIVEAUIMBRIC',TOBPAR.getInteger('GL_NIVEAUIMBRIC'));
     TOBNL.SetDouble('GL_QTEFACT',TOBT.GetDouble('QTE'));
+    TOBNL.SetDouble('GL_QTERESTE',TOBT.GetDouble('QTE'));
+    TOBNL.SetDouble('GL_QTESTOCK',TOBT.GetDouble('QTE'));
     TOBNL.SetDouble('GL_DPA',TOBT.GetDouble('PA'));
+    CodeFamille2 := GetInfoMarcheST (TOBNL.GetString('GL_AFFAIRE'),TOBT.GetString('SOUSTRAITANT'),TOBT.GetString('CODEMARCHE'),'FAMILLENIV2');
+    if CodeFamille2 <> #0 then TOBNL.putvalue('GL_FAMILLENIV2',CodeFamille2);
+    GetCoefPoc (TOBNL.GetString('GL_AFFAIRE'),CoefPaPr,CoefPrPv);
+    if CoefPaPr = 0 then CoefPaPr := 1;
+    if CoefPrPv = 0 then CoefPrPv := 1;
+    if CoefPaPr <> 0 then
+    begin
+      TOBNL.putValue('GL_COEFFG',CoefPaPr-1);
+      TOBNL.SetDouble('GL_DPR',ARRONDI(TOBNL.GetDouble('GL_DPA')*CoefPaPr,V_PGI.OkDecP));
+    end;
+    if CoefPrPv <> 0 then
+    begin
+      TOBNL.putValue('GL_COEFMARG',CoefPrPv);
+      TOBNL.PutValue('POURCENTMARG',Arrondi((CoefPrPv-1)*100,2));
+      TOBNL.SetDouble('GL_PUHT',ARRONDI(TOBNL.GetDouble('GL_DPR')*CoefPrPv,V_PGI.OkDecP));
+      if TFFacture(XX).dev.code <> '' then
+      begin
+        TOBNL.SetDouble('GL_PUHTDEV',pivottodevise(TOBNL.GetDouble('GL_PUHT'),TFFacture(XX).DEV.Taux,TFFacture(XX).DEV.quotite,V_PGI.okdecP ));
+      end else
+      begin
+        TOBNL.SetDouble('GL_PUHTDEV',TOBNL.GetDouble('GL_PUHT'));
+      end;
+    end;
+    TOBNL.SetDouble('MTTRANSFERT',0);
     TOBNL.SetString('GL_RECALCULER','X');
     DelChampsSupSaisie(TOBT);
   until II >= TOBDEST.detail.count ;
   TOBPiece.SetString('GP_RECALCULER','X');
-  TFFacture(XX).RecalculeDocumentClick(TFFacture(XX)); 
+  TFFacture(XX).RecalculeDocumentClick(TFFacture(XX));
+  TFFacture(XX).GS.Refresh;
+end;
+
+procedure TOF_BTSAISTRFPOC.AfterInsertTOB;
+begin
+end;
+
+procedure TOF_BTSAISTRFPOC.DupliqueDetailOuv (TOBL,TOBNL: TOB);
+var TOBO,TOBOS,TOBOD,TOBOuvrage,TOBOuv,TOBBases,TOBBasesL : TOB;
+    II : Integer;
+    NewPrix : Double;
+    EnHT : boolean;
+begin
+  TOBOUvrage := TFFacture(XX).TheTOBOuvrage;
+  TOBBases := TFFacture(XX).TheTOBBases;
+  TOBBasesL := TFFacture(XX).TheTOBBasesL;
+  EnHt := (TOBL.getValue('GL_FACTUREHT')='X');
+  //
+  TOBOUV := TOBOuvrage.detail[TOBL.GetInteger('GL_INDICENOMEN')-1];
+  if TOBOUV <> nil then
+  begin
+    TOBO:=TOB.Create('',TOBOuvrage,-1) ;
+    InsertionChampSupOuv (TOBO,false);
+    TOBL.SetInteger('GL_INDICENOMEN',TOBO.GetIndex+1);
+    //
+    for II := 0 to TOBOUV.detail.count -1 do
+    begin
+      TOBOS := TOBOUV.detail[II];
+      TOBOD := TOB.Create ('LIGNEOUV',TOBO,-1);
+      TOBOD.Dupliquer(TOBOS,True,true);
+    end;
+    NewPrix := TOBNL.GetDouble('GL_DPA');
+    if TOBL.GetDouble('GL_DPA') <> TOBNL.GetDouble('GL_DPA') then
+    begin
+      TOBNL.SetDouble('GL_DPA',TOBL.GetDouble('GL_DPA'));
+      TraitePrixOuvrage(TOBPiece,TOBNL,TOBBases,TOBBasesL,TOBOuvrage, EnHt, NewPrix,0,TFFacture(XX).DEV,True);
+      ReinitCoefMarg (TOBNL,TOBO);
+      if TOBNL.GetValue('GL_DPR')<>0 THEN
+      begin
+        TOBNL.PutValue('GL_COEFMARG',Arrondi(NewPrix/TOBNL.GetValue('GL_DPR'),4));
+        TOBNL.PutValue('POURCENTMARG',Arrondi((TOBNL.GetValue('GL_COEFMARG')-1)*100,2));
+      end else TOBNL.PutValue('GL_COEFMARG',0);
+
+      if TOBNL.GetValue('GL_PUHT') <> 0 then
+      begin
+        TOBNL.PutValue('POURCENTMARQ',Arrondi(((TOBNL.GetValue('GL_PUHT')- TOBNL.GetValue('GL_DPR'))/TOBNL.GetValue('GL_PUHT'))*100,2));
+      end else
+      begin
+        TOBNL.PutValue('POURCENTMARQ',0);
+      end;
+    end;
+  end;
+end;
+
+procedure TOF_BTSAISTRFPOC.AjouteDetailOuv(TOBL: TOB);
+var TOBN,TOBLN,TOBOuvrage,TOBArticles,TOBDEPART : TOB;
+    CodeNomen,RefUnique,Depot,CodeDevCli,TypeArt : string;
+    NiveauDepart : Integer;
+    valeurs : T_Valeurs;
+    EnHt : boolean;
+    Pu : double;
+begin
+  TOBOUvrage := TFFacture(XX).TheTOBOuvrage;
+  TOBArticles := TFFacture(XX).TheTOBArticles;
+  //
+  TOBN:=TOB.Create('',nil,-1) ;
+  TOBN.addchampsupValeur('NOMENCLATURE',CodeNomen,false);
+  TRY
+    Pu := TOBL.getDouble('GL_DPA');
+    Depot := TOBL.GetString('GL_DEPOT');
+    CodeNomen := TOBL.GetString('GL_CODEARTICLE');
+    RefUnique := TOBL.GetString('GL_ARTICLE');
+    CodeDevCli:= TOBL.GetValue ('GL_DEVISE');
+    TypeArt:=TOBL.GetValue('GL_TYPEARTICLE') ;
+    EnHt := (TOBL.getValue('GL_FACTUREHT')='X');
+
+    NiveauDepart := 1;
+    DerouleOuvrage(TOBN,CodeNomen,RefUnique,Depot,TOBArticles,1,TFFacture(XX).DEV,TFFacture(XX).IsVenteAchat) ;
+    if TOBN.detail.count > 0 then
+    begin
+      TOBLN:=TOB.Create('',TOBOuvrage,-1) ;
+      InsertionChampSupOuv (TOBLN,false);
+      TOBL.SetInteger('GL_INDICENOMEN',TOBLN.GetIndex);
+      InitTableau (Valeurs);
+      RenseigneValoOuvrage(TOBN,CodeDevCli,1,1,TFFacture(XX).DEV,Valeurs) ;
+      if TOBL.GetValue('GL_TYPEARTICLE')='ARP' then
+      begin
+        TOBDEPART := TOB.Create('LIGNEOUV',TOBLN,-1) ;
+        InsertionChampSupOuv (TOBDEPART,false);
+        inc (NiveauDepart);
+      end else
+      begin
+        TOBDEPART := TOBLN;
+      end;
+      OuvVersLigOuv(TOBPiece,TOBL,TOBN,TOBDEPART,TOBArticles,NiveauDepart,0,TFFacture(XX).DEV,EnHt) ;
+      NumeroteLigneOuv (TOBLN,TOBL,1,1,0,0,0);
+      if TOBL.GetValue('GL_TYPEARTICLE')='ARP' then
+      begin
+        recupInfoLigneOuv (TOBDEPART,TOBDEPART.Detail[0]);
+        TOBDEPART.PutValue('BLO_NATUREPIECEG',TOBDEPART.detail[0].GetValue('BLO_NATUREPIECEG'));
+        TOBDEPART.PutValue('BLO_QTEFACT',1) ;
+        TOBDEPART.PutValue('BLO_NIVEAU',1) ;
+        TOBDEPART.PutValue('BLO_NUMORDRE',1) ;
+        TOBDEPART.PutValue('BLO_QTEDUDETAIL',1) ;
+        TOBDEPART.PutValue('BLO_PRIXPOURQTE',1) ;
+        GetValoDetail (TOBDEPART);
+      end;
+      //
+      InitTableau (Valeurs);
+      CalculeOuvrageDoc (TOBDEPART,1,1,true,TFFacture(XX).DEV,valeurs,EnHt,true,true);
+      StockeLesTypes(TOBL,Valeurs);
+      if TOBL.GetValue('GL_TYPEARTICLE')='ARP' then
+      begin
+        TOBDEPART.putvalue ('BLO_DPA',valeurs[0]);
+        TOBDEPART.putvalue ('BLO_DPR',valeurs[1]);
+        TOBDEPART.PutValue('BLO_PMAP',valeurs[6]);
+        TOBDEPART.PutValue('BLO_PMRP',valeurs[7]);
+        TOBDEPART.putvalue ('BLO_PUHTDEV',valeurs[2]);
+        TOBDEPART.putvalue ('BLO_PUTTCDEV',valeurs[3]);
+        TOBDEPART.putvalue ('BLO_PUHT',devisetopivotEx(TOBDEPART.Getvalue ('BLO_PUHTDEV'),TFFacture(XX).DEV.Taux,TFFacture(XX).DEV.quotite,V_PGI.okdecP));
+        TOBDEPART.putvalue ('BLO_PUTTC',devisetopivotEx(TOBDEPART.Getvalue ('BLO_PUTTCDEV'),TFFacture(XX).DEV.Taux,TFFacture(XX).DEV.quotite,V_PGI.OkdecP));
+        TOBDEPART.putvalue ('BLO_PUHTBASE',TOBDEPART.GetValue('BLO_PUHT'));
+        TOBDEPART.putvalue ('BLO_PUTTCBASE',TOBDEPART.getValue('BLO_PUTTC'));
+        TOBDEPART.putvalue ('BLO_TPSUNITAIRE',valeurs[9]);
+        TOBDEPART.Putvalue ('ANCPA',TOBDEPART.GetValue('BLO_DPA')) ;
+        TOBDEPART.Putvalue ('ANCPR',TOBDEPART.GetValue('BLO_DPR')) ;
+        //
+        TOBDEPART.PutValue('GA_HEURE',valeurs[9]);
+        TOBDEPART.PutValue('BLO_MONTANTPAFG',valeurs[10]);
+        TOBDEPART.PutValue('BLO_MONTANTPAFR',valeurs[11]);
+        TOBDEPART.PutValue('BLO_MONTANTPAFC',valeurs[12]);
+        TOBDEPART.PutValue('BLO_MONTANTFG',valeurs[13]);
+        TOBDEPART.PutValue('BLO_MONTANTFR',valeurs[14]);
+        TOBDEPART.PutValue('BLO_MONTANTFC',valeurs[15]);
+        TOBDEPART.PutValue('BLO_MONTANTPA',valeurs[16]);
+        TOBDEPART.PutValue('BLO_MONTANTPR',valeurs[17]);
+        //
+
+        if EnHt then TOBDEPART.Putvalue('ANCPV',TOBDEPART.Getvalue('BLO_PUHTDEV'))
+                else TOBDEPART.Putvalue('ANCPV',TOBDEPART.Getvalue('BLO_PUTTCDEV'));
+        CalculMontantHtDevLigOuv (TOBDEPART,TFFacture(XX).DEV);
+      end else
+      begin
+        GestionDetailPrixPose (TOBDepart);
+      end;
+      //
+      TOBL.Putvalue('GL_PUHTDEV',valeurs[2]);
+      TOBL.Putvalue('GL_PUTTCDEV',valeurs[3]);
+      TOBL.Putvalue('GL_PUHTNETDEV',valeurs[2]);
+      TOBL.Putvalue('GL_PUTTCNETDEV',valeurs[3]);
+      TOBL.Putvalue('GL_PUHT',DeviseToPivotEx(TOBL.GetValue('GL_PUHTDEV'),TFFacture(XX).DEV.Taux,TFFacture(XX).DEV.quotite,V_PGI.OkdecP));
+      TOBL.Putvalue('GL_PUTTC',DevisetoPivotEx(TOBL.GetValue('GL_PUTTCDEV'),TFFacture(XX).DEV.taux,TFFacture(XX).DEV.quotite,V_PGI.okdecP));
+      TOBL.Putvalue('GL_PUHTBASE',TOBL.GetValue('GL_PUHT'));
+      TOBL.Putvalue('GL_PUTTCBASE',TOBL.GetValue('GL_PUTTC'));
+      TOBL.Putvalue('GL_PUHTNET',TOBL.getValue('GL_PUHT'));
+      TOBL.Putvalue('GL_PUTTCNET',TOBL.GetValue('GL_PUTTC'));
+      TOBL.Putvalue('GL_DPA',valeurs[0]);
+      TOBL.Putvalue('GL_DPR',valeurs[1]);
+      TOBL.Putvalue('GL_PMAP',valeurs[6]);
+      TOBL.Putvalue('GL_PMRP',valeurs[7]);
+      TOBL.putvalue('GL_TPSUNITAIRE',valeurs[9]);
+      //
+      TOBL.PutValue('GL_MONTANTPAFG',valeurs[10]);
+      TOBL.PutValue('GL_MONTANTPAFR',valeurs[11]);
+      TOBL.PutValue('GL_MONTANTPAFC',valeurs[12]);
+      TOBL.PutValue('GL_MONTANTFG',valeurs[13]);
+      TOBL.PutValue('GL_MONTANTFR',valeurs[14]);
+      TOBL.PutValue('GL_MONTANTFC',valeurs[15]);
+      TOBL.PutValue('GL_MONTANTPA',valeurs[16]);
+      TOBL.PutValue('GL_MONTANTPR',valeurs[17]);
+      //
+    end;
+  FINALLY
+    TOBN.Free;
+  END;
+end;
+
+procedure TOF_BTSAISTRFPOC.BdeleteClick(Sender: TObject);
+begin
+  if PGIAsk('Etes-vous sûr de supprimer ce transfert ?') <> mryes then Exit; 
+  BeforeInsertTOB;
+  NumeroteLignesGC(TFFacture(XX).GS,TOBPiece,false,true);
+  TOBTRFPOC.SetString('OKOK','D');
+  TToolbarButton97(GetCOntrol('BFerme')).Click;
 end;
 
 Initialization

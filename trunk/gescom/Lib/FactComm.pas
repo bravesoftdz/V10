@@ -220,7 +220,7 @@ Uses
      factRetenues
    ,CbpMCD
     ,CbpEnumerator
-
+    ,UTransferts
      ;
 
 function GetTauxTaxe (RegimeTaxe,FamilleTaxe : string; Achat : boolean=false) : double;
@@ -546,6 +546,7 @@ begin
   if isComptaStock(TOBPiece_O.GetValue('GP_NATUREPIECEG')) then ExecuteSQL('DELETE FROM VENTANA WHERE YVA_TABLEANA="GS" AND YVA_IDENTIFIANT LIKE "' + RefA + '"');
   RefA := EncodeRefpieceSup(TOBPiece_O);
   ExecuteSQL('UPDATE BTEVENTMAT SET BEM_CODEETAT="ARE",BEM_REFPIECE="",BEM_LIBREALISE="" WHERE BEM_REFPIECE LIKE "'+RefA+'"');
+  DeleteLesTOBTRF (cledoc);
   Result := True;
   EXCEPT
     on E: Exception do
