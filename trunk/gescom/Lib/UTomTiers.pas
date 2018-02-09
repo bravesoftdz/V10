@@ -161,6 +161,7 @@ Type
     procedure BVisuParcClick(Sender: TObject);
     procedure ChargeCodeBarre;
     procedure ParamInterfaceRexelClick(Sender: TObject);
+    procedure RTListeCollectif;
       public
 {$IFDEF CTI}
          procedure RTCTIAfficheMessageCTI;
@@ -1663,16 +1664,16 @@ Inherited;
    end;
 
   if (F.FieldName = 'T_COLLECTIF')  then
-   begin
-   Tampon := GetField('T_COLLECTIF');
-   tampon1:=Trim(tampon);
+  begin
+    Tampon := GetField('T_COLLECTIF');
+    tampon1:=Trim(tampon);
     if Length(tampon1)>VH^.Cpta[fbGene].Lg then tampon1:=Copy(Tampon1,1,VH^.Cpta[fbGene].Lg) ;
-   if Length(tampon1)<VH^.Cpta[fbGene].Lg then
-   begin
+    if Length(tampon1)<VH^.Cpta[fbGene].Lg then
+    begin
       for i:=Length(tampon1) to VH^.Cpta[fbGene].Lg do tampon1:=tampon1+VH^.Cpta[fbGene].Cb ;
       end ;
-   if Tampon<>tampon1 then SetField('T_COLLECTIF',tampon1);
-   end;
+    if Tampon<>tampon1 then SetField('T_COLLECTIF',tampon1);
+  end;
 
 if (F.FieldName = 'T_ISPAYEUR') then
 begin
@@ -4205,6 +4206,15 @@ SetControlEnabled('BDP',FALSE);
 SetControlEnabled('BCOURRIER',FALSE);
 end;
 
+procedure AGLRTListeCollectif( parms: array of variant; nb: integer ) ;
+var  F : TForm ;
+     OM : TOM ;
+begin
+F:=TForm(Longint(Parms[0])) ;
+if (F is TFFiche) then OM:=TFFiche(F).OM else exit;
+if (OM is TOM_TIERS) then TOM_TIERS(OM).RTListeCollectif() else exit;
+end;
+
 procedure AGLRTListeEnseigne( parms: array of variant; nb: integer ) ;
 var  F : TForm ;
      OM : TOM ;
@@ -4223,6 +4233,32 @@ begin
   if (OM is TOM_TIERS) then TOM_TIERS(OM).BTPBordereaux() else exit;
 end;
 
+procedure TOM_TIERS.RTListeCollectif ;
+var ChaineAct : THEdit;
+    Enseigne : THEdit;
+    stWhere :string;
+begin
+  ChaineAct:= THEdit.Create (Nil);
+  Enseigne := THEdit(GetControl('T_COLLECTIF'));
+  ChaineAct.Parent:=Enseigne.Parent;
+  ChaineAct.visible := False;
+  ChaineAct.Top := Enseigne.top;
+  ChaineAct.Left := Enseigne.left+Enseigne.width;
+  stWhere := 'G_COLLECTIF = "X"';
+{$IFNDEF EAGLCLIENT}
+  ChaineAct.text :=  Getfield ('T_COLLECTIF') ;
+{$ENDIF}
+{$IFNDEF EAGLCLIENT}
+  if (LookupList(ChaineAct,'Collectif Tiers','GENERAUX','DISTINCT G_GENERAL','',stWhere,'',True,0,'',tlLocate )) then
+{$ELSE}
+  if (LookupList(ChaineAct,'Collectif Tiers','GENERAUX','DISTINCT G_GENERAL','',stWhere,'',True,0,'',tlDefault )) then
+{$ENDIF}
+  begin
+    DS.edit;
+    setfield ('T_COLLECTIF', ChaineAct.Text);
+  end;
+  ChaineAct.Destroy ;
+end;
 
 procedure TOM_TIERS.RTListeEnseigne ;
 var ChaineAct : THEdit;
@@ -4882,8 +4918,8 @@ RegisterAglProc( 'MajContacts_chr', TRUE , 0, AGLMajContact_Chr); // CHR
 RegisterAglFunc( 'RechercheClient', TRUE , 1, AGLRechercheClient);  //CHR
 RegisterAglProc( 'RTTransProCli', TRUE , 0, AGLRTTransProCli);
 RegisterAglProc( 'RTListeEnseigne', TRUE , 0, AGLRTListeEnseigne);
+RegisterAglProc( 'RTListeCollectif', TRUE , 0, AGLRTListeCollectif);
 RegisterAglProc( 'BTPBordereaux', TRUE , 0, AGLBTPBordereaux);
-
 {$IFDEF CTI}
 RegisterAglProc( 'RTCTIDecrocheAppel', TRUE , 0, AGLRTCTIDecrocheAppel);
 RegisterAglProc( 'RTCTIRaccrocheAppel', TRUE , 0, AGLRTCTIRaccrocheAppel);
