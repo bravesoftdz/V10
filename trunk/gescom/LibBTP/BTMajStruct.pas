@@ -96,7 +96,7 @@ type
     procedure ConstitueTableSoucheBTP;
     procedure ConstitueTableTiersBTP;
     procedure CreateRealTable(NomTable: string);
-
+    procedure InitChampsUniqueBAST;
 
   public
     property CodeStatus : integer read fCodeStatus write SetCodeStatus;
@@ -662,7 +662,7 @@ end;
 
 procedure TMajStructBTP.InitChampsAjoute(NomTable: string);
 var sql : string;
-begin
+begin                    
   // ERP CEGID
   //
   if NomTable = 'LIGREAANAL' then
@@ -676,6 +676,10 @@ begin
     if VersionBaseDest < '998.ZZZP' then
     begin
       ExecuteSQL('UPDATE BTFACTST SET BM3_ENVOIMAIL="-" WHERE BM3_ENVOIMAIL IS NULL');
+    end;
+    if VersionBaseDest < '998.ZZZU' then
+    begin
+      InitChampsUniqueBAST;
     end;
   end else if NomTable = 'TXCPTTVA' then
   begin
@@ -3298,6 +3302,26 @@ begin
     TrouveMenuStdLibre (TheMenusRef,OT,ID);
     InsereEltSpecif (OT,TheMenusRef);
   end;
+end;
+
+procedure TMajStructBTP.InitChampsUniqueBAST;
+var QQ : TQuery;
+    II : Integer;
+begin
+  II := 1;
+  QQ := OpenSQL('SELECT * from BTFACTST',False,-1,'');
+  if not QQ.eof then
+  begin
+    QQ.First;
+    repeat
+      QQ.Edit;
+      QQ.FindField('BM3_UNIQUE').AsInteger := II;
+      QQ.Post;
+      QQ.Next;
+      Inc(II);
+    until QQ.Eof;
+  end;
+  Ferme(QQ);
 end;
 
 end.
