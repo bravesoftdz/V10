@@ -771,7 +771,8 @@ begin
     begin
        IndPro := Pos('PRO',stWhere);
        if ClientArechercher (G_CodeTiers,IndPro) then
-          CodeTiers := AGLLanceFiche ('GC', 'GCTIERS_RECH','T_TIERS='+G_CodeTiers.text+';NATUREAUXI=CLI' , '', stWhere)
+          //FV1 - 13/02/2018 : FS#2934 - TEST VD Saisie devis-création article-Création Fournisseur-fenêtre de création Clients prosp arrive
+          CodeTiers := AGLLanceFiche ('GC', 'GCTIERS_RECH','T_TIERS='+G_CodeTiers.text, '', stWhere)
        else
           CodeTiers := G_CodeTiers.text;
     end;
