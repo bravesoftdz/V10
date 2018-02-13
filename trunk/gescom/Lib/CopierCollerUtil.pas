@@ -45,20 +45,20 @@ private
     TOBPiece,TOBArticles,TOBAffaire,TOBCatalogu,TOBCpta,TOBTiers,TOBAnaS,TOBAnaP,TOBAdresses : TOB;
     TOBSerie,TOBDesLots,TobNomen,TOBOuvrage : TOB;
     TOBBases,TOBBasesL : TOB;
-    SaContexte : TModeAff;
+    SaContexte  : TModeAff;
     GereLot,GereSerie,GereStock : boolean ;
-    DEV : RDevise;
-    fTypeInfo : string;
-    RowCollage : integer;
-    ColCollage : integer;
-    POPGS : TPopupMenu;
+    DEV         : RDevise;
+    fTypeInfo   : string;
+    RowCollage  : integer;
+    ColCollage  : integer;
+    POPGS       : TPopupMenu;
     fcreatedPop : boolean;
-    fMaxItems : integer;
+    fMaxItems   : integer;
     MesMenuItem : array[0..MAXITEMS] of TMenuItem;
-    venteAchat : string;
-    TTNUMP : TNumParag;
-    TobVarDoc : TOB;
-    TobMetres : TOB;
+    venteAchat  : string;
+    TTNUMP      : TNumParag;
+    TobVarDoc   : TOB;
+    TobMetres   : TOB;
     TTObPiece   : TOB;
     TheMetredoc : TMetreArt;
     procedure AjouteLigneSel (TOBSel : TOB; Indice: Integer; WithMemo : boolean=false);
@@ -361,27 +361,27 @@ procedure TCopieColleDoc.SetTobs(ThePiece,TheSerie,TheDesLots,TheAdresses,TheArt
                                  TheCatalogu,TheNomen,TheOuvrage,TheCpta,TheTiers,TheAnaS,TheAnaP,
                                  TheBases,TheBasesL, TheVardoc, TheMetres : TOB; Metredoc : TMetreArt);
 begin
-  TOBPiece := ThePiece;
-  TOBSerie := TheSerie;
-  TOBDesLots := TheDesLots;
+  TOBPiece    := ThePiece;
+  TOBSerie    := TheSerie;
+  TOBDesLots  := TheDesLots;
   TOBAdresses := TheAdresses;
   TOBArticles := TheArticles;
-  TOBAffaire := TheAffaire;
+  TOBAffaire  := TheAffaire;
   TOBCatalogu := TheCatalogu;
-  TOBOuvrage := TheOuvrage;
-  TOBNomen := TheNomen;
-  TOBCpta := TheCpta;
-  TOBTiers := TheTiers;
-  TOBAnas := TheAnas;
-  TOBAnaP := TheAnaP;
-  TOBBases := TheBases;
-  TOBBasesL := TheBasesL;
+  TOBOuvrage  := TheOuvrage;
+  TOBNomen    := TheNomen;
+  TOBCpta     := TheCpta;
+  TOBTiers    := TheTiers;
+  TOBAnas     := TheAnas;
+  TOBAnaP     := TheAnaP;
+  TOBBases    := TheBases;
+  TOBBasesL   := TheBasesL;
   //Métrés
-  TobVarDoc := TheVardoc;
-  TobMetres := TheMetres;
+  TobVarDoc   := TheVardoc;
+  TobMetres   := TheMetres;
   TheMetredoc := Metredoc;
 // definition par defaut (récup)
-  VenteAchat :=  TOBPiece.getValue('GP_VENTEACHAT');
+  VenteAchat  :=  TOBPiece.getValue('GP_VENTEACHAT');
 end;
 
 
@@ -1151,7 +1151,9 @@ begin
   TOBOO.PutValue('BLO_PUHTDEV',TOBI.getValue('GL_PUHTDEV'));
   TOBOO.PutValue('BLO_PUHT',TOBI.getValue('GL_PUHT'));
   TOBOO.PutValue('BLO_PUHT',TOBI.getValue('GL_PUHT'));
-  TOBOO.PutValue('BLO_COEFMARG',0);
+  //FV1 - 25/01/2018 : FS#2892 - TREUIL - Le copier-coller ne récupère pas le coef. de marge
+  //TOBOO.PutValue('BLO_COEFMARG',    0);
+  //
   if not MemeDoc then
   begin
     //
