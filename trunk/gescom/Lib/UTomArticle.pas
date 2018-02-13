@@ -10235,8 +10235,8 @@ begin
     //FV1 : remise à zéro de l'ensemble des zones associées àu fournisseur principal
     TOBCatalog.InitValeurs(false);
     SetControlText('FOURNPRINC', '');
-    SetControlText('GF_PRIXUNITAIRE','0');
-    SetControlText('GCA_PRIXBASE','0');
+    SetControlText('GF_PRIXUNITAIRE','0.00');
+    SetControlText('GCA_PRIXBASE','0.00');
     SetControlText('TUA','');
     SetControlText('GF_CALCULREMISE','0.00');
     //FV1 : 19/02/2015 - Gestion du prix d'achat au niveau de la fiche Article
