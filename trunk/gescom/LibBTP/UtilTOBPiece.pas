@@ -26,7 +26,7 @@ procedure LoadLignes(CleDocLigne: R_CleDoc; TobPiece: Tob; WithLigneCompl: Boole
 function LoadPiece (Cledoc : r_cledoc; TOBPiece : TOB) : boolean;
 function ChargelaPieceEtUneLigne (CleDocLigne: R_CleDoc; TobPiece,TOBOuvrage: Tob) : boolean;
 procedure LoadPieceLignes(CleDocLigne: R_CleDoc; TobPiece: Tob; WithLigneCompl: Boolean = True;QueLaLigne : boolean=false; FromExcel : boolean=false; duplication : Boolean=false);
-function MakeSelectLigneBtp (WithLigneCOmpl : boolean;WithEntetePiece : boolean = false;WithLigneFac : boolean=false;FromExcel : boolean = false;Document : Tdocument = nil) : string;
+function MakeSelectLigneBtp (WithLigneCOmpl : boolean;WithEntetePiece : boolean = false;WithLigneFac : boolean=false;FromExcel : boolean = false;Document : Tdocument = nil) : Widestring;
 function MakeSelectLigneOuvBtp (WithLigneFac : boolean=false) : string;
 procedure StringToCleDoc(StA: string; var CleDoc: R_CleDoc);
 function  WherePiece(CleDoc: R_CleDoc; ttd: T_TableDoc; Totale: boolean; WithNumOrdre: Boolean = False): string; { NEWPIECE }
@@ -457,7 +457,7 @@ begin
   end;
 end;
 
-function MakeSelectLigneBtp (WithLigneCOmpl : boolean;WithEntetePiece : boolean = false;WithLigneFac : boolean=false;FromExcel : boolean = false;Document : Tdocument = nil) : string;
+function MakeSelectLigneBtp (WithLigneCOmpl : boolean;WithEntetePiece : boolean = false;WithLigneFac : boolean=false;FromExcel : boolean = false;Document : Tdocument = nil) : Widestring;
 var stdocument,NaturepieceG : string;
 begin
   stDocument := '';
@@ -492,7 +492,8 @@ begin
                       'BT3_SOUCHE=GL_SOUCHE AND '+
                       'BT3_NUMERO=GL_NUMERO AND '+
                       'BT3_INDICEG=GL_INDICEG AND '+
-                      'BT3_NUMORDRE=GL_NUMORDRE '+
+                      'BT3_NUMORDRE=GL_NUMORDRE AND '+
+                      'BT3_TYPELIGNETRF="001" '+
                       ') AS NUMTRANSFERT, ';
     Result := result +
                       '('+

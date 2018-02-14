@@ -548,8 +548,6 @@ type
     MnBSVVISU: TMenuItem;
     BGED: TToolbarButton97;
     PAIESTPOC: TMenuItem;
-    SEPNN: TMenuItem;
-    POPYTS: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -15384,8 +15382,6 @@ begin
   RecalcAvanc.visible := false;
   RepriseAvancPreGlob.visible := false;
   Sep11.visible := false;
-  SEPNN.Visible := (VH_GC.BTCODESPECIF='001') and (TOBPiece.GetString('GP_NATUREPIECEG')='BCE');
-  POPYTS.Visible := (VH_GC.BTCODESPECIF='001') and (TOBPiece.GetString('GP_NATUREPIECEG')='BCE');
   BZoomArticle.Enabled := (GetCodeArtUnique(TOBPiece, ARow) <> '');
   BZoomPiece.Enabled := (not TransfoPiece) and (not TransfoMultiple) and (not GenAvoirFromSit) and (action in [taModif, taConsult]);
   if (Ctxscot in V_PGI.PGIContexte) or (CtxBTP in V_PGI.PGIContexte) or (CtxCHR in V_PGI.PGIContexte) then BZoomPiece.Enabled := False; // mcd bl rh 14/10/2003
@@ -15512,7 +15508,6 @@ begin
     RemplTypeLigne.SetLigne (Arow);
   end;
   BVentil.Enabled := ((VPiece.Enabled) or (VLigne.Enabled) or (SPiece.Enabled) or (SLigne.Enabled));
-  POPYTS.Enabled := (POPYTS.Visible) and (TOBL <> nil) and (TOBL.GetString ('GL_TYPELIGNE')='ART');
 {$IFNDEF UTILS}
   VoirBPXSpigao.Visible := SPIGAOOBJ.TestAffaire  (TOBPiece.GetValue('GP_AFFAIRE'));
 {$ELSE}
@@ -29877,7 +29872,7 @@ procedure TFFacture.POPYTSClick(Sender: TObject);
 var OneTOB : TOB;
 begin
   OneTOB := GetTOBLigne(TOBpiece,GS.row);
-  GestionTsPOC(OneTOB,TOBTSPOC);
+  GestionTsPOC(TOBPiece,OneTOB,TOBTSPOC);
   AfficheLaLigne(GS.row);
 end;
 
