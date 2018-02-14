@@ -659,7 +659,7 @@ begin
   end;
   FreeAndNil(TobContact);
 
-  //Lecture des références Banquaires
+  //Lecture des références Banquaires -----
   if PTOB.GetInteger('NUMERORIB') <> 0 then
   begin
     TobBanque := TOB.Create('BANQUE', nil, -1);
