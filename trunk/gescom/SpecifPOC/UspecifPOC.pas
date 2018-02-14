@@ -33,7 +33,7 @@ procedure LibereMemContratST;
 procedure AppelsBAST;
 function GetNextNumSituation (TOBPiece : TOB) : integer;
 procedure LoadLesTOBTS (Cledoc : R_CLEDOC;TOBTSPOC : TOB);
-procedure GestionTsPOC(OneTOB,TOBTSPOC : TOB);
+procedure GestionTsPOC(TOBPiece,OneTOB,TOBTSPOC : TOB);
 procedure ValideLesTOBTS ( TOBPiece,TOBTSPOC : TOB);
 function SetFactureReglePOC (TOBPiece : TOB) : boolean;
 implementation
@@ -507,6 +507,7 @@ begin
   result.AddChampSupValeur('NUMORDRE',TheNumOrdre);
   result.AddChampSupValeur('TOTALTS',0);
   result.AddChampSupValeur('MODIFIED','-');
+  result.AddChampSupValeur('DESIGNATION','');
 end;
 
 procedure DeleteLesTOBTS (cledoc : r_cledoc);
@@ -620,7 +621,7 @@ begin
   TOBE.free;
 end;
 
-procedure GestionTsPOC(OneTOB,TOBTSPOC : TOB);
+procedure GestionTsPOC(TOBPiece,OneTOB,TOBTSPOC : TOB);
 var TheTOBC : TOB;
     TheNumOrdre : String;
     II : integer;
@@ -631,10 +632,13 @@ begin
   begin
     TheTOBC := CreTOBTS(TheNumOrdre,TOBTSPOC);
   end;
+  TheTOBC.SetString('DESIGNATION','Ligne '+OneTOB.GetString('GL_NUMLIGNE')+' : '+OneTOB.GetString('GL_CODEARTICLE')+copy(OneTOB.GetString('GL_LIBELLE'),1,35));
+  TheTOBC.data := TOBPiece;
   TheTOB := TheTOBC;
   AGLLanceFiche('BTP','BTMULPOCTS','','','ACTION=MODIFICATION');
   TheTOB := nil;
   TheTOBC.SetDouble('TOTALTS',0);
+  TheTOBC.Data := nil;
   for II := 0 to TheTOBC.detail.count -1 do
   begin
     TheTOBC.SetDouble('TOTALTS',TheTOBC.GetDouble('TOTALTS')+TheTOBC.detail[II].getDouble('BLE_MONTANT'));

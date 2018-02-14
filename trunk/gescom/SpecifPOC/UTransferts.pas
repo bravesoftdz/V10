@@ -11,7 +11,7 @@ uses sysutils,classes,windows,messages,controls,forms,hmsgbox,stdCtrls,clipbrd,n
 {$ENDIF}
      HRichOLE,UTOF;
 
-const MAXITEMS = 4;
+const MAXITEMS = 6;
 
 type
 
@@ -29,6 +29,7 @@ type
     procedure ModifTransfert (Sender : TObject);
     function IsTransfert (TOBL : TOB) : boolean;
     procedure ActiveMenu (Etat : boolean);
+    procedure POPYTSClick (Sender : TObject); 
   public
     property CurrentSaisie : TForm read FF;
     destructor  destroy ; override;
@@ -315,6 +316,10 @@ begin
       if ISTransfert (TOBL) then MesMenuItem[II].Enabled := false
                             else MesMenuItem[II].Enabled := true;
     end;
+    if MesMenuItem[II].Name = 'POPYTS' then
+    begin
+      MesMenuItem[II].Enabled := (TOBL.GetString ('GL_TYPELIGNE')='ART');
+    end;
   end;
 end;
 
@@ -331,6 +336,21 @@ begin
       end;
     inc (fMaxItems);
   end;
+  MesMenuItem[fMaxItems] := TmenuItem.Create (parent);
+  with MesMenuItem[fMaxItems] do
+  begin
+    Name := 'POPYTS';
+    Caption := TraduireMemoire ('Avenants / TS');
+    OnClick := POPYTSClick;
+  end;
+  inc (fMaxItems);
+  MesMenuItem[fMaxItems] := TmenuItem.Create (parent);
+  with MesMenuItem[fMaxItems] do
+  begin
+    Name := 'SEPNN';
+    Caption := TraduireMemoire ('-');
+  end;
+  inc (fMaxItems);
   MesMenuItem[fMaxItems] := TmenuItem.Create (parent);
   with MesMenuItem[fMaxItems] do
   begin
@@ -385,7 +405,7 @@ function TGestTransfert.IsTransfert(TOBL: TOB): boolean;
 begin
   Result := false;
   if TOBL = nil then exit;
-  Result := (TOBL.Getdouble('NUMTRANSFERT')<>0);
+  Result := (TOBL.Getdouble('MTTRANSFERT')<>0);
 end;
 
 procedure TGestTransfert.ModifTransfert(Sender: TObject);
@@ -432,6 +452,10 @@ begin
   end;
 end;
 
+procedure TGestTransfert.POPYTSClick(Sender: TObject);
+begin
+  TFFacture(FF).POPYTSClick(Self); 
+end;
 procedure TGestTransfert.SetPiece(NaturePiece: string);
 begin
   if (VH_GC.BTCODESPECIF <> '001') or (NaturePiece <>'BCE') then

@@ -48,9 +48,11 @@ Type
     procedure OnCancel                 ; override ;
   private
     GS : THGrid;
+    TOBPiece : TOB;
     TOBDET,TheRecord,TOBPERE : TOB;
     LastDetail : Integer;
     stCell : string;
+    SuiteWhere : string;
     procedure GSElipsisClick(Sender: TObject);
     procedure GSCellEnter(Sender: TObject; var ACol, ARow: Integer; var Cancel: Boolean);
     procedure GSCellExit(Sender: TObject; var ACol, ARow: Integer; var Cancel: Boolean);
@@ -78,7 +80,7 @@ Type
   end ;
 
 Implementation
-uses FactUtil,UtilArticle,Windows,AglInit;
+uses FactUtil,UtilArticle,Windows,AglInit,FactTOB;
 
 
 procedure TOF_BTSAISPOCTS.OnNew ;
@@ -190,7 +192,9 @@ begin
 
   TheRecord := LaTOB;
   TOBPERE := TOB(LaTOB.data);
+  TOBPiece := TOB(TOBpere.data);
   cancel := false;
+  SuiteWhere := FabricWhereNatArt(TOBPiece.getString('GP_NATUREPIECEG'), TOBPiece.getString('GP_DOMAINE'),'');
   TOBDET := TOB.Create ('BLIGNEETS',nil,-1); TOBDET.AddChampSupValeur('OK','-'); 
   TOBDET.dupliquer (LaTOB,True,True,true);
   TOBDET.PutEcran(Ecran,THPanel(GetCOntrol('PENT')));
@@ -301,6 +305,11 @@ begin
     TOBA := TOB.Create ('ARTICLE',nil,-1);
     TRY
       if GS.Cells[GS.col,GS.Row] <> '' then StChamps := 'GA_CODEARTICLE=' + Trim(Copy(GS.Cells[GS.col,GS.Row], 1, 18));
+      if SuiteWhere <> '' then
+      begin
+        if StChamps <> '' then StChamps := StChamps + ';XX_WHERE= AND (' + SuiteWhere+')'
+                          else StChamps := 'XX_WHERE= AND (' + SuiteWhere+')';
+      end;
       RefArticle := AGLLanceFiche('BTP', 'BTARTICLE_RECH', '', '', StChamps+';RECHERCHEARTICLE');
       if RefArticle <> '' then
       begin

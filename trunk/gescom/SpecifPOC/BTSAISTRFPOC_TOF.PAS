@@ -64,6 +64,7 @@ Type
     TOBTRFPOC,TOBParag : TOB;
     TOBFROM : TOB;
     TOBDEST : TOB;
+    TOBPhases : TOB;
     TOBPiece : TOB;
     GSFROM,GSDEST : THGrid;
     BSELDEST : TToolbarButton97;
@@ -125,13 +126,15 @@ Type
     procedure AjouteDetailOuv(TOBL : TOB) ;
     procedure DupliqueDetailOuv(TOBL, TOBNL: TOB);
     procedure BdeleteClick (Sender : TObject);
+    procedure ConstituePhaseInterne;
+
 end ;
 
 Implementation
 
 uses Grids,SelectPhase,Facture,FactTOB,UtilArticle,FactArticle,FactUtil,FactFormule,
      FactPiece,FactCalc,Windows,Messages,FactComm,FactOuvrage,uEntCommun,
-     NomenUtil,FactureBTP,UtilPGI,UCotraitance,USpecifPOC;
+     NomenUtil,FactureBTP,UtilPGI,UCotraitance,USpecifPOC,EntGC;
 
 procedure TOF_BTSAISTRFPOC.OnNew ;
 begin
@@ -229,6 +232,7 @@ begin
   TOBDEST := TOB.create ('LES DEST',nil,-1);
   TOBParag := TOB.Create ('LES PARAG',nil,-1);
   TOBNewLigne := TOB.Create ('LES NEW LIG',nil,-1);
+  TOBPhases := TOB.Create('LES PHASES',nil,-1);
 end;
 
 procedure TOF_BTSAISTRFPOC.GetControls;
@@ -544,6 +548,7 @@ begin
   TOBDEST.free;
   TOBParag.free;
   TOBNewLigne.Free;
+  TOBPhases.free;
 end;
 
 procedure TOF_BTSAISTRFPOC.ChargeLesParags;
@@ -598,14 +603,12 @@ begin
   begin
     BSELDEST.OnClick := BSELDestClick;
     ThePop.OnPopup := BeforePopup;
-    TmenuItem(GetControl('MnAffectInterne')).OnClick := AffectInterneClick;
     TMenuItem(GetControl('MnAffectST')).OnClick := AffecteST;
     TToolbarButton97 (GetControl('BdeleteALL')).onclick := BdeleteClick;
   end else
   begin
     BSELDEST.OnClick := nil;
     ThePop.OnPopup := nil;
-    TmenuItem(GetControl('MnAffectInterne')).OnClick := nil;
     TMenuItem(GetControl('MnAffectST')).OnClick := nil;
     TToolbarButton97 (GetControl('BdeleteALL')).onclick := nil;
   end;
@@ -1165,6 +1168,7 @@ procedure TOF_BTSAISTRFPOC.GSKeyDown(Sender: TObject; var Key: Word;Shift: TShif
 var Vide: Boolean;
     Acol,Arow : Integer;
     cancel : boolean;
+    TOBL : TOB;
 begin
   Vide := (Shift = []);
   case Key of
@@ -1183,9 +1187,14 @@ begin
       Key := 0;
       if GSDEST.Col = GSMONTANTD then
       begin
+        TOBL := TOBDEST.detail[GSDEST.row-1];
         cancel := False;
         Acol := GSDEST.Col;
         Arow := GSDEST.Row;
+        AjouteLaLigne (TOBL,TTgsDest,TOBL.GetDouble('MONTANT'),'-');
+        DefiniPied;
+        TOBL.SetDouble('MONTANT',0);
+        TOBL.SetDouble('PA',0);
         GSDEST.Cells [GSDEST.Col,GSDEST.Row] := THNumEdit(GetControl('MTRESTE')).Text;
         GSCellExitDest(Self,Acol,Arow,cancel);
       end;
@@ -1291,26 +1300,19 @@ procedure TOF_BTSAISTRFPOC.AjouteLesDatas;
 
 
   function FindLignePhaseFin : Integer;
-  var QQ : TQuery;
-      Affaire : string;
+  var TT : TOB;
       II : Integer;
       Val : Integer;
       NumOrdre : Integer;
-      SQL : string;
   begin
     Result := -1;
     NumOrdre := -1;
-    Affaire := TOBPiece.GetString('GP_AFFAIRE');
-    SQL := 'SELECT BPC_PN1,BPC_PN2,BPC_PN3,BPC_PN4,BPC_PN5,BPC_PN6,BPC_PN7,BPC_PN8,BPC_PN9 '+
-           'FROM PHASESCHANTIER '+
-           'WHERE '+
-           'BPC_AFFAIRE="'+Affaire+'" AND BPC_PHASETRA="'+TOBTRFPOC.GetString ('BT2_PHASETRA')+'"';
-    QQ := OpenSql (SQL,True,1,'',true);
-    if not QQ.eof then
+    TT := TOBPhases.findfirst(['BPC_PHASETRA'],[TOBTRFPOC.GetString ('BT2_PHASETRA')],True);
+    if TT  <> nil then
     begin
       for II := 9 downto 1 do
       begin
-        Val := QQ.FindField('BPC_PN'+InttoStr(II)).AsInteger;
+        Val := TT.GetInteger('BPC_PN'+InttoStr(II));
         if  Val <> 0 then
         begin
           NumOrdre := Val;
@@ -1318,7 +1320,6 @@ procedure TOF_BTSAISTRFPOC.AjouteLesDatas;
         end;
       end;
     end;
-    Ferme(QQ);
     //
     if NumOrdre < 0 then exit; 
     for II := 0 to TOBPiece.detail.count -1 do
@@ -1337,6 +1338,7 @@ var II,LigD : Integer;
     CodeFamille2 : string;
     CoefPaPr,CoefPrPv : double;
 begin
+  ConstituePhaseInterne;
   II := 0;
   // déduction ancien montant de la ligne départ pour le cumul
   // TRAITEMENT DES LIGNES PRISENT DANS LE TRANSFERT DEPART
@@ -1383,7 +1385,14 @@ begin
   until II >= TOBFROM.detail.count ;
   II := 0;
   //
-  LigD := FindLignePhaseFin; if LigD <> -1 then TOBPAR := TOBPiece.detail[Ligd+1];
+  LigD := FindLignePhaseFin;
+  if LigD <> -1 then
+  begin
+    TOBPAR := TOBPiece.detail[Ligd];
+  end else
+  begin
+    Exit;
+  end;
   repeat
     TOBL := TOB(TOBDEST.detail[II].Data); if TOBL = nil then break;
     TOBT := TOBDEST.detail[II];
@@ -1396,7 +1405,7 @@ begin
     //
     TOBT.ChangeParent(TOBTRFPOC,-1);
     //
-    TOBNL := NewTOBLigne(TOBPiece,TOBPAR.getIndex);
+    TOBNL := NewTOBLigne(TOBPiece,TOBPAR.getIndex+1);
     TOBNL.Dupliquer(TOBL,true,true);
     MaxNumOrdre:=LireMaxNumOrdre(TOBPiece);
     Inc(MaxNumOrdre);
@@ -1535,7 +1544,7 @@ begin
     begin
       TOBLN:=TOB.Create('',TOBOuvrage,-1) ;
       InsertionChampSupOuv (TOBLN,false);
-      TOBL.SetInteger('GL_INDICENOMEN',TOBLN.GetIndex);
+      TOBL.SetInteger('GL_INDICENOMEN',TOBLN.GetIndex+1);
       InitTableau (Valeurs);
       RenseigneValoOuvrage(TOBN,CodeDevCli,1,1,TFFacture(XX).DEV,Valeurs) ;
       if TOBL.GetValue('GL_TYPEARTICLE')='ARP' then
@@ -1639,6 +1648,220 @@ begin
   TToolbarButton97(GetCOntrol('BFerme')).Click;
 end;
 
+procedure TOF_BTSAISTRFPOC.ConstituePhaseInterne;
+var IndiceCurrent,NivCurrent,Indice : integer;
+    CurrentPhase,TOBCompteur,TOBL : TOB;
+    TypeLigne,TypeArticle : string;
+
+  function GetPhase (TOBL : TOB; Niveau : integer) : integer;
+  begin
+    if Niveau = 1 then result := TOBL.GetValue('PN1') else
+    if Niveau = 2 then result := TOBL.GetValue('PN2') else
+    if Niveau = 3 then result := TOBL.GetValue('PN3') else
+    if Niveau = 4 then result := TOBL.GetValue('PN4') else
+    if Niveau = 5 then result := TOBL.GetValue('PN5') else
+    if Niveau = 6 then result := TOBL.GetValue('PN6') else
+    if Niveau = 7 then result := TOBL.GetValue('PN7') else
+    if Niveau = 8 then result := TOBL.GetValue('PN8') else
+    if Niveau = 9 then result := TOBL.GetValue('PN9') else
+    result := 0;
+  end;
+
+  function EncodePhase: string;
+  var P1,P2,P3,P4,P5,P6,P7,P8,P9 : integer;
+  begin
+    result := '';
+    P1 := GetPhase(TOBCompteur,1); P2 := GetPhase(TOBCompteur,2); P3 := GetPhase(TOBCompteur,3);
+    P4 := GetPhase(TOBCompteur,4); P5 := GetPhase(TOBCompteur,5); P6 := GetPhase(TOBCompteur,6);
+    P7 := GetPhase(TOBCompteur,7); P8 := GetPhase(TOBCompteur,8); P9 := GetPhase(TOBCompteur,9);
+    if P1 > 0 then result := IntTostr(P1);
+    if P2 > 0 then result := result +'.'+IntToStr(P2);
+    if P3 > 0 then result := result +'.'+inttoStr(p3);
+    if P4 > 0 then result := result +'.'+IntTostr(P4);
+    if P5 > 0 then result := result +'.'+IntToStr(P5);
+    if P6 > 0 then result := result +'.'+inttoStr(p6);
+    if P7 > 0 then result := result +'.'+IntTostr(P7);
+    if P8 > 0 then result := result +'.'+IntToStr(P8);
+    if P9 > 0 then result := result +'.'+inttoStr(p9);
+  end;
+
+  procedure DefiniCOmpteur (Niveau : integer);
+  begin
+    if Niveau = 1 then
+    begin
+      TOBCompteur.putValue ('PN1',TOBCompteur.GetValue('PN1')+1);
+      TOBCompteur.putValue ('PN2',0);
+      TOBCompteur.putValue ('PN3',0);
+      TOBCompteur.putValue ('PN4',0);
+      TOBCompteur.putValue ('PN5',0);
+      TOBCompteur.putValue ('PN6',0);
+      TOBCompteur.putValue ('PN7',0);
+      TOBCompteur.putValue ('PN8',0);
+      TOBCompteur.putValue ('PN9',0);
+    end else
+    if Niveau = 2 then
+    begin
+      TOBCompteur.putValue ('PN2',TOBCompteur.GetValue('PN2')+1);
+      TOBCompteur.putValue ('PN3',0);
+      TOBCompteur.putValue ('PN4',0);
+      TOBCompteur.putValue ('PN5',0);
+      TOBCompteur.putValue ('PN6',0);
+      TOBCompteur.putValue ('PN7',0);
+      TOBCompteur.putValue ('PN8',0);
+      TOBCompteur.putValue ('PN9',0);
+    end else
+    if Niveau = 3 then
+    begin
+      TOBCompteur.putValue ('PN3',TOBCompteur.GetValue('PN3')+1);
+      TOBCompteur.putValue ('PN4',0);
+      TOBCompteur.putValue ('PN5',0);
+      TOBCompteur.putValue ('PN6',0);
+      TOBCompteur.putValue ('PN7',0);
+      TOBCompteur.putValue ('PN8',0);
+      TOBCompteur.putValue ('PN9',0);
+    end else
+    if Niveau = 4 then
+    begin
+      TOBCompteur.putValue ('PN4',TOBCompteur.GetValue('PN4')+1);
+      TOBCompteur.putValue ('PN5',0);
+      TOBCompteur.putValue ('PN6',0);
+      TOBCompteur.putValue ('PN7',0);
+      TOBCompteur.putValue ('PN8',0);
+      TOBCompteur.putValue ('PN9',0);
+    end else
+    if Niveau = 5 then
+    begin
+      TOBCompteur.putValue ('PN5',TOBCompteur.GetValue('PN5')+1);
+      TOBCompteur.putValue ('PN6',0);
+      TOBCompteur.putValue ('PN7',0);
+      TOBCompteur.putValue ('PN8',0);
+      TOBCompteur.putValue ('PN9',0);
+    end else
+    if Niveau = 6 then
+    begin
+      TOBCompteur.putValue ('PN6',TOBCompteur.GetValue('PN6')+1);
+      TOBCompteur.putValue ('PN7',0);
+      TOBCompteur.putValue ('PN8',0);
+      TOBCompteur.putValue ('PN9',0);
+    end else
+    if Niveau = 7 then
+    begin
+      TOBCompteur.putValue ('PN7',TOBCompteur.GetValue('PN7')+1);
+      TOBCompteur.putValue ('PN8',0);
+      TOBCompteur.putValue ('PN9',0);
+    end else
+    if Niveau = 8 then
+    begin
+      TOBCompteur.putValue ('PN8',TOBCompteur.GetValue('PN8')+1);
+      TOBCompteur.putValue ('PN9',0);
+    end else
+    if Niveau = 9 then
+    begin
+      TOBCompteur.putValue ('PN9',TOBCompteur.GetValue('PN9')+1);
+    end;
+  end;
+
+
+  procedure AjoutePhase (TOBL : TOB);
+  var TOBphase,TOBLast : TOB;
+  begin
+    TOBLast := nil;
+    if IndiceCurrent >= 0 then TOBLast := CurrentPhase;
+    inc(NivCurrent);
+
+    TOBphase := TOB.create ('PHASESCHANTIER',TOBPhases,-1);
+    definiCompteur (nivcurrent);
+    if TOBlast <> nil then
+    begin
+      TOBPhase.putValue('BPC_PN1',TobLast.getValue('BPC_PN1'));
+      TOBPhase.putValue('BPC_PN2',TobLast.getValue('BPC_PN2'));
+      TOBPhase.putValue('BPC_PN3',TobLast.getValue('BPC_PN3'));
+      TOBPhase.putValue('BPC_PN4',TobLast.getValue('BPC_PN4'));
+      TOBPhase.putValue('BPC_PN5',TobLast.getValue('BPC_PN5'));
+      TOBPhase.putValue('BPC_PN6',TobLast.getValue('BPC_PN6'));
+      TOBPhase.putValue('BPC_PN7',TobLast.getValue('BPC_PN7'));
+      TOBPhase.putValue('BPC_PN8',TobLast.getValue('BPC_PN8'));
+      TOBPhase.putValue('BPC_PN9',TobLast.getValue('BPC_PN9'));
+      if NivCurrent = 9 then TOBPhase.putValue('BPC_PN9',TobL.getValue('GL_NUMORDRE')) else
+      if NivCurrent = 8 then TOBPhase.putValue('BPC_PN8',TobL.getValue('GL_NUMORDRE')) else
+      if NivCurrent = 7 then TOBPhase.putValue('BPC_PN7',TobL.getValue('GL_NUMORDRE')) else
+      if NivCurrent = 6 then TOBPhase.putValue('BPC_PN6',TobL.getValue('GL_NUMORDRE')) else
+      if NivCurrent = 5 then TOBPhase.putValue('BPC_PN5',TobL.getValue('GL_NUMORDRE')) else
+      if NivCurrent = 4 then TOBPhase.putValue('BPC_PN4',TobL.getValue('GL_NUMORDRE')) else
+      if NivCurrent = 3 then TOBPhase.putValue('BPC_PN3',TobL.getValue('GL_NUMORDRE')) else
+      if NivCurrent = 2 then TOBPhase.putValue('BPC_PN2',TobL.getValue('GL_NUMORDRE'));
+    end else
+    begin
+      TOBPhase.putValue('BPC_PN1',TobL.getValue('GL_NUMORDRE'));
+    end;
+    TOBPhase.putValue('BPC_AFFAIRE',TOBL.GetValue('GL_AFFAIRE'));
+    TOBPhase.putValue('BPC_LIBELLE',TOBL.GetValue('GL_LIBELLE'));
+    TOBPhase.putValue('BPC_PHASETRA',EncodePhase);
+    indiceCurrent := TOBPhases.detail.count -1;
+    CurrentPhase := TOBPhase;
+  end;
+
+  procedure RemontePhase;
+  begin
+    dec(IndiceCurrent);
+    dec(NivCurrent);
+    if (IndiceCurrent >= 0) and (NivCurrent > 0) then
+    begin
+      CurrentPhase := TOBPhases.detail[IndiceCurrent]
+    end else
+    begin
+      CurrentPhase := nil;
+      IndiceCurrent := -1;
+      NivCurrent := 0;
+    end;
+  end;
+  
+  procedure AddSupPhases(TobPhase : TOB);
+  begin
+    TOBPhase.AddChampSupValeur('PN1',0);
+    TOBPhase.AddChampSupValeur('PN2',0);
+    TOBPhase.AddChampSupValeur('PN3',0);
+    TOBPhase.AddChampSupValeur('PN4',0);
+    TOBPhase.AddChampSupValeur('PN5',0);
+    TOBPhase.AddChampSupValeur('PN6',0);
+    TOBPhase.AddChampSupValeur('PN7',0);
+    TOBPhase.AddChampSupValeur('PN8',0);
+    TOBPhase.AddChampSupValeur('PN9',0);
+  end;
+
+
+begin
+  TOBCompteur := TOB.create ('LE COMPTEUR DE PHASE',nil,-1);
+  AddSupPhases (TOBCompteur);
+
+  IndiceCurrent := -1;
+  CurrentPhase := nil;
+
+  TOBPhases.ClearDetail;
+  for indice := 0 to TOBPIece.detail.count -1 do
+  begin
+    TOBL := TOBPIece.detail[Indice];
+    if TOBL.getValue('GL_AFFAIRE')='' then continue;
+    TypeLigne :=TOBL.GetValue('GL_TYPELIGNE');
+    if copy(TypeLigne,1,2)='DP' then
+    begin
+      AjoutePhase (TOBL);
+    end else if TypeLigne='ART' then
+    begin
+      TypeArticle := TOBL.GetString('GL_TYPEARTICLE');
+      if (Copy(TypeArticle,1,2)='OU') and (TOBPiece.GetValue ('GP_NATUREPIECEG')='BCE') and (VH_GC.BTCODESPECIF = '001') then
+      begin
+        AjoutePhase (TOBL);
+        RemontePhase;
+      end;
+    end else if copy(TypeLigne,1,2)='TP' then
+    begin
+      RemontePhase;
+    end;
+  end;
+  
+  TOBCompteur.Free;
+end;
 Initialization
   registerclasses ( [ TOF_BTSAISTRFPOC ] ) ;
 end.

@@ -30,6 +30,7 @@ Uses StdCtrls,
      HMsgBox,
      Vierge,
      HTB97,
+     Hpanel,
      UTOF ;
 
 Type
@@ -43,6 +44,7 @@ Type
     procedure OnClose                  ; override ;
     procedure OnCancel                 ; override ;
   private
+    TOBPiece : TOB;
     TOBDet : TOB;
     GS : THGrid;
     procedure PrepareLaGrille;
@@ -84,6 +86,8 @@ procedure TOF_BTMULPOCTS.OnArgument (S : String ) ;
 begin
   Inherited ;
   TOBDet := LaTOB;
+  TOBPiece := TOB(TOBDet.data);
+  THpanel(GetControl('PDESC')).Caption := LaTOB.getString('DESIGNATION');
   GS := THGrid(GetControl('GS'));
   TToolbarButton97 (GetControl('Binsert')).OnClick := BINSERTCLick;
   TToolbarButton97 (GetControl('BDelete')).OnClick := BDELETECLick;
@@ -125,7 +129,14 @@ begin
 end;
 
 procedure TOF_BTMULPOCTS.BDELETECLick(Sender: TObject);
+var OneTOB : TOB;
 begin
+  if PGIAsk('Etes-vous sur de vouloir supprimer cet Avenant/TS ?') <> mryes then exit;
+  OneTOB := TOBDet.Detail[GS.row-1];
+  OneTOB.free;
+  GS.DeleteRow(GS.Row -1);
+  AfficheLaGrille;
+  CalcMontantGlob;
   //
 end;
 
@@ -136,8 +147,11 @@ begin
   OneTOB.SetInteger('BLE_NUMORDRE',TOBDet.GetInteger('NUMORDRE'));
   TheTOB := OneTOB;
   OneTOB.Data := TOBDet;
+  TOBDet.Data := TOBPiece;
   AGLLanceFiche('BTP','BTSAISPOCTS','','','ACTION=CREATION');
   TheTOB := nil;
+  OneTOB.Data := nil;
+  TOBDet.Data := nil;
   if OneTOB.GetString('OK') = 'X' then
   begin
     CalcMontantCumul (OneTOB);
@@ -152,11 +166,14 @@ procedure TOF_BTMULPOCTS.GSDblClick(Sender: Tobject);
 var OneTOB : TOB;
 begin
   OneTOB := TOBDet.Detail[GS.row-1];
+  OneTOB.Data := TOBDet;
+  TOBDet.Data := TOBPiece;
   if not OneTOB.FieldExists('OK') then OneTOB.AddChampSupValeur ('OK','-')
                                   else OneTOB.SetString ('OK','-');
   TheTOB := OneTOB;
   AGLLanceFiche('BTP','BTSAISPOCTS','','','ACTION=MODIFICATION');
   TheTOB := nil;
+  OneTOB.Data := nil;
   if OneTOB.GetString('OK')= 'X' then
   begin
     CalcMontantCumul (OneTOB);
