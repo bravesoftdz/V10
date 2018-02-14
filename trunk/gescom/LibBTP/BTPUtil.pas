@@ -4630,8 +4630,7 @@ var Req : string;
 begin
 	result := false;
   Req := 'SELECT R_DOMICILIATION,R_ETABBQ,R_GUICHET,R_NUMEROCOMPTE,R_CLERIB FROM RIB WHERE ' +
-         'R_AUXILIAIRE="' + CodeAuxiliaire + '"' +
-         'R_NUMERORIB='+ IntToStr(NumeroRIB);
+         'R_AUXILIAIRE="' + CodeAuxiliaire + '" AND R_NUMERORIB='+ IntToStr(NumeroRIB);
   QQ := OpenSql(Req,True,-1,'',true);
   if not QQ.eof then
   begin
