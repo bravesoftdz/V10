@@ -1252,7 +1252,10 @@ begin
             end;
             ferme (QQ);
           end;
-    			if (not TOBA.GetBoolean('GA_GEREDEMPRIX')) then exit; // non géré dans les demande de prix
+          //FV1 : 15/02/2018 - FS#2933 - SES_ETANCHEITE SERVICE :Problème avec les demandes de prix sur un devis
+          //c'est violent comme sortie :)
+    			//if (not TOBA.GetBoolean('GA_GEREDEMPRIX')) then exit; // non géré dans les demande de prix
+    			if (not TOBA.GetBoolean('GA_GEREDEMPRIX')) then Continue; // non géré dans les demande de prix
           if (Pos(TOBPLAT.GetString('BOP_NATURETRAVAIL'),'001;002')>0) then exit; // si cotraité ou ss traité --> suivant
           //??????
     			if IsPrestationInterne(Article) then continue;  // on ne va pas demander des prix pour des presta interne ..
@@ -1302,7 +1305,7 @@ begin
         end;
         ferme (QQ);
       end;
-      if (not TOBA.GetBoolean('GA_GEREDEMPRIX')) then exit; // non géré dans les demande de prix
+      if (not TOBA.GetBoolean('GA_GEREDEMPRIX')) then Exit; // non géré dans les demande de prix
       //
       TOBI := findArticle (TOBPieceDemPrix,TOBArticleDemprix,TOBDetailDemprix,TOBFournDemPrix,TOBL,TOBpere);
       if TOBI = nil then
