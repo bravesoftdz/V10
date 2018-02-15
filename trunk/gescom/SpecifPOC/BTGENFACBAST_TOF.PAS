@@ -263,7 +263,7 @@ begin
     St := Format('BAST N° %s situation N° %d --> %s N° %d',[Result.Numbast,Result.NumSituation,RechDom('GCNATUREPIECEG','FF',false),Result.fNumeroPiece]);
   end else
   begin
-    St := Format('ERREUR en génération du BAST N° %d situation N° %d --> %s',[Result.Numbast,Result.NumSituation,Result.MessageRet]);
+    St := Format('ERREUR en génération du BAST N° %s situation N° %d --> %s',[Result.Numbast,Result.NumSituation,Result.MessageRet]);
   end;
   Rapport.MemoRapport.lines.Add(St);
 end;

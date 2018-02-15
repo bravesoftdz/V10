@@ -2949,12 +2949,9 @@ BEGIN
   begin
     TOBP:=TOBPorcs.Detail[i] ;
     if TOBP.GetBoolean('GPT_FRAISREPARTIS') then continue;
-    if TOBP.GetBoolean('GPT_RETENUEDIVERSE') and (Pos(TOBP.GetString('GPT_TYPEPORT'),'HT;MI;MT')<0) then continue;
-    for k:=1 to 5 do
-    BEGIN
-      TaxesB[D,NumT]:=TaxesB[D,NumT]+TOBP.GetDouble('GPT_TOTALTAXEDEV'+InttoStr(k)) ;
-      TaxesB[P,NumT]:=TaxesB[P,NumT]+TOBP.GetDouble('GPT_TOTALTAXE'+InttoStr(k)) ;
-    END;
+    if TOBP.GetBoolean('GPT_RETENUEDIVERSE') and (TOBP.GetString('GPT_TYPEPORT')<>'HT') and (TOBP.GetString('GPT_TYPEPORT')<>'MI') and (TOBP.GetString('GPT_TYPEPORT')<>'MT') then continue;
+    TaxesB[D,1]:=TaxesB[D,1]+TOBP.GetDouble('GPT_TOTALTAXEDEV1') ;
+    TaxesB[P,1]:=TaxesB[P,1]+TOBP.GetDouble('GPT_TOTALTAXE1') ;
   end;
   {Ajustement final}
   for k:=1 to 5 do
@@ -6019,6 +6016,7 @@ end;
 if LastMsg>0 then Tex:=TexteMessage[LastMsg] else Tex:='' ;
 Case Res of
    rcOk  : Result:=True ;
+   else result := false;
    END ;
 TOBTiersCpta.Free ;
 TOBBasesCharges.free;
