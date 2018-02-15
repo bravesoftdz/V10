@@ -1617,7 +1617,9 @@ Cegid,False,False)};
     145421 : AGLLanceFiche('BTP','BTPIECE_MUL','GP_NATUREPIECEG=FBT;GP_VENTEACHAT=VEN','','MODIFICATION;STATUT=AFF');   //Modif Factures
     145422 : AGLLanceFiche('BTP','BTEDITDOCDIFF_MUL','GP_NATUREPIECEG=FBT','','VEN;STATUT=AFF') ;
     145423 : AGLLanceFiche('BTP','BTPIECEVISA_MUL','GP_NATUREPIECEG=FBT;GP_VENTEACHAT=VEN','','STATUT=AFF;BTP;') ; // Visa des factures
-    145424 : AGLLanceFiche('BTP','BTREGLPIECE_MUL','GP_NATUREPIECEG=FBT','','STATUT=AFF') ; // Enregistrement des reglements non comptabilisés
+    //FV1 : 15/02/2018 - FS#2947 - ESPACS - Restriction sur le code affaire ce qui empêche certains traitements des pièces
+    //145424 : AGLLanceFiche('BTP','BTREGLPIECE_MUL','GP_NATUREPIECEG=FBT','','STATUT=AFF') ; // Enregistrement des reglements non comptabilisés
+    145424 : AGLLanceFiche('BTP','BTREGLPIECE_MUL','GP_NATUREPIECEG=FBT','','') ; // Enregistrement des reglements non comptabilisés
     145425 : AGLLanceFiche('BTP','BTPIECE_MUL','GP_NATUREPIECEG=FBT;GP_VENTEACHAT=VEN;AFF_GENERAUTO=AVA','','MODIFICATION;MODIFDATSIT;STATUT=AFF');   //Modif Factures
     145426 : if (VH_GC.SeriaCoTraitance) OR (VH_GC.SeriaSousTraitance) then AGLLanceFiche('BTP','BTREGLCOTRAIT_MUL','GP_NATUREPIECEG=FBT','','INTERVENANT;STATUT=AFF') ; // Saisie des reglements Cotraitants
     145427 : if (VH_GC.SeriaCoTraitance) OR (VH_GC.SeriaSousTraitance) then AGLLanceFiche('BTP','BTEDTBONPAIEMENT','GP_NATUREPIECEG=FBT;GP_VENTEACHAT=VEN','','INTERVENANT;MODIFICATION;STATUT=AFF');  //Edition lettre d'éclatement et bon de paiement
