@@ -1891,82 +1891,87 @@ begin
 
   if TOBS = nil then BEGIN PGIBoxAf ('Vous devez d''abord définir la structure du fichier',caption); exit; END;
 
-if TOBL.GetValue('BDE_PIECEASSOCIEE') <> '' then
-   begin
-   if PGIAsk (TraduireMemoire ('Ce traitement a déjà été effectué#13#10Désirez-vous réellement récupérer les données'),caption) <> mryes then
-      begin
+  if TOBL.GetValue('BDE_PIECEASSOCIEE') <> '' then
+  begin
+    if PGIAsk (TraduireMemoire ('Ce traitement a déjà été effectué#13#10Désirez-vous réellement récupérer les données'),caption) <> mryes then
+    begin
       if StructCreated then TOBS.free;
       exit;
-      end;
-   end;
-   if IsExcelLaunched then
-   BEGIN
-     PGIBox ('Vous devez fermer préalablement les instances d''EXCEL',caption);
-     Exit;
-   END;
+    end;
+  end;
 
-   PieceEtude := TPieceEtude.Create(self);
-TRY
-Valide97.Enabled := false;
-Outils97.Enabled := false;
-splash := TFsplashScreen.Create (GS.Parent);
-splash.Label1.Caption := 'Récupération du fichier excel en cours...';
-splash.Show;
-splash.Refresh;
-if TOBL.GetString('BDE_NAME') <> '' then
-   begin
-   TRY
-   if TOBL.GetString('BDE_PIECEASSOCIEE') = '' then
-      begin
-      FillChar(CleDoc,Sizeof(CleDoc),#0) ;
-      if Traitement <> TatBordereaux then
-        CleDoc.NaturePiece:=VH_GC.AFNatProposition
-      else
-        Cledoc.Naturepiece := GetParamSoc ('SO_BTNATBORDEREAUX');
+  if IsExcelLaunched then
+  BEGIN
+    PGIBox ('Vous devez fermer préalablement les instances d''EXCEL',caption);
+    Exit;
+  END;
 
-      CleDoc.DatePiece:=V_PGI.DateEntree;
-      pieceEtude.NewDoc (cledoc,TOBEtude.GetValue('AFF_TIERS'),TOBEtude.GetValue('AFF_AFFAIRE'),TOBEtude.GetValue('AFF_ETABLISSEMENT'),'',true,false);
-      //FV1 : ajout contrôle nature travaux et fournisseur
-      PieceEtude.Fournisseur := TOBL.GetString('BDE_FOURNISSEUR');
-      PieceEtude.NatureTravail := '001';
-      if cledoc.NumeroPiece <> 0 then
-         BEGIN
-         TOBL.putValue('BDE_PIECEASSOCIEE',CodeLaPiece(cledoc));
-         TOBL.PutValue('BDE_NATUREPIECEG',Cledoc.NaturePiece);
-         TOBL.PutValue('BDE_SOUCHE',Cledoc.Souche);
-         TOBL.PutValue('BDE_NUMERO',Cledoc.NumeroPiece);
-         TOBL.PutValue('BDE_INDICEG',Cledoc.Indice);
-         if TOBL.GetValue('BDE_QUALIFNAT') = 'PRINC' then
-          PositionneBordereau (TOBL);
-         END
-         ELSE
-          PGIBoxAf ('Erreur de création document Interne',caption);
-      end;
+  PieceEtude := TPieceEtude.Create(self);
 
-   DeCodeRefPiece (TOBL.GetValue('BDE_PIECEASSOCIEE'),Cledoc);
-   if (ExistePiece (cledoc)) then
-      begin
-      PieceEtude.CleDoc := CleDoc;
-      end;
-   PieceEtude.NomFicXls := TOBL.GetValue('BDE_NAME');
-   PieceEtude.DefiniStructureXls (TOBS.GetValue('BSD_DESCRIPT'));
-   if Traitement = TatBordereaux then PieceEtude.Bordereau := true;
+  TRY
+    Valide97.Enabled := false;
+    Outils97.Enabled := false;
+    splash := TFsplashScreen.Create (GS.Parent);
+    splash.Label1.Caption := 'Récupération du fichier excel en cours...';
+    splash.Show;
+    splash.Refresh;
+    //
+    if TOBL.GetString('BDE_NAME') <> '' then
+    begin
+      TRY
+        if TOBL.GetString('BDE_PIECEASSOCIEE') = '' then
+        begin
+          FillChar(CleDoc,Sizeof(CleDoc),#0) ;
+          if Traitement <> TatBordereaux then
+            CleDoc.NaturePiece:=VH_GC.AFNatProposition
+          else
+            Cledoc.Naturepiece := GetParamSoc ('SO_BTNATBORDEREAUX');
 
-   PieceEtude.VersPgi;
-   FINALLY
-   PieceEtude.Free;
-   if StructCreated then TOBS.free;
-   END;
-   end else
-   begin
-   PGIBOX('Vous devez rattacher un document',caption);
-   end;
-FINALLY
-splash.free;
-Valide97.Enabled := true;
-Outils97.Enabled := true;
-END;
-DefiniPopUpGS (GS.row);
+          CleDoc.DatePiece:=V_PGI.DateEntree;
+          pieceEtude.NewDoc (cledoc,TOBEtude.GetValue('AFF_TIERS'),TOBEtude.GetValue('AFF_AFFAIRE'),TOBEtude.GetValue('AFF_ETABLISSEMENT'),'',true,false);
+          //FV1 : ajout contrôle nature travaux et fournisseur
+          PieceEtude.Fournisseur := TOBL.GetString('BDE_FOURNISSEUR');
+          PieceEtude.NatureTravail := '001';
+          if cledoc.NumeroPiece <> 0 then
+          BEGIN
+            TOBL.putValue('BDE_PIECEASSOCIEE',CodeLaPiece(cledoc));
+            TOBL.PutValue('BDE_NATUREPIECEG',Cledoc.NaturePiece);
+            TOBL.PutValue('BDE_SOUCHE',Cledoc.Souche);
+            TOBL.PutValue('BDE_NUMERO',Cledoc.NumeroPiece);
+            TOBL.PutValue('BDE_INDICEG',Cledoc.Indice);
+            if TOBL.GetValue('BDE_QUALIFNAT') = 'PRINC' then PositionneBordereau (TOBL);
+          END
+          ELSE
+            PGIBoxAf ('Erreur de création document Interne',caption);
+        end;
+
+        DeCodeRefPiece (TOBL.GetValue('BDE_PIECEASSOCIEE'),Cledoc);
+        if (ExistePiece (cledoc)) then
+        begin
+          PieceEtude.CleDoc := CleDoc;
+        end;
+        PieceEtude.NomFicXls := TOBL.GetValue('BDE_NAME');
+        PieceEtude.DefiniStructureXls (TOBS.GetValue('BSD_DESCRIPT'));
+        if Traitement = TatBordereaux then PieceEtude.Bordereau := true;
+
+        PieceEtude.VersPgi;
+      FINALLY
+        PieceEtude.Free;
+        if StructCreated then TOBS.free;
+      END;
+     end
+    else
+    begin
+      PGIBOX('Vous devez rattacher un document',caption);
+    end;
+  FINALLY
+    splash.free;
+    Valide97.Enabled := true;
+    Outils97.Enabled := true;
+  END;
+
+  DefiniPopUpGS (GS.row);
+
 end;
 
 procedure TFEtudes.RenvoieDonneeXlsClick(Sender: TObject);

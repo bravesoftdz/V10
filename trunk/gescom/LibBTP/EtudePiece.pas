@@ -958,19 +958,24 @@ begin
             end;
                   end;
           //              if Valeur(Qte) <> 0 then ExcelValue (WorkSheet,LigneXls-1,fcolQte.colonne-1,valeur(Qte));
-                end;
+        end;
         //
         // Modified by f.vautrain 24/10/2017 15:30:16 - FS#2753 - NCN : développement selon devis ML-171509-3A
         TraitementArticle(TOBL, CodeArticle, Qte, LignePgi);
         //
         // Modified by f.vautrain 09/11/2017 09:58:00 - FS#2777 - TREUIL - Gestion des libellés/descriptifs dans l'intégration des appels d'offre
-        if (designation<>'') then
+        if (designation <> '') then
         begin
           libtmp := StringReplace(designation,#$D#$A,'',[rfReplaceAll]);
           libtmp := StringReplace(libTmp,#$A,'',[rfReplaceAll]);
           TOBL.SetString('GL_LIBELLE',copy(libtmp,1,70));
-          StringToRich(Descriptif, designation);
-          TOBL.PutValue('GL_BLOCNOTE', ExRichToString(Descriptif));
+          //Manque la gestion du paramètre société... Bordel de merde !!!!!
+          //FV1 : 15/02/2018 - FS#2908 - MOUTHON, SCETEC : Impossible de créer des paragraphes sur un devis venant d'un appel d'offre
+          If getParamSocSecur('SO_BTDESCEQUALLIB', False) then
+          Begin
+            StringToRich(Descriptif, designation);
+            TOBL.PutValue('GL_BLOCNOTE', ExRichToString(Descriptif));
+          end;
         end;
         //
         if (unite<>'') then
