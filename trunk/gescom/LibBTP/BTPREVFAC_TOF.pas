@@ -612,6 +612,9 @@ begin
     Ferme(QQ);
   end;
 
+  Date1 := StrToDate(DateDeb.text);
+  Date2 := StrToDate(Datefin.text);
+
   //On calcul ensuite le nombre d'heures totales de l'affaire, le montant total des devis accepté sur l'affaire...
   try
     StSQl := 'SELECT SUM(GP_TOTALHEURE) AS HEUREAFF, SUM(GP_TOTALHTDEV) AS MONTANTHT FROM PIECE ';

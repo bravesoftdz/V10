@@ -1056,6 +1056,13 @@ begin
       ArticleDivers := GetParamSoc ('SO_BTARTICLEDIV');
   end;
 
+  //FV1 - 22/02/2018FS#2895 - DUHALDE - Blocage de l'application lors du traitement d'intégration Appel d'Offre
+  if copy(ArticleDivers,0,15) = '' then
+  begin
+    PGIError('Pas d''article divers en paramètres société', 'Erreur de Paramétrage');
+    Exit;
+  end;
+
   ArticleDivers := CodeArticleUnique(ArticleDivers,'','','','','');
 
   // ARTICLEDIV
