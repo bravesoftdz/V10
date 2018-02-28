@@ -2454,8 +2454,11 @@ var TOBPar,TOBE,TOBG : TOB;
     BEGIN
       TOBE.PutValue('E_ECHE','X') ; TOBE.PutValue('E_NUMECHE',TOBTTC.GetValue('E_NUMECHE')) ; TOBE.PutValue('E_ETATLETTRAGE','AL') ;
       TOBE.PutValue('E_ETAT','0000000000') ;
-      TOBE.PutValue('E_MODEPAIE',TOBTTC.GetValue('E_MODEPAIE')) ;
-      TOBE.PutValue('E_DATEECHEANCE',TOBTTC.GetValue('E_DATEECHEANCE')) ;
+      if TOBTTC<>Nil then
+      BEGIN
+        TOBE.PutValue('E_MODEPAIE',TOBTTC.GetValue('E_MODEPAIE')) ;
+        TOBE.PutValue('E_DATEECHEANCE',TOBTTC.GetValue('E_DATEECHEANCE')) ;
+      end;
     END ;
     {Montants}
     DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
@@ -2662,6 +2665,8 @@ begin
     TOBTTC.PutValue('E_CODEACCEPT',MPTOACC(ModePaie)) ;
     TOBTTC.PutValue('E_DATEPAQUETMIN',MM.DateC) ;
     TOBTTC.PutValue('E_DATEPAQUETMAX',MM.DateC) ;
+    //FV1 - 23/02/2018 : FS#2964 - Viviane - Il faut charger le champ E_DATEVALEUR avec le champ E_DATECOMPTABLE pour la ligne « TTC »
+    TOBTTC.PutValue('E_DATEVALEUR', MM.DateC) ;
     {Montants}
     DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
     RecupLesDC(TOBH,XD,XP) ;
@@ -2752,6 +2757,8 @@ BEGIN
         TOBTTC.PutValue('E_CODEACCEPT',MPTOACC(ModePaie)) ;
         TOBTTC.PutValue('E_DATEPAQUETMIN',MM.DateC) ;
         TOBTTC.PutValue('E_DATEPAQUETMAX',MM.DateC) ;
+        //FV1 - 23/02/2018 : FS#2964 - Viviane - Il faut charger le champ E_DATEVALEUR avec le champ E_DATECOMPTABLE pour la ligne « TTC »
+        TOBTTC.PutValue('E_DATEVALEUR', MM.DateC) ;
         {Montants}
         DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
         RecupLesDC(TOBL,XD,XP) ;
@@ -2785,66 +2792,68 @@ BEGIN
       PieceVersECR(MM,TOBPiece,TOBTiers,TOBTTC,False) ;
       {Tiers}
       TOBTTC.PutValue('E_AUXILIAIRE',TOBTiers.GetValue('T_AUXILIAIRE')) ;
-    TOBTTC.PutValue('E_GENERAL',GColl) ;
-    TOBTTC.PutValue('E_CONSO',TOBTiers.GetValue('T_CONSO')) ;
-    {Pièce}
-    TOBTTC.PutValue('E_BLOCNOTE',TOBPiece.GetValue('GP_BLOCNOTE')) ;
-    TOBTTC.PutValue('E_RIB',TobTiers.GetValue('RIB')); // JT eQualité 11032
-    {Divers}
-    TOBTTC.PutValue('E_TYPEMVT','TTC') ;
-    TOBTTC.PutValue('E_ETATLETTRAGE','AL') ;
-    TOBTTC.PutValue('E_EMETTEURTVA','X') ;
-    AlimLibEcr(TobTTC,TobPiece,TobTiers,TOBTiers.GetValue('T_LIBELLE'),tecTiers,True,(MM.Simul='S'));
-    // --
-  	if TOBH.GetString('GPE_FOURNISSEUR') <> '' then
-    begin
-      TOBTTC.SetString('E_LIBELLE',Copy(TOBTTC.getString('E_LIBELLE')+'-ST- '+TOBH.GetString('GPE_FOURNISSEUR'),1,35));
-    end;
-    // --
-    if VH_GC.GCIfDefCEGID then
-    if TOBTiers.FieldExists('LIBTIERSCEGID') then TOBTTC.PutValue('E_LIBELLE',TOBTiers.GetValue('LIBTIERSCEGID')) ;
-    {Eche+Vent}
-    if OkVent then BEGIN NumL:=cpt ; NumE:=1 ; END else BEGIN NumL:=1 ; NumE:=cpt ; END ;
-    TOBTTC.PutValue('E_ECHE','X') ;
-    if OkVent then TOBTTC.PutValue('E_ANA','X') ;
-    TOBTTC.PutValue('E_NUMLIGNE',NumL) ; TOBTTC.PutValue('E_NUMECHE',NumE) ;
-    {Echéances}
-    ModePaie:=TOBH.GetValue('GPE_MODEPAIE') ;
-    TOBTTC.PutValue('E_MODEPAIE',ModePaie) ;
-    TOBTTC.PutValue('E_DATEECHEANCE',TOBH.GetValue('GPE_DATEECHE')) ;
-    LastDate := TOBH.GetValue('GPE_DATEECHE');
-    TOBTTC.PutValue('E_CODEACCEPT',MPTOACC(ModePaie)) ;
-    TOBTTC.PutValue('E_DATEPAQUETMIN',MM.DateC) ;
-    TOBTTC.PutValue('E_DATEPAQUETMAX',MM.DateC) ;
-    {Montants}
-    DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
-    RecupLesDC(TOBH,XD,XP) ;
-    // Modif BTP
+      TOBTTC.PutValue('E_GENERAL',GColl) ;
+      TOBTTC.PutValue('E_CONSO',TOBTiers.GetValue('T_CONSO')) ;
+      {Pièce}
+      TOBTTC.PutValue('E_BLOCNOTE',TOBPiece.GetValue('GP_BLOCNOTE')) ;
+      TOBTTC.PutValue('E_RIB',TobTiers.GetValue('RIB')); // JT eQualité 11032
+      {Divers}
+      TOBTTC.PutValue('E_TYPEMVT','TTC') ;
+      TOBTTC.PutValue('E_ETATLETTRAGE','AL') ;
+      TOBTTC.PutValue('E_EMETTEURTVA','X') ;
+      AlimLibEcr(TobTTC,TobPiece,TobTiers,TOBTiers.GetValue('T_LIBELLE'),tecTiers,True,(MM.Simul='S'));
+      // --
+      if TOBH.GetString('GPE_FOURNISSEUR') <> '' then
+      begin
+        TOBTTC.SetString('E_LIBELLE',Copy(TOBTTC.getString('E_LIBELLE')+'-ST- '+TOBH.GetString('GPE_FOURNISSEUR'),1,35));
+      end;
+      // --
+      if VH_GC.GCIfDefCEGID then
+      if TOBTiers.FieldExists('LIBTIERSCEGID') then TOBTTC.PutValue('E_LIBELLE',TOBTiers.GetValue('LIBTIERSCEGID')) ;
+      {Eche+Vent}
+      if OkVent then BEGIN NumL:=cpt ; NumE:=1 ; END else BEGIN NumL:=1 ; NumE:=cpt ; END ;
+      TOBTTC.PutValue('E_ECHE','X') ;
+      if OkVent then TOBTTC.PutValue('E_ANA','X') ;
+      TOBTTC.PutValue('E_NUMLIGNE',NumL) ; TOBTTC.PutValue('E_NUMECHE',NumE) ;
+      {Echéances}
+      ModePaie:=TOBH.GetValue('GPE_MODEPAIE') ;
+      TOBTTC.PutValue('E_MODEPAIE',ModePaie) ;
+      TOBTTC.PutValue('E_DATEECHEANCE',TOBH.GetValue('GPE_DATEECHE')) ;
+      LastDate := TOBH.GetValue('GPE_DATEECHE');
+      TOBTTC.PutValue('E_CODEACCEPT',MPTOACC(ModePaie)) ;
+      TOBTTC.PutValue('E_DATEPAQUETMIN',MM.DateC) ;
+      TOBTTC.PutValue('E_DATEPAQUETMAX',MM.DateC) ;
+      //FV1 - 23/02/2018 : FS#2964 - Viviane - Il faut charger le champ E_DATEVALEUR avec le champ E_DATECOMPTABLE pour la ligne « TTC »
+      TOBTTC.PutValue('E_DATEVALEUR', MM.DateC) ;
+      {Montants}
+      DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
+      RecupLesDC(TOBH,XD,XP) ;
+      // Modif BTP
   //    if (TOBpieceRG.detail.count>0) and (TOBH.GetValue('GPE_ACOMPTE')<>'X')then RecupRGEcheances (TOBH,TOBEchesRG,XXD,XXP) else begin XXD:=0;XXP:=0; end;
-    // --
-    if MM.Nature='FC' then BEGIN DD:=XD+XXD ; DP:=XP+XXP ; CD:=0 ; CP:=0 ; END else
-    if MM.Nature='FF' then BEGIN CD:=XD+XXD ; CP:=XP+XXP ; DD:=0 ; DP:=0 ; END else
-    if MM.Nature='AC' then BEGIN CD:=-(XD+XXD) ; CP:=-(XP+XXP) ; DD:=0 ; DP:=0 ; END else
-    if MM.Nature='AF' then BEGIN DD:=-(XD+XXD) ; DP:=-(XP+XXP) ; CD:=0 ; CP:=0 ; END ;
-    TOBTTC.PutValue('E_DEBIT',DP)     ; TOBTTC.PutValue('E_CREDIT',CP) ;
-    TOBTTC.PutValue('E_DEBITDEV',DD)  ; TOBTTC.PutValue('E_CREDITDEV',CD) ;
-    if ((DP=0) and (CP=0)) then TOBTTC.Free else
-    BEGIN
-      if OkVent then NbEches:=1 else Inc(NbEches) ;
-    END ;
+      // --
+      if MM.Nature='FC' then BEGIN DD:=XD+XXD ; DP:=XP+XXP ; CD:=0 ; CP:=0 ; END else
+      if MM.Nature='FF' then BEGIN CD:=XD+XXD ; CP:=XP+XXP ; DD:=0 ; DP:=0 ; END else
+      if MM.Nature='AC' then BEGIN CD:=-(XD+XXD) ; CP:=-(XP+XXP) ; DD:=0 ; DP:=0 ; END else
+      if MM.Nature='AF' then BEGIN DD:=-(XD+XXD) ; DP:=-(XP+XXP) ; CD:=0 ; CP:=0 ; END ;
+      TOBTTC.PutValue('E_DEBIT',DP)     ; TOBTTC.PutValue('E_CREDIT',CP) ;
+      TOBTTC.PutValue('E_DEBITDEV',DD)  ; TOBTTC.PutValue('E_CREDITDEV',CD) ;
+      if ((DP=0) and (CP=0)) then TOBTTC.Free else
+      BEGIN
+        if OkVent then NbEches:=1 else Inc(NbEches) ;
+      END ;
 
-    // TRAITEMENT SPECIFIQUE POUR LA SOCIETE POUCHAIN : BRL Mars 2011
-    // Test sur code SIREN unique pour l'entreprise (9 premiers caractères du code SIRET)
-    if (TOBTTC.Detail.count <> 0) and (Copy(GetParamsocSecur('SO_SIRET',''),1,9) = '403001001') then
-    BEGIN
-      // Mise à jour de la table libre 1 ecriture à partir de la table libre pièce 3
-      // pour gestion des factures en litiges
-      TOBTTC.PutValue('E_TABLE0', TOBPiece.GetValue('GP_LIBREPIECE3'));
-       END;
-    if TOBH.GetValue('GPE_CODE')<>'' then
+      // TRAITEMENT SPECIFIQUE POUR LA SOCIETE POUCHAIN : BRL Mars 2011
+      // Test sur code SIREN unique pour l'entreprise (9 premiers caractères du code SIRET)
+      if (TOBTTC.Detail.count <> 0) and (Copy(GetParamsocSecur('SO_SIRET',''),1,9) = '403001001') then
+      BEGIN
+        // Mise à jour de la table libre 1 ecriture à partir de la table libre pièce 3
+        // pour gestion des factures en litiges
+        TOBTTC.PutValue('E_TABLE0', TOBPiece.GetValue('GP_LIBREPIECE3'));
+      END;
+      if TOBH.GetValue('GPE_CODE')<>'' then
       begin
         CreerLigneTimbres (TOBEcr,TOBH,TOBTTC,TOBPiece,TOBTiers,MM);
-    END;
+      END;
     end;
   END ;
 
@@ -2877,6 +2886,8 @@ BEGIN
     ModePaie := GetParamSocSecur ('SO_BTMODEPAIEASS','RG');
     TOBTTC.PutValue('E_MODEPAIE',ModePaie) ;
     TOBTTC.PutValue('E_DATEECHEANCE',LastDate) ;
+    //FV1 - 23/02/2018 : FS#2964 - Viviane - Il faut charger le champ E_DATEVALEUR avec le champ E_DATECOMPTABLE pour la ligne « TTC »
+    TOBTTC.PutValue('E_DATEVALEUR', MM.DateC) ;
     {Montants}
     DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
     GetMontantRGReliquat(TOBPIeceRG, XD, XP,True);
@@ -4117,6 +4128,10 @@ BEGIN
   if TOBPorcs.detail.count = 0 then exit;
   DEV.Code:=TOBPiece.GetValue('GP_DEVISE') ; GetInfosDevise(DEV) ;
   //
+  //FV1 - 27/02/2018 : FS#2963 - TREUIL - Absence de mode de paiement dans l'écriture sur la ligne du Port et Frais
+  TOBTTC:=Nil ;
+  if TOBEcr.Detail.Count>0 then TOBTTC:=TOBEcr.Detail[0] ;
+  //
   RecalculeRetenues (TOBpiece,TOBPorcs,TOBBases,DEV);
   //
   for II := 0 To TOBPorcs.detail.count -1 do
@@ -4124,7 +4139,7 @@ BEGIN
     TOBP := TOBPorcs.detail[II];
     if not TOBP.GetBoolean('GPT_RETENUEDIVERSE') then continue;
     {Montants}
-    
+
 // On garde les montants signés. Voir + bas : BRL 4/08
 //    XP := Abs(TOBP.getDouble('GPT_TOTALTTC'));
 //    XD := Abs(TOBP.getDouble('GPT_TOTALTTCDEV'));
@@ -4161,7 +4176,8 @@ BEGIN
     TOBE.PutValue('E_TYPEMVT','TTC') ;
     {Client}
     TOBE.PutValue('E_AUXILIAIRE',TOBTiers.GetValue('T_AUXILIAIRE')) ;
-    AlimLibEcr(TobE,TobPiece,TobTiers,TOBP.GetString('GPT_LIBELLE'),tecRG,True,(MM.Simul='S'));
+    //FV1 : 27/02/2018 - FS#2957 - DSA - En écriture comptable le libellé des Ports & Frais est erroné
+    //AlimLibEcr(TobE,TobPiece,TobTiers,TOBP.GetString('GPT_LIBELLE'),tecRG,True,(MM.Simul='S'));
     {Eche+Vent}
     NumL:=TOBEcr.Detail.Count-NbEches+1 ; TOBE.PutValue('E_NUMLIGNE',NumL) ;
     if OkVent then TOBE.PutValue('E_ANA','X') ;
@@ -4170,7 +4186,8 @@ BEGIN
     BEGIN
       TOBE.PutValue('E_ECHE','X') ; TOBE.PutValue('E_NUMECHE',1) ; TOBE.PutValue('E_ETATLETTRAGE','AL') ;
       TOBE.PutValue('E_ETAT','0000000000') ;
-      if TOBTTC <> nil then
+      //??????? c'est quoi ce truc ?????
+      //if TOBTTC <> nil then
       if TOBTTC<>Nil then
       BEGIN
         TOBE.PutValue('E_MODEPAIE',TOBTTC.GetValue('E_MODEPAIE')) ;

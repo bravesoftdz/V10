@@ -3027,14 +3027,15 @@ Begin
   end;
   if QueFacture then SqlPlus := 'AND BST_NATUREPIECE IN ("FBT","DAC") ';
   // récupération numéro de facture de la dernière situation
-  Req:='SELECT BST_NUMEROFAC,BST_NATUREPIECE,BST_NUMEROSIT FROM BSITUATIONS WHERE '+
-      'BST_SSAFFAIRE="'+ TOBPiece.GetValue('GP_AFFAIREDEVIS') +'" '+
-      SqlPlus+' AND BST_VIVANTE="X" AND BST_NUMEROSIT > '+TOBPiece.GetString('NUMEROSIT') +' '+
-      'ORDER BY BST_NUMEROSIT DESC';
+  Req := 'SELECT BST_NUMEROFAC,BST_NATUREPIECE,BST_NUMEROSIT FROM BSITUATIONS ';
+  Req := req + ' WHERE BST_SSAFFAIRE="'+ TOBPiece.GetValue('GP_AFFAIREDEVIS') + '" ';
+  req := req + SqlPlus+' AND BST_VIVANTE="X" ';
+  if TOBPiece.GetString('NUMEROSIT') <> '' then Req := req + ' AND BST_NUMEROSIT > '+ TOBPiece.GetString('NUMEROSIT');
+  Req := Req + ' ORDER BY BST_NUMEROSIT DESC';
   Q:=OpenSQL(Req,TRUE,1,'',true);
   if Not Q.EOF then
   begin
-  Num := Q.Fields[0].AsInteger;
+    Num := Q.Fields[0].AsInteger;
     TypeD := Q.Fields[1].AsString;
     if (TOBPiece.getString('GP_NATUREPIECEG')<>TypeD) or (Num <> TOBPiece.GetValue('GP_NUMERO')) then result:=false;
   end;
