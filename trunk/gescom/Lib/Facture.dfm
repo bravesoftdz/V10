@@ -6,7 +6,7 @@ object FFacture: TFFacture
   HelpContext = 119000017
   ActiveControl = GP_DATEPIECE
   BorderIcons = [biSystemMenu, biMaximize]
-  Caption = 'traitance'
+  Caption = 'Saisie de documents'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -2596,6 +2596,7 @@ object FFacture: TFFacture
             Font.Name = 'MS Sans Serif'
             Font.Style = []
             Layout = blGlyphTop
+            NumGlyphs = 2
             Opaque = False
             ParentFont = False
             ParentShowHint = False
@@ -3466,6 +3467,7 @@ object FFacture: TFFacture
       '\par '
       '\par '
       '\par '
+      '\par '
       '\par }')
   end
   object BZoomRessource: THBitBtn
@@ -4274,6 +4276,7 @@ object FFacture: TFFacture
         '\par '
         '\par '
         '\par '
+        '\par '
         '\par }')
     end
   end
@@ -4949,8 +4952,7 @@ object FFacture: TFFacture
       'Z0885_S16G1'
       'Z1439_S16G1'
       'Z0284_S16G1')
-    Height = 18
-    Width = 18
+    Width = 17
     Left = 651
     Top = 152
   end
@@ -5039,8 +5041,6 @@ object FFacture: TFFacture
       'Z0415_S16G1'
       'Z0397_S16G1')
     DrawingStyle = dsTransparent
-    Height = 18
-    Width = 18
     Left = 725
     Top = 150
   end
