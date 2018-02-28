@@ -146,10 +146,10 @@ function GetTobTiers(sChamp, sWhere: String; TobTiers: Tob; SelectDB:Boolean = F
 function ExistCommercial(sCodeCommercial : string; WithAlert: Boolean = false):Boolean;
 
 { Renvoie field de TIERS ou de TIERSCOMPL }
-function GetFieldFromTiers(Field, sNatureAux, sTiers: string): Variant;
+function GetFieldFromTiers(Field, sNatureAux, sTiers: string): String;
 function GetFieldFromT(Const FieldName, Tiers: string): Variant;
 { Retourne le numéro de l'adresse par défaut d'un tiers }
-function GetNumAdresseFromTiers(NatureAuxi, Tiers: String; TheType: TypeAdresse): Integer;
+function GetNumAdresseFromTiers(NatureAuxi, Tiers: String; TheType: TypeAdresse): String;
 { Recherche du pays d'un code postal ou d'une ville }
 function GetFieldFromCodePostal(Field, sCodePostal, sVille: string): Variant;
 function GetNomsFromContact(Fields: Array of string; Auxiliaire: string; NumeroContact: integer): MyArrayValue;
@@ -773,6 +773,9 @@ begin
        if ClientArechercher (G_CodeTiers,IndPro) then
           //FV1 - 13/02/2018 : FS#2934 - TEST VD Saisie devis-création article-Création Fournisseur-fenêtre de création Clients prosp arrive
           CodeTiers := AGLLanceFiche ('GC', 'GCTIERS_RECH','T_TIERS='+G_CodeTiers.text, '', stWhere)
+          //FV1 - 08/01/2018 : FS#2831 - JPG - Erreur en création de tiers via un devis
+          //CodeTiers := AGLLanceFiche ('GC', 'GCTIERS_RECH','T_TIERS='+G_CodeTiers.text+';NATUREAUXI=CLI' , '', stWhere)
+          //CodeTiers := AGLLanceFiche ('GC', 'GCTIERS_MUL','T_TIERS='+G_CodeTiers.text+';NATUREAUXI=CLI' , '', stWhere)
        else
           CodeTiers := G_CodeTiers.text;
     end;
@@ -1098,21 +1101,21 @@ Result := ValeurChamp ;
 
   if clipart then
   begin
-   if NomChamp = 'T_LIBELLE' then chp := 'SO_FMTTIERSLIBELLE' else
-   if NomChamp = 'T_PRENOM'  then chp := 'SO_FMTTIERSPRENOM'  else
-   if NomChamp = 'T_ADRESSE1'  then chp := 'SO_FMTTIERSADR1' else
-   if NomChamp = 'T_ADRESSE2'  then chp := 'SO_FMTTIERSADR2'  else
-   if NomChamp = 'T_ADRESSE3'  then chp := 'SO_FMTTIERSADR3'  else
+    if NomChamp = 'T_LIBELLE'   then chp := 'SO_FMTTIERSLIBELLE'  else
+    if NomChamp = 'T_PRENOM'    then chp := 'SO_FMTTIERSPRENOM'   else
+    if NomChamp = 'T_ADRESSE1'  then chp := 'SO_FMTTIERSADR1'     else
+    if NomChamp = 'T_ADRESSE2'  then chp := 'SO_FMTTIERSADR2'     else
+    if NomChamp = 'T_ADRESSE3'  then chp := 'SO_FMTTIERSADR3'     else
     if NomChamp = 'T_VILLE'     then chp := 'SO_FMTTIERSVILLE'    else
     exit;
   end
   else
   begin
-   if NomChamp = 'T_LIBELLE' then chp := 'SO_FMTSOCLIBELLE' else
-   if NomChamp = 'T_PRENOM'  then chp := 'SO_FMTSOCPRENOM'  else
-   if NomChamp = 'T_ADRESSE1'  then chp := 'SO_FMTTIERSADR1' else
-   if NomChamp = 'T_ADRESSE2'  then chp := 'SO_FMTTIERSADR2'  else
-   if NomChamp = 'T_ADRESSE3'  then chp := 'SO_FMTTIERSADR3'  else
+    if NomChamp = 'T_LIBELLE'   then chp := 'SO_FMTSOCLIBELLE'    else
+    if NomChamp = 'T_PRENOM'    then chp := 'SO_FMTSOCPRENOM'     else
+    if NomChamp = 'T_ADRESSE1'  then chp := 'SO_FMTTIERSADR1'     else
+    if NomChamp = 'T_ADRESSE2'  then chp := 'SO_FMTTIERSADR2'     else
+    if NomChamp = 'T_ADRESSE3'  then chp := 'SO_FMTTIERSADR3'     else
     if NomChamp = 'T_VILLE'     then chp := 'SO_FMTTIERSVILLE'    else
     exit;
   end;
@@ -1122,29 +1125,29 @@ Result := ValeurChamp ;
   sup := varAsType(GetParamSoc('SO_FMTTIERSSUPESPACE'), varBoolean);
 
   if (clipart = true) then
-   begin
-   if (NomChamp = 'T_LIBELLE') then
-	begin
-	fmtpart := varAsType(GetParamSoc('SO_FMTTIERSPARTIC'), varString);
-	max := varAsType(GetParamSoc('SO_FMTTIERSTAILLEMOT'), varInteger);
-	Result := MetNomEnForme (Result, fmt, fmtpart, max, sup) ;
+  begin
+    if (NomChamp = 'T_LIBELLE') then
+  	begin
+    	fmtpart := varAsType(GetParamSoc('SO_FMTTIERSPARTIC'), varString);
+    	max     := varAsType(GetParamSoc('SO_FMTTIERSTAILLEMOT'), varInteger);
+    	Result  := MetNomEnForme (Result, fmt, fmtpart, max, sup) ;
     end
     else
         //   if (NomChamp = 'T_PRENOM') then
-	begin
-	fmtpart := ' ';
-	max := 0;
-	Result := MetNomEnForme (Result, fmt, fmtpart, max, sup) ;
-        end;
-   end
+  	begin
+	    fmtpart := ' ';
+	    max := 0;
+	    Result := MetNomEnForme (Result, fmt, fmtpart, max, sup) ;
+    end;
+  end
   else
-   begin
+  begin
     //FV1 : 29/12/20014 - FS#1183 - Bati Alpes 74 En création adresse client le 1er caractère de chaque mot ne passe pas en majuscule
 	  //Result := MetTexteEnForme (Result, fmt, sup) ;
     fmtpart := ' ';
     max := 0;
     Result := MetNomEnForme(Result, fmt, fmtpart, max, sup) ;
-   end;
+  end;
 
 END ;
 
@@ -1599,14 +1602,14 @@ Créé le ...... : 11/09/2002
 Modifié le ... : 11/02/2003
 Description .. : Construction du WHERE pour la fiche TIERSCOMPL
 *****************************************************************}
-function GetFieldFromTiers(Field, sNatureAux, sTiers: string): Variant;
+function GetFieldFromTiers(Field, sNatureAux, sTiers: string): String;
 begin
    if wGetPrefixe(Field) = 'T' then
 	   Result := wGetSqlFieldValue(Field, 'TIERS', WhereTiers(sNatureAux, sTiers))
    else if wGetPrefixe(Field) = 'YTC' then
       Result := wGetSqlFieldValue(Field, 'TIERSCOMPL', WhereTiersCompl(sNatureAux, sTiers))
    else
-      Result := null;
+      Result := '';
 end;
 
 function GetFieldFromT(Const FieldName, Tiers: string): Variant;
@@ -1677,7 +1680,7 @@ Auteur  ...... : Thierry Petetin
 Créé le ...... : 31/01/2003
 Description .. : Retourne le numéro de l'adresse par défaut d'un tiers
 *****************************************************************}
-function GetNumAdresseFromTiers(NatureAuxi, Tiers: String; TheType: TypeAdresse): Integer;
+function GetNumAdresseFromTiers(NatureAuxi, Tiers: String; TheType: TypeAdresse): String;
 var
   FieldName: String;
 begin
@@ -1689,7 +1692,7 @@ begin
   if FieldName <> '' then
     Result := GetFieldFromTiers(FieldName, NatureAuxi, Tiers)
   else
-    Result := 0;
+    Result := '';
 end;
 
 {***********A.G.L.***********************************************

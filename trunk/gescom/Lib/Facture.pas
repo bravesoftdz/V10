@@ -5395,6 +5395,7 @@ begin
   //
   TheMetreDoc.OkMetre       := TheMetreDoc.ControleMetreDoc(NomRepDoc);
   //
+  TDescriptif.Width := (canvas.TextWidth('W')*70) +16;
 
   CopierColler.Activate;
   TheBordereauMen.Activate;
@@ -8795,6 +8796,7 @@ end;
 
 function TFFacture.GereElipsis(LaCol: integer;Var FromBordereau : boolean): boolean;
 var SelectFourniss: string;
+    StWhere       : String;
   {$IFDEF GPAO}
     TobParam, TobL: Tob;
   {$ENDIF GPAO}
@@ -8803,6 +8805,13 @@ begin
   if LaCol = SG_RefArt then
   begin
     SelectFourniss := '';
+    //
+    //FV1 - 28/02/2018 : FS#2970 - RESINA - Problème de relation articles / dépots dans l'affichage de la liste des articles
+    if  GP_DEPOT.Value <> '' then
+      StWhere := ' GQ_DEPOT="' + GP_DEPOT.Value + '" '
+    else
+      StWhere := '';
+    //
     if (ctxMode in V_PGI.PGIContexte) then
     begin
       // Dans le cas d'une gestion Mono-fournisseur, seuls les articles du fournisseur
@@ -8836,7 +8845,9 @@ begin
         end;
       end
       else
+      Begin
         Result := GetArticleRecherche(GS, HTitres.Mess[1], CleDoc.NaturePiece, GP_DOMAINE.Value, SelectFourniss);
+      end;
       {$ELSE}
       // ICI LS
       result := TheBordereau.RechArticlesFromBordereau (GS.Cells[GS.Col, GS.Row],Cledoc.NaturePiece);
@@ -8848,7 +8859,7 @@ begin
       // --
       if not FromBordereau then
       begin
-      	Result := GetArticleRecherche(GS, HTitres.Mess[1], CleDoc.NaturePiece, GP_DOMAINE.Value, SelectFourniss);
+      	Result := GetArticleRecherche(GS, HTitres.Mess[1], CleDoc.NaturePiece, GP_DOMAINE.Value, SelectFourniss, StWhere);
       end;
       {$ENDIF GPAO}
     end
@@ -15283,7 +15294,20 @@ end;
 
 procedure TFFacture.GereCommercialEnabled;
 begin
+
   BZoomCommercial.Enabled := (GP_REPRESENTANT.Text <> '');
+
+  //FV1 : 29/01/2018 - FS#2882 - CLOSSUR - Donner la possibilité de fermer un commercial
+  //Vérification si le commercial n'est pas fermé...
+  if GP_REPRESENTANT.Text = '' then exit;
+
+  if ExecuteSQL('SELECT GCL_COMMERCIAL FROM COMMERCIAL WHERE GCL_COMMERCIAL="' + GP_REPRESENTANT.Text + '" AND GCL_FERME="-"') = 0 then
+  begin
+    PGIError('Commercial fermé', 'Commercial');
+    GP_REPRESENTANT.Text := '';
+    BZoomCommercial.Enabled := False;
+  end;
+
 end;
 
 //FV1 : 20/02/2014 - FS#898 - BAGE : Ajouter une zone pour indiquer le contact du bon de commande
@@ -19448,7 +19472,8 @@ begin
   begin
     CacherDesc := False;
     //
-    TDescriptif.Width := (canvas.TextWidth('W')*70) +16;
+    //FV1 - 27/02/2018 : FS#2971 - RESINA - Redimensionnement automatique en largeur de la fenêtre de descriptif détaillé des articles
+    //TDescriptif.Width := (canvas.TextWidth('W')*70) +16;
     //
     //{$IFDEF BTP}
     if (TOBL.GetValue('GL_REFARTSAISIE') = '') or (TOBL.GetValue('GL_TYPELIGNE')='COM') then CacherDesc := True;

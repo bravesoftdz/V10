@@ -30,18 +30,18 @@ type
     TGenFacAvanc = class (Tobject)
       private
 				MontantMarche,DejaFacture,MtHorsDevis : Double;
-      	fCloture : boolean;
-        fDatefac : TdateTime;
-        Avancement : boolean;
-        NewNature : string;
-        NewSouche : string;
-        NewNumero : integer;
+      	fCloture        : boolean;
+        fDatefac        : TdateTime;
+        Avancement      : boolean;
+        NewNature       : string;
+        NewSouche       : string;
+        NewNumero       : integer;
         NewIndiceg      : integer;
-        PiecesG   : TStrings ;
-        DEV : Rdevise;
-        fCotraitance : boolean;
-        fLastfacture : boolean;
-        ModifSituation : boolean;
+        PiecesG         : TStrings ;
+        DEV             : Rdevise;
+        fCotraitance    : boolean;
+        fLastfacture    : boolean;
+        ModifSituation  : boolean;
         GenereAvoir : boolean;
         NumSituation : integer;
         PourcentAvanc : double; // pourcentage d'avancement global de la situation
@@ -50,12 +50,12 @@ type
         TOBArticles,TOBTiers,TOBEches,TOBAdresses,
         TOBCpta,TOBAnaP,TOBAnaS,TOBBases,TOBBasesL,TOBAcomptes,TOBPorcs,TOBComms,TOBLigneRG : TOB ;
         TOBOuvrage,TOBOuvragesP,TOBPIECERG,TOBBasesRg,TOBVTECOLL,TOBSituations : TOB;
-        TOBAnalPiece : TOB;
+        TOBAnalPiece  : TOB;
         TOBAcomptes_O : TOB;
-        TOBtimbres : TOB;
-        IndiceRg : integer;
-        TheRepartTva : TREPARTTVAMILL;
-        OkCPta : boolean;
+        TOBtimbres    : TOB;
+        IndiceRg      : integer;
+        TheRepartTva  : TREPARTTVAMILL;
+        OkCPta        : boolean;
         //
         procedure AppliqueInfoNewPiece;
         procedure AddChampNbUses(TOBPDOC : TOB);
@@ -141,22 +141,22 @@ var XX      : TgenFacAvanc;
 begin
   XX := TgenFacAvanc.create;
   TRY
-    XX.TOBDevis := TOBSource;
-    XX.TOBOptDevis := TOBDetailDevis;
-    XX.TOBAcomptes := TOBAcomptes;
-    XX.TOBAcomptes_O := TobAcomptes_O;
-    XX.TOBOuvrage  := TOBouvrages;
-    XX.TOBSousTrait :=  TOBSOUSTraits;
+    XX.TOBDevis         := TOBSource;
+    XX.TOBOptDevis      := TOBDetailDevis;
+    XX.TOBAcomptes      := TOBAcomptes;
+    XX.TOBAcomptes_O    := TobAcomptes_O;
+    XX.TOBOuvrage       := TOBouvrages;
+    XX.TOBSousTrait     :=  TOBSOUSTraits;
     XX.ClotureFacturation := ClotureFacturation;
-    XX.DateFac  := DateFac;
-    XX.fCotraitance := Cotraitance;
-    XX.MontantMarche := MontantMarche;
-    XX.MtHorsDevis := MtHorsDevis;
-    XX.DejaFacture := DejaFacture;
-    XX.Flastfacture := lastFacture;
-    XX.ModifSituation := ModifSituation;
+    XX.DateFac          := DateFac;
+    XX.fCotraitance     := Cotraitance;
+    XX.MontantMarche    := MontantMarche;
+    XX.MtHorsDevis      := MtHorsDevis;
+    XX.DejaFacture      := DejaFacture;
+    XX.Flastfacture     := lastFacture;
+    XX.ModifSituation   := ModifSituation;
     XX.GenereAvoir      := GenereAvoir;
-    result := XX.GenereLaFacture;
+    result              := XX.GenereLaFacture;
     ClePiece.NaturePiece  := XX.NewNature;
     ClePiece.Souche       := XX.NewSouche;
     ClePiece.NumeroPiece  := XX.NewNumero;
