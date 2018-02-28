@@ -4306,7 +4306,8 @@ begin
    begin
       if GetControlText('TE_LIVRE') <> '' then
       begin 
-        SetControlText('YTC_NADRESSELIV', IntToStr(GetNumAdresseFromTiers('', GetControlText('TE_LIVRE'), taLivr)));
+        //SetControlText('YTC_NADRESSELIV', IntToStr(GetNumAdresseFromTiers('', GetControlText('TE_LIVRE'), taLivr)));
+        SetControlText('YTC_NADRESSELIV', GetNumAdresseFromTiers('', GetControlText('TE_LIVRE'), taLivr));
         SetControlProperty('YTC_NADRESSELIV', 'ENABLED', True);  
       end
       else
@@ -4364,7 +4365,8 @@ begin
    begin
       if GetControlText('TE_FACTURE') <> '' then
       begin
-        SetControlText('YTC_NADRESSEFAC', IntToStr(GetNumAdresseFromTiers('', GetControlText('TE_FACTURE'), taFact)));
+        //SetControlText('YTC_NADRESSEFAC', IntToStr(GetNumAdresseFromTiers('', GetControlText('TE_FACTURE'), taFact)));
+        SetControlText('YTC_NADRESSEFAC', GetNumAdresseFromTiers('', GetControlText('TE_FACTURE'), taFact));
         SetControlProperty('YTC_NADRESSEFAC', 'ENABLED', True);
       end
       else
