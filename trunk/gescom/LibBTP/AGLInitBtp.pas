@@ -114,6 +114,7 @@ type
   Function DemandeAcompteOk (NaturePiece,Souche,Tiers : string ; Numero,Indice: integer; pass : boolean=false): boolean;
   procedure AglAvancementChantier (Parms : array of variant ; nb : integer) ;
   Procedure PositionneEtatAffaire(CodeAffaire, CodeEtat : String);
+  procedure PleinEcran (TheForm : TForm) ;
 
 implementation
 uses factvariante,
@@ -1945,6 +1946,10 @@ begin
 end;
 
 
+procedure PleinEcran (TheForm : TForm) ;
+begin
+  if GetParamSocSecur('SO_SAISIEPLEINECRAN', False) then SendMessage(TheForm.Handle, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+end;
 Initialization
 initM3Btp();
 finalization

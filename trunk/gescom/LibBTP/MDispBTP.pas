@@ -2425,10 +2425,8 @@ Case NumModule of
             FMenuG.removeItem (147610);
             FMenuG.removeItem (147620);
           end;
-          if not (VH_GC.BTCODESPECIF = '001') then
-          begin
-            FMenuG.RemoveItem(147163);
-          end;
+          if (VH_GC.BTCODESPECIF = '001') then FMenuG.RemoveItem(147130)
+                                          else FMenuG.RemoveItem(147163);
         end;
   149 : begin
          {Categories de dimensions }

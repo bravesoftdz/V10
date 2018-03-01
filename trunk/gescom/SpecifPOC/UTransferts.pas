@@ -47,7 +47,7 @@ procedure DeleteLesTOBTRF (Cledoc :r_cledoc);
 function LastTransfert (TOBTRFPOC,TOBT : TOB) : boolean;
 
 implementation
-uses Facture,UtilTOBPiece;
+uses Facture,UtilTOBPiece, Variants;
 
 
 function ExisteTransfertSuiv (TOBTRFPOC,TT : TOB) : boolean;
@@ -351,6 +351,7 @@ begin
     Caption := TraduireMemoire ('-');
   end;
   inc (fMaxItems);
+
   MesMenuItem[fMaxItems] := TmenuItem.Create (parent);
   with MesMenuItem[fMaxItems] do
   begin
@@ -405,7 +406,8 @@ function TGestTransfert.IsTransfert(TOBL: TOB): boolean;
 begin
   Result := false;
   if TOBL = nil then exit;
-  Result := (TOBL.Getdouble('MTTRANSFERT')<>0);
+  if not TOBL.FieldExists('NUMTRANSFERT') or VarIsNull(TOBL.getValue('NUMTRANSFERT')) or (VarAsType(TOBL.getValue('NUMTRANSFERT'), varString) = #0) then exit;
+  Result := (TOBL.GetString('NUMTRANSFERT')<>'') and (TOBL.GetString('NUMTRANSFERT')<>'0');
 end;
 
 procedure TGestTransfert.ModifTransfert(Sender: TObject);
@@ -414,6 +416,8 @@ var TOBT,TOBL : TOB;
     TOBTRFPOC : TOB;
     Arow,Acol : Integer;
 begin
+  Acol := TFFacture (FF).GS.Col;
+  Arow := TFFacture (FF).GS.row;
   TOBPIece := TFFacture (FF).LaPieceCourante;
   TOBTRFPOC := TFFActure(FF).XTOBTRFPOC;
   TOBL := TOBPiece.Detail[TFFacture(FF).GS.Row -1];
@@ -444,11 +448,19 @@ begin
       TFFacture(FF).SupLesLibDetail (TOBpiece);
       TFFacture(FF).CopierColleObj.deselectionneRows;
       TFFacture(FF).AffichageDesDetailOuvrages;  // en TOB
+      if TFFacture (FF).GS.row < TOBpiece.detail.count then
+      begin
+        TOBL := TOBPiece.Detail[TFFacture(FF).GS.Row -1]
+      end else
+      begin
+        TOBL := TOBPiece.detail[TOBPiece.detail.count -1];
+      end;
       Arow := TOBL.GetIndex+1;
       TFFacture(FF).RefreshGrid (Acol,ARow);
       TFFacture(FF).PieceCoTrait.SetSaisie;
       TOBT.free;
     end;
+    TFFACture(FF).AfficheLaGrille; 
   end;
 end;
 
@@ -456,6 +468,7 @@ procedure TGestTransfert.POPYTSClick(Sender: TObject);
 begin
   TFFacture(FF).POPYTSClick(Self); 
 end;
+
 procedure TGestTransfert.SetPiece(NaturePiece: string);
 begin
   if (VH_GC.BTCODESPECIF <> '001') or (NaturePiece <>'BCE') then

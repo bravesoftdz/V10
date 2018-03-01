@@ -1,5 +1,5 @@
 {***********UNITE*************************************************
-Auteur  ...... : 
+Auteur  ...... :
 Créé le ...... : 22/11/2017
 Modifié le ... :   /  /
 Description .. : Source TOF de la FICHE : BTSELMOISAVANC ()
@@ -9,25 +9,26 @@ Unit BTSELMOISAVANC_TOF ;
 
 Interface
 
-Uses StdCtrls, 
-     Controls, 
-     Classes, 
+Uses StdCtrls,
+     Controls,
+     Classes,
 {$IFNDEF EAGLCLIENT}
-     db, 
-     uDbxDataSet, 
-     mul, fe_Main,M3Fp, 
+     db,
+     uDbxDataSet,
+     mul, fe_Main,M3Fp,
 {$else}
      eMul,
 {$ENDIF}
      AglInit,
      uTob,
      forms,
-     sysutils, 
+     sysutils,
      ComCtrls,
-     HCtrls, 
-     HEnt1, 
-     HMsgBox, 
-     UTOF ; 
+     HCtrls,
+     HEnt1,
+     HMsgBox,
+     HTB97,
+     UTOF ;
 
 Type
   TOF_BTSELMOISAVANC = Class (TOF)
@@ -39,6 +40,8 @@ Type
     procedure OnDisplay                ; override ;
     procedure OnClose                  ; override ;
     procedure OnCancel                 ; override ;
+  private
+    procedure BValideClick (Sender : TObject);
   end ;
 
 procedure SelectionMoisAvancPoc (Parms : array of variant ; nb : integer);
@@ -110,6 +113,7 @@ end ;
 procedure TOF_BTSELMOISAVANC.OnArgument (S : String ) ;
 begin
   Inherited ;
+  TToolbarButton97 (GetControl('BVALIDE')).OnClick := BValideClick;
 end ;
 
 procedure TOF_BTSELMOISAVANC.OnClose ;
@@ -126,6 +130,11 @@ procedure TOF_BTSELMOISAVANC.OnCancel () ;
 begin
   Inherited ;
 end ;
+
+procedure TOF_BTSELMOISAVANC.BValideClick(Sender: TObject);
+begin
+
+end;
 
 Initialization
   RegisterAglProc( 'SelectionMoisAvancPoc',True,5,SelectionMoisAvancPoc);

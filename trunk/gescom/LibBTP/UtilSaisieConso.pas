@@ -401,7 +401,7 @@ Begin
   if Code = '' then exit;
 
   Requete := 'SELECT GA_STATUTART,GA_CODEARTICLE,GA_ARTICLE,' +
-             'GA_LIBELLE, GA_PVHT, GA_DPR ' +
+             'GA_LIBELLE, GA_PVHT, GA_DPR,GA_FAMILLENIV1,GA_FAMILLENIV2,GA_FAMILLENIV3 ' +
              'FROM ARTICLE WHERE ';
 
   if FromArt then
@@ -436,6 +436,9 @@ Begin
   	TOBL.PutValue('BCO_CODEARTICLE',QQ.findField('GA_CODEARTICLE').asString);
 		TOBL.PUTVALUE('BCO_LIBELLE',QQ.findField('GA_LIBELLE').AsString);
   	TOBL.PutValue('COEFMARGE', CoefMarge);
+    TOBL.PUTVALUE('BCO_FAMILLENIV1',QQ.findField('GA_FAMILLENIV1').AsString);
+    TOBL.PUTVALUE('BCO_FAMILLENIV2',QQ.findField('GA_FAMILLENIV2').AsString);
+    TOBL.PUTVALUE('BCO_FAMILLENIV3',QQ.findField('GA_FAMILLENIV3').AsString);
   end;
 
   result := true;
@@ -457,7 +460,7 @@ begin
   if Code = '' then exit;
 
   requete := 'SELECT GA_CODEARTICLE,GA_ARTICLE,GA_LIBELLE,' +
-             'GA_PVHT, GA_DPR,BNP_TYPERESSOURCE FROM ARTICLE '+
+             'GA_PVHT, GA_DPR,BNP_TYPERESSOURCE,GA_FAMILLENIV1,GA_FAMILLENIV2,GA_FAMILLENIV3 FROM ARTICLE '+
              'LEFT JOIN NATUREPREST ON GA_NATUREPRES=BNP_NATUREPRES '+
              'WHERE ';
 
@@ -494,6 +497,9 @@ begin
   	TOBL.PutValue('BCO_CODEARTICLE',QQ.findField('GA_CODEARTICLE').asString);
   	TOBL.PUTVALUE('BCO_LIBELLE',QQ.findField('GA_LIBELLE').AsString);
   	TOBL.PutValue('COEFMARGE', CoefMarge);
+    TOBL.PUTVALUE('BCO_FAMILLENIV1',QQ.findField('GA_FAMILLENIV1').AsString);
+    TOBL.PUTVALUE('BCO_FAMILLENIV2',QQ.findField('GA_FAMILLENIV2').AsString);
+    TOBL.PUTVALUE('BCO_FAMILLENIV3',QQ.findField('GA_FAMILLENIV3').AsString);
 	end;
   result := true;
 
@@ -514,7 +520,7 @@ begin
   if Code = '' then exit;
 
   Requete := 'SELECT GA_STATUTART,GA_CODEARTICLE,GA_ARTICLE,' +
-             'GA_LIBELLE, GA_PVHT, GA_DPR ' +
+             'GA_LIBELLE, GA_PVHT, GA_DPR,GA_FAMILLENIV1,GA_FAMILLENIV2,GA_FAMILLENIV3 ' +
              'FROM ARTICLE WHERE ';
 
   if FromArt then
@@ -537,6 +543,9 @@ begin
   	TOBL.PutValue('BCO_CODEARTICLE',QQ.findField('GA_CODEARTICLE').asString);
   	TOBL.PUTVALUE('BCO_LIBELLE',QQ.findField('GA_LIBELLE').AsString);
   	TOBL.PutValue('COEFMARGE', 0);
+    TOBL.PUTVALUE('BCO_FAMILLENIV1',QQ.findField('GA_FAMILLENIV1').AsString);
+    TOBL.PUTVALUE('BCO_FAMILLENIV2',QQ.findField('GA_FAMILLENIV2').AsString);
+    TOBL.PUTVALUE('BCO_FAMILLENIV3',QQ.findField('GA_FAMILLENIV3').AsString);
 	end;
 
   result := true;
@@ -584,6 +593,9 @@ begin
      TOBL.PUTVALUE('BCO_LIBELLE',QQ.findField('GA_LIBELLE').AsString);
      TOBL.PUTVALUE('BCO_FAMILLETAXE1',QQ.findField('GA_FAMILLETAXE1').AsString);
      TOBL.PUTVALUE('PRIXPASMODIF',QQ.findField('GA_PRIXPASMODIF').AsString);
+     TOBL.PUTVALUE('BCO_FAMILLENIV1',QQ.findField('GA_FAMILLENIV1').AsString);
+     TOBL.PUTVALUE('BCO_FAMILLENIV2',QQ.findField('GA_FAMILLENIV2').AsString);
+     TOBL.PUTVALUE('BCO_FAMILLENIV3',QQ.findField('GA_FAMILLENIV3').AsString);
      //
      TOBL.PutValue('COEFMARGE', CoefMarge);
 (*
