@@ -338,7 +338,7 @@ begin
         TobTmp.Setdouble('MONTANT', (TobTmp.GetDouble('MONTANT') + Montant));
         TobTmp.Setdouble('MONTANTDEV', (TobTmp.GetDouble('MONTANTDEV') + MontantDev));
         TobTmp.Setdouble('BASE', TobTmp.GetDouble('BASE') + TotalHt);
-        TobTmp.Setdouble('BASEDEV', TobTmp.GetDouble('BASEHTDEV') + TotalHtDev);
+        TobTmp.Setdouble('BASEDEV', TobTmp.GetDouble('BASEDEV') + TotalHtDev);
       end;
     end;
   end;
@@ -1793,7 +1793,8 @@ Var i : integer ;
   procedure GenereEcriture (LibelleForce : string='');
   begin
     {Ligne d'écriture}
-    TOBTTC:=Nil ; if TOBEcr.Detail.Count>0 then TOBTTC:=TOBEcr.Detail[0] ;
+    TOBTTC:=Nil ;
+    if TOBEcr.Detail.Count>0 then TOBTTC:=TOBEcr.Detail[0] ;
     TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
     PieceVersECR(MM,TOBPiece,TOBTiers,TOBE,False) ;
     {Général}
@@ -1848,6 +1849,7 @@ Var i : integer ;
     if MM.Nature='AC' then BEGIN DD:=-XD+ED+RGD-TRD ; DP:=-XP+EP+RGP-TRD ; CD:=0 ; CP:=0 ; END else
     if MM.Nature='AF' then BEGIN CD:=-XD+ED+RGD ; CP:=-XP+EP+RGP ; DD:=0 ; DP:=0 ; END ;
     CP := arrondi(CP,V_PGI.OkDecV); CD := Arrondi (CD,LaDev.decimale);
+    DP := arrondi(DP,V_PGI.OkDecV); DD := Arrondi (DD,LaDev.decimale);
     if (DP < 0) or (CP <0) then
     begin
       DP := DP * (-1);
@@ -2024,7 +2026,7 @@ BEGIN
   {#TVAENC}
   TvaEnc:=(TOBPiece.GetValue('GP_TVAENCAISSEMENT')='TE') or (TOBPiece.GetValue('GP_TVAENCAISSEMENT')='TM') ;
   OkPourMixte := ((GereTvaMixte) and (TvaEnc));
-
+  (*
   if (OkPourMixte) then
   begin
     for i:=0 to TobTVASurEncaiss.Detail.Count-1 do
@@ -2034,7 +2036,7 @@ BEGIN
       TobTmp.Setdouble('MONTANTDEV',Arrondi(TOBTmp.getDouble('BASEDEV')*TOBTMP.GetDouble('TAUX'),2));
     END;
   end;
-
+  *)
   for i:=0 to TOBBases.Detail.Count-1 do
   BEGIN
     // Modif BTP
@@ -2930,7 +2932,7 @@ Var TaxesB,TaxesL : Array[DPE,1..5] of Double ;
     i,k,NumT : integer ;
     CumHT : T_CodeCpta ;
     CatT : String ;
-    TOBB,TOBP : TOB ;
+    TOBB,TOBP,TT : TOB ;
 BEGIN
   if TTCSANSTVA then Exit ;
   FillChar(TaxesB,Sizeof(TaxesB),#0) ; FillChar(TaxesL,Sizeof(TaxesL),#0) ; FillChar(MaxT,Sizeof(MaxT),#0) ;
@@ -2965,8 +2967,11 @@ BEGIN
     TOBP:=TOBPorcs.Detail[i] ;
     if TOBP.GetBoolean('GPT_FRAISREPARTIS') then continue;
     if TOBP.GetBoolean('GPT_RETENUEDIVERSE') and (TOBP.GetString('GPT_TYPEPORT')<>'HT') and (TOBP.GetString('GPT_TYPEPORT')<>'MI') and (TOBP.GetString('GPT_TYPEPORT')<>'MT') then continue;
-    TaxesB[D,1]:=TaxesB[D,1]+TOBP.GetDouble('GPT_TOTALTAXEDEV1') ;
-    TaxesB[P,1]:=TaxesB[P,1]+TOBP.GetDouble('GPT_TOTALTAXE1') ;
+    for k:=1 to 5 do
+    BEGIN
+      TaxesB[D,NumT]:=TaxesB[D,NumT]+TOBP.GetDouble('GPT_TOTALTAXEDEV'+InttoStr(k)) ;
+      TaxesB[P,NumT]:=TaxesB[P,NumT]+TOBP.GetDouble('GPT_TOTALTAXE'+InttoStr(k)) ;
+    END;
   end;
   {Ajustement final}
   for k:=1 to 5 do
@@ -2976,6 +2981,16 @@ BEGIN
     if ((EcartD<>0) or (EcartP<>0)) then if LeMax[k]>=0 then
        BEGIN
        CumHT:=T_CodeCpta(TTA[LeMax[k]]) ;
+      // Correctif // LS
+      if IsCompteTaxeSurEncaissement(CumHT.CptHT) then
+      begin
+        TT := TobTVASurEncaiss.FindFirst(['INDEX'],['TX1' + ';' +CumHT.FamTaxe[k]], true);
+        if TT <> nil then
+        begin
+          TT.SetDouble('MONTANTDEV',TT.GetDouble('MONTANTDEV')+EcartD);
+          TT.SetDouble('MONTANT',TT.GetDouble('MONTANT')+EcartP);
+        end;
+      end;
        CumHT.SommeTaxeD[k]:=Arrondi(CumHT.SommeTaxeD[k]+EcartD,NbDec) ;
        CumHT.SommeTaxeP[k]:=Arrondi(CumHT.SommeTaxeP[k]+EcartP,V_PGI.OkDecV) ;
        END ;
@@ -3883,8 +3898,16 @@ BEGIN
     BEGIN
         if (Pos(TOBP.GetString('GPT_TYPEPORT'),'PT;MIC;MTC;')>0) and (TOBP.GetDouble('GPT_TOTALTTCDEV')<0) then
         begin
-          if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=VH_GC.GCCptePortACH else CptHT:=VH_GC.GCCptePortVTE ;
-        end else
+          if GetParamSocSecur('SO_VENTILMONTANTSURCHARGE', False) then
+          begin
+            if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=VH_GC.GCCptePortACH else CptHT:=VH_GC.GCCptePortVTE ;
+          end
+          else
+          begin
+            if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=VH_GC.GCCptePortVTE else CptHT:=VH_GC.GCCptePortACH ;
+          end;
+        end
+        else
         begin
       if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=VH_GC.GCCptePortVTE else CptHT:=VH_GC.GCCptePortACH ;
         end;
@@ -4181,7 +4204,8 @@ BEGIN
     {Client}
     TOBE.PutValue('E_AUXILIAIRE',TOBTiers.GetValue('T_AUXILIAIRE')) ;
     //FV1 : 27/02/2018 - FS#2957 - DSA - En écriture comptable le libellé des Ports & Frais est erroné
-    //AlimLibEcr(TobE,TobPiece,TobTiers,TOBP.GetString('GPT_LIBELLE'),tecRG,True,(MM.Simul='S'));
+    if GetParamSocSecur('SO_LIBRETENUE', True) then AlimLibEcr(TobE,TobPiece,TobTiers,TOBP.GetString('GPT_LIBELLE'),tecRG,True,(MM.Simul='S'));
+    //
     {Eche+Vent}
     NumL:=TOBEcr.Detail.Count-NbEches+1 ; TOBE.PutValue('E_NUMLIGNE',NumL) ;
     if OkVent then TOBE.PutValue('E_ANA','X') ;
