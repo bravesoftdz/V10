@@ -484,8 +484,8 @@ begin
   if (VH_GC.BTCODESPECIF = '001') and (NaturepieceG ='BCE') then
   begin
     Result := Result +','+
-              '('+
-                      'SELECT DISTINCT IIF(BT3_TYPELIGNETRF="000" AND BT3_CONTREP="-",NULL,BT3_UNIQUE) '+
+                      '('+
+                      'SELECT DISTINCT IIF(BT3_TYPELIGNETRF="000" AND BT3_CONTREP="-",0,BT3_UNIQUE) '+
                       'FROM BTRFDETAIL '+
                       'WHERE '+
                       'BT3_NATUREPIECEG=GL_NATUREPIECEG AND '+
@@ -495,6 +495,18 @@ begin
                       'BT3_NUMORDRE=GL_NUMORDRE AND '+
                       'BT3_TYPELIGNETRF="001" '+
                       ') AS NUMTRANSFERT, ';
+    Result := result +
+                      '('+
+                      'SELECT DISTINCT IIF(BT3_TYPELIGNETRF="000" AND BT3_CONTREP="-","",BT3_CONTREP) '+
+                      'FROM BTRFDETAIL '+
+                      'WHERE '+
+                      'BT3_NATUREPIECEG=GL_NATUREPIECEG AND '+
+                      'BT3_SOUCHE=GL_SOUCHE AND '+
+                      'BT3_NUMERO=GL_NUMERO AND '+
+                      'BT3_INDICEG=GL_INDICEG AND '+
+                      'BT3_NUMORDRE=GL_NUMORDRE AND '+
+                      'BT3_TYPELIGNETRF="001"'+
+                      ') AS TYPETRANSFERT, ';
     Result := result +
                       '('+
                       'SELECT SUM(BT3_MTTRANSFERT) '+
@@ -515,7 +527,7 @@ begin
               ') AS SUMTOTALTS ';
   end else
   begin
-    Result := Result +',0 AS NUMTRANSFERT,0 AS MTTRANSFERT, 0 AS SUMTOTALTS ';
+    Result := Result +',0 AS NUMTRANSFERT,"" AS TYPETRANSFERT,0 AS MTTRANSFERT, 0 AS SUMTOTALTS ';
   end;
   if WithLigneCompl Then
   begin

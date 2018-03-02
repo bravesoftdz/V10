@@ -421,6 +421,14 @@ Var Nature,TiersAff : string;
 begin
   Inherited ;
   TOBPiece := LaTOB.Parent;
+  if (TOBPiece.GetString('GP_NATUREPIECEG') = 'BCE') and (VH_GC.BTCODESPECIF = '001') then
+  begin
+    if (IsDebutParagraphe(LaTOB)) and (LaTOB.GetInteger('GL_NIVEAUIMBRIC')=1) then
+    begin
+      SetControlVisible('LGL_TYPECADENCE',true);
+      SetControlVisible('GL_TYPECADENCE',true);
+    end;
+  end;
   ApplicFRST := (TOBPIece.GetValue('GP_APPLICFGST')='X');
   ApplicFCST := (TOBPIece.GetValue('GP_APPLICFCST')='X');
   PrestationST := IsPrestationST (LaTOb);

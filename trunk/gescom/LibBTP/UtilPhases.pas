@@ -612,8 +612,11 @@ begin
         TypeArticle := TOBL.GetString('GL_TYPEARTICLE');
         if (Copy(TypeArticle,1,2)='OU') and (TOBgenere.GetValue ('GP_NATUREPIECEG')='BCE') and (VH_GC.BTCODESPECIF = '001') then
         begin
-          AjoutePhase (TOBL);
-          RemontePhase;
+          if TOBL.GetString('TYPETRANSFERT')<> 'X' then
+          begin
+            AjoutePhase (TOBL);
+            RemontePhase;
+          end;
         end else
         begin
           AssocieALaPhase (TOBL);

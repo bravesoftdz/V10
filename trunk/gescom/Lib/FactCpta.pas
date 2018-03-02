@@ -607,6 +607,10 @@ RefA:=EncodeRefCPGescom(TOBPiece) ;
 for i:=0 to TOBPiece.Detail.Count-1 do
     BEGIN
     TOBL:=TOBPiece.Detail[i] ;
+    if TOBL.Detail.count = 0 then
+    begin
+      NewTOBLigneFille (TOBL);
+    end;
     TOBAL:=TOBL.Detail[0] ;
     for k:=0 to TOBAL.Detail.Count-1 do
         BEGIN

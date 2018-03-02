@@ -792,6 +792,7 @@ type
 //    procedure TImprimableClick(Sender: TObject);
 
   private
+    AccesSousDetailOk : Boolean;
     PieceRecalculee : boolean;
     fGestQteAvanc : boolean;
     fGestionListe : TListeSaisie;
@@ -4450,6 +4451,9 @@ end;
 procedure TFFacture.FormCreate(Sender: TObject);
 begin
   LibereMemContratST;
+  //
+  AccesSousDetailOk := ExJaiLeDroitConcept(TConcept(bt512),False);
+  //
   fGestionListe := TListeSaisie.create (self);
   GestionMarq := GetParamSocSecur('SO_BTGESTIONMARQ', False);
 
@@ -15504,7 +15508,7 @@ begin
       MBSoldeReliquat.Enabled := OkArt and (ReliquatTransfo or GereReliquat) and (not PiecePrecMajStockPhysique);
       MBSoldeTousReliquat.Enabled := MBSoldeReliquat.Enabled;
     end;
-    MBDetailNomen.Enabled := ((OkArt) and (TOBL.GetValue('GL_INDICENOMEN') > 0) and (ExJaiLeDroitConcept(TConcept(bt512),False)) );
+    MBDetailNomen.Enabled := ((OkArt) and (TOBL.GetValue('GL_INDICENOMEN') > 0) and (AccesSousDetailOk) );
     {$IFNDEF CCS3}
     MBDetailLot.Enabled := ((OkArt) and ((TOBL.GetValue('GL_INDICELOT') > 0) or (TOBL.GetValue('GL_INDICESERIE') > 0)));
     {$ENDIF}
@@ -17392,6 +17396,14 @@ begin
   //
   TOBL := GetTOBLigne(TOBpiece,GS.row);
   //
+  if (TOBPiece.GetString('GP_NATUREPIECEG') = 'BCE') and (VH_GC.BTCODESPECIF = '001')  then
+  begin
+    if (TOBL.GetDouble('MTTRANSFERT')<> 0) or (TOBL.GetString('NUMTRANSFERT')<> '') then
+    begin
+      PgiInfo('Vous ne pouvez pas supprimer un transfert comme ceci.');
+      exit;  
+    end;
+  end;
   if IsSousDetail ( TOBL) then
   begin
  		if (DemPrixAutorise (NewNature)) then SupprimeLigDemPrix (TOBArticles,TOBArticleDemprix,TOBDetailDemPrix,TOBFournDemPrix,TOBPiece,TOBOUvrage,TOBL );

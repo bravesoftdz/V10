@@ -1248,7 +1248,7 @@ begin
         if TOBT.GetString('BT3_TYPELIGNETRF')='001' then
         begin
           NumLig := TOBL.GetIndex + 1;
-//          GS.DeleteRow(NumLig);
+          GS.DeleteRow(NumLig);
           TOBL.Free;
         end else
         begin
@@ -1349,6 +1349,7 @@ begin
     LigD := TOBL.GetIndex +1;
     //
     TOBT.SetDouble('BT3_MTTRANSFERT',TOBT.GetDouble('MONTANT'));
+    TOBT.SetDouble('BT3_QTETRANSFERT',ARRONDI(TOBT.GetDouble('MONTANT')/TOBT.GetDouble('PA'),V_PGI.okdecP));
     TOBT.SetInteger('BT3_UNIQUE',TOBTRFPOC.GetInteger('BT2_UNIQUE'));
     TOBT.SetInteger('BT3_NUMORDRE',TOBL.GetInteger('GL_NUMORDRE'));
     TOBT.SetBoolean('BT3_CONTREP',false);
@@ -1406,7 +1407,11 @@ begin
     TOBT.ChangeParent(TOBTRFPOC,-1);
     //
     TOBNL := NewTOBLigne(TOBPiece,TOBPAR.getIndex+1);
-    TOBNL.Dupliquer(TOBL,true,true);
+    TOBNL.Dupliquer(TOBL,false,true);
+    if TOBNL.Detail.count = 0 then
+    begin
+      NewTOBLigneFille(TOBL);
+    end;
     MaxNumOrdre:=LireMaxNumOrdre(TOBPiece);
     Inc(MaxNumOrdre);
     EcrireMaxNumordre (TOBPiece,MaxNumOrdre);
@@ -1862,6 +1867,7 @@ begin
   
   TOBCompteur.Free;
 end;
+
 Initialization
   registerclasses ( [ TOF_BTSAISTRFPOC ] ) ;
 end.
