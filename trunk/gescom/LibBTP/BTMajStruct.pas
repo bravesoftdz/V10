@@ -677,7 +677,7 @@ begin
     begin
       ExecuteSQL('UPDATE BTFACTST SET BM3_ENVOIMAIL="-" WHERE BM3_ENVOIMAIL IS NULL');
     end;
-    if VersionBaseDest < '998.ZZZU' then
+    if VersionBaseDest < '998.ZZZW' then
     begin
       InitChampsUniqueBAST;
     end;
