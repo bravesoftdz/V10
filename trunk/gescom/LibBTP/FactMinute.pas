@@ -18,6 +18,7 @@ uses factvariante,
      ParamSoc;
 
 var TOTPATOT,TOTPVTOT,TOTHRSTOT,TOTPRTOT : double;
+    ImprimeVariante : Boolean;
 
 procedure AddchampBase (TOBMinute,TOBPiece,TOBTiers,TOBAffaire : TOB);
 begin
@@ -164,8 +165,8 @@ begin
     for Indice := 0 to TOBGO.detail.Count -1 do
     begin
       TOBO := TOBGO.detail[Indice];
+      //if ImprimeVariante then Continue;
       TOBM := TOB.Create ('MINUTE',TOBMinute,-1);
-      if not GetParamSocSecur('SO_IMPVARIANTEMINUTE', False) then Continue;
       AddchampBase (TOBM,TOBPiece,TOBTiers,TOBAffaire);
       AddchampLigne (TOBM);
       TOBM.PutValue ('BMN_TYPELIGNE','ART');
@@ -213,6 +214,9 @@ var Indice      : integer;
     TypeArticle : string;
     Modele      : string;
 begin
+
+  ImprimeVariante := GetParamSocSecur('SO_IMPVARIANTEMINUTE', False);
+
   TOBMinute := TOB.Create ('DESCRIPTIFMINUTES',nil,-1);
 
   TRY
@@ -233,7 +237,7 @@ begin
         AjouteParagrapheMinute (TOBPiece,TOBTiers,TOBAffaire,TOBL,TOBMinute);
       end;
       // VARIANTE
-      if GetParamSocSecur('SO_IMPVARIANTEMINUTE', False) then
+      if ImprimeVariante then
       begin
         if ((TypeArticle='MAR') or (TypeArticle = 'PRE') or (TypeArticle = 'POU') or (TypeArticle = 'ARP')) and (not IsSousDetail(TOBL)) and (not IsCommentaire(TOBL)) then
         begin
