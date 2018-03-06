@@ -33,6 +33,7 @@ Type
      FamilleN1,FamilleN2,FamilleN3 : THvalComboBox;
      FamilleN1Ouv,FamilleN2Ouv,FamilleN3Ouv : THvalComboBox;
      FamilleTarif,SousFamilleTarif : THvalComboBox;
+     //
         procedure OnUpdate ; override ;
         procedure OnLoad ; override ;
         procedure OnArgument (st : String ) ; override ;
@@ -57,7 +58,8 @@ Type
         procedure DuplicationArticle(Sender: TObject);
      END ;
 VAR
-   IndiceArt : Integer;
+   IndiceArt  : Integer;
+   XXWhere    : String;
 implementation
 
 uses Grids,UFonctionsCBP;
@@ -141,7 +143,7 @@ Inherited;
       SetControlVisible ('GA_LIBREART3',False);
       SetControlVisible ('TGA_LIBREART1',False);
       SetControlVisible ('TGA_LIBREART2',False);
-      SetControlVisible ('TGA_LIBREART3',False);      
+      SetControlVisible ('TGA_LIBREART3',False);
     end
     else
     If (st ='NOM') Then
@@ -189,7 +191,6 @@ Inherited;
       Critere := Critere + 'AND (GA_TYPEARTICLE NOT LIKE "PA%")' ;
       THMultiValComboBox ( getcontrol('GA_TYPEARTICLE')).text := '';
       THMultiValComboBox ( getcontrol('GA_TYPEARTICLE')).Plus := 'AND (CO_CODE="MAR" OR CO_CODE="POU" OR CO_CODE="ARP")';
-      THEdit(getcontrol('XX_WHERE')).Text := Critere;
       Ecran.Caption :='Articles';
       ButInsert := TToolbarButton97 (Getcontrol('Binsert'));
       MenuPop := TpopupMenu(GetControl ('POPCREATART'));
@@ -270,6 +271,7 @@ Inherited;
       until Critere = '';
       //
       Critere:=THEdit(getcontrol('XX_WHERE')).Text;
+      XXWhere:=THEdit(getcontrol('XX_WHERE')).Text;
       //
       Critere := GetPlusTypeArticle (Critere);
       if critere <> '' then
@@ -746,10 +748,12 @@ begin
   if copy(Ecran.name,1,13) <> 'BTARTICLE_MUL' then
   BEGIN
   	TypeArticle := THValComboBox (GetControl ('GA_TYPEARTICLE')).Value  ;
-  END else
+  END
+  else
   BEGIN
   	TypeArticle := THMultiValComboBox (GetControl ('GA_TYPEARTICLE')).Text  ;
   END;
+
   If (TypeArticle = 'MAR') or (TypeArticle = 'ARP') then
   	FamilleTarif.enabled := True
   else
@@ -767,7 +771,7 @@ begin
     FamilleN1.value := '';
     FamilleN2.value := '';
     FamilleN3.value := '';
-
+    THEdit(getcontrol('XX_WHERE')).Text := '';
   end else
 	if ThvalComboBox(getCOntrol('GA_TYPEARTICLE')).Value = 'PRE' then
   begin
@@ -781,6 +785,7 @@ begin
     FamilleN1Ouv.value := '';
     FamilleN2Ouv.value := '';
     FamilleN3Ouv.value := '';
+    THEdit(getcontrol('XX_WHERE')).Text := '';
   end else
   begin
   	TFMul(ecran).SetDBListe ('BTRECHARTICLE');
@@ -793,6 +798,7 @@ begin
     FamilleN1Ouv.value := '';
     FamilleN2Ouv.value := '';
     FamilleN3Ouv.value := '';
+    THEdit(getcontrol('XX_WHERE')).Text := XXWhere;
   end;
 
   for iCol:=1 to 3 do
