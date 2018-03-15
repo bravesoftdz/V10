@@ -160,7 +160,7 @@ end;
 function GetNextSequence(Cle: string; nombre : integer; Entity : integer=0) : integer;
 var CNX : TADOConnection;
     QQ : TADOQuery;
-    NbRec : integer;
+    NbRec,OldValue : integer;
     SQL,NomPartage,Nomreel,NomReel1 : string;
 begin
   Result := -1;
@@ -171,24 +171,6 @@ begin
     CNX.Connected := True;
     Cnx.BeginTrans;
     TRY
-      if wExistTable ('CPSEQCORRESP') then
-      begin
-        NomPartage := GetPartage('DESEQUENCES');
-        if NomPartage <> '' then NomReel := NomPartage+'.dbo.DESEQUENCES'
-                            else NomReel := 'DESEQUENCES';
-        NomPartage := GetPartage('CPSEQCORRESP');
-        if NomPartage <> '' then NomReel1 := NomPartage+'.dbo.CPSEQCORRESP'
-                            else NomReel1 := 'CPSEQCORRESP';
-        SQL := 'UPDATE '+NomReel+' SET DSQ_VALEUR=(DSQ_VALEUR+DSQ_INCREMENT) WHERE DSQ_CODE=(SELECT CSC_SEQUENCE FROM '+NomReel1+' WHERE CSC_METIER='''+Cle+''')';
-      end else
-      begin
-        NomPartage := GetPartage('DESEQUENCES');
-        if NomPartage <> '' then NomReel := NomPartage+'.dbo.DESEQUENCES'
-                            else NomReel := 'DESEQUENCES';
-        SQL := 'UPDATE '+NomReel+' SET DSQ_VALEUR=DSQ_VALEUR+DSQ_INCREMENT WHERE DSQ_CODE='''+Cle+'''';
-      end;
-      //
-      CNX.Execute(SQl,NbRec);
       //
       QQ := TADOQuery.Create(Application);
       QQ.Connection := CNX;
@@ -200,13 +182,13 @@ begin
         NomPartage := GetPartage('CPSEQCORRESP');
         if NomPartage <> '' then NomReel1 := NomPartage+'.dbo.CPSEQCORRESP'
                             else NomReel1 := 'CPSEQCORRESP';
-        SQL := 'SELECT DSQ_VALEUR FROM '+NomReel+' WHERE DSQ_CODE=(SELECT CSC_SEQUENCE FROM '+NomReel1+' WHERE CSC_METIER='''+Cle+''')';
+        SQL := 'SELECT DSQ_VALEUR,DSQ_INCREMENT FROM '+NomReel+' WHERE DSQ_CODE=(SELECT CSC_SEQUENCE FROM '+NomReel1+' WHERE CSC_METIER='''+Cle+''')';
       end else
       begin
         NomPartage := GetPartage('DESEQUENCES');
         if NomPartage <> '' then NomReel := NomPartage+'.dbo.DESEQUENCES'
                             else NomReel := 'DESEQUENCES';
-        SQL := 'SELECT DSQ_VALEUR FROM '+NomReel+' WHERE DSQ_CODE='''+Cle+'''';
+        SQL := 'SELECT DSQ_VALEUR,DSQ_INCREMENT FROM '+NomReel+' WHERE DSQ_CODE='''+Cle+'''';
       end;
       QQ.SQL.Text := SQL;
       QQ.Prepared := True;
@@ -214,10 +196,37 @@ begin
       TRY
         if not QQ.Eof then
         begin
-          Result := QQ.Fields[0].AsInteger;
+          OldValue := QQ.Fields[0].AsInteger;
+          Result := OldValue + QQ.fields[1].AsInteger;
+          QQ.Active := false;
+          // -- préparation requete de maj
+          if wExistTable ('CPSEQCORRESP') then
+          begin
+            NomPartage := GetPartage('DESEQUENCES');
+            if NomPartage <> '' then NomReel := NomPartage+'.dbo.DESEQUENCES'
+                                else NomReel := 'DESEQUENCES';
+            NomPartage := GetPartage('CPSEQCORRESP');
+            if NomPartage <> '' then NomReel1 := NomPartage+'.dbo.CPSEQCORRESP'
+                                else NomReel1 := 'CPSEQCORRESP';
+            SQL := 'UPDATE '+NomReel+' SET DSQ_VALEUR='+IntToStr(result)+' WHERE DSQ_CODE=(SELECT CSC_SEQUENCE FROM '+NomReel1+' WHERE CSC_METIER='''+Cle+''') AND DSQ_VALEUR='+InttoStr(OldValue);
+          end else
+          begin
+            NomPartage := GetPartage('DESEQUENCES');
+            if NomPartage <> '' then NomReel := NomPartage+'.dbo.DESEQUENCES'
+                                else NomReel := 'DESEQUENCES';
+            SQL := 'UPDATE '+NomReel+' SET DSQ_VALEUR='+IntToStr(result)+' WHERE DSQ_CODE='''+Cle+''' AND DSQ_VALEUR='+InttoStr(OldValue);
+          end;
+          //
+          QQ.SQL.Clear;
+          QQ.sql.text := SQL;
+          if QQ.ExecSQL = 0 then
+          begin
+            Result := -1;
+            Raise Exception.Create('Erreur mise à jour compteur pièece comptable');
+          end;
         end;
       FINALLY
-        QQ.Close;
+        QQ.active := False;
         QQ.Free;
       end;
       CNX.CommitTrans;
