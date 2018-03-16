@@ -1804,14 +1804,10 @@ end;
 function TImprPieceViaTOB.SetQueryForOldSituations : Widestring;
 begin
   // Fu le changement de numérotation
-  (*
-  result := 'SELECT * FROM BSITUATIONS WHERE '+
-            'BST_SSAFFAIRE="'+ fTOBPiece.getValue('GP_AFFAIREDEVIS')+'" AND BST_NUMEROFAC <= ' +
-            InttoStr(fcledocFacCur.NumeroPiece)+' ORDER BY BST_NUMEROSIT';
-  *)
   Result := 'SELECT * FROM BSITUATIONS WHERE '+
   					'BST_SSAFFAIRE="'+fTOBPiece.getValue('GP_AFFAIREDEVIS')+'" AND '+
             'BST_VIVANTE="X" AND '+
+            'BST_NATUREPIECE<>"B00" AND '+
             'BST_NUMEROSIT <= '+
             	'('+
               	'SELECT BST_NUMEROSIT FROM BSITUATIONS WHERE BST_NATUREPIECE="'+fTOBPiece.getValue('GP_NATUREPIECEG')+'" AND '+
