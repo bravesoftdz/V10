@@ -291,7 +291,7 @@ Uses  TiersUtil,
       UtilsParc,
       UtilRessource,
       BTPUtil,
-      TntGrids;
+      TntGrids,
       EntGC;
 
 procedure TOF_BTMATERIEL.OnArgument (S : String ) ;
