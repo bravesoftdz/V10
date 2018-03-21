@@ -2111,6 +2111,15 @@ begin
     begin
       ReInitDuplication(TobForm);
       TobToEcran(TobForm);
+      if (VH_GC.BTCODESPECIF='001') and (StatutAffaire = 'AFF') then
+      begin
+        SetControlText ('AFF_RESPONSABLE1', TobForm.GetValue('AFF_RESPONSABLE'));
+        if (GetControlText('AFF_RESPONSABLE1')<>'') then
+        begin
+          SetControlproperty('LIBAFF_RESPONSABLE1', 'Visible', True);
+          SetControlText('LIBAFF_RESPONSABLE1', GetLibResponsable(GetControlText('AFF_RESPONSABLE1')));
+        end;
+      end;
       //FV1 - 13/03/2017 : FS#2409 - SES ETANCH - Duplication affaire ne reprends pas toutes les info
       SetField ('AFF_NUMEROCONTACT', TobForm.GetValue('AFF_NUMEROCONTACT'));
       NomContactAff;
@@ -3701,7 +3710,7 @@ begin
     if (GetControlText('AFF_RESPONSABLE1')<>'') then
     begin
       SetControlproperty('LIBAFF_RESPONSABLE1', 'Visible', True);
-      SetControlText('LIBAFF_RESPONSABLE1', GetLibResponsable(GetControlText('AFF_RESPONSABLE')));
+      SetControlText('LIBAFF_RESPONSABLE1', GetLibResponsable(GetControlText('AFF_RESPONSABLE1')));
     end;
     if (GetControlText('AFF_RESSOURCE1')<>'') then
     begin
