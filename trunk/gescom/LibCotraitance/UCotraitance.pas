@@ -2396,8 +2396,11 @@ begin
   begin
     CodeFamille2 := GetInfoMarcheST (TOBL.GetString('GL_AFFAIRE'),Fournisseur,CodeMarche,'FAMILLENIV2');
     if CodeFamille2 <> #0 then TOBL.putvalue('GL_FAMILLENIV2',CodeFamille2);
-    MtPaiementDir := GetMtPaiementDir (TOBL.GetString('GL_AFFAIRE'),Fournisseur,CodeMarche);
-    if MtPaiementDir <> 0 then TOBL.SetDouble('GL_DPA',MtPaiementDir);
+    if TOBL.GetString('GL_NATUREPIECEG')<>'BCE' then
+    begin
+      MtPaiementDir := GetMtPaiementDir (TOBL.GetString('GL_AFFAIRE'),Fournisseur,CodeMarche);
+      if (MtPaiementDir <> 0) then TOBL.SetDouble('GL_DPA',MtPaiementDir);
+    end;
   end;
 
   if TOBL.fieldExists('BLF_NATURETRAVAIL') then
