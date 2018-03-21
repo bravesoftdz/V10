@@ -513,6 +513,13 @@ begin
 
   fBoClose := result;
 
+  //FV1 : 14/03/20018 - FS#3006 - ESPACS - En création de tâches contrat les lignes sont doublées
+  SetControlVisible('BINSERT',        True);
+  SetControlVisible('BDUPLIQUE',      True);
+  SetControlVisible('BINSERTMODELE',  True);
+  SetControlVisible('BDELETE',        True);
+  SetControlEnabled('BDELETE',        True);
+  SetControlVisible('BGENERER',       True);
 end;
 
 procedure TOF_BTTACHES.OnLoad;
@@ -1377,30 +1384,40 @@ var Title   : String;
     StChamp : string;
     StFonction  : String;
     StWhere : string;
-    CR      : THCritMaskEdit;
+    CodeRessource : THCritMaskEdit;
 begin
 
   if fGSRes.Col <> cInColRes then exit;
 
-  CR          := ThCritMaskEdit.Create(TFvierge(ecran));
+  CodeRessource := ThCritMaskEdit.Create(TFvierge(ecran));
 
-  title       := 'Recherche Ressource';
-
-  stWhere     := 'TYPERESSOURCE : SAL,INT';
+  title       := 'Recherche Ressource tâches';
 
   StChamp     := fGSRes.Cells[fGSRes.Col, fGSRes.Row];
   StFonction  := THValComboBox(GetControl('ATA_FONCTION')).Value;
 
-  if stFonction <> '' then
+  if (VH_GC.AFRechResAv) then
   begin
-    if StWhere <> '' then stWhere := stWhere + ';ARS_FONCTION1 : ' + stFonction + '';
+    stWhere     := 'TYPERESSOURCE:SAL,INT';
+    if stFonction <> '' then
+    begin
+      if StWhere <> '' then stWhere := stWhere + ';ARS_FONCTION1:' + stFonction + '';
+    end;
+  end
+  else
+  begin
+    stWhere     := 'ARS_TYPERESSOURCE="SAL" OR ARS_TYPERESSOURCE = "INT"';
+    if stFonction <> '' then
+    begin
+      if StWhere <> '' then stWhere := stWhere + 'AND ARS_FONCTION1="' + stFonction + '"';
+    end;
   end;
 
-  DispatchRecherche(CR, 3, StWhere,'ARS_RESSOURCE=' + Trim(StChamp), '');
+  DispatchRecherche(CodeRessource, 3, StWhere,'ARS_RESSOURCE=' + Trim(StChamp), '');
 
-  if CR.text <> '' then
+  if StChamp <> '' then
   begin
-    fGSRes.Cells[fGSRes.Col, fGSRes.Row] := CR.text;
+    fGSRes.Cells[fGSRes.Col, fGSRes.Row] := CodeRessource.text;
     fStatut := taModif;
   end;
 
@@ -1432,7 +1449,7 @@ begin
   end;
   *}
 
-  CR.Free;
+  CodeRessource.Free;
 
 end;
 
@@ -2831,6 +2848,14 @@ begin
   // on stocke le libellé de création de l'article par défaut
   // pour le remplacer si on choisit un autre article et qu'on ne l'a pas modifié
   fStLibelleParDefaut := GetControlText('ATA_LIBELLETACHE1');
+
+  //FV1 : 14/03/20018 - FS#3006 - ESPACS - En création de tâches contrat les lignes sont doublées
+  SetControlVisible('BINSERT',        False);
+  SetControlVisible('BDUPLIQUE',      False);
+  SetControlVisible('BINSERTMODELE',  False);
+  SetControlVisible('BDELETE',        False);
+  SetControlVisible('BGENERER',       False);
+
 
 end;
 

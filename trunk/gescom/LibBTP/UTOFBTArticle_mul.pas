@@ -33,7 +33,7 @@ Type
      FamilleN1,FamilleN2,FamilleN3 : THvalComboBox;
      FamilleN1Ouv,FamilleN2Ouv,FamilleN3Ouv : THvalComboBox;
      FamilleTarif,SousFamilleTarif : THvalComboBox;
-     //
+     CodeDepot    : THValComboBox;
         procedure OnUpdate ; override ;
         procedure OnLoad ; override ;
         procedure OnArgument (st : String ) ; override ;
@@ -124,6 +124,7 @@ Inherited;
   BDuplication := TToolbarButton97(ecran.FindComponent ('B_DUPLICATION'));
   if BDuplication <> nil then BDuplication.OnClick := DuplicationArticle;
 
+  CodeDepot := THValComboBox(Ecran.FindComponent('GQ_DEPOT'));
 
   if copy(ecran.Name,1,16) = 'BTPRESTATION_MUL' then
   begin
@@ -191,6 +192,7 @@ Inherited;
       Critere := Critere + 'AND (GA_TYPEARTICLE NOT LIKE "PA%")' ;
       THMultiValComboBox ( getcontrol('GA_TYPEARTICLE')).text := '';
       THMultiValComboBox ( getcontrol('GA_TYPEARTICLE')).Plus := 'AND (CO_CODE="MAR" OR CO_CODE="POU" OR CO_CODE="ARP")';
+      THEdit(getcontrol('XX_WHERE')).Text := Critere;
       Ecran.Caption :='Articles';
       ButInsert := TToolbarButton97 (Getcontrol('Binsert'));
       MenuPop := TpopupMenu(GetControl ('POPCREATART'));
@@ -772,7 +774,8 @@ begin
     FamilleN2.value := '';
     FamilleN3.value := '';
     THEdit(getcontrol('XX_WHERE')).Text := '';
-  end else
+  end
+  else
 	if ThvalComboBox(getCOntrol('GA_TYPEARTICLE')).Value = 'PRE' then
   begin
   	TFMul(ecran).SetDBListe ('BTPRESTATIONSMUL');
@@ -786,7 +789,8 @@ begin
     FamilleN2Ouv.value := '';
     FamilleN3Ouv.value := '';
     THEdit(getcontrol('XX_WHERE')).Text := '';
-  end else
+  end
+  else
   begin
   	TFMul(ecran).SetDBListe ('BTRECHARTICLE');
     THValComboBox(getControl('GA_FAMILLENIV1')).Visible := True;
