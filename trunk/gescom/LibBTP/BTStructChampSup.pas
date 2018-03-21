@@ -105,7 +105,7 @@ var WithLigneFac : boolean;
 
 begin
   WithLigneFac := (pos(NaturePiece,'FBT;DAC;FBP;BAC')>0);
-	Sql := MakeSelectLigneOuvBtp (WithLigneFac);
+	Sql := MakeSelectLigneOuvBtp (WithLigneFac,'');
   Sql := Sql + ' WHERE 1=2'; // pour ne recup que la structure
   QQ := OpenSQL(Sql, True,-1, '', True);
   SMemoriseChampsSupLigneOuv(QQ);

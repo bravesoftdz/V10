@@ -27,7 +27,7 @@ function LoadPiece (Cledoc : r_cledoc; TOBPiece : TOB) : boolean;
 function ChargelaPieceEtUneLigne (CleDocLigne: R_CleDoc; TobPiece,TOBOuvrage: Tob) : boolean;
 procedure LoadPieceLignes(CleDocLigne: R_CleDoc; TobPiece: Tob; WithLigneCompl: Boolean = True;QueLaLigne : boolean=false; FromExcel : boolean=false; duplication : Boolean=false);
 function MakeSelectLigneBtp (WithLigneCOmpl : boolean;WithEntetePiece : boolean = false;WithLigneFac : boolean=false;FromExcel : boolean = false;Document : Tdocument = nil) : Widestring;
-function MakeSelectLigneOuvBtp (WithLigneFac : boolean=false) : string;
+function MakeSelectLigneOuvBtp (WithLigneFac : boolean=false; NaturepieceG : string=''): string;
 procedure StringToCleDoc(StA: string; var CleDoc: R_CleDoc);
 function  WherePiece(CleDoc: R_CleDoc; ttd: T_TableDoc; Totale: boolean; WithNumOrdre: Boolean = False): string; { NEWPIECE }
 procedure ConstitueLesLignes (TOBListPieces,TOBPiece,TOBArticles,TOBAFormule,TOBConds  : TOB; CledocAffaire,Cledoc : R_cledoc; VenteAchat : string);
@@ -406,7 +406,7 @@ begin
   Document.free;
 end;
 
-function MakeSelectLigneOuvBtp (WithLigneFac : boolean=false): string;
+function MakeSelectLigneOuvBtp (WithLigneFac : boolean=false; NaturepieceG : string=''): string;
 begin
   result :='SELECT O.*,N.BNP_TYPERESSOURCE,N.BNP_LIBELLE,';
   if WithLigneFac then
@@ -444,6 +444,47 @@ begin
   result := result + '(BLO_QTEFACT * BLO_MTAUTPA) AS TOTALAUTPA,';
   result := result + '(BLO_QTEFACT * BLO_MTAUTPR) AS TOTALAUTPR,';
   result := result + '(BLO_QTEFACT * BLO_MTAUTPV) AS TOTALAUTPV ';
+  if (VH_GC.BTCODESPECIF = '001') and (NaturepieceG ='BCE') then
+  begin
+    Result := Result +','+
+                      '('+
+                      'SELECT DISTINCT IIF(BT3_TYPELIGNETRF="000" AND BT3_CONTREP="-",0,BT3_UNIQUE) '+
+                      'FROM BTRFDETAIL '+
+                      'WHERE '+
+                      'BT3_NATUREPIECEG=BLO_NATUREPIECEG AND '+
+                      'BT3_SOUCHE=BLO_SOUCHE AND '+
+                      'BT3_NUMERO=BLO_NUMERO AND '+
+                      'BT3_INDICEG=BLO_INDICEG AND '+
+                      'BT3_UNIQUEBLO=BLO_UNIQUEBLO AND '+
+                      'BT3_TYPELIGNETRF="001" '+
+                      ') AS NUMTRANSFERT, ';
+    Result := result +
+                      '('+
+                      'SELECT DISTINCT IIF(BT3_TYPELIGNETRF="000" AND BT3_CONTREP="-","",BT3_CONTREP) '+
+                      'FROM BTRFDETAIL '+
+                      'WHERE '+
+                      'BT3_NATUREPIECEG=BLO_NATUREPIECEG AND '+
+                      'BT3_SOUCHE=BLO_SOUCHE AND '+
+                      'BT3_NUMERO=BLO_NUMERO AND '+
+                      'BT3_INDICEG=BLO_INDICEG AND '+
+                      'BT3_UNIQUEBLO=BLO_UNIQUEBLO AND '+
+                      'BT3_TYPELIGNETRF="001"'+
+                      ') AS TYPETRANSFERT, ';
+    Result := result +
+                      '('+
+                      'SELECT SUM(BT3_MTTRANSFERT) '+
+                      'FROM BTRFDETAIL '+
+                      'WHERE '+
+                      'BT3_NATUREPIECEG=BLO_NATUREPIECEG AND '+
+                      'BT3_SOUCHE=BLO_SOUCHE AND '+
+                      'BT3_NUMERO=BLO_NUMERO AND '+
+                      'BT3_INDICEG=BLO_INDICEG AND '+
+                      'BT3_UNIQUEBLO=BLO_UNIQUEBLO'+
+                      ') AS MTTRANSFERT ';
+  end else
+  begin
+    Result := Result +',0 AS NUMTRANSFERT,"" AS TYPETRANSFERT,0 AS MTTRANSFERT ';
+  end;
   result := result + 'FROM LIGNEOUV O '+
             'LEFT JOIN NATUREPREST N ON BNP_NATUREPRES=(SELECT GA_NATUREPRES FROM ARTICLE WHERE GA_ARTICLE=O.BLO_ARTICLE) ';
   if WithLigneFac then

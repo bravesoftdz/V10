@@ -177,7 +177,7 @@ procedure LoadLesAcomptes(TOBPiece, TOBAcomptes: TOB; CleDoc: R_CleDoc; TOBAcpte
 // MOdif BTP
 procedure LoadLesRetenues(TOBPiece, TOBPieceRG, TOBBasesRG: TOB; Action : TactionFiche= taCreat);
 procedure LoadLesRetenuesPRE(TOBPiece, TOBRGPRE: TOB; Action : TactionFiche= taCreat);
-procedure LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire: TOB; DEV: Rdevise; saisieTypeAvanc: boolean; TheMetreDoc : TMetreArt);
+procedure LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire, TOBTRFPOC: TOB; DEV: Rdevise; saisieTypeAvanc: boolean; TheMetreDoc : TMetreArt);
 procedure LoadLesBlocNotes(SaContexte: TModeAff; TOBLienOle: TOB; Cledoc: R_CleDoc);
 // --
 procedure AcomptesVersPiece(TOBAcomptes, TOBPiece: TOB);
@@ -4079,7 +4079,7 @@ begin
   end;
 end;
 
-procedure LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire: TOB; DEV: Rdevise; saisieTypeAvanc: boolean; TheMetreDoc : TMetreArt);
+procedure LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire, TOBTRFPOC: TOB; DEV: Rdevise; saisieTypeAvanc: boolean; TheMetreDoc : TMetreArt);
 var ModifSousDetail :boolean;
 begin
 	ModifSousDetail :=  GetParamSocSecur('SO_BTMODIFSDETAIL',false);
@@ -4087,7 +4087,7 @@ begin
   {$IFDEF BTP}
 //	if ((SaisieTypeAvanc) and (ModifSousDetail)) or (not SaisieTypeAvanc) then
   begin
-  	LoadLesLibDetailOuvrages(TOBPiece, TOBOuvrage, TOBTiers, TOBAffaire, DEV, TheMetreDoc);
+  	LoadLesLibDetailOuvrages(TOBPiece, TOBOuvrage, TOBTiers, TOBAffaire,TOBTRFPOC, DEV, TheMetreDoc);
   end;
   {$ENDIF}
   NumeroteLignesGC(nil, TOBpiece);

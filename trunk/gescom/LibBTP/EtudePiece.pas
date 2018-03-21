@@ -486,7 +486,7 @@ LoadLesOuvrages (TOBPiece,TOBOuvrage,TOBArticles,fCledoc,IndiceOuv);
 // chargement des details ouvrage ou nomenclatures
 DEV.Code:=TOBPIECE.GetValue('GP_DEVISE') ; GetInfosDevise(DEV) ;
 DEV.Taux:=TOBPiece.GetValue('GP_TAUXDEV');
-if WithSousDetail then LoadLesLibDetail(TOBPiece,TOBNomen,TobOuvrage,TOBTiers,TOBAffaire,DEV,False, TheMetreDoc);
+if WithSousDetail then LoadLesLibDetail(TOBPiece,TOBNomen,TobOuvrage,TOBTiers,TOBAffaire,nil,DEV,False, TheMetreDoc);
 {$IFDEF CHR}
 //LoadLesTobChr; {pas possible pour l'instant ..voir avec CHR si besoin est }
 {$ENDIF}

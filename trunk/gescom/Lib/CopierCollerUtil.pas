@@ -607,7 +607,7 @@ begin
       if TOBL <> nil then
       begin
         Localisation := TOBL.getIndex;
-          LoadLesLibDetOuvLig (TOBPIece,TOBOuvrage,TOBTiers,TOBAffaire,TOBL,Localisation,DEV, TheMetredoc,TFFacture(fform).AffSousDetailUnitaire);
+          LoadLesLibDetOuvLig (TOBPIece,TOBOuvrage,TOBTiers,TOBAffaire,TOBL,nil,Localisation,DEV, TheMetredoc,TFFacture(fform).AffSousDetailUnitaire);
         ZeroLigneMontant (TOBL);
       end;
       TOBDLR.free;

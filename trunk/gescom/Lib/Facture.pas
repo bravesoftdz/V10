@@ -2641,7 +2641,7 @@ begin
   LoadLesrevisions (TOBPiece,TOBrevisions);
   if SaisieCM then loadlesEvtsmat(TOBPiece,TOBEvtsMat);
   LoadLesTOBTS (Cledoc,TOBTSPOC);
-  LoadLesTOBTRF(CleDoc,TOBPiece,TOBTRFPOC);
+  LoadLesTOBTRF(CleDoc,TOBPiece,TOBTRFPOC,TOBOUvrage);
 end;
 
 procedure TFFacture.LoadTOBCond(RefUnique: string);
@@ -3725,6 +3725,7 @@ var Ind             : integer;
     lastPrec        : string;
   TraiteAvancOuv : boolean;
     Ok_ReliquatMt   : Boolean;
+    TT : TOB;
 begin
   // GUINIER - Contrôle Montant Facture <= Montant Cde Fournisseur
   MtCF      := 0;
@@ -4013,7 +4014,7 @@ begin
   if not PieceControleModifie then
   begin
   	if fmodeAudit then fAuditPerf.Debut('Chargement détail d''ouvrages');
-  	LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire, DEV, ChargeLesDetail, TheMetreDoc);
+  	LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire,TOBTRFPOC, DEV, ChargeLesDetail, TheMetreDoc);
   	if fmodeAudit then fAuditPerf.Fin('Chargement détail d''ouvrages');
   end;
 
@@ -4094,7 +4095,22 @@ begin
       Begin
         if CTrlfacFF then MTCF := MTCf + CalculeMontantCdeFournisseur(TOBL);
       end;
-
+      //
+      if VH_GC.BTCODESPECIF = '001' then
+      begin
+        if (TOBL.GetString('GL_FOURNISSEUR') <> '' ) and (TOBL.GetString('GL_CODEMARCHE')<>'') then
+        begin
+          TT := fPieceCoTrait.FindSousTraitantPOC(TOBL.GetString('GL_FOURNISSEUR'),TOBL.GetString('GL_CODEMARCHE'));
+          if TT = nil then
+          begin
+            fPieceCoTrait.AddSousTraitant(TOBL.GetString('GL_FOURNISSEUR'),TOBL.GetString('GL_CODEMARCHE'));
+          end else
+          begin
+            TT.SetDouble ('NBUSED',TT.GetDouble ('NBUSED') +1);
+          end;
+        end;
+      end;
+      //
     end;
     if (SaisieTypeAvanc) or (ModifAvanc) then TOBPiece.PutValue('GP_RECALCULER', 'X');
     if TOBL.Detail.Count > 0 then
@@ -23294,7 +23310,7 @@ end;
 
 procedure TFFacture.AffichageDetailOuvrage(RowReference: Integer);
 var Insligne, Indice, IndiceNomen, TypePresent: Integer;
-  TOBL, TOBOuv, TOBLOC, TOBRef: TOB;
+  TOBL, TOBOuv, TOBLOC, TOBRef,TT,TL: TOB;
   Montant, QteDuDetail, QteDUPv, MontantOuv, MontantLig, MontantAchat,MontantAchatUNI,MontantOuvAch,MontantLigAch,MontantUNI,CumMontUNI : double;
   EnHt: boolean;
   Ouvrage: boolean;
@@ -23424,6 +23440,19 @@ begin
       TOBL.SetString('GL_PERTE',TOBLoc.GetValue('BLO_PERTE'));
       TOBL.SetString('GL_RENDEMENT',TOBLoc.GetValue('BLO_RENDEMENT'));
       TOBL.SetString('GL_QUALIFHEURE', TOBLoc.GetValue('BLO_QUALIFHEURE'));
+      // -- POC --
+      TOBL.PutValue('NUMTRANSFERT', TOBLoc.GetValue('NUMTRANSFERT'));
+      TOBL.PutValue('MTTRANSFERT', TOBLoc.GetVAlue('MTTRANSFERT'));
+      //
+      if TOBTRFPOC <> nil then
+      begin
+        TL := TOBTRFPOC.FindFirst(['BT3_UNIQUEBLO'],[TOBLoc.GetInteger('BLO_UNIQUEBLO')],true);
+        if TL <> nil then
+        begin
+          TL.Data := TOBL;
+        end;
+      end;
+      //
       if TOBRef.getValue('GL_BLOQUETARIF')='X' then
       begin
         TOBL.putValue('GL_BLOQUETARIF','X');
@@ -23678,7 +23707,7 @@ begin
     repeat
       if TOBL.GetValue('GL_TYPEARTICLE') = 'OUV' then
         {$IFDEF BTP}
-        LoadLesLibDetOuvLig(TOBPIECE, TOBOuvrage, TOBTiers, TOBAffaire, TOBL, Indice, DEV, TheMetreDoc,fAffSousDetailUnitaire)
+        LoadLesLibDetOuvLig(TOBPIECE, TOBOuvrage, TOBTiers, TOBAffaire, TOBL, TOBTRFPOC, Indice, DEV, TheMetreDoc,fAffSousDetailUnitaire)
           {$ENDIF}
       else if (TOBL.GetValue('GL_TYPENOMENC') = 'ASS') then
         LoadLesLibDetailNomLig(TOBPIECE, TOBNomenclature, TOBTiers, TOBAffaire, TOBL, Indice, DEV)
@@ -24242,7 +24271,7 @@ begin
           if EtenduApplication = 0 then ReferencePrix := TOBPiece.GetValeur(IndiceMontant)
                                    else ReferencePrix := TOBPiece.Detail[IndFin].GetValeur(IndiceMontantPar);
           *)
-          if EtenduApplication = 0 then LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire, DEV, SaisieTypeAvanc, TheMetreDoc)
+          if EtenduApplication = 0 then LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire,TOBTRFPOC, DEV, SaisieTypeAvanc, TheMetreDoc)
                                    else AddLesLibdetInParag(TOBPiece, IndDepart);
   //        GS.VidePile(false);
           NettoieGrid;
@@ -24253,7 +24282,7 @@ begin
           NumeroteLignesGC(GS, TOBPIece);
         end else
         begin
-          if EtenduApplication = 0 then LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire, DEV, SaisieTypeAvanc, TheMetreDoc)
+          if EtenduApplication = 0 then LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire,TOBTRFPOC, DEV, SaisieTypeAvanc, TheMetreDoc)
                                    else AddLesLibdetInParag(TOBPiece, IndDepart);
           for i := 0 to TOBpiece.detail.count -1  do AfficheLaLigne (i+1);
         end;
@@ -26987,7 +27016,7 @@ end;
 
 procedure TFFacture.AffichageDesDetailOuvrages;
 begin
-  LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire, DEV, (SaisieTypeAvanc or ModifAvanc), TheMetreDoc);
+  LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire, TOBTRFPOC, DEV, (SaisieTypeAvanc or ModifAvanc), TheMetreDoc);
 end;
 
 procedure TFFacture.GSTopLeftChanged(Sender: TObject);

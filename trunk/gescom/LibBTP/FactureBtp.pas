@@ -249,7 +249,7 @@ begin
   begin
     SupLesLibDetail(TOBPiece);
 //    LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire, DEV, SaisieTypeAvanc);
-    LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire, DEV, (SaisieTypeAvanc or ModifAvanc ),TheMetredoc);
+    LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire, FFact.XTOBTRFPOC, DEV, (SaisieTypeAvanc or ModifAvanc ),TheMetredoc);
     if TOBPiece.Detail.Count >= GS.RowCount - 1 then
     begin
       if (tModeBlocNotes in SaContexte) then
@@ -319,7 +319,7 @@ begin
     SupLigneRgUnique;
 //    LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire, DEV, SaisieTypeAvanc);
   	if FFact.modeAudit then FFact.AuditPerf.Debut('Ajout des sous détails');
-    LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire, DEV, (SaisieTypeAvanc or ModifAvanc), TheMetreDoc );
+    LoadLesLibDetail(TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire, FFact.XTOBTRFPOC, DEV, (SaisieTypeAvanc or ModifAvanc), TheMetreDoc );
   	if FFact.modeAudit then FFact.AuditPerf.Fin('Ajout des sous détails');
     if TOBPiece.Detail.Count >= GS.RowCount - 1 then
     begin

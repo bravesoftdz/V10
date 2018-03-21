@@ -29,7 +29,7 @@ type
     procedure ModifTransfert (Sender : TObject);
     function IsTransfert (TOBL : TOB) : boolean;
     procedure ActiveMenu (Etat : boolean);
-    procedure POPYTSClick (Sender : TObject); 
+    procedure POPYTSClick (Sender : TObject);
   public
     property CurrentSaisie : TForm read FF;
     destructor  destroy ; override;
@@ -41,13 +41,14 @@ type
 var CurrentTransfert : TGestTransfert;
 
 function FindTransfert (TOBTRFPOC,TOBL : TOB) : TOB;
-procedure LoadLesTOBTRF(CleDoc : r_cledoc;TOBPiece,TOBTRFPOC : TOB);
+procedure LoadLesTOBTRF(CleDoc : r_cledoc;TOBPiece,TOBTRFPOC,TOBOuvrage : TOB);
 procedure ValideLesTOBTRF (TOBPiece,TOBTRFPOC : TOB);
 procedure DeleteLesTOBTRF (Cledoc :r_cledoc);
 function LastTransfert (TOBTRFPOC,TOBT : TOB) : boolean;
+function FindLigneDocFromDetail(TOBPiece,TOBD: TOB): TOB;
 
 implementation
-uses Facture,UtilTOBPiece, Variants;
+uses Facture,UtilTOBPiece, Variants,FactOuvrage,FactureBTP;
 
 
 function ExisteTransfertSuiv (TOBTRFPOC,TT : TOB) : boolean;
@@ -95,18 +96,21 @@ begin
   Result := TOBTRFPOC.findfirst(['BT2_UNIQUE'],[TOBL.GetInteger('NUMTRANSFERT')],True);
 end;
 
-procedure LoadLesTOBTRF(CleDoc : r_cledoc;TOBPiece,TOBTRFPOC : TOB);
+procedure LoadLesTOBTRF(CleDoc : r_cledoc;TOBPiece,TOBTRFPOC,TOBOUvrage : TOB);
 
   function FindLigneInDoc (TT : TOB) : TOB;
   var II : Integer;
   begin
     Result := nil;
-    for II := 0 to TOBPiece.detail.count -1 do
+    if TT.GetInteger('BT3_NUMORDRE')<> 0 then
     begin
-      if TOBPiece.detail[II].GetInteger('GL_NUMORDRE')= TT.GetInteger('BT3_NUMORDRE') then
+      for II := 0 to TOBPiece.detail.count -1 do
       begin
-        result := TOBPiece.detail[II];
-        break;
+        if TOBPiece.detail[II].GetInteger('GL_NUMORDRE')= TT.GetInteger('BT3_NUMORDRE') then
+        begin
+          result := TOBPiece.detail[II];
+          break;
+        end;
       end;
     end;
   end;
@@ -188,6 +192,24 @@ end;
 
 { TGestTransfert }
 
+function FindLigneDocFromDetail(TOBPiece,TOBD: TOB): TOB;
+var Inddep,Indice : integer;
+		indOuvrage : integer;
+begin
+	result := nil;
+  Inddep := TOBD.GetIndex ;
+  IndOuvrage := TOBD.GetValue('GL_INDICENOMEN');
+  for Indice := Inddep-1 downto 0 do
+  begin
+    if (ISOuvrage(TOBpiece.detail[Indice])) and
+    	 (TOBpiece.detail[Indice].getValue('GL_INDICENOMEN')=IndOuvrage) and (IsArticle(TOBpiece.detail[Indice])) then
+    begin
+    	result := TOBpiece.detail[Indice];
+      break;
+    end;
+  end;
+end;
+
 procedure TGestTransfert.ActiveMenu(Etat: boolean);
 var II : integer;
 begin
@@ -206,9 +228,11 @@ var TOBT,LastTOBL : TOB;
   function BeforeTransfert (TOBPiece,TOBTRFPOC,TOBT : TOB) : boolean;
   var II : Integer;
       GS : Thgrid;
-      TOBL,TL  : TOB;
+      TOBL,TL,TOBLIgne,TOBOuvrages,TOBO  : TOB;
+      MontantPa : Double;
   begin
     GS := TFFActure(FF).GS;
+    TOBOuvrages := TFFACture(FF).TheTOBOuvrage;
     Acol := GS.Col;
     Result := false;
     if GS.nbSelected = 0 then BEGIN PGIInfo('Aucune ligne séléctionné'); Exit; END;
@@ -216,19 +240,51 @@ var TOBT,LastTOBL : TOB;
     begin
       TOBL := GetTOBLigne(TOBPiece,II);
       if not GS.IsSelected(II) then Continue;
-      if TOBL.GetString('GL_TYPELIGNE')<>'ART' then continue;
+      if (TOBL.GetString('GL_TYPELIGNE')<>'ART') and (TOBL.GetString('GL_TYPELIGNE')<>'SD')  then continue;
       //
-      if (Arrondi(TOBL.GetDouble('GL_MONTANTPA')-TOBL.GetDouble('MTTRANSFERT'),TFFActure(FF).DEV.Decimale)= 0) then
+      if (TOBL.GetString('GL_TYPELIGNE')='ART') then
       begin
-        PGIInfo('La ligne '+TOBL.GetString('GL_NUMLIGNE')+' est déjà transférée en totalité');
-        Exit;
+        if (Arrondi(TOBL.GetDouble('GL_MONTANTPA')-TOBL.GetDouble('MTTRANSFERT'),TFFActure(FF).DEV.Decimale)= 0) then
+        begin
+          PGIInfo('La ligne '+TOBL.GetString('GL_NUMLIGNE')+' est déjà transférée en totalité');
+          Exit;
+        end;
+      end else if (TOBL.GetString('GL_TYPELIGNE')='SD') then
+      begin
+        TOBO := FindLigneOuvFromUnique (TOBL,TOBOUvrages,TOBL.GetInteger('UNIQUEBLO'));
+        if TOBO <> nil then
+        begin
+          TOBLigne := FindLigneDocFromDetail (TOBPiece,TOBL);
+          if TOBLigne <> nil then
+          begin
+            if TOBT.findfirst(['BT3_NUMORDRE','BT3_UNIQUEBLO'],[TOBLigne.GetInteger('GL_NUMORDRE'),0],True)<> nil then Continue; // l'ouvrage est sélectionné --> on ne prend pas le sous détail
+            MontantPa := TOBO.GetDouble('BLO_MONTANTPA') * TOBLigne.GetDouble('GL_QTEFACT');
+          end;
+        end else Exit;
+        //
+        if (Arrondi(Montantpa-TOBL.GetDouble('MTTRANSFERT'),TFFActure(FF).DEV.Decimale)= 0) then
+        begin
+          PGIInfo('La ligne '+TOBL.GetString('GL_NUMLIGNE')+' est déjà transférée en totalité');
+          Exit;
+        end;
+        if (Arrondi(TOBLigne.GetDouble('GL_MONTANTPA')-TOBLigne.GetDouble('MTTRANSFERT'),TFFActure(FF).DEV.Decimale)= 0) then
+        begin
+          PGIInfo('L''ouvrage '+TOBLigne.GetString('GL_NUMLIGNE')+' est déjà transféré en totalité');
+          Exit;
+        end;
       end;
       //
       LastTOBL := TOBL;
       TL := TOB.Create('BTRFDETAIL',TOBT,-1);
       TL.SetInteger('BT3_UNIQUE',TOBT.GetInteger('BT2_UNIQUE'));
       TL.SetString('BT3_TYPELIGNETRF','000');
-      TL.SetInteger('BT3_NUMORDRE',TOBL.GetInteger('GL_NUMORDRE'));
+      if (TOBL.GetString('GL_TYPELIGNE')='ART') then
+      begin
+        TL.SetInteger('BT3_NUMORDRE',TOBL.GetInteger('GL_NUMORDRE'));
+      end else
+      begin
+        TL.SetInteger('BT3_UNIQUEBLO',TOBL.GetInteger('UNIQUEBLO'));
+      end;
       TL.Data := TOBL;
     end;
     Result := True;
@@ -248,6 +304,8 @@ begin
   TOBT.AddChampSupValeur('MODE','CREATION');
   TOBT.AddChampSupValeur('OKOK','-');
   if not BeforeTransfert (TOBPiece,TOBTRFPOC,TOBT) then exit;
+  Arow := LastTOBL.GetIndex+1;
+
   //
   if TOBT.detail.count > 0 then
   begin
@@ -261,7 +319,8 @@ begin
       TFFacture(FF).CopierColleObj.deselectionneRows;
       TOBPiece.SetInteger('MAXUNIQUE',TOBPiece.GetInteger('MAXUNIQUE')+1);
       TFFacture(FF).AffichageDesDetailOuvrages;  // en TOB
-      Arow := LastTOBL.GetIndex+1;
+      DefiniRowCount (FF,TOBPiece);
+
       TFFacture(FF).RefreshGrid (Acol,ARow);
       TFFacture(FF).PieceCoTrait.SetSaisie;
     end else
@@ -440,7 +499,7 @@ begin
       TFFacture(FF).SupLesLibDetail (TOBpiece);
       TFFacture(FF).CopierColleObj.deselectionneRows;
       TFFacture(FF).AffichageDesDetailOuvrages;  // en TOB
-      Arow := TOBL.GetIndex+1;
+//      Arow := TOBL.GetIndex+1;
       TFFacture(FF).RefreshGrid (Acol,ARow);
       TFFacture(FF).PieceCoTrait.SetSaisie;
     end else if TOBT.GetString('OKOK')='D' then

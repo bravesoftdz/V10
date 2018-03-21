@@ -28,6 +28,7 @@ Uses StdCtrls,
      HEnt1,
      HMsgBox,
      HTB97,
+     uEntCommun,
      UTOF ;
 
 Type
@@ -41,52 +42,62 @@ Type
     procedure OnClose                  ; override ;
     procedure OnCancel                 ; override ;
   private
+    cledoc : r_cledoc;
+    Affaire : string;
     procedure BValideClick (Sender : TObject);
+    procedure BInsertClick (Sender : Tobject);
   end ;
 
 procedure SelectionMoisAvancPoc (Parms : array of variant ; nb : integer);
 
 Implementation
 
-procedure SelectionMoisAvancPoc (Parms : array of variant ; nb : integer);
-var SQL,Params : string;
-    Naturepiece,Souche,Numero,Indice,Affaire : string;
-    TOBP : TOB;
+procedure NewMois (cledoc : r_cledoc; Affaire : string);
+var TOBP : TOB;
+    Params : string;
 begin
-  Naturepiece := Parms[1];
-  Souche := Parms[2];
-  Numero := Parms[3];
-  Indice := Parms[4];
+  TOBP := TOB.Create('LES PARAMS',nil,-1);
+  TRY
+    TOBP.AddChampSupValeur('NATUREPIECEG',cledoc.NaturePiece);
+    TOBP.AddChampSupValeur('SOUCHE',cledoc.Souche);
+    TOBP.AddChampSupValeur('NUMERO',cledoc.NumeroPiece);
+    TOBP.AddChampSupValeur('INDICEG',cledoc.Indice);
+    TOBP.AddChampSupValeur('MOIS','');
+    TheTOB := TOBP;
+    AGLLanceFiche('BTP','BTSAISMOIAVANC','','','ACTION=MODIFICATION');
+    TheTOB := nil;
+    if TOBP.GetString('MOIS')<>'' then
+    begin
+      Params := 'BNATURE='+cledoc.NaturePiece+';BSOUCHE='+cledoc.Souche+';BNUMERO='+InttoStr(cledoc.NumeroPiece)+
+                ';BINDICEG='+IntToStr(cledoc.Indice)+';BMOIS='+TOBP.GetString('MOIS')+';BAFFAIRE='+Affaire;
+      AGLLanceFiche('BTP','BSAISIEAVANCPOC','','','ACTION=MODIFICATION;'+Params);
+    end;
+  FINALLY
+    TOBP.Free;
+  END;
+end;
+
+procedure SelectionMoisAvancPoc (Parms : array of variant ; nb : integer);
+var SQL,Params,Affaire : string;
+    cledoc : R_CLEDOC;
+begin
   Affaire := Parms[5];
+  cledoc.NaturePiece := Parms[1];
+  cledoc.Souche := Parms[2];
+  cledoc.NumeroPiece := Parms[3];
+  cledoc.Indice := Parms[4];
   Sql := 'SELECT 1 FROM BAVANCTECH WHERE '+
-         'BM9_NATUREPIECEG="'+NaturepIece+'" AND '+
-         'BM9_SOUCHE="'+Souche+'" AND '+
-         'BM9_NUMERO='+Numero+' AND '+
-         'BM9_INDICEG='+Indice;
+         'BM9_NATUREPIECEG="'+cledoc.NaturePiece+'" AND '+
+         'BM9_SOUCHE="'+cledoc.Souche+'" AND '+
+         'BM9_NUMERO='+IntTostr(cledoc.NumeroPiece)+' AND '+
+         'BM9_INDICEG='+IntToStr(cledoc.Indice);
   if ExisteSQL(SQL) then
   begin
-    Params :='BM9_NATUREPIECEG='+NaturepIece+';BM9_SOUCHE='+Souche+';BM9_NUMERO='+Numero+';BM9_INDICEG='+Indice;
+    Params :='BM9_NATUREPIECEG='+cledoc.NaturePiece+';BM9_SOUCHE='+cledoc.Souche+';BM9_NUMERO='+InttoStr(cledoc.NumeroPiece)+';BM9_INDICEG='+InttoStr(cledoc.Indice)+';BM9_AFFAIRE='+Affaire;
     AGLLanceFiche('BTP','BTSELMOISAVANC',Params,'','ACTION=MODIFICATION');
   end else
   begin
-    TOBP := TOB.Create('LES PARAMS',nil,-1);
-    TRY
-      TOBP.AddChampSupValeur('NATUREPIECEG',Parms[1]);
-      TOBP.AddChampSupValeur('SOUCHE',Parms[2]);
-      TOBP.AddChampSupValeur('NUMERO',Parms[3]);
-      TOBP.AddChampSupValeur('INDICEG',Parms[4]);
-      TOBP.AddChampSupValeur('MOIS','');
-      TheTOB := TOBP;
-      AGLLanceFiche('BTP','BTSAISMOIAVANC','','','ACTION=MODIFICATION');
-      TheTOB := nil;
-      if TOBP.GetString('MOIS')<>'' then
-      begin
-        Params := 'BNATURE='+Parms[1]+';BSOUCHE='+Parms[2]+';BNUMERO='+Parms[3]+';BINDICEG='+Parms[4]+';BMOIS='+TOBP.GetString('MOIS')+';BAFFAIRE='+Parms[5];
-        AGLLanceFiche('BTP','BSAISIEAVANCPOC','','','ACTION=MODIFICATION;'+Params);
-      end;
-    FINALLY
-      TOBP.Free;
-    END;
+    NewMois (cledoc,Affaire);
   end;
 end;
 
@@ -108,12 +119,19 @@ end ;
 procedure TOF_BTSELMOISAVANC.OnLoad ;
 begin
   Inherited ;
+  cledoc.NaturePiece := GetControlText('BM9_NATUREPIECEG');
+  cledoc.Souche := GetControlText('BM9_SOUCHE');
+  cledoc.NumeroPiece := StrToInt(GetControlText('BM9_NUMERO'));
+  cledoc.Indice := StrToInt(GetControlText('BM9_INDICEG'));
+  Affaire := GetControlText('BM9_AFFAIRE');
 end ;
 
 procedure TOF_BTSELMOISAVANC.OnArgument (S : String ) ;
 begin
   Inherited ;
+  //
   TToolbarButton97 (GetControl('BVALIDE')).OnClick := BValideClick;
+  TToolbarButton97 (GetControl('BINSERT')).OnClick := BInsertClick;
 end ;
 
 procedure TOF_BTSELMOISAVANC.OnClose ;
@@ -134,6 +152,12 @@ end ;
 procedure TOF_BTSELMOISAVANC.BValideClick(Sender: TObject);
 begin
 
+end;
+
+procedure TOF_BTSELMOISAVANC.BInsertClick(Sender: Tobject);
+begin
+  NewMois(cledoc,Affaire);
+  TFMul(ecran).ChercheClick;
 end;
 
 Initialization

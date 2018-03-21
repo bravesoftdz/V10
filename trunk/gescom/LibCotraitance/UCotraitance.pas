@@ -130,6 +130,8 @@ type
     	procedure SetGrilleSaisie(State: boolean);
     	procedure SetSaisie;
     	procedure ReinitSaisie;
+      function FindSousTraitantPOC(Fournisseur, CodeMarche: string): TOB;
+      procedure AddSousTraitant(Fournisseur, CodeMarche: string);
   end;
 
 function  CotraitanceAffectationOk (CodeAffaire : string) : boolean;
@@ -815,6 +817,7 @@ begin
   TOBssTrait.AddChampSupValeur('CLERIB', '');
   TOBssTrait.AddChampSupValeur('IBAN', '');
   TOBssTrait.AddChampSupValeur('AFFAIRE', '');
+  TOBssTrait.AddChampSupValeur('NBUSED', 0);
 end;
 
 procedure AddChampsSupTraitCreat (TOBSSTRAIT : TOB);
@@ -1299,6 +1302,7 @@ begin
     i:=0;
   repeat
     TOBP := TOBSSTrait.Detail[i];
+    if TOBP.GetDouble('NBUSED') > 0 then TOBP.SetString('UTILISE','X');
     if (TOBP.getvalue('UTILISE')='-') then
     begin
     	TOBP.free;
@@ -2754,6 +2758,7 @@ end;
 procedure TPieceCotrait.InitLigneInterne(TOBL : TOB; var Indice : integer);
 var prixBloque,FromExcel : boolean;
 		LigneInit : integer;
+    TT : TOB;
 begin
   LigneInit := indice;
   if (not IsVariante(TOBL)) and (TOBL.GetValue('GL_ARTICLE') <> '') then
@@ -2762,8 +2767,17 @@ begin
   end;
   PrixBloque := (TOBL.getValue('GL_BLOQUETARIF')='X');
   FromExcel := IsFromExcel(TOBL);
+  if VH_GC.BTCODESPECIF = '001' then
+  begin
+    TT := FindSousTraitantPOC(TOBL.Getvalue('GL_FOURNISSEUR'),TOBL.Getvalue('GL_CODEMARCHE'));
+    if TT <> nil then
+    begin
+      TT.SetDouble ('NBUSED',TT.GetDouble ('NBUSED') -1);
+    end;
+  end;
   TOBL.putvalue('GLC_NATURETRAVAIL','');
   TOBL.putvalue('GL_FOURNISSEUR','');
+  TOBL.putvalue('GL_CODEMARCHE','');
   if TOBL.FieldExists('BLF_NATURETRAVAIL') then
   begin
     TOBL.putvalue('BLF_FOURNISSEUR',TOBL.Getvalue('GL_FOURNISSEUR'));
@@ -3096,28 +3110,35 @@ begin
   TFFacture(FF).GoToLigne(Acol,Arow); 
 end;
 
-procedure TPieceCotrait.GSAffectSoustraitPOC(Sender: tobject);
+function TPieceCotrait.FindSousTraitantPOC(Fournisseur,CodeMarche : string) : TOB;
+begin
+  result := fTOBPieceInterv.FindFirst(['BPI_TYPEINTERV','BPI_TIERSFOU','BPI_CODEMARCHE'],['Y00',Fournisseur,CodeMarche],true);
+end;
 
-  procedure  AddSousTraitant(Fournisseur,CodeMarche : string);
-  var TT : TOB;
-  begin
-    TT := TOB.Create('PIECEINTERV',fTOBPieceInterv,-1);
-		AddChampsSupTraitCreat (TT);
-		AddChampsSupTrait (TT);
-    TT.putValue('BPI_NATUREPIECEG',fTOBpiece.GetString('GP_NATUREPIECEG'));
-    TT.putValue('BPI_SOUCHE',fTOBpiece.GetString('GP_SOUCHE'));
-    TT.putValue('BPI_NUMERO',fTOBpiece.GetInteger('GP_NUMERO') );
-    TT.putValue('BPI_INDICEG',fTOBpiece.GetInteger('GP_INDICEG'));
-    TT.SetInteger('BPI_ORDRE',fTOBPieceInterv.detail.count -1);
-    //
-    TT.putValue('BPI_TYPEINTERV','Y00');
-    TT.putValue('BPI_TYPEPAIE','001');
-    TT.putValue('BPI_DATECONTRAT',V_PGI.DateEntree);
-    TT.SetBoolean('BPI_AUTOLIQUID',true);
-    TT.SetString('BPI_FAMILLETAXE',GetInfoMarcheST(fTOBpiece.GetString('GP_AFFAIRE'),Fournisseur,CodeMarche,'FAMILLETAXE1'));
-    TT.SetString('BPI_TIERSFOU',Fournisseur);
-    TT.SetString('BPI_CODEMARCHE',CodeMarche);
-  end;
+procedure TPieceCotrait.AddSousTraitant(Fournisseur,CodeMarche : string);
+var TT : TOB;
+begin
+  TT := TOB.Create('PIECEINTERV',fTOBPieceInterv,-1);
+  AddChampsSupTraitCreat (TT);
+  AddChampsSupTrait (TT);
+  TT.putValue('BPI_NATUREPIECEG',fTOBpiece.GetString('GP_NATUREPIECEG'));
+  TT.putValue('BPI_SOUCHE',fTOBpiece.GetString('GP_SOUCHE'));
+  TT.putValue('BPI_NUMERO',fTOBpiece.GetInteger('GP_NUMERO') );
+  TT.putValue('BPI_INDICEG',fTOBpiece.GetInteger('GP_INDICEG'));
+  TT.SetInteger('BPI_ORDRE',fTOBPieceInterv.detail.count -1);
+  //
+  TT.putValue('BPI_TYPEINTERV','Y00');
+  TT.putValue('BPI_TYPEPAIE','001');
+  TT.putValue('BPI_DATECONTRAT',V_PGI.DateEntree);
+  TT.SetBoolean('BPI_AUTOLIQUID',true);
+  TT.SetString('BPI_FAMILLETAXE',GetInfoMarcheST(fTOBpiece.GetString('GP_AFFAIRE'),Fournisseur,CodeMarche,'FAMILLETAXE1'));
+  TT.SetString('BPI_TIERSFOU',Fournisseur);
+  TT.SetString('BPI_CODEMARCHE',CodeMarche);
+  TT.SetDouble('NBUSED',1);
+end;
+
+
+procedure TPieceCotrait.GSAffectSoustraitPOC(Sender: tobject);
 
   procedure  AjouteSousTraitantPOC(Fournisseur,CodeMarche : string);
   var TT : TOB;
@@ -3126,6 +3147,9 @@ procedure TPieceCotrait.GSAffectSoustraitPOC(Sender: tobject);
     if TT = nil then
     begin
       AddSousTraitant(Fournisseur,CodeMarche);
+    end else
+    begin
+      TT.SetDouble('NBUSED',TT.GetDouble('NBUSED')+1);
     end;
   end;
 

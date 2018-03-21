@@ -325,14 +325,14 @@ begin
   if TOBlast <> nil then
   begin
     TOBPhase.putValue('BPC_PN1',TobLast.getValue('BPC_PN1'));
-    TOBPhase.putValue('BPC_PN2',TobLast.getValue('BPC_PN2'));
-    TOBPhase.putValue('BPC_PN3',TobLast.getValue('BPC_PN3'));
-    TOBPhase.putValue('BPC_PN4',TobLast.getValue('BPC_PN4'));
-    TOBPhase.putValue('BPC_PN5',TobLast.getValue('BPC_PN5'));
-    TOBPhase.putValue('BPC_PN6',TobLast.getValue('BPC_PN6'));
-    TOBPhase.putValue('BPC_PN7',TobLast.getValue('BPC_PN7'));
-    TOBPhase.putValue('BPC_PN8',TobLast.getValue('BPC_PN8'));
-    TOBPhase.putValue('BPC_PN9',TobLast.getValue('BPC_PN9'));
+    if NivCurrent >= 2 then TOBPhase.putValue('BPC_PN2',TobLast.getValue('BPC_PN2'));
+    if NivCurrent >= 3 then TOBPhase.putValue('BPC_PN3',TobLast.getValue('BPC_PN3'));
+    if NivCurrent >= 4 then TOBPhase.putValue('BPC_PN4',TobLast.getValue('BPC_PN4'));
+    if NivCurrent >= 5 then TOBPhase.putValue('BPC_PN5',TobLast.getValue('BPC_PN5'));
+    if NivCurrent >= 6 then TOBPhase.putValue('BPC_PN6',TobLast.getValue('BPC_PN6'));
+    if NivCurrent >= 7 then TOBPhase.putValue('BPC_PN7',TobLast.getValue('BPC_PN7'));
+    if NivCurrent >= 8 then TOBPhase.putValue('BPC_PN8',TobLast.getValue('BPC_PN8'));
+    if NivCurrent = 9 then TOBPhase.putValue('BPC_PN9',TobLast.getValue('BPC_PN9'));
     if NivCurrent = 9 then TOBPhase.putValue('BPC_PN9',TobL.getValue('GL_NUMORDRE')) else
     if NivCurrent = 8 then TOBPhase.putValue('BPC_PN8',TobL.getValue('GL_NUMORDRE')) else
     if NivCurrent = 7 then TOBPhase.putValue('BPC_PN7',TobL.getValue('GL_NUMORDRE')) else

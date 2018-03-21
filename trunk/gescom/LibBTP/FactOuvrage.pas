@@ -113,8 +113,8 @@ procedure CopieOuvFromLigne(TOBLND,TOBL: TOB);
 procedure DefiniPrixLigneOuv (TOBouvrage,TOBNomen,TOBART,TOBPiece : TOb;DEV:Rdevise);
 procedure CopieOuvFromRef(TOBOuv,TOBRef: TOB);
 procedure AttribueEcart (TOBPiece,TOBL,TobOuvrage : TOB;ArtEcart:string;Montantecart: double;DEV:RDEVISE;EnHt:Boolean;EnPA : boolean=false;OnlyPa:boolean=false;PrixPourQte : double=0; LibEcart : string='';ForcePaEqualPv : Boolean=false);
-procedure LoadLesLibDetOuvLig ( TOBPIECE,TOBOuvrage,TOBTiers,TOBAffaire,TOBL: TOB;var Indice: integer; DEV:RDevise; TheMetreDoc : TMetreArt; AffSousDetailUnitaire : boolean);
-procedure LoadLesLibDetailOuvrages (TOBPIECE,TOBOuvrage,TOBTiers,TOBAffaire : TOB;DEV:RDevise; TheMetreDoc : TMetreArt);
+procedure LoadLesLibDetOuvLig ( TOBPIECE,TOBOuvrage,TOBTiers,TOBAffaire,TOBL, TOBTRFPOC: TOB;var Indice: integer; DEV:RDevise; TheMetreDoc : TMetreArt; AffSousDetailUnitaire : boolean);
+procedure LoadLesLibDetailOuvrages (TOBPIECE,TOBOuvrage,TOBTiers,TOBAffaire,TOBTRFPOC : TOB;DEV:RDevise; TheMetreDoc : TMetreArt);
 procedure DropLesLibDetailouvrages (TOBPiece : TOB);
 procedure MiseAPlatOuv (TOBPiece,TOBL,TOBOuv,TOBPlat : TOB; TousNiveaux:boolean; GardeReference : boolean=false; WithCalcul : boolean=true; SurLigneStd : boolean=false;PourCpta : boolean=false);
 Procedure CalculeLigneHTOuv ( TOBOuv,TOBPiece : TOB ; DEV:RDevise ; Forcer:boolean=False ) ;
@@ -220,6 +220,7 @@ procedure StockeLesTypes (TOBL : TOB; Valloc : T_Valeurs);
 //
 Procedure DerouleOuvrage ( TOBN : TOB ; CodeNomen,RefUnique,Depot : String ; TOBArticles : TOB ; QteDuDetail : Double;DEV:RDevise;VenteAchat : string) ;
 Procedure OuvVersLigOuv ( TOBPIece,TOBL,TOBNOMEN,TOBLN,TOBA : TOB ; Niv,OrdreCompo : integer ;DEV:RDevise;EnHt:Boolean;Prixtraite : string='PUH' ) ;
+function FindLigneOuvFromUnique (TOBL,TOBOuvrages : TOB; UniqueBlo : Integer) : TOB;
 //
 implementation
 uses factgrp,FactVariante,Facture,FactureBTP
@@ -2661,7 +2662,7 @@ BEGIN
             'WHERE '+WherePiece(CleDoc,ttdOuvrage,False)+
             ' ORDER BY BLO_NUMLIGNE,BLO_N1, BLO_N2, BLO_N3, BLO_N4,BLO_N5';
   *)
-  requete := MakeSelectLigneOuvBtp (WithLigneFac);
+  requete := MakeSelectLigneOuvBtp (WithLigneFac,TOBpiece.getString('GP_NATUREPIECEG'));
   requete := requete + ' WHERE '+WherePiece(CleDoc,ttdOuvrage,False)+
             					 ' ORDER BY BLO_NUMLIGNE,BLO_N1, BLO_N2, BLO_N3, BLO_N4,BLO_N5';
 
@@ -4455,9 +4456,9 @@ begin
   end;
 end;
 
-procedure LoadLesLibDetOuvLig ( TOBPIECE,TOBOuvrage,TOBTiers,TOBAffaire,TOBL : TOB;var Indice: integer; DEV:RDevise; TheMetreDoc : TMetreArt;  AffSousDetailUnitaire : boolean);
+procedure LoadLesLibDetOuvLig ( TOBPIECE,TOBOuvrage,TOBTiers,TOBAffaire,TOBL,TOBTRFPOC : TOB;var Indice: integer; DEV:RDevise; TheMetreDoc : TMetreArt;  AffSousDetailUnitaire : boolean);
 var IndOuv,IndiceNomen,IndiceLig,TypePresent,NiveauImbric : integer;
-    TOBL1,TOBOuv,TOBLoc : TOB;
+    TOBL1,TOBOuv,TOBLoc,TT,TL : TOB;
     QteDuDetail,QteDUPv,Montant,MontantUni,MontantAchat,MontantAchatUni,CumMontant,CumMontantUNI,MontantOuv,MontantLig,MontantPaOuv,MontantLPa,QteFact : double;
     IndicePou ,RowRef: Integer;
     EnHt : boolean;
@@ -4556,7 +4557,18 @@ begin
       TOBL1.SetString('GL_PERTE',TOBOUV.GetValue('BLO_PERTE'));
       TOBL1.SetString('GL_RENDEMENT',TOBOUV.GetValue('BLO_RENDEMENT'));
       TOBL1.SetString('GL_QUALIFHEURE', TOBOUV.GetValue('BLO_QUALIFHEURE'));
-
+      // -- POC --
+      TOBL1.PutValue('NUMTRANSFERT', TOBOUV.GetValue('NUMTRANSFERT'));
+      TOBL1.PutValue('MTTRANSFERT', TOBOUV.GetValue('MTTRANSFERT'));
+      //
+      if TOBTRFPOC <> nil then
+      begin
+        TL := TOBTRFPOC.FIndfirst(['BT3_UNIQUEBLO'],[TOBOUV.GetInteger('BLO_UNIQUEBLO')],true);
+        if TL <> nil then
+        begin
+          TL.Data := TOBL1;
+        end;
+      end;
       if TOBL.getValue('GL_BLOQUETARIF')='X' then
       begin
         TOBL1.putValue('GL_BLOQUETARIF','X');
@@ -4735,7 +4747,7 @@ begin
 
 end;
 
-procedure LoadLesLibDetailOuvrages (TOBPIECE,TOBOuvrage,TOBTiers,TOBAffaire : TOB;DEV:RDevise; TheMetreDoc : TmetreArt);
+procedure LoadLesLibDetailOuvrages (TOBPIECE,TOBOuvrage,TOBTiers,TOBAffaire,TOBTRFPOC : TOB;DEV:RDevise; TheMetreDoc : TmetreArt);
 var indice : integer;
     TOBL : TOB;
     VoirDetail : boolean;
@@ -4760,7 +4772,7 @@ begin
     AffSousDetail := (not ModifSousDetail) and (TypePresent <> DOU_AUCUN);
     if (not ModifLeSousDetail) and (not AffSousDetail) then begin inc(Indice); continue; end;
 {    if (not ModifLeSousDetail) and (not VoirDetail) then begin inc(Indice); continue; end;}
-    LoadLesLibDetOuvLig ( TOBPIECE,TOBOuvrage,TOBTiers,TOBAffaire,TOBL ,Indice,DEV, TheMetreDoc,fAffSousDetailUnitaire);
+    LoadLesLibDetOuvLig ( TOBPIECE,TOBOuvrage,TOBTiers,TOBAffaire,TOBL,TOBTRFPOC ,Indice,DEV, TheMetreDoc,fAffSousDetailUnitaire);
   until indice > TOBPiece.detail.count -1;
 end;
 
@@ -7437,5 +7449,25 @@ begin
   end;
 end;
 
+function FindLigneOuvFromUnique (TOBL,TOBOuvrages : TOB; UniqueBlo : Integer) : TOB;
+var IndiceNomen : Integer;
+    TOBOUV : TOB;
+    II : Integer;
+begin
+  Result := nil;
+  IndiceNomen := TOBL.GetInteger('GL_INDICENOMEN') -1;
+  if IndiceNomen < TOBOuvrages.Detail.count then
+  begin
+    TOBOUV := TOBOuvrages.detail[IndiceNOmen];
+    for II := 0 to TOBOUV.detail.Count -1 do
+    begin
+      if TOBOUV.detail[II].GetInteger('BLO_UNIQUEBLO')=UniqueBlo then
+      begin
+        Result := TOBOUV.detail[II];
+        break;
+      end;
+    end;
+  end;
+end;
 
 end.
