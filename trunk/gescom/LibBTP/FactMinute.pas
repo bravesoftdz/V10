@@ -165,7 +165,6 @@ begin
     for Indice := 0 to TOBGO.detail.Count -1 do
     begin
       TOBO := TOBGO.detail[Indice];
-      //if ImprimeVariante then Continue;
       TOBM := TOB.Create ('MINUTE',TOBMinute,-1);
       AddchampBase (TOBM,TOBPiece,TOBTiers,TOBAffaire);
       AddchampLigne (TOBM);
@@ -183,7 +182,7 @@ begin
       TOBM.PutValue ('BMN_MONTANT',TOBO.GetValue('BLO_MONTANTHTDEV'));
       // VARIANTE
       //FV1 : 19/02/2018 - FS#2927 - TREUIL - Edition minute : En totalisation générale ne pas prendre en compte les variantes
-      if IsVariante(TOBO) then
+      if IsVariante(TOBL) then
       Begin
         TOBM.PutValue('BMN_VARIANTE','X');
       end;
@@ -239,6 +238,14 @@ begin
       // VARIANTE
       if ImprimeVariante then
       begin
+        if copy(TOBL.GetValue('GL_TYPELIGNE'),1,2)='TV' then
+        begin
+          AjouteFinParagrapheMinute (TOBPiece,TOBTiers,TOBAffaire,TOBL,TOBMinute);
+        end;
+        if copy(TOBL.GetValue('GL_TYPELIGNE'),1,2)='DV' then
+        begin
+          AjouteParagrapheMinute (TOBPiece,TOBTiers,TOBAffaire,TOBL,TOBMinute);
+        end;      
         if ((TypeArticle='MAR') or (TypeArticle = 'PRE') or (TypeArticle = 'POU') or (TypeArticle = 'ARP')) and (not IsSousDetail(TOBL)) and (not IsCommentaire(TOBL)) then
         begin
           AjouteArticleMinute (TOBPiece,TOBL,TOBTiers,TOBAffaire,TOBArticles,TOBOuvrage,TOBMinute);
