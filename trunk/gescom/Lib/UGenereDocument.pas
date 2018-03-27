@@ -184,7 +184,9 @@ begin
   if Venteachat = 'ACH' then NatureAuxi := 'FOU' else NatureAuxi := 'CLI';
   //
   GereReliquat := GetInfoParPiece(TOBPiece.GetString('GP_NATUREPIECEG'), 'GPP_RELIQUAT')='X';
-  //
+  // FS#46 - Dans les BL, visualisation du document de la GED correspondant à la commande
+  TOBPiece.SetString('GP_BSVREF',''); // protection pour éviter de faire suivre dans les documents générés
+  // 
   for II := 0 to TOBPiece.Detail.count -1 do
   begin
     TOBL := TOBPiece.detail[II];
