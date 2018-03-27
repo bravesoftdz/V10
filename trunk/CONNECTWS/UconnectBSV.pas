@@ -103,7 +103,7 @@ function GetParamsUserBSV (var UploadRight : Boolean; var ViewRight : boolean) :
 procedure GetParamsUploadBSV (TOBParamsBSV : TOB; ZeXX : TconnectBSV = nil);
 function SetFactureRegleBSV (BSVDocumentID : string) : boolean;
 procedure VisuDocumentBSV (TOBPiece : TOB);
-function StoreDocumentBSV (FileName : string; TOBFields : TOB) : WideString;
+function StoreDocumentBSV (FileName : string; TOBFields : TOB;StoreWF : boolean=true) : WideString;
 procedure GetParamStockageBSV (TOBFIelds : TOB; NaturePiece : string);
 
 implementation
@@ -135,7 +135,7 @@ begin
 end;
 
 
-function StoreDocumentBSV (FileName : string; TOBFields : TOB) : WideString;
+function StoreDocumentBSV (FileName : string; TOBFields : TOB; StoreWF : boolean=true) : WideString;
 var QQ : TQuery;
     XX : TconnectBSV;
     Currentpasswd : Widestring;
@@ -172,7 +172,7 @@ begin
     if not XX.SetFields (TOBFields,TOBParamsBSV) then Exit;
     if not  XX.UploadDocument (FileName) then Exit;
     Result := XX.GetDocumentId;
-    if (Result <> '') and (TheWorkFlowId <> 0)then
+    if (Result <> '') and (TheWorkFlowId <> 0) and (StoreWF) then
     begin
       XX.AddFileToWorkFlow (TheWorkFlowId,Result,TOBFields,TOBParamsBSV);
     end;
