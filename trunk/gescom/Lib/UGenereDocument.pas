@@ -604,12 +604,12 @@ procedure TGenerePiece.UpdateDocumentsPrecedent;
     for II := 0 to TOBPP.detail.count -1 do
     begin
       TOBL := TOBPP.detail[II];
+      cledoc.NaturePiece := TOBL.GetString('NATUREPIECEG');
+      cledoc.Souche := TOBL.GetString('SOUCHE');
+      cledoc.NumeroPiece := TOBL.GetInteger('NUMERO');
+      cledoc.Indice := TOBL.GetInteger('INDICEG');
       if GereReliquat then
       begin
-        cledoc.NaturePiece := TOBL.GetString('NATUREPIECEG');
-        cledoc.Souche := TOBL.GetString('SOUCHE');
-        cledoc.NumeroPiece := TOBL.GetInteger('NUMERO');
-        cledoc.Indice := TOBL.GetInteger('INDICEG');
         if not IsPieceVivante(TOBL) then
         begin
          if (ExecuteSQL('UPDATE PIECE SET GP_VIVANTE="-",GP_DEVENIRPIECE="'+encoderefPiece(TOBPiece)+'" WHERE '+WherePiece(cledoc,ttdPiece,false)) <= 0) then exit;
@@ -653,6 +653,25 @@ procedure TGenerePiece.UpdateDocumentsPrecedent;
     Result := True;
   end;
 
+  procedure PositionneLigneMorte (TOBL : TOB;cledoc : r_cledoc);
+  var QQ : TQuery;
+      SQL : String;
+  begin
+    // on ne récupère que la ligne
+    SQL := 'SELECT * '+
+           'FROM LIGNE '+
+           'WHERE '+ WherePiece(CleDoc, ttdLigne, true,true);
+    QQ := OpenSQL(SQL,false,1);
+    if not QQ.eof then
+    begin
+      QQ.Edit;
+      QQ.FindField('GL_VIVANTE').AsString := '-';
+      QQ.Post;
+    end;
+    QQ.Close;
+  end;
+
+
   function TraiteReliquatLigne (TOBL : TOB;cledoc : r_cledoc) : Boolean;
   var TOBLP : TOB;
       QQ : TQuery;
@@ -662,13 +681,14 @@ procedure TGenerePiece.UpdateDocumentsPrecedent;
     TOBLP := TOB.Create ('LIGNE',nil,-1);
     TRY
       // on ne récupère que la ligne
-      SQL := 'SELECT GL_NATUREPIECEG,GL_SOUCHE,GL_NUMERO,GL_INDICEG,GL_NUMLIGNE,GL_QTEFACT,GL_QTERESTE,GL_QTERELIQUAT,GL_QTESTOCK,GL_MTRESTE,GL_MTRELIQUAT,(SELECT GA_RELIQUATMT FROM ARTICLE WHERE GA_ARTICLE=GL_ARTICLE) AS RELIQUATMT '+
+      SQL := 'SELECT GL_NATUREPIECEG,GL_SOUCHE,GL_NUMERO,GL_INDICEG,GL_NUMLIGNE,GL_QTEFACT,GL_QTERESTE,GL_QTERELIQUAT,GL_QTESTOCK,GL_MTRESTE,GL_MTRELIQUAT,GL_VIVANTE,(SELECT GA_RELIQUATMT FROM ARTICLE WHERE GA_ARTICLE=GL_ARTICLE) AS RELIQUATMT '+
              'FROM LIGNE '+
              'WHERE '+ WherePiece(CleDoc, ttdLigne, true,true);
       QQ := OpenSQL(SQL,true,1,'',true);
       if not QQ.eof then
       begin
         TOBLP.SelectDB('',QQ);
+        ferme(QQ);
         if TOBLP.GetString('RELIQUATMT')='X' then
         begin
           if TOBLP.GetDouble('GL_MTRESTE') <= TOBL.GetDouble('GL_MONTANTHT') then
@@ -696,8 +716,10 @@ procedure TGenerePiece.UpdateDocumentsPrecedent;
         end;
         //
         if (not TOBLP.UpdateDB(false)) then exit;
+      end else
+      begin
+        ferme (QQ);
       end;
-      ferme (QQ);
       Result := True;
     FINALLY
       TOBLP.Free;
@@ -724,7 +746,11 @@ begin
           raise Exception.Create('Mise à jour pièce précédente / ligne');
           exit;
         end;
+      end else
+      begin
+        PositionneLigneMorte(TOBL,cledoc);
       end;
+      AddReferenceDoc (cledoc,TOBPiecePrec);
     end;
   end;
   //
@@ -736,6 +762,7 @@ begin
       exit;
     end;
   end;
+  
   if TOBprov <> nil then
   begin
     if TOBProv.detail.count > 0 then

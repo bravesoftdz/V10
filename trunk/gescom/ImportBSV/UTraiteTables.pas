@@ -391,8 +391,6 @@ begin
   END;
 end;
 
-
-
 procedure ConstitueDocsFromDatasBSV (WithReport : Boolean);
 var II : Integer;
     QQ,QQ1 : TQuery;
@@ -666,14 +664,14 @@ begin
   Result := false;
   TOBP := ListDoc.GetItems(IDEntete); if TOBP = nil then Exit;
   RefPiece := EncodeRefPiece(TOBL);
-  if GardeRefPrecedente then
-  begin
+//  if GardeRefPrecedente then
+//  begin
     TOBL.SetString('GL_PIECEPRECEDENTE',RefPiece);
     if TOBL.GetString('GL_PIECEORIGINE')='' then TOBL.SetString('GL_PIECEORIGINE',RefPiece);
-  end else
-  begin
-    TOBL.SetString('GL_PIECEPRECEDENTE','');
-  end;
+//  end else
+//  begin
+//    TOBL.SetString('GL_PIECEPRECEDENTE','');
+//  end;
   TOBL.SetInteger('GL_NUMLIGNE',0);
   TOBL.SetInteger('GL_NUMORDRE',0);
   if GardeRefPrecedente then
