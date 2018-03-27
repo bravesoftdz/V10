@@ -2324,7 +2324,7 @@ begin
   if NomGrid = 'GSPP' then
   begin
     CurGS := TheListGrid.findGrille(NomGrid);
-    if TOBPP.detail.count = 0 then GSPP.enabled := false;
+    if TOBPP.detail.count = 0 then BEGIN GSPP.enabled := false; exit; END;
     GSRowEnterPP(Self,CurGS.fLastRow,cancel,false);
     GSCellEnterPP(Self,CurGS.fLastcol,CurGS.fLastRow,cancel);
     GSPP.SetFocus;
@@ -2332,7 +2332,7 @@ begin
   end else if NomGrid = 'GSMOI' then
   begin
     CurGS := TheListGrid.findGrille(NomGrid);
-    if TOBMOI.detail.count = 0 then GSMOI.enabled := false;
+    if TOBMOI.detail.count = 0 then BEGIN GSMOI.enabled := false; exit; END;
     GSRowEnterMOI(Self,CurGS.fLastRow,cancel,false);
     GSCellEnterMOI(Self,CurGS.fLastcol,CurGS.fLastRow,cancel);
     GSMOI.SetFocus;
@@ -2340,7 +2340,7 @@ begin
   end else if NomGrid = 'GSFI' then
   begin
     CurGS := TheListGrid.findGrille(NomGrid);
-    if TOBFI.detail.count = 0 then GSFI.enabled := false;
+    if TOBFI.detail.count = 0 then BEGIN GSFI.enabled := false; Exit; END;
     GSRowEnterFI(Self,CurGS.fLastRow,cancel,false);
     GSCellEnterFI(Self,CurGS.fLastcol,CurGS.fLastRow,cancel);
     GSFI.SetFocus;
@@ -2348,7 +2348,7 @@ begin
   end else if NomGrid = 'GSST' then
   begin
     CurGS := TheListGrid.findGrille(NomGrid);
-    if TOBST.detail.count = 0 then GSST.enabled := false;
+    if TOBST.detail.count = 0 then BEGIN GSST.enabled := false; EXIT; END;
     GSRowEnterST(Self,CurGS.fLastRow,cancel,false);
     GSCellEnterST(Self,CurGS.fLastcol,CurGS.fLastRow,cancel);
     GSST.SetFocus;
