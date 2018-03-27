@@ -306,7 +306,7 @@ begin
       Result := -1;
       Exit;
     end;
-    TheResultID := StoreDocumentBSV(TF,TOBI);
+    TheResultID := StoreDocumentBSV(TF,TOBI,true);
     if TheResultId <> '' then
     begin
       TOBE.setString('BM4_IDZEDOC',TheResultId);

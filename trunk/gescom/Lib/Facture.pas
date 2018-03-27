@@ -29905,7 +29905,7 @@ begin
         TOBFIelds.Detail[II].SetString('BP3_VALEUR',TheValeurResult);
       end;
     end;
-    TheResultID := StoreDocumentBSV(FileName,TOBFields);
+    TheResultID := StoreDocumentBSV(FileName,TOBFields,false);
     if TheResultId <> '' then
     begin
       TOBPiece.setString('GP_BSVREF',TheResultId);
