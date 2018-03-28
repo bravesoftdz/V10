@@ -1472,7 +1472,8 @@ begin
           TOBOS.SetDouble('BLO_QTEFACT',ARRONDI(TOBT.GetDouble('BT3_QTETRANSFERT')/(TOBLigne.geTDouble('GL_QTEFACT')-QteDejaTransf),V_PGI.OkDecQ)*(-1));
           //
           TOBTT.setString('BT3_TYPELIGNETRF','001');
-          TOBTT.SetDouble('BT3_MTTRANSFERT',TOBOS.GetDouble('MTTRANSFERT'));
+          TOBTT.SetDouble('BT3_MTTRANSFERT',TOBT.GetDouble('BT3_MTTRANSFERT'));
+          TOBTT.SetDouble('MTTRANSFERT',TOBTT.GetDouble('BT3_MTTRANSFERT'));
           TOBTT.SetInteger('BT3_UNIQUE',TOBTRFPOC.GetInteger('BT2_UNIQUE'));
           TOBTT.SetInteger('BT3_UNIQUEBLO',TOBOS.GetInteger('BLO_UNIQUEBLO'));
           TOBTT.SetBoolean('BT3_CONTREP',true);

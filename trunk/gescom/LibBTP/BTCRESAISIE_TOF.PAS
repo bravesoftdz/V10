@@ -347,6 +347,7 @@ begin
     ThCheckBox(GetControl('ZCUMUL')).OnClick := DataChange;
     ThCheckBox(GetControl('ZMODIFOK')).OnClick := DataChange;
     ThCheckBox(GetControl('ZOBLIG')).OnClick := DataChange;
+    ThCheckBox(GetControl('ZVIDESINUL')).OnClick := DataChange;
     //
   end else
   begin

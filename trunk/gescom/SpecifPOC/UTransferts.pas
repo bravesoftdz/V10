@@ -466,7 +466,7 @@ begin
   Result := false;
   if TOBL = nil then exit;
   if not TOBL.FieldExists('NUMTRANSFERT') or VarIsNull(TOBL.getValue('NUMTRANSFERT')) or (VarAsType(TOBL.getValue('NUMTRANSFERT'), varString) = #0) then exit;
-  Result := (TOBL.GetString('NUMTRANSFERT')<>'') and (TOBL.GetString('NUMTRANSFERT')<>'0');
+  Result := (TOBL.GetString('NUMTRANSFERT')<>'') and (Valeur(TOBL.GetString('MTTRANSFERT'))<>0);
 end;
 
 procedure TGestTransfert.ModifTransfert(Sender: TObject);
