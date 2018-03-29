@@ -179,6 +179,8 @@ begin
   begin
     TOBPiece.Dupliquer(TOBProv,True,true);
     TOBEnteteScan := TOB(TOBProv.data);
+    // modif
+    TOBPiece.SetString('GP_CREEPAR','BSV');
   end;
   VenteAchat := GetInfoParPiece(TOBPiece.GetString('GP_NATUREPIECEG'), 'GPP_VENTEACHAT');
   if Venteachat = 'ACH' then NatureAuxi := 'FOU' else NatureAuxi := 'CLI';
@@ -186,7 +188,7 @@ begin
   GereReliquat := GetInfoParPiece(TOBPiece.GetString('GP_NATUREPIECEG'), 'GPP_RELIQUAT')='X';
   // FS#46 - Dans les BL, visualisation du document de la GED correspondant à la commande
   TOBPiece.SetString('GP_BSVREF',''); // protection pour éviter de faire suivre dans les documents générés
-  // 
+  //
   for II := 0 to TOBPiece.Detail.count -1 do
   begin
     TOBL := TOBPiece.detail[II];
@@ -1413,6 +1415,7 @@ begin
     TOBPiece.SetDateTime('GP_DATEPIECE',DateFac);
     TOBPiece.SetDateTime('GP_DATECREATION',TOBBAST.GetDateTime('BM4_DATEVALID'));
     TOBPiece.SetString('GP_REFEXTERNE',TOBBAST.GetString('BM3_NUMERODOC'));
+    TOBPiece.SetString('GP_CREEPAR','BST');
     //
     if (Pos(TOBBAST.GetString('BM4_FAMILLETAXE1'),VH_GC.AutoLiquiTVAST)>0) then
     begin
