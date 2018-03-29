@@ -2,7 +2,11 @@ unit UTransferts;
 
 interface
 uses sysutils,classes,windows,messages,controls,forms,hmsgbox,stdCtrls,clipbrd,nomenUtil,
-     HCtrls,SaisUtil,HEnt1,Ent1,EntGC,UtilPGI,UTOB,HTB97,FactUtil,FactComm,Menus,ParamSoc,
+     SaisUtil,Ent1,EntGC,UtilPGI,UTOB,HTB97,FactUtil,FactComm,Menus,ParamSoc,ExtCtrls,
+     ComCtrls,
+     HCtrls,
+     Hpanel,
+     HEnt1,
      AglInit,FactTob,FactVariante,vierge,UtilNumParag,uEntCommun,
 {$IFDEF EAGLCLIENT}
      maineagl,
@@ -19,6 +23,9 @@ type
   private
     fCreatedPop : boolean;
     FF : TForm;
+    TTWTransfert : TToolWindow97;
+    TVTRansfert : TTreeView;
+    TOBTransferts : TOB;
     fusable : boolean;
     POPGS : TPopupMenu;
     MesMenuItem: array[0..MAXITEMS] of TMenuItem;
@@ -30,6 +37,10 @@ type
     function IsTransfert (TOBL : TOB) : boolean;
     procedure ActiveMenu (Etat : boolean);
     procedure POPYTSClick (Sender : TObject);
+    function ConstitueTOBDetailTransfert(TOBL,TOBTRFPOC: TOB): boolean;
+    procedure ConstitueTreeViewTrf;
+    function IsExistsTransfert(TOBL: TOB): boolean;
+    procedure TreeViewClick (Sender : TObject);
   public
     property CurrentSaisie : TForm read FF;
     destructor  destroy ; override;
@@ -55,7 +66,7 @@ function ExisteTransfertSuiv (TOBTRFPOC,TT : TOB) : boolean;
 var TS : TOB;
 begin
   result := false;
-  TS := TOBTRFPOC.findfirst(['BT3_NUMORDRE'],[TT.GetInteger('BT3_NUMORDRE')],true);
+  TS := TOBTRFPOC.findfirst(['BT3_NUMORDRE','BT3_UNIQUEBLO'],[TT.GetInteger('BT3_NUMORDRE'),TT.GetInteger('BT3_UNIQUEBLO')],true);
   repeat
     if TS = nil then break;
     if TS.GetInteger('BT3_UNIQUE') > TT.GetInteger('BT3_UNIQUE') then
@@ -63,7 +74,7 @@ begin
       result := True;
       Exit;
     end;
-    TS := TOBTRFPOC.findnext(['BT3_NUMORDRE'],[TT.GetInteger('BT3_NUMORDRE')],true);
+    TS := TOBTRFPOC.findnext(['BT3_NUMORDRE','BT3_UNIQUEBLO'],[TT.GetInteger('BT3_NUMORDRE'),TT.GetInteger('BT3_UNIQUEBLO')],true);
   until TS = nil;
 end;
 
@@ -336,6 +347,7 @@ end;
 constructor TGestTransfert.create(TT: TForm);
 var ThePop : Tcomponent;
 begin
+  TOBTransferts := TOB.Create ('LES TRASNFERTS',nil,-1);
   fCreatedPop := false;
   fusable := false;
   FF := TT;
@@ -351,6 +363,24 @@ begin
     POPGS := TPopupMenu(thePop);
   END;
   DefiniMenuPop(TT);
+  // TToolWindow
+  TTWTransfert := TToolWindow97.Create(FF);
+  TTWTransfert.Name := 'XTRFS';
+  TTWTransfert.caption := 'Informations sur transferts';
+  TTWTransfert.Parent := FF;
+  TTWTransfert.Visible := false;
+  TTWTransfert.top := TFFacture(FF).TTVParag.top;
+  TTWTransfert.left := TFFacture(FF).TTVParag.left - 10;
+  TTWTransfert.Width := 600;
+  TTWTransfert.height := TFFacture(FF).TTVParag.height;
+  TTWTransfert.CloseButton := True;
+  // TreeView
+  TVTRansfert := TTreeView.Create(TTWTransfert);
+  TVTRansfert.Parent := TTWTransfert;
+  TVTRansfert.Align := alClient;
+  TVTRansfert.MultiSelect := false;
+  TVTRansfert.OnClick := TreeViewClick;
+  //
   CurrentTransfert := Self;
 end;
 
@@ -362,8 +392,8 @@ begin
   begin
     if MesMenuItem[II].Name = 'mListTransfert' then
     begin
-      if ISTransfert (TOBL) then MesMenuItem[II].Enabled := true
-                            else MesMenuItem[II].Enabled := false;
+      if IsExistsTransfert (TOBL) then MesMenuItem[II].Enabled := true
+                                  else MesMenuItem[II].Enabled := false;
     end;
     if MesMenuItem[II].Name = 'mModifTransfert' then
     begin
@@ -447,18 +477,121 @@ end;
 destructor TGestTransfert.destroy;
 var indice : integer;
 begin
-  inherited;
-  for Indice := 0 to fMaxItems -1 do   
+  for Indice := 0 to fMaxItems -1 do
   begin
     MesMenuItem[Indice].Free;
   end;
   if fcreatedPop then POPGS.free;
   CurrentTransfert := nil;
+  TOBTransferts.free;
+  TVTRansfert.Free;
+  TTWTransfert.Free;
+  inherited;
+end;
+
+procedure TGestTransfert.ConstitueTreeViewTrf;
+
+  procedure AddDetails(TT : TOB; RootTN : TTreeNode);
+  var Tn : TTreeNode;
+     II : Integer;
+  begin
+    TN := TVTRansfert.Items.AddChild (RootTN,TT.GetValue('LIBELLE'));
+    if TT.Data <> nil then Tn.data := TT.Data;
+    if TT.Detail.count > 0 then
+    begin
+      for II := 0 to TT.Detail.count -1 do
+      begin
+        AddDetails(TT.detail[II],TN);
+      end;
+    end;
+  end;
+
+var Tn,RootTN: TTreeNode;
+    II : Integer;
+    TT : TOB;
+begin
+  TVTRansfert.items.clear;
+
+  RootTN := TVTRansfert.items.add(nil,'Détail des transferts');
+  for II := 0 to TOBTransferts.Detail.count -1 do
+  begin
+    TT := TOBTransferts.detail[II];
+    AddDetails(TT,RootTN);
+  end;
+end;
+
+
+function TGestTransfert.ConstitueTOBDetailTransfert (TOBL,TOBTRFPOC : TOB) : boolean;
+var TT,TOBT,TOBTS,ONELig,ONET,TDETT,TTT : TOB;
+    NumOrdre,UniqueBLo : Integer;
+    II,AA : Integer;
+begin
+  Result := false;
+  TOBTransferts.ClearDetail;
+  //
+  if TOBL.getString('GL_TYPELIGNE')='SD' then
+  begin
+    NumOrdre := 0;
+    Uniqueblo := TOBL.getInteger('UNIQUEBLO');
+  end else
+  begin
+    NumOrdre := TOBL.GetInteger ('GL_NUMORDRE');
+    UniqueBLo := 0;
+  end;
+  //
+  TT := TOBTRFPOC.findfirst(['BT3_NUMORDRE','BT3_UNIQUEBLO'],[NumOrdre,UniqueBlo],True);
+  repeat
+    if TT = nil then Exit;
+    //
+    ONET := TT.Parent;
+    TOBT := TOB.Create('UN TRANSFERT',TOBTransferts,-1);
+    TOBT.AddChampSupValeur ('LIBELLE','Transfert N° '+ONET.GetString('BT2_UNIQUE'));
+    //
+    TTT:= TOB.Create('UN TRANSFERT',TOBT,-1);
+    TTT.AddChampSupValeur('LIBELLE','Provenance');
+    for II := 0 to ONET.detail.count -1 do
+    begin
+      TDETT := ONET.detail[II];
+      ONELig := TOB(TDETT.data);
+      if (TDETT.GetString('BT3_TYPELIGNETRF')<> '000') then break;
+      //
+      TOBTS := TOB.Create('UN DEPART',TTT,-1);
+      TOBTS.AddChampSupValeur ('LIBELLE','Transfert de '+TDETT.GetString('GL_CODEARTICLE')+' '+OneLig.GetString('GL_LIBELLE')+'  pour un montant de '+STRF00(TDETT.GetDouble('BT3_MTTRANSFERT'),2) );
+      TOBTS.Data := ONELig;
+    end;
+
+    TTT:= TOB.Create('UN TRANSFERT',TOBT,-1);
+    TTT.AddChampSupValeur('LIBELLE','Destination');
+    for II := 0 to ONET.detail.count -1 do
+    begin
+      TDETT := ONET.detail[II];
+      ONELig := TOB(TDETT.data);
+      if (TDETT.GetString('BT3_TYPELIGNETRF')= '000') then continue;
+      if (TDETT.GetString('BT3_TYPELIGNETRF')= '001') and (TDETT.GeTString('BT3_CONTREP')='X') then continue;
+      //
+      TOBTS := TOB.Create('UNE DESTINATION',TTT,-1);
+      TOBTS.AddChampSupValeur ('LIBELLE','Destination '+TDETT.GetString('GL_CODEARTICLE')+' '+OneLig.GetString('GL_LIBELLE')+'  pour un montant de '+STRF00(OneLig.GetDouble('GL_MONTANTPA'),2) );
+      TOBTS.Data := ONELig;
+    end;
+    //
+    TT := TOBTRFPOC.findnext(['BT3_NUMORDRE','BT3_UNIQUEBLO'],[NumOrdre,UniqueBlo],True);
+  until TT = nil;
+  Result := true;
 end;
 
 procedure TGestTransfert.DetailTransfert(Sender: TObject);
+var TOBPiece,TOBL,TOBTRFPOC : TOB;
 begin
-//
+  TOBPIece := TFFacture (FF).LaPieceCourante;
+  TOBTRFPOC := TFFActure(FF).XTOBTRFPOC;
+  //
+  TOBL := TOBPiece.Detail[TFFacture(FF).GS.Row -1];
+  if ConstitueTOBDetailTransfert (TOBL,TOBTRFPOC) then
+  begin
+    ConstitueTreeViewTrf;
+    TTWTransfert.Visible := True;
+    TVTRansfert.FullExpand;
+  end;
 end;
 
 function TGestTransfert.IsTransfert(TOBL: TOB): boolean;
@@ -468,6 +601,14 @@ begin
   if not TOBL.FieldExists('NUMTRANSFERT') or VarIsNull(TOBL.getValue('NUMTRANSFERT')) or (VarAsType(TOBL.getValue('NUMTRANSFERT'), varString) = #0) then exit;
   Result := (TOBL.GetString('NUMTRANSFERT')<>'') and (Valeur(TOBL.GetString('MTTRANSFERT'))<>0);
 end;
+
+function TGestTransfert.IsExistsTransfert(TOBL: TOB): boolean;
+begin
+  Result := false;
+  if TOBL = nil then exit;
+  Result := (TOBL.GetString('NUMTRANSFERT')<>'') or (Valeur(TOBL.GetString('MTTRANSFERT'))<>0);
+end;
+
 
 procedure TGestTransfert.ModifTransfert(Sender: TObject);
 var TOBT,TOBL : TOB;
@@ -538,6 +679,25 @@ begin
   begin
     ActiveMenu (true);
     fusable := true;
+  end;
+end;
+
+procedure TGestTransfert.TreeViewClick(Sender: TObject);
+var Tn: TTreeNode;
+  TOBL: TOB;
+  Acol, Arow: integer;
+begin
+  Tn := TVTRansfert.selected;
+  TOBL := TOB(Tn.data);
+  if (TOBL <> nil) then
+  begin
+    ARow := TOBL.GetValue('GL_NUMLIGNE');
+    ACol := SG_Lib;
+    TFFacture(FF).GS.SetFocus;
+    TFFacture(FF).GSEnter(TFFacture(FF).GS);
+    TFFacture(FF).GS.Row := Arow;
+    TFFacture(FF).GS.col := Acol;
+    TFFacture(FF).StCellCur := TFFacture(FF).GS.Cells[TFFacture(FF).GS.Col, TFFacture(FF).GS.Row];
   end;
 end;
 
