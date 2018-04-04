@@ -236,6 +236,21 @@ var TOBT,LastTOBL : TOB;
     TOBTRFPOC : TOB;
     Arow,Acol : Integer;
 
+  function TransfertOnlyOuvrage (TOBL : TOB) : boolean;
+  var TOBOuvrages,TOBOUV : TOB;
+      IndiceNomen,II : integer;
+  begin
+    Result := false;
+    TOBOuvrages := TFFACture(FF).TheTOBOuvrage;
+    IndiceNomen := TOBL.GetInteger('GL_INDICENOMEN'); if IndiceNomen = 0 then exit;
+    TOBOUV := TOBOuvrages.detail[IndiceNomen-1]; if TOBOUV = nil then exit;
+    for II := 0 to TOBOUV.Detail.count -1 do
+    begin
+      if TOBOUV.detail[II].GetDouble('MTTRANSFERT') <> 0 then Exit;
+    end;
+    Result := True;
+  end;
+
   function BeforeTransfert (TOBPiece,TOBTRFPOC,TOBT : TOB) : boolean;
   var II : Integer;
       GS : Thgrid;
@@ -260,6 +275,14 @@ var TOBT,LastTOBL : TOB;
           PGIInfo('La ligne '+TOBL.GetString('GL_NUMLIGNE')+' est déjà transférée en totalité');
           Exit;
         end;
+        if IsOuvrage(TOBL) then
+        begin
+          if not TransfertOnlyOuvrage(TOBL) then
+          begin
+            PGIInfo('Transfert de l''ouvrage '+TOBL.GetString('GL_CODEARTICLE')+'impossible#13#10 '+'Des sous détails sont déjà transférés.');
+            Exit;
+          end;
+        end;
       end else if (TOBL.GetString('GL_TYPELIGNE')='SD') then
       begin
         TOBO := FindLigneOuvFromUnique (TOBL,TOBOUvrages,TOBL.GetInteger('UNIQUEBLO'));
@@ -270,6 +293,11 @@ var TOBT,LastTOBL : TOB;
           begin
             if TOBT.findfirst(['BT3_NUMORDRE','BT3_UNIQUEBLO'],[TOBLigne.GetInteger('GL_NUMORDRE'),0],True)<> nil then Continue; // l'ouvrage est sélectionné --> on ne prend pas le sous détail
             MontantPa := TOBO.GetDouble('BLO_MONTANTPA') * TOBLigne.GetDouble('GL_QTEFACT');
+            if TOBLigne.getDOuble('MTTRANSFERT')<>0 then
+            begin
+              PGIInfo('Impossible : L''ouvrage '+TOBLigne.GetString('GL_CODEARTICLE')+'#13#10 '+' est déjà partiellement ou totalement transféré.');
+              Exit;
+            end;
           end;
         end else Exit;
         //

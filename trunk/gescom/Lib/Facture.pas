@@ -7874,7 +7874,7 @@ begin
     if (ACol = SG_TEMPSTOT) and (TOBL.GetValue('GL_TYPEARTICLE')='PRE') and (TOBL.getString('BNP_TYPERESSOURCE')='SAL') then exit;
     if (pos(TOBL.GetValue('GL_TYPEARTICLE'),'ARP;ARV;OUV') = 0) and
          (copy(TOBL.getString('GL_TYPELIGNE'),1,2) <> 'TP') then Canvas.FillRect(ARect);
-  end;
+    end;
   end;
 
   if (Arow >= GS.fixedRows) and (ACol = SG_VOIRDETAIL) then
