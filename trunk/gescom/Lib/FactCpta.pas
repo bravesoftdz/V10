@@ -103,6 +103,7 @@ Uses FactVariante,FactOuvrage,UCoTraitance,FactTimbres
 ,Factretenues
 ,ULiquidTva2014
 ,UCumulCollectifs
+,UConnectWSCEGID
 ;
 
 type MODIF_Diff = class(TOB)
@@ -4916,8 +4917,10 @@ Var QualifP,PassP,LienP,NatureG,NatCpta,JalCpta,RefCP,Domaine,NatureJal : String
     I : integer;
     LesMilliemes,TvaEncaissement : string;
     ExePiece : string;
+    SENDCEGID : boolean;
 //    DEV : Rdevise;
 BEGIN
+SENDCEGID := True;
 Result:=rcOk ; LastMsg:=-1 ; NbEches:=0 ; NbAcc:=0 ;
 NatureG:=TOBPiece.GetValue('GP_NATUREPIECEG') ;
 Domaine:=TOBPiece.GetValue('GP_DOMAINE') ;
@@ -5081,7 +5084,13 @@ if ((Result=rcOk) and (TOBEcr.Detail.Count>=2)) then
       {Insertion}
       if LienP<>'DIF' then
       BEGIN
-         if Not TOBEcr.InsertDBByNivel(False) then V_PGI.IoError:=oeUnknown ;
+        if Not TOBEcr.InsertDBByNivel(False) then V_PGI.IoError:=oeUnknown ;
+        
+        if V_PGI.ioerror = OeOk then
+        begin
+          SendEntryCEGID (TOBPiece,TOBEcr,SENDCEGID);
+        end;
+
          {Lettrage}
          if QualifP='N' then GCLettrerAcomptes(OldEcr,TOBEcr,TOBAcomptes,TOBPiece) ;
          {Tiers payeur}
@@ -5104,6 +5113,7 @@ if ((Result=rcOk) and (TOBEcr.Detail.Count>=2)) then
             TOBPiece.Detail[ii].PutValue('GL_VIVANTE','-') ;
             end ;
          end;
+
       END else
       BEGIN
          if Not InsertionDifferee(TOBEcr) then V_PGI.IoError:=oeUnknown ;

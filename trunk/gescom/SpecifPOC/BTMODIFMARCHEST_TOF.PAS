@@ -48,7 +48,7 @@ Type
     procedure AfficheGrids;
     procedure constitueGrids;
     procedure ChargeTob;
-    procedure SetEvents;
+    procedure SetEvents (State : boolean);
     procedure GSCellEnter(Sender: TObject; var ACol, ARow: Integer; var Cancel: Boolean);
     procedure GSCellExit(Sender: TObject; var ACol, ARow: Integer; var Cancel: Boolean);
     procedure GSTopLeftChanged (Sender : TObject);
@@ -65,6 +65,10 @@ Implementation
 procedure TOF_BTMODIFMARCHEST.OnNew ;
 begin
   Inherited ;
+  //
+//         'BM1_AFFAIRE="'+LaTOB.GetString('AFFAIRE')+'" AND '+
+//         'BM1_MARCHE="'+copy(LaTOB.GetString('CODEMARCHE'),1,8)+'" AND '+
+  //
 end ;
 
 procedure TOF_BTMODIFMARCHEST.OnDelete ;
@@ -124,7 +128,7 @@ begin
   constitueGrids;
   ChargeTob;
   AfficheGrids;
-  SetEvents;
+  SetEvents (True);
   Arow := 1;
   Acol := 1;
   GSCellEnter (Self,Acol,Arow,cancel);
@@ -243,12 +247,21 @@ begin
   end;
 end;
 
-procedure TOF_BTMODIFMARCHEST.SetEvents;
+procedure TOF_BTMODIFMARCHEST.SetEvents (State : boolean);
 begin
-  GS.OnCellEnter := GSCellEnter;
-  GS.OnCellExit := GSCellExit;
-  GS.OnTopLeftChanged  := GSTopLeftChanged;
-  GS.OnColumnWidthsChanged := GSColWidthsChanged;
+  if State then
+  begin
+    GS.OnCellEnter := GSCellEnter;
+    GS.OnCellExit := GSCellExit;
+    GS.OnTopLeftChanged  := GSTopLeftChanged;
+    GS.OnColumnWidthsChanged := GSColWidthsChanged;
+  end else
+  begin
+    GS.OnCellEnter := nil;
+    GS.OnCellExit := nil;
+    GS.OnTopLeftChanged  := nil;
+    GS.OnColumnWidthsChanged := nil;
+  end;
 end;
 
 procedure TOF_BTMODIFMARCHEST.GSCellEnter(Sender: TObject; var ACol,ARow: Integer; var Cancel: Boolean);

@@ -1082,7 +1082,8 @@ uses
 	,uBTPVerrouilleDossier
   ,BTPGetVersions
   ,UBTPSequenceCpta
-  ,UApplication 
+  ,UApplication
+  ,UConnectWSCEGID 
    ;
 
 {$IFDEF EAGLCLIENT}
@@ -2496,6 +2497,8 @@ Var fb     : TFichierBase ;
     oT : TOB;
 		VersionRef : string;
 BEGIN
+
+  RecupParamCptaFromWS;
 
 {$IFNDEF EAGLSERVER}
 // MB : Nécessite AGL 20.21 avec unité FiltresDonnees
