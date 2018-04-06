@@ -15332,7 +15332,6 @@ begin
   begin
     PGIError('Commercial fermé', 'Commercial');
     GP_REPRESENTANT.Text := '';
-    BZoomCommercial.Enabled := False;
   end;
 
   Ferme(QQ);
