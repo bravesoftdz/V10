@@ -29,7 +29,12 @@ Type
      TOM_Commercial = Class (TOM)
      private
        TypeCommercial : string;
-       ChangeType : Boolean;
+       ChangeType     : Boolean;
+       //FV1 : 29/01/2018 - FS#2882 - CLOSSUR - Donner la possibilité de fermer un commercial
+       ChkFerme       : TcheckBox;
+       DateSupp       : THEdit;
+       Action         : Tactionfiche;
+
 {$IFDEF NOMADESERVER}
 {$IFNDEF EAGLCLIENT}
        LesSites : TCollectionSites ;
@@ -38,6 +43,7 @@ Type
        Procedure AfSpecifApporteur;
        procedure majcontact;
        procedure PositionneEtabUser (NomChamp : string);
+       procedure FermeOnClick(Sender: Tobject);
      public
        procedure OnArgument (stArgument : String ) ; override ;
        procedure OnChangeField (F : TField)  ; override ;
@@ -168,12 +174,29 @@ if not(ctxaffaire in V_PGI.PGIContexte ) then   // Paramétrage des libellés des 
   GCMAJChampLibre (TForm (Ecran), False, 'EDIT', 'GCL_VALLIBRE', 3, '');
   GCMAJChampLibre (TForm (Ecran), False, 'EDIT', 'GCL_DATELIBRE', 3, '');
   end;
+
+  Datesupp := THEdit(GetControl('GCL_DATESUPP'));
+
+  If Assigned(GetControl('GCL_FERME')) then
+  begin
+    ChkFerme := TCheckBox(GetControl('GCL_FERME'));
+    ChkFerme.OnClick := FermeOnClick;
+  end;
   
 PositionneEtabUser('GCL_ETABLISSEMENT') ;
 {$IFNDEF CCS3}
 AppliquerConfidentialite(Ecran,'GCL'); //JT eQualité 10964
 {$ENDIF}
 SetActiveTabSheet('PGeneral');
+end;
+
+Procedure TOM_Commercial.FermeOnClick(Sender : Tobject);
+begin
+
+  if Not (DS.State in [DSInsert, DsEdit]) then DS.Edit;
+
+  If Chkferme.checked then DateSupp.Text := DateToStr(Now) else DateSupp.Text := DateToStr(idate2099);
+
 end;
 
 procedure TOM_Commercial.OnChangeField(F: TField);
@@ -200,6 +223,9 @@ if ctxMode in V_PGI.PGIContexte then
     SetField('GCL_NATUREPIECEG', 'FAC');  // Nature pièce forcé à facture client
     SetField('GCL_ETABLISSEMENT', VH^.EtablisDefaut);  // Initialisé par l'établisst par défaut
     end;
+
+    ChkFerme.Checked := False;
+    DateSupp.Text    := DateToStr(Idate2099);
 
 PositionneEtabUser ('GCL_ETABLISSEMENT');
 
@@ -276,6 +302,14 @@ if (GetField('GCL_PREFIXETIERS')<>'') then
       Exit;
       end;
    end;
+
+   If ChkFerme.Checked then
+    SetField('GCL_FERME', 'X')
+   else
+    SetField('GCL_FERME', '-');
+
+   SetField('GCL_DATESUPP', StrToDate(DateSupp.Text));
+
 end;
 
 procedure TOM_Commercial.OnAfterUpdateRecord;
@@ -350,6 +384,13 @@ Inherited ;
 
   if ( (ctxaffaire in V_PGI.PGIContexte ) or (ctxgcaff in V_PGI.PGIContexte ))
     and (not(changetype))   then  AfSpecifApporteur;
+
+  if GetField('GCL_FERME') = 'X' then
+    ChkFerme.Checked := True
+  else
+    ChkFerme.Checked := False;
+
+  DateSupp.text := DateToStr(GetField('GCL_DATESUPP'));
 
 end;
 
