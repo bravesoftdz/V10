@@ -227,7 +227,7 @@ function GetChampsTot (Nomchamps : string) : string;
 procedure ZeroMtLigne (TOBP : TOB);
 
 implementation
-uses FactComm;
+uses FactComm,FactVariante;
 
 
 function GetChampsTot (Nomchamps : string) : string;
@@ -245,6 +245,7 @@ end;
 procedure CumuleTypeSurPiece (TOBP,TOBL : TOB);
 var Qte,X : double;
 begin
+  if IsVariante(TOBL) then exit;
   Qte := TOBL.GetDouble('GL_QTEFACT');
   X:=TOBP.Getdouble('GP_TOTALMOPA')+ Arrondi(TOBL.Getdouble('GLC_MTMOPA')*Qte,V_PGI.okdecV)   ; TOBP.PutValue('GP_TOTALMOPA',X) ;
   X:=TOBP.Getdouble('GP_TOTALMOPR')+Arrondi(TOBL.Getdouble('GLC_MTMOPR')*Qte,V_PGI.okdecV)   ; TOBP.PutValue('GP_TOTALMOPR',X) ;
