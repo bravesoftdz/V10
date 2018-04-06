@@ -47,6 +47,10 @@ type
     TiersLivre    : string;
     Action        : TActionFiche;
     //
+    Commercial    : THCritMaskEdit;
+    LblCommercial : THLabel;
+    OldCommercial : String;
+    //
     OkPieceAdresse: Boolean;
     //
     procedure AffichageMarge;
@@ -80,6 +84,9 @@ type
     procedure ControleChamp(Champ, Valeur: Variant);
     procedure ChargementAdresseTobEcran(TypeAdresse, Prefixe1, Prefixe2: string; TOBLAdresses: TOB);
     procedure ChargementAdresseEcranTOB(TypeAdresse, Prefixe1, Prefixe2: string; TOBLAdresses: TOB);
+    //
+    procedure GP_REPRESENTANTElipsisClick(Sender: TObject);
+    procedure GP_REPRESENTANTExit(Sender: TObject);
 
   public
     procedure OnArgument(stArgument: string); override;
@@ -201,6 +208,11 @@ begin
   // Modif BTP
   Apporteur := THEdit(Ecran.FindComponent('GP_APPORTEUR'));
   Apporteur.OnExit := ApporteurExit;
+
+  Commercial                := THCritMaskEdit(Ecran.FindComponent('GP_REPRESENTANT'));
+  Commercial.OnExit         := GP_REPRESENTANTExit;
+  Commercial.OnElipsisClick := GP_REPRESENTANTElipsisClick;
+  LblCommercial             := THLabel(Ecran.FindComponent('LIBREPRESENTANT'));
 
   {$IFDEF BTP}
 	GPTiersLivre := THEdit(GetControl('GP_TIERSLIVRE'));
@@ -371,6 +383,56 @@ TOBAdr_Old := TOB.Create ('SAUVE LES ADRESSES',nil,-1);
 	TOBRepart := TOB(TOB(LaTOB.data).Data);
 	SetComponents;
 {$ENDIF}
+
+end;
+
+procedure TOF_AFPiece.GP_REPRESENTANTExit(Sender: TObject);
+Var Lib1, Lib2 : String;
+    st : string;
+begin
+
+  st := Commercial.Text;
+
+  EntreCote(st, true);
+
+  Commercial.Text := st;
+
+  if (Commercial.Text <> '') and (Commercial.Text <> OldCommercial) then
+  begin
+  	if not OKRepresentant (Commercial.text,TypeCom) then
+    begin
+      PGIBoxAF(TexteMsgCompl[3], Ecran.Caption);
+      Commercial.SetFocus;
+      Exit;
+    end;
+  end;
+
+  LblCommercial.Caption := '';
+  if Commercial.text <> '' then
+  begin
+    LibelleCommercial(Commercial.Text, Lib1, Lib2, False);
+    LblCommercial.Caption := Lib1 + ' ' + Lib2;
+    LblCommercial.Visible := True;
+  end;
+
+end;
+
+function ExisteRessource(CodeRess: string): boolean;
+begin
+  Result := ExisteSql('SELECT ARS_RESSOURCE FROM RESSOURCE WHERE ARS_RESSOURCE="' + CodeRess + '"');
+end;
+
+
+procedure TOF_AFPiece.GP_REPRESENTANTElipsisClick(Sender: TObject);
+begin
+
+  if GetRepresentantEntete(Commercial, 'Recherche Commercial', TypeCom, nil) then
+  begin
+    if Commercial.Text <> OldCommercial then
+    begin
+      OldCommercial := Commercial.Text;
+    end;
+  end;
 
 end;
 
@@ -781,7 +843,7 @@ begin
   LaTob.PutValue('GP_TIERSPAYEUR', GetControlText('GP_TIERSPAYEUR'));
 
   // Contrôle du commercial
-  if (TraiteRepresentant) and (GetControlText('GP_REPRESENTANT') <> '') then
+  if (TraiteRepresentant) and (Commercial.text <> '') then
   begin
   	Req :='SELECT GCL_COMMERCIAL FROM COMMERCIAL WHERE GCL_COMMERCIAL="' + GetControlText('GP_REPRESENTANT') + '"';
     if TypeCom <> '' then req := Req + ' AND GCL_TYPECOMMERCIAL="'+TypeCom+'"';

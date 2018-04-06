@@ -15315,6 +15315,8 @@ begin
 end;
 
 procedure TFFacture.GereCommercialEnabled;
+var StSql : String;
+    QQ    : TQuery;
 begin
 
   BZoomCommercial.Enabled := (GP_REPRESENTANT.Text <> '');
@@ -15323,12 +15325,17 @@ begin
   //Vérification si le commercial n'est pas fermé...
   if GP_REPRESENTANT.Text = '' then exit;
 
-  if ExecuteSQL('SELECT GCL_COMMERCIAL FROM COMMERCIAL WHERE GCL_COMMERCIAL="' + GP_REPRESENTANT.Text + '" AND GCL_FERME="-"') = 0 then
+  StSql := 'SELECT GCL_COMMERCIAL FROM COMMERCIAL WHERE GCL_COMMERCIAL="' + GP_REPRESENTANT.Text + '" AND GCL_FERME="X"';
+  QQ := OpenSQL(StSQl, False);
+
+  if not QQ.eof then
   begin
     PGIError('Commercial fermé', 'Commercial');
     GP_REPRESENTANT.Text := '';
     BZoomCommercial.Enabled := False;
   end;
+
+  Ferme(QQ);
 
 end;
 
