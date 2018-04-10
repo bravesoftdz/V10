@@ -1183,7 +1183,8 @@ Begin
      else if Valeur = 'AFF' then
         Begin
       	SetControlText('XX_WHERE', GetControltext('XX_WHERE')+' AND SUBSTRING(GP_AFFAIRE,1,1) IN ("A","")');
-        if GetControl('AFF_AFFAIRE0') <> nil then SetControlText('AFF_AFFAIRE0', 'A');
+        if pos(ecran.name,'BTDEVISSTRAITE;BTDEVISCOTRAI_MUL') = 0 then
+          if GetControl('AFF_AFFAIRE0') <> nil then SetControlText('AFF_AFFAIRE0', 'A');
         SetControlText('AFFAIRE0', 'A');
         SetControlProperty('BSELECTAFF1', 'Hint', 'Recherche Chantier');
         SetControlProperty('BEFFACEAFF1', 'Hint', 'Effacer Critères Chantier');
