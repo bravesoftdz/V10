@@ -1462,19 +1462,36 @@ begin
 end;
 { GC_DBR_GC13811_FIN }
 
-{$IFDEF BTP}
+procedure ReinitlesMemoryTObs;
+
+  procedure ReinitMemTOb (TheMemTOB : tMemoryTob);
+  begin
+    TheMemTOB.ClearDetail;
+    TheMemTOB.IsLoaded := false;
+  end;
+  
+begin
+  ReinitMemTOb(VH_GC.TobDevise);
+  ReinitMemTOb(VH_GC.MTobParPieceDomaine);
+  ReinitMemTOb(VH_GC.MTOBParPieceComp);
+  ReinitMemTOb(VH_GC.MGCTobDim);
+  ReinitMemTOb(VH_GC.MGCTobAna);
+  ReinitMemTOb(VH_GC.MTobChpsOblig);
+  ReinitMemTOb(VH_GC.MTobMEA);
+end; 
+
 procedure ChargeLesmemoryTOBs;
 begin
-VH_GC.TobDevise.Load;
-VH_GC.MTobParPieceDomaine.load;
-VH_GC.MTOBParPieceComp.Load;
-VH_GC.MGCTobDim.load;
-VH_GC.MGCTobAna.load;
-VH_GC.MGCTOBAna.Detail.Sort('GDA_AXE;GDA_ETABLISSEMENT;GDA_TYPESTRUCRANA;GDA_TYPECOMPTE;GDA_RANG;');
-VH_GC.MTobChpsOblig.load;
-VH_GC.MTobMEA.Load;
+  ReinitlesMemoryTObs;
+  VH_GC.TobDevise.Load;
+  VH_GC.MTobParPieceDomaine.load;
+  VH_GC.MTOBParPieceComp.Load;
+  VH_GC.MGCTobDim.load;
+  VH_GC.MGCTobAna.load;
+  VH_GC.MGCTOBAna.Detail.Sort('GDA_AXE;GDA_ETABLISSEMENT;GDA_TYPESTRUCRANA;GDA_TYPECOMPTE;GDA_RANG;');
+  VH_GC.MTobChpsOblig.load;
+  VH_GC.MTobMEA.Load;
 end;
-{$ENDIF}
 
 Procedure ChargeDescriGC ;
 BEGIN
