@@ -3885,33 +3885,25 @@ BEGIN
     TOBCode:=ChargeAjouteComptaPorc(TOBCpta,TOBPiece,TOBP,TOBTiers,TOBAnaP,TOBAnaS) ;
     if TOBCode<>Nil then
     BEGIN
-        if (Pos(TOBP.GetString('GPT_TYPEPORT'),'PT;MIC;MTC;')>0) and (TOBP.GetDouble('GPT_TOTALTTCDEV')<0) then
-        begin
-          if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=TOBCode.GetValue('GCP_CPTEGENEACH')
-                                                    else CptHT:=TOBCode.GetValue('GCP_CPTEGENEVTE') ;
-        end else
-        begin
-      if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=TOBCode.GetValue('GCP_CPTEGENEVTE')
-                                                else CptHT:=TOBCode.GetValue('GCP_CPTEGENEACH') ;
-        end;
+      if (TOBP.GetDouble('GPT_TOTALTTCDEV')<0) and (GetParamSocSecur('SO_VENTILMONTANTSURCHARGE', False)) then
+      begin
+        if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=TOBCode.GetValue('GCP_CPTEGENEACH')
+                                                  else CptHT:=TOBCode.GetValue('GCP_CPTEGENEVTE') ;
+      end else
+      begin
+        if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=TOBCode.GetValue('GCP_CPTEGENEVTE')
+                                                  else CptHT:=TOBCode.GetValue('GCP_CPTEGENEACH') ;
+      end;
     END ;
     if (TOBCode=Nil) or ((CptHT='') and (VH_GC.GCPontComptable='ATT')) then
     BEGIN
-        if (Pos(TOBP.GetString('GPT_TYPEPORT'),'PT;MIC;MTC;')>0) and (TOBP.GetDouble('GPT_TOTALTTCDEV')<0) then
-        begin
-          if GetParamSocSecur('SO_VENTILMONTANTSURCHARGE', False) then
-          begin
-            if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=VH_GC.GCCptePortACH else CptHT:=VH_GC.GCCptePortVTE ;
-          end
-          else
-          begin
-            if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=VH_GC.GCCptePortVTE else CptHT:=VH_GC.GCCptePortACH ;
-          end;
-        end
-        else
-        begin
-      if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=VH_GC.GCCptePortVTE else CptHT:=VH_GC.GCCptePortACH ;
-        end;
+      if (TOBP.GetDouble('GPT_TOTALTTCDEV')<0) and (GetParamSocSecur('SO_VENTILMONTANTSURCHARGE', False)) then
+      begin
+        if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=VH_GC.GCCptePortACH else CptHT:=VH_GC.GCCptePortVTE ;
+      end else
+      begin
+        if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=VH_GC.GCCptePortVTE else CptHT:=VH_GC.GCCptePortACH ;
+      end;
     END ;
     // Erreur sur le compte HT port
     if CptHT='' then BEGIN Result:=rcPar ; LastMsg:=5 ; Break ; END ;
