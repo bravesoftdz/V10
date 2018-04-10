@@ -1094,7 +1094,8 @@ uses
   BTMULPOCTS_TOF in '..\SpecifPOC\BTMULPOCTS_TOF.PAS',
   BTSAISPOCTS_TOF in '..\SpecifPOC\BTSAISPOCTS_TOF.PAS',
   UTransferts in '..\SpecifPOC\UTransferts.pas',
-  BTSAISTRFPOC_TOF in '..\SpecifPOC\BTSAISTRFPOC_TOF.PAS';
+  BTMODIFMARCHEST_TOF in '..\SpecifPOC\BTMODIFMARCHEST_TOF.PAS',
+  UConnectWSCEGID in '..\..\CONNECTWS\UConnectWSCEGID.pas';
 
 //
 
