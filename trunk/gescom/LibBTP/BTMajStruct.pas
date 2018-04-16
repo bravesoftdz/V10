@@ -1421,7 +1421,14 @@ begin
     if VersionBaseDest < '998.ZZZD' then
     begin
       ExecuteSql ('UPDATE NOMENLIG SET GNL_PERTE=0,GNL_RENDEMENT=0,GNL_QTESAIS=GNL_QTE,GNL_QUALIFUNITEACH="" WHERE GNL_PERTE IS NULL');
-  end;
+    end;
+  end
+  else if NomTable = 'COMMERCIAL' then
+  begin
+    if VersionBaseDest < '998.ZZZX' then
+    begin
+      ExecuteSql ('UPDATE COMMERCIAL SET GCL_FERME="-" WHERE GCL_FERME IS NULL');
+    end;
   end;
 
 
