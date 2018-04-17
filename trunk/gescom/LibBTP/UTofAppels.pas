@@ -3788,7 +3788,7 @@ begin
   end Else
   Begin
     if (CodeEtat = 'CL1') OR (CodeEtat = 'ANN') OR
-    (CodeEtat = 'ACA') OR (CodeEtat = 'ACD') OR
+    {(CodeEtat = 'ACA') OR} (CodeEtat = 'ACD') OR
     (CodeEtat = 'FAC') OR (CodeEtat = 'ECR') OR
     (CodeEtat = 'REA') OR (CodeEtat = 'TER') then  Exit;
     //if (CodeEtat <> 'ACD') then
