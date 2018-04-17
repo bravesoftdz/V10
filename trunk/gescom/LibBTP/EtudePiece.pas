@@ -131,7 +131,6 @@ type TPieceEtude = class
     	procedure TraitePrixLigneCourante(TOBL: TOB; Pu: double);
      // Modified by f.vautrain 24/10/2017 15:30:16 - FS#2753 - NCN : développement selon devis ML-171509-3A
      procedure TraitementArticle(TOBL: TOB; CodeArticle, Qte : string; LignePgi : integer);
-
      public
 
      destructor Destroy; override;
