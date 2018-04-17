@@ -193,15 +193,31 @@ begin
 
   if PGIASK('Confirmez-vous la suppression ?', 'Suppression Type Action')=MrNo then Exit;
 
-  //contrôle si Famille non présente sur Matériel...
-  StSQL := 'SELECT BEM_BTETAT FROM BTEVENTMAT WHERE BEM_BTETAT="' + BtEtat.Text + '"';
+  //FV1 - 03/04/2018 - FS#3031 - ECHAFAUDAGE SERVICE : Interdire de supprimer un type action si présent sur planning
+  if TypeAction = 'PMA' then
+  begin
+    //contrôle si Famille non présente sur Matériel...
+    StSQL := 'SELECT BEM_BTETAT FROM BTEVENTMAT WHERE BEM_BTETAT="' + BtEtat.Text + '"';
+  end
+  else if TypeAction = 'INT' then
+  begin
+    //contrôle si Famille non présente sur Matériel...
+    StSQL := 'SELECT BEP_BTETAT FROM BTEVENPLAN WHERE BEP_BTETAT="' + BtEtat.Text + '"';
+  end
+  else if TypeAction = 'PCA' then
+  begin
+    //contrôle si Famille non présente sur Matériel...
+    StSQL := 'SELECT BEC_BTETAT FROM BTEVENTCHA WHERE BEC_BTETAT="' + BtEtat.Text + '"';
+  end;
+  //
+  
   if existeSQL(STSQL) then
     PGIError(TexteMessage[2], 'Type Action')
   else
   Begin
     //suppression pure et simple de l'enregistrement avec confirmation
     StSQL := 'DELETE BTETAT WHERE BTA_BTETAT="' + BtEtat.Text + '"' + StWhere;
-    if ExecuteSQL(StSQL)=0 then PGIError(TexteMessage[3], 'Type Action');;
+    if ExecuteSQL(StSQL)=0 then PGIError(TexteMessage[3], 'Type Action');
   end;
 
   Ecran.ModalResult := 1;
