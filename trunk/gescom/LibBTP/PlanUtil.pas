@@ -521,7 +521,7 @@ begin
 
   //Modif pour planning Général
   if Result <> 'GEN' then
-     Req := Req + 'WHERE BFO_FONCTION="' + Result + '" BFO_GEREPLANNING = "X"'
+     Req := Req + 'WHERE BFO_FONCTION="' + Result + '" AND BFO_GEREPLANNING = "X"'
   else
      Req := Req + 'WHERE BFO_GEREPLANNING = "X"';
 
@@ -1983,6 +1983,11 @@ begin
   TOBItem.AddChampSupValeur('BPL_DESCRIPTIF',     TOBEvent.GetString('DESCRIPTIF'));
   TOBItem.AddChampSupValeur('BPL_NUMEROADRESSE',  TOBEvent.GetValue('NUMEROADRESSE'));
   TobItem.AddChampSupValeur('BPL_CONTROLCAL',     CtrlCal);
+  //FV1 : 03/04/2018 - FS#3032 - ECHAFAUDAGE SERVICE : Ajouter date début et date fin du chantier
+  DateD   := StrToDate(DateToStr(TOBEvent.getValue('DATEDEBAFF')));
+  DateF   := StrToDate(DateToStr(TOBEvent.getValue('DATEFINAFF')));
+  TOBItem.putValue('BPL_DATEDEBAFF',      DateD);
+  TOBItem.putValue('BPL_DATEFINAFF',      DateF);
   //
   CompleteTobItem(TobItem)
   //
@@ -2593,7 +2598,11 @@ begin
     Result := Result + ' LEFT JOIN BTTYPERES ON ARS_CHAINEORDO=BTR_TYPRES';
 
     //Gestion du libellé de la ressource
-    if pos('AFO_LIBELLE',ZoneRes) > 0 then Result := Result + ' LEFT JOIN FONCTION ON ARS_FONCTION1=AFO_FONCTION ';
+    if pos('AFO_LIBELLE',ZoneRes) > 0 then
+    Begin
+      Result := Result + ' LEFT JOIN FONCTION  ON ARS_FONCTION1=AFO_FONCTION ';
+      Result := Result + ' LEFT JOIN BFONCTION ON AFO_FONCTION =BFO_FONCTION ';
+    end;
 
     //Gestion Affichage du sous-type ressource au Planning
     Result := Result + ' WHERE ARS_RESSOURCE in ';
@@ -2603,15 +2612,22 @@ begin
   else
   begin
     Result := Result + ZoneRes + ' FROM RESSOURCE ';
-    //Gestiuon du libellé du Sous-type Ressource
+    //Gestion du libellé du Sous-type Ressource
     if pos('BTR_LIBELLE',ZoneRes) > 0 Then Result := Result + ' LEFT JOIN BTTYPERES ON ARS_CHAINEORDO=BTR_TYPRES ';
     //Gestion du libellé de la Fonction Ressource
-    if pos('AFO_LIBELLE',ZoneRes) > 0 then Result := Result + ' LEFT JOIN FONCTION ON ARS_FONCTION1=AFO_FONCTION ';
+    if pos('AFO_LIBELLE',ZoneRes) > 0 then
+    Begin
+      Result := Result + ' LEFT JOIN FONCTION  ON ARS_FONCTION1=AFO_FONCTION ';
+      Result := Result + ' LEFT JOIN BFONCTION ON AFO_FONCTION =BFO_FONCTION ';
+    end;
     Result := Result + ' WHERE ';
   end;
 
   //Gestion des conditions de selection des enregistrement
   Result := Result + 'ARS_FERME="-" ';
+  //FV1 - 03/04/2018 : FS#3033 - ECHAFAUDAGE SERVICE : Ne pas afficher tous les salariés dans le planning
+  if pos('BTR_LIBELLE',ZoneRes) > 0 then Result := Result + ' AND BTR_GEREPLANNING="X" ';
+  if pos('AFO_LIBELLE',ZoneRes) > 0 then Result := Result + ' AND BFO_GEREPLANNING="X" ';
   //
   if P.Famres <> 'GEN' then
     Result := Result + ' AND ARS_TYPERESSOURCE = "' + p.FamRes + '" '
@@ -2681,7 +2697,11 @@ begin
     Result := Result + ZoneRes + ',BTR_LIBELLE ';
     Result := Result + '  FROM RESSOURCE LEFT JOIN BTTYPERES ON ARS_CHAINEORDO=BTR_TYPRES';
     //Gestion du libellé de la ressource
-    if pos('AFO_LIBELLE',ZoneRes) > 0 then Result := Result + ' LEFT JOIN FONCTION ON ARS_FONCTION1=AFO_FONCTION ';
+    if pos('AFO_LIBELLE',ZoneRes) > 0 then
+    Begin
+      Result := Result + ' LEFT JOIN FONCTION ON ARS_FONCTION1=AFO_FONCTION ';
+      Result := Result + ' LEFT JOIN BFONCTION ON BFO_FONCTION=AFO_FONCTION ';
+    end;
     Result := Result + ' WHERE ARS_RESSOURCE in '; //Gestion Affichage du sous-type ressource au Planning
     Result := Result + '(SELECT ARS_RESSOURCE FROM RESSOURCE LEFT JOIN BTTYPERES ON ARS_CHAINEORDO=BTR_TYPRES ';
     Result := Result + 'WHERE BTR_GEREPLANNING="X" AND  ARS_FERME="-") AND ';
@@ -2691,12 +2711,17 @@ begin
     Result := 'SELECT "INTERV" AS ORIGINEITEM, ';
     Result := Result + ZoneRes + ' FROM RESSOURCE ';
     //Gestion du Libellé de la fonction de la ressource
-    if pos('AFO_LIBELLE',ZoneRes) > 0 then Result := Result + ' LEFT JOIN FONCTION ON ARS_FONCTION1=AFO_FONCTION ';
+    if pos('AFO_LIBELLE',ZoneRes) > 0 then
+    Begin
+      Result := Result + ' LEFT JOIN FONCTION ON ARS_FONCTION1=AFO_FONCTION ';
+      Result := Result + ' LEFT JOIN BFONCTION ON BFO_FONCTION=AFO_FONCTION ';
+    end;
     Result := Result + ' WHERE ';
   end;
 
   //Gestion des conditions de selection des enregistrement
   Result := Result + 'ARS_FERME="-" ';
+  if pos('AFO_LIBELLE',ZoneRes) > 0 then   Result := Result + ' AND BFO_GEREPLANNING="X" ';
 
   if P.Famres <> 'GEN' then Result := Result + ' AND ARS_TYPERESSOURCE = "' + P.FamRes + '" ';
 
@@ -2724,7 +2749,11 @@ begin
   Result := Result + '  FROM RESSOURCE ';
   Result := Result + '  LEFT JOIN CHOIXCOD  ON ARS_TYPERESSOURCE=CC_CODE';
 
-  if pos('AFO_LIBELLE',ZoneRes) > 0 then Result := Result + ' LEFT JOIN FONCTION ON ARS_FONCTION1=AFO_FONCTION ';
+  if pos('AFO_LIBELLE',ZoneRes) > 0 then
+  Begin
+    Result := Result + ' LEFT JOIN FONCTION  ON ARS_FONCTION1=AFO_FONCTION ';
+    Result := Result + ' LEFT JOIN BFONCTION ON BFO_FONCTION=AFO_FONCTION ';
+  end;
 
   if SsTypeRessource='X' then Result := Result + '  LEFT JOIN BTTYPERES ON ARS_CHAINEORDO=BTR_TYPRES';
 
@@ -2732,6 +2761,9 @@ begin
 
   //Gestion des conditions de selection des enregistrement
   Result := Result + 'ARS_FERME="-" ';
+
+  if pos('AFO_LIBELLE',ZoneRes) > 0 then Result := Result + 'AND BFO_GEREPLANNING="X" ';
+  if SsTypeRessource='X'            then Result := Result + ' AND BTR_GEREPLANNING="X" ';
 
   Condition := LectLibCol('CO', 'BMP', p.TypePlanning,'CO_LIBRE') + '="' + P.CodeOnglet + '"';
   Result := Result + ' AND ' + Condition;
@@ -2754,6 +2786,7 @@ begin
   //if SsTypeRessource='X' then Result := Result + ', BTR_LIBELLE';
 
   Result := Result + '  FROM FONCTION ';
+  Result := Result + '  LEFT JOIN BFONCTION ON AFO_FONCTION=BFO_FONCTION  ';
   Result := Result + '  LEFT JOIN RESSOURCE ON ARS_FONCTION1=AFO_FONCTION';
 
   //if SsTypeRessource='X' then
@@ -2764,8 +2797,12 @@ begin
   //Gestion des conditions de selection des enregistrement
   Result := Result + 'ARS_FERME="-" ';
 
+  //FV1 : 03/04/2018 - FS#3033 - ECHAFAUDAGE SERVICE : Ne pas afficher tous les salariés dans le planning
+  Result := Result + 'AND BFO_GEREPLANNING="X" ';
+  //
+
   ///gestion de la famille renseignée au niveau du paramétrage Planning
-  if P.Famres <> 'GEN' then Result := Result + ' AND AFO_FONCTION IN (' + P.FamRes + ') ';
+  if P.Famres <> 'GEN' then Result := Result + ' AND BFO_FONCTION IN (' + P.FamRes + ') ';
 
   Condition := LectLibCol('CO', 'BMP', p.TypePlanning,'CO_LIBRE') + '="' + P.CodeOnglet + '" ';
   Result := Result + ' AND ' + Condition;
@@ -2845,7 +2882,10 @@ begin
   Result := Result + '""                AS TYPECONGE, ';
   Result := Result + 'ARS_SALARIE       AS SALARIE, ';
   Result := Result + 'AFF_DESCRIPTIF    AS DESCRIPTIF, ';
-  Result := Result + 'BEP_NUMEROADRESSE AS NUMEROADRESSE ';
+  Result := Result + 'BEP_NUMEROADRESSE AS NUMEROADRESSE, ';
+  //FV1 - 03/04/2018 : FS#3032 - ECHAFAUDAGE SERVICE : Ajouter date début et date fin du chantier
+  Result := Result + 'AFF_DATEDEBUT     AS DATEDEBAFF, ';
+  Result := Result + 'AFF_DATEFIN       AS DATEFINAFF ';
   Result := Result + 'FROM BTEVENPLAN ';
   Result := Result + 'LEFT JOIN BTETAT    ON (BTA_BTETAT=BEP_BTETAT) ';
   Result := Result + 'LEFT JOIN AFFAIRE   ON (AFF_AFFAIRE=BEP_AFFAIRE) ';
@@ -2853,6 +2893,8 @@ begin
   Result := Result + 'LEFT JOIN ADRESSES  ON (ADR_REFCODE=AFF_AFFAIRE) ';
   Result := Result + 'LEFT JOIN RESSOURCE ON (ARS_RESSOURCE=BEP_RESSOURCE) ';
   Result := Result + 'LEFT JOIN FONCTION  ON (AFO_FONCTION=ARS_FONCTION1) ';
+  Result := Result + 'LEFT JOIN BFONCTION ON (BFO_FONCTION=AFO_FONCTION) ';
+
   Result := Result + 'LEFT JOIN BTTYPERES ON (BTR_TYPRES=ARS_CHAINEORDO) ';
 
 
@@ -2941,12 +2983,17 @@ begin
   Result := Result + '""                AS TYPECONGE, ';
   Result := Result + 'ARS_SALARIE       AS SALARIE, ';
   Result := Result + 'AFF_DESCRIPTIF    AS DESCRIPTIF, ';
+  Result := Result + '"0"               AS NUMEROADRESSE, ';
+  //FV1 - 03/04/2018 : FS#3032 - ECHAFAUDAGE SERVICE : Ajouter date début et date fin du chantier
+  Result := Result + 'AFF_DATEDEBUT     AS DATEDEBAFF, ';
+  Result := Result + 'AFF_DATEFIN       AS DATEFINAFF, ';
   Result := Result + 'RAC_CHAINAGE, RAC_NUMLIGNE, RAC_GESTRAPPEL, RAC_DELAIRAPPEL, RAC_DATERAPPEL, RAC_NUMEROCONTACT ';
   Result := Result + 'FROM RTVACTIONS ';
   Result := Result + 'LEFT JOIN ACTIONINTERVENANT ON RAI_AUXILIAIRE=RAC_AUXILIAIRE AND RAI_NUMACTION=RAC_NUMACTION ';
   Result := Result + 'LEFT JOIN AFFAIRE           ON (AFF_AFFAIRE=RAC_AFFAIRE) ';
   Result := Result + 'LEFT JOIN RESSOURCE         ON RAI_RESSOURCE=ARS_RESSOURCE ';
   Result := Result + 'LEFT JOIN FONCTION          ON (ARS_FONCTION1=AFO_FONCTION) ';
+  Result := Result + 'LEFT JOIN BFONCTION         ON (AFO_FONCTION=BFO_FONCTION) ';
   Result := Result + 'LEFT JOIN BTTYPERES         ON (ARS_CHAINEORDO=BTR_TYPRES) ';
   Result := result + 'LEFT JOIN BTETAT            ON BTA_BTETAT="ACT-GRC" ';
   Result := Result + 'WHERE ';
@@ -3026,10 +3073,15 @@ begin
  	Result := Result + 'PCN_TYPEMVT       AS TYPEMVT, ';
   Result := Result + 'PCN_TYPECONGE     AS TYPECONGE, ';
   Result := Result + 'PCN_SALARIE       AS SALARIE, ';
-  Result := Result + '""                AS DESCRIPTIF ';
+  Result := Result + '""                AS DESCRIPTIF, ';
+  Result := Result + '"0"               AS NUMEROADRESSE, ';
+  //FV1 - 03/04/2018 : FS#3032 - ECHAFAUDAGE SERVICE : Ajouter date début et date fin du chantier
+  Result := Result + '"01/01/1900"      AS DATEDEBAFF, ';
+  Result := Result + '"31/12/2099"      AS DATEFINAFF ';
   Result := Result + ' FROM ABSENCESALARIE ';
   Result := Result + ' LEFT JOIN RESSOURCE ON ARS_SALARIE=PCN_SALARIE ';
   Result := Result + ' LEFT JOIN FONCTION  ON (ARS_FONCTION1=AFO_FONCTION) ';
+  Result := Result + ' LEFT JOIN BFONCTION ON (AFO_FONCTION=BFO_FONCTION) ';
   Result := Result + ' LEFT JOIN BTTYPERES ON (ARS_CHAINEORDO=BTR_TYPRES) ';
   Result := result + ' LEFT JOIN BTETAT    ON BTA_BTETAT="ABSPAIE" ';
   Result := Result + 'WHERE (ARS_RESSOURCE <> '') ';
@@ -3093,13 +3145,18 @@ begin
  	Result := Result + '""                AS TYPEMVT, ';
   Result := Result + '""                AS TYPECONGE, ';
   Result := Result + 'ARS_SALARIE       AS SALARIE, ';
-  Result := Result + 'AFF_DESCRIPTIF    AS DESCRIPTIF ';
+  Result := Result + 'AFF_DESCRIPTIF    AS DESCRIPTIF, ';
+  Result := Result + '"0"               AS NUMEROADRESSE, ';
+  //FV1 - 03/04/2018 : FS#3032 - ECHAFAUDAGE SERVICE : Ajouter date début et date fin du chantier
+  Result := Result + 'AFF_DATEDEBUT     AS DATEDEBAFF, ';
+  Result := Result + 'AFF_DATEFIN       AS DATEFINAFF ';
   Result := Result + 'FROM BTEVENTMAT ';
   Result := Result + 'LEFT JOIN BTMATERIEL   ON (BMA_CODEMATERIEL=BEM_CODEMATERIEL) ';
   Result := Result + 'LEFT JOIN BTFAMILLEMAT ON (BFM_CODEFAMILLE=BMA_CODEFAMILLE) ';
   Result := Result + 'LEFT JOIN BTETAT       ON (BTA_BTETAT=BEM_BTETAT) ';
   Result := Result + 'LEFT JOIN RESSOURCE    ON (ARS_RESSOURCE=BMA_RESSOURCE) ';
   Result := Result + 'LEFT JOIN FONCTION     ON (ARS_FONCTION1=AFO_FONCTION) ';
+  Result := Result + 'LEFT JOIN BFONCTION    ON (AFO_FONCTION=BFO_FONCTION) ';  
   Result := Result + 'LEFT JOIN BTTYPERES    ON (ARS_CHAINEORDO=BTR_TYPRES) ';
   Result := Result + 'LEFT JOIN AFFAIRE      ON (AFF_AFFAIRE=BEM_AFFAIRE) ';
   Result := Result + 'LEFT JOIN TIERS        ON (T_AUXILIAIRE=BEM_TIERS) ';
@@ -3174,13 +3231,18 @@ begin
  	Result := Result + '""                AS TYPEMVT, ';
   Result := Result + '""                AS TYPECONGE, ';
   Result := Result + 'ARS_SALARIE       AS SALARIE, ';
-  Result := Result + 'AFF_DESCRIPTIF    AS DESCRIPTIF ';
+  Result := Result + 'AFF_DESCRIPTIF    AS DESCRIPTIF, ';
+  Result := Result + '"0"               AS NUMEROADRESSE, ';
+  //FV1 - 03/04/2018 : FS#3032 - ECHAFAUDAGE SERVICE : Ajouter date début et date fin du chantier
+  Result := Result + 'AFF_DATEDEBUT     AS DATEDEBAFF, ';
+  Result := Result + 'AFF_DATEFIN       AS DATEFINAFF ';
   Result := Result + 'FROM BTEVENTMAT ';
   Result := Result + 'LEFT JOIN BTMATERIEL   ON (BMA_CODEMATERIEL=BEM_CODEMATERIEL) ';
   Result := Result + 'LEFT JOIN BTFAMILLEMAT ON (BFM_CODEFAMILLE=BMA_CODEFAMILLE) ';
   Result := Result + 'LEFT JOIN BTETAT       ON (BTA_BTETAT=BEM_BTETAT) ';
   Result := Result + 'LEFT JOIN RESSOURCE    ON (ARS_RESSOURCE=BEM_RESSOURCE) ';
   Result := Result + 'LEFT JOIN FONCTION     ON (ARS_FONCTION1=AFO_FONCTION) ';
+  Result := Result + 'LEFT JOIN BFONCTION    ON (AFO_FONCTION=BFO_FONCTION) ';  
   Result := Result + 'LEFT JOIN BTTYPERES    ON (ARS_CHAINEORDO=BTR_TYPRES) ';
   Result := Result + 'LEFT JOIN AFFAIRE      ON (AFF_AFFAIRE=BEM_AFFAIRE) ';
   Result := Result + 'LEFT JOIN TIERS        ON (T_AUXILIAIRE=BEM_TIERS) ';
@@ -3253,13 +3315,18 @@ begin
  	Result := Result + '""                AS TYPEMVT, ';
   Result := Result + '""                AS TYPECONGE, ';
   Result := Result + 'ARS_SALARIE       AS SALARIE, ';
-  Result := Result + 'AFF_DESCRIPTIF    AS DESCRIPTIF ';
+  Result := Result + 'AFF_DESCRIPTIF    AS DESCRIPTIF, ';
+  Result := Result + '"0"               AS NUMEROADRESSE, ';
+  //FV1 - 03/04/2018 : FS#3032 - ECHAFAUDAGE SERVICE : Ajouter date début et date fin du chantier
+  Result := Result + 'AFF_DATEDEBUT     AS DATEDEBAFF, ';
+  Result := Result + 'AFF_DATEFIN       AS DATEFINAFF ';
   Result := Result + 'FROM BTEVENTMAT ';
   Result := Result + 'LEFT JOIN BTMATERIEL   ON (BMA_CODEMATERIEL=BEM_CODEMATERIEL) ';
   Result := Result + 'LEFT JOIN BTFAMILLEMAT ON (BFM_CODEFAMILLE=BMA_CODEFAMILLE) ';
   Result := Result + 'LEFT JOIN BTETAT       ON (BTA_BTETAT=BEM_BTETAT) ';
   Result := Result + 'LEFT JOIN RESSOURCE    ON (ARS_RESSOURCE=BEM_RESSOURCE) ';
   Result := Result + 'LEFT JOIN FONCTION     ON (ARS_FONCTION1=AFO_FONCTION) ';
+  Result := Result + 'LEFT JOIN BFONCTION    ON (AFO_FONCTION=BFO_FONCTION) ';  
   Result := Result + 'LEFT JOIN BTTYPERES    ON (ARS_CHAINEORDO=BTR_TYPRES) ';
   Result := Result + 'LEFT JOIN AFFAIRE      ON (AFF_AFFAIRE=BEM_AFFAIRE) ';
   Result := Result + 'LEFT JOIN TIERS        ON (T_AUXILIAIRE=BEM_TIERS) ';
@@ -3330,7 +3397,11 @@ begin
  	Result := Result + '""                AS TYPEMVT, ';
   Result := Result + '""                AS TYPECONGE, ';
   Result := Result + 'ARS_SALARIE       AS SALARIE, ';
-  Result := Result + 'AFF_DESCRIPTIF    AS DESCRIPTIF ';
+  Result := Result + 'AFF_DESCRIPTIF    AS DESCRIPTIF, ';
+  Result := Result + '"0"               AS NUMEROADRESSE, ';
+  //FV1 - 03/04/2018 : FS#3032 - ECHAFAUDAGE SERVICE : Ajouter date début et date fin du chantier
+  Result := Result + 'AFF_DATEDEBUT     AS DATEDEBAFF, ';
+  Result := Result + 'AFF_DATEFIN       AS DATEFINAFF ';
   Result := Result + 'FROM BTEVENTCHA ';
   Result := Result + 'LEFT JOIN BTETAT    ON (BTA_BTETAT=BEC_BTETAT) ';
   Result := Result + 'LEFT JOIN AFFAIRE   ON (AFF_AFFAIRE=BEC_AFFAIRE) ';
@@ -3338,6 +3409,7 @@ begin
   Result := Result + 'LEFT JOIN ADRESSES  ON (ADR_REFCODE=AFF_AFFAIRE) ';
   Result := Result + 'LEFT JOIN RESSOURCE ON (ARS_RESSOURCE=BEC_RESSOURCE)';
   Result := Result + 'LEFT JOIN FONCTION  ON (ARS_FONCTION1=AFO_FONCTION) ';
+  Result := Result + 'LEFT JOIN BFONCTION    ON (AFO_FONCTION=BFO_FONCTION) ';
   Result := Result + 'LEFT JOIN BTTYPERES ON (ARS_CHAINEORDO=BTR_TYPRES) ';
 
   //
