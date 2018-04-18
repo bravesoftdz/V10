@@ -918,6 +918,7 @@ begin
   TobAppel.PutValue('AFF_DATESIGNE', StrToDate(GetControlText('AFF_DATESOUHAIT'))+StrToTime(GetControlText('AFF_HEURESOUHAIT')));
 
   TobAppel.PutValue('AFF_RESPONSABLE', GetControlText('AFF_RESPONSABLE'));
+  TobAppel.PutValue('AFF_NUMBON', GetControlText('AFF_NUMBON'));
 
   TobAppel.PutValue('AFF_ETATAFFAIRE', CodeEtat);
 
@@ -1940,6 +1941,7 @@ begin
   SetControlText('AFF_COMPTAAFFAIRE', TobAppel.GetValue('AFF_COMPTAAFFAIRE'));
   SetControlText('AFF_ETABLISSEMENT', TobAppel.GetValue('AFF_ETABLISSEMENT'));
   SetControlText('AFF_RESPONSABLE', TobAppel.GetValue('AFF_RESPONSABLE'));
+  SetControlText('AFF_NUMBON', TobAppel.GetValue('AFF_NUMBON'));
   //
   if THCheckBox(GetControl('DEMANDEREGLE')) <> nil then
   begin
