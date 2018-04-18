@@ -665,7 +665,19 @@ var sql : string;
 begin                    
   // ERP CEGID
   //
-  if NomTable = 'LIGREAANAL' then
+  if NomTable ='BTRESSOURCE' then
+  begin
+    if VersionBaseDest < '998.ZZZY' then
+    begin
+      ExecuteSQL('UPDATE BTRESSOURCE SET BRS_GERECHANTIER="-" WHERE BRS_GERECHANTIER IS NULL');
+    end;
+  end else if NomTable ='PHASESCHANTIER' then
+  begin
+    if VersionBaseDest < '998.ZZZY' then
+    begin
+      ExecuteSQL('UPDATE PHASESCHANTIER SET BPC_VISIBLE="X",BPC_SAISISSABLE="X" WHERE BPC_VISIBLE IS NULL');
+    end;
+  end else if NomTable = 'LIGREAANAL' then
   begin
     if VersionBaseDest < '998.ZZZP' then
     begin
@@ -1211,6 +1223,12 @@ begin
     begin
       UpDateDecoupeLigneCompl('GLC_COEFCOND=0 ',' AND GLC_COEFCOND IS NULL');
     end;
+
+    if VersionBaseDest < '998.ZZZY' then
+    begin
+      UpDateDecoupeLigneCompl('GLC_VISIBLE="X",GLC_SAISISSABLE="X" ',' AND GLC_VISIBLE IS NULL');
+    end;
+
   end else if nomTable ='LIGNEOUV' then
   begin
     if VersionBaseDest < '998.W' then
