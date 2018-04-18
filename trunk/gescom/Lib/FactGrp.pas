@@ -4291,6 +4291,7 @@ BEGIN
          else
             Intervention := false;
 				 G_LigneCommentaireBTP (newTOBP,TOBL,true,Intervention);
+    	   G_LigneCommentaireNumBon (newTOBP,TOBL,true,True);
          end;
     end;
 
@@ -4298,6 +4299,7 @@ BEGIN
 		if (GenereMode = 'FACCONSO') and (TOBL.GetValue('GL_AFFAIRE')<>LastAffaire) then
     begin
     	G_LigneCommentaireBTP (newTOBP,TOBL,true,True);
+    	G_LigneCommentaireNumBon (newTOBP,TOBL,true,True);
       LastAffaire := TOBL.GetValue('GL_AFFAIRE');
     end;
 
