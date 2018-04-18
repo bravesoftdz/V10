@@ -780,9 +780,14 @@ begin
 
   //FV1 : 04/05/2017 - FS#2528 - FVE - Gérer le SAV sur les Intérim comme sur les Salariés
   if (GetControlText('ARS_TYPERESSOURCE')='SAL') OR (GetControlText('ARS_TYPERESSOURCE')='INT') then
-    SetControlVisible('BRS_GERESAV',True)
-  else
+  begin
+    SetControlVisible('BRS_GERESAV',True);
+    SetControlVisible('BRS_GERECHANTIER',True);
+  end else
+  begin
     SetControlVisible('BRS_GERESAV',False);
+    SetControlVisible('BRS_GERECHANTIER',False);
+  end;
 
 end;
 
@@ -1493,10 +1498,12 @@ begin
   if (GetControlText('ARS_TYPERESSOURCE')='SAL') OR (GetControlText('ARS_TYPERESSOURCE')='INT') then
   begin
     SetControlVisible('BRS_GERESAV',True);
+    SetControlVisible('BRS_GERECHANTIER',True);
     SetControlVisible('ARS_RESSOURCELIE',True);
   end else
   begin
     SetControlVisible('BRS_GERESAV',False);
+    SetControlVisible('BRS_GERECHANTIER',false);
     SetControlVisible('ARS_RESSOURCELIE',false);
   end;
 
@@ -1532,10 +1539,12 @@ begin
   if Etat then
   begin
     TCHeckBox(GetControl ('BRS_GERESAV')).onClick := ChangeInfoSUp;
+    TCHeckBox(GetControl ('BRS_GERECHANTIER')).onClick := ChangeInfoSUp;
     THEdit(GetControl ('BRS_SECTION')).OnChange := ChangeInfoSUp;
   end else
   begin
     TCHeckBox(GetControl ('BRS_GERESAV')).onClick := nil;
+    TCHeckBox(GetControl ('BRS_GERECHANTIER')).onClick := nil;
     THEdit(GetControl ('BRS_SECTION')).OnChange := nil;
   end;
 end;

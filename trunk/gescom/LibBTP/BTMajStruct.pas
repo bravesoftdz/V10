@@ -665,7 +665,13 @@ var sql : string;
 begin                    
   // ERP CEGID
   //
-  if NomTable ='PHASESCHANTIER' then
+  if NomTable ='BTRESSOURCE' then
+  begin
+    if VersionBaseDest < '998.ZZZY' then
+    begin
+      ExecuteSQL('UPDATE BTRESSOURCE SET BRS_GERECHANTIER="-" WHERE BRS_GERECHANTIER IS NULL');
+    end;
+  end else if NomTable ='PHASESCHANTIER' then
   begin
     if VersionBaseDest < '998.ZZZY' then
     begin
