@@ -74,7 +74,10 @@ type
     procedure ChargeLesConsos;
     procedure CompletelesInfos;
     procedure AddChampsSupLoc(TOBB: TOB);
+    Procedure AddChampsSupLibTableLibre(TOBB: TOB);
     procedure AlimenteInfoProv(TOBL, TOBF: TOB);
+    //FV1 - 29/03/2018 : FS#3025 - ECHAFAUDAGE SERVICE : Permettre d'afficher le libellé des tables libres dans le journal des conso    
+    Procedure AlimenteLibelleTableLibreRessource(TOBL : TOB);
     procedure ControleChamp(Champ, Valeur: String);
     procedure ControleCritere(Critere: String);
     procedure OnChangeTypeAffaire(Sender: TObject);
@@ -377,6 +380,25 @@ procedure TOF_BTJOUCON.AddChampsSupLoc (TOBB : TOB);
 begin
 	TOBB.AddChampSupValeur ('Fournisseur','');
 	TOBB.AddChampSupValeur ('Provenance','');
+  //
+end;
+
+//FV1 - 29/03/2018 : FS#3025 - ECHAFAUDAGE SERVICE : Permettre d'afficher le libellé des tables libres dans le journal des conso
+
+procedure TOF_BTJOUCON.AddChampsSupLibTableLibre (TOBB : TOB);
+begin
+  //
+  TOBB.AddChampSupValeur ('Lib_Table_Libre_Res1', '');
+  TOBB.AddChampSupValeur ('Lib_Table_Libre_Res2', '');
+  TOBB.AddChampSupValeur ('Lib_Table_Libre_Res3', '');
+  TOBB.AddChampSupValeur ('Lib_Table_Libre_Res4', '');
+  TOBB.AddChampSupValeur ('Lib_Table_Libre_Res5', '');
+  TOBB.AddChampSupValeur ('Lib_Table_Libre_Res6', '');
+  TOBB.AddChampSupValeur ('Lib_Table_Libre_Res7', '');
+  TOBB.AddChampSupValeur ('Lib_Table_Libre_Res8', '');
+  TOBB.AddChampSupValeur ('Lib_Table_Libre_Res9', '');
+  TOBB.AddChampSupValeur ('Lib_Table_Libre_ResA', '');
+  //
 end;
 
 procedure TOF_BTJOUCON.AlimenteInfoProv (TOBL,TOBF : TOB);
@@ -386,6 +408,25 @@ begin
   Prov := RechDom ('GCNATUREPIECEG',TOBF.GetValue('BCO_NATUREPIECEG'),false)+' '+
   				IntToStr(TOBF.GetValue('BCO_NUMERO'))+ ' du '+DateToStr(TOBF.GetValue('GL_DATEPIECE'));
 	TOBL.putValue('Provenance',prov);
+end;
+
+//FV1 - 29/03/2018 : FS#3025 - ECHAFAUDAGE SERVICE : Permettre d'afficher le libellé des tables libres dans le journal des conso
+procedure TOF_BTJOUCON.AlimenteLibelleTableLibreRessource(TOBL : TOB);
+var Ind     : Integer;
+    Numero  : string;
+    lib     : string;
+begin
+
+  for ind := 1 to 10 do
+  begin
+    if Ind = 10 then
+      Numero := 'A'
+    else
+      Numero := IntToStr(Ind);
+    lib    := RechDom ('AFTLIBRERES'+Numero, TOBL.GetValue('TABLE_LIBRE_RESSOURCE'+Numero),false);
+	  TOBL.putValue('Lib_Table_Libre_Res'+Numero, Lib);
+  end;
+
 end;
 
 procedure TOF_BTJOUCON.CompletelesInfos;
@@ -399,9 +440,10 @@ begin
   for Indice := 0 to TOBBJC.detail.count -1 do
   begin
     TOBL := TOBBJC.detail[Indice];
-  	AddChampsSupLoc (TOBL);
+    AddChampsSupLibTableLibre(TOBL);
     if (TCheckBox(GetCOntrol('INCLUSINFOFOU')).Checked) then
     begin
+      AddChampsSupLoc (TOBL);
       if (TOBL.GetValue('BCO_NATUREMOUV')='FOU') or (TOBL.GetValue('BCO_NATUREMOUV')='EXT') then
       begin
         TOBProv.ClearDetail;
@@ -458,6 +500,8 @@ begin
         ferme (QQ);
       end;
     end;
+    //FV1 - 29/03/2018 : FS#3025 - ECHAFAUDAGE SERVICE : Permettre d'afficher le libellé des tables libres dans le journal des conso
+    AlimenteLibelleTableLibreRessource(TOBL);
   end;
   if TOBProv <> nil then FreeAndNil(TOBProv);
 end;

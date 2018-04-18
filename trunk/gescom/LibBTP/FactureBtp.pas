@@ -3122,11 +3122,13 @@ var QQ          : Tquery;
     Else if (Pos(TOBPiece.GetValue('GP_NATUREPIECEG'), 'BCE') > 0) then TypeSaisie := 'BCE'
     Else If (Venteachat = 'ACH') then TypeSaisie := Venteachat;
     //
-    if not ControleAffaire(Affaire, 'Saisie de document', TypeSaisie) then
-    begin
-      result := false;
-      exit;
-    end;
+  end;
+
+  //FV1 : 04/04/2018 - FS#3030 - EGCS : Pas de message indiquant "Chantier non accepté" lors de la duplication d'une facture Fournisseur
+  if not ControleAffaire(Affaire, 'Saisie de document', TypeSaisie) then
+  begin
+    result := false;
+    exit;
   end;
 
   {*
