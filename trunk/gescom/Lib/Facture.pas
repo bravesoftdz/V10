@@ -548,6 +548,7 @@ type
     MnBSVVISU: TMenuItem;
     BGED: TToolbarButton97;
     PAIESTPOC: TMenuItem;
+    BToolPhases: TToolbarButton97;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -789,6 +790,7 @@ type
     procedure MnBSVVISUClick(Sender: TObject);
     procedure MnBSVSTOCKEClick(Sender: TObject);
     procedure POPYTSClick(Sender: TObject);
+    procedure BToolPhasesClick(Sender: TObject);
 //    procedure TImprimableClick(Sender: TObject);
 
   private
@@ -5249,6 +5251,7 @@ var indice        : integer;
     StSQL         : String;
     QQ            : TQuery;
 begin
+  BToolPhases.visible := ISPieceGeneratricePhase (Cledoc.NaturePiece);
   PieceRecalculee := false;
   fGestQteAvanc := (GetParamSocSecur('SO_BTGESTQTEAVANC',false)) and (ISDocumentChiffrage(cledoc.Naturepiece));
   //
@@ -29980,6 +29983,25 @@ begin
   GS.SynEnabled := true;
 end;
 
+
+procedure TFFacture.BToolPhasesClick(Sender: TObject);
+var TOBSTP : TOB;
+begin
+  TOBSTP := TOB.Create ('UNE STRUCTURE PHASE',nil,-1);
+  TOBSTP.AddChampSupValeur('MODIF','-'); 
+  ConstitueStructPhases(TOBPiece,TOBSTP);
+  if TOBSTP.detail.count > 0 then
+  begin
+    TheTOB := TOBSTP;
+    AGLLanceFiche('BTP','BTPARAMPHASES','','','ACTION='+ActionToString(action));
+    TheTOB := nil;
+    if TOBSTP.GetString('MODIF')='X' then
+    begin
+      EnvoieInfoPhaseSurLigne(TOBSTP);
+    end;
+  end;
+  TOBSTP.free;
+end;
 
 initialization
   InitFacGescom();

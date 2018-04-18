@@ -1,7 +1,7 @@
 object FFacture: TFFacture
-  Left = 508
-  Top = 156
-  Width = 1177
+  Left = 305
+  Top = 130
+  Width = 1118
   Height = 721
   HelpContext = 119000017
   ActiveControl = GP_DATEPIECE
@@ -37,7 +37,7 @@ object FFacture: TFFacture
   object PEntete: THPanel
     Left = 0
     Top = 0
-    Width = 1161
+    Width = 1102
     Height = 125
     Align = alTop
     FullRepaint = False
@@ -1201,7 +1201,7 @@ object FFacture: TFFacture
   object PPiedTot: TPanel
     Left = 0
     Top = 536
-    Width = 1161
+    Width = 1102
     Height = 24
     Align = alBottom
     BevelOuter = bvNone
@@ -1209,7 +1209,7 @@ object FFacture: TFFacture
     object PGTG: TPanel
       Left = 0
       Top = -56
-      Width = 1161
+      Width = 1102
       Height = 80
       Align = alBottom
       BevelOuter = bvNone
@@ -1217,7 +1217,7 @@ object FFacture: TFFacture
       object GTG: THGrid
         Left = 0
         Top = 0
-        Width = 1161
+        Width = 1102
         Height = 80
         Align = alClient
         ColCount = 9
@@ -1243,7 +1243,7 @@ object FFacture: TFFacture
     object PGT: TPanel
       Left = 0
       Top = 0
-      Width = 1161
+      Width = 1102
       Height = 21
       Align = alTop
       BevelOuter = bvNone
@@ -1251,7 +1251,7 @@ object FFacture: TFFacture
       object GT: THGrid
         Left = 0
         Top = 0
-        Width = 1161
+        Width = 1102
         Height = 22
         Align = alTop
         DefaultRowHeight = 18
@@ -1337,7 +1337,7 @@ object FFacture: TFFacture
   object PGlobPied: THPanel
     Left = 0
     Top = 560
-    Width = 1161
+    Width = 1102
     Height = 122
     Align = alBottom
     BevelOuter = bvNone
@@ -1351,7 +1351,7 @@ object FFacture: TFFacture
     object PPied: THPanel
       Left = 0
       Top = 0
-      Width = 1161
+      Width = 1102
       Height = 87
       Align = alTop
       BevelOuter = bvNone
@@ -1365,7 +1365,7 @@ object FFacture: TFFacture
       TextEffect = tenone
       AutoResize = True
       DesignSize = (
-        1161
+        1102
         87)
       object HGP_ESCOMPTE: THLabel
         Left = 222
@@ -1446,7 +1446,7 @@ object FFacture: TFFacture
         Visible = False
       end
       object BLanceCalc: TToolbarButton97
-        Left = 763
+        Left = 704
         Top = 2
         Width = 405
         Height = 101
@@ -2532,7 +2532,7 @@ object FFacture: TFFacture
     object PButtons: TPanel
       Left = 0
       Top = 86
-      Width = 1161
+      Width = 1102
       Height = 36
       Align = alBottom
       BevelOuter = bvNone
@@ -2540,7 +2540,7 @@ object FFacture: TFFacture
       object DockBottom: TDock97
         Left = 0
         Top = 5
-        Width = 1161
+        Width = 1102
         Height = 31
         BackgroundTransparent = True
         Position = dpBottom
@@ -2553,11 +2553,11 @@ object FFacture: TFFacture
           DockPos = 0
           TabOrder = 0
           DesignSize = (
-            906
+            934
             27)
           object BMenuZoom: TToolbarButton97
             Tag = -100
-            Left = 28
+            Left = 56
             Top = 0
             Width = 40
             Height = 27
@@ -2583,7 +2583,7 @@ object FFacture: TFFacture
           end
           object BEche: TToolbarButton97
             Tag = 1
-            Left = 108
+            Left = 136
             Top = 0
             Width = 28
             Height = 27
@@ -2605,7 +2605,7 @@ object FFacture: TFFacture
           end
           object BInfos: TToolbarButton97
             Tag = 1
-            Left = 68
+            Left = 96
             Top = 0
             Width = 40
             Height = 27
@@ -2632,7 +2632,7 @@ object FFacture: TFFacture
           end
           object BChercher: TToolbarButton97
             Tag = 1
-            Left = 340
+            Left = 368
             Top = 0
             Width = 28
             Height = 27
@@ -2656,7 +2656,7 @@ object FFacture: TFFacture
           end
           object BSousTotal: TToolbarButton97
             Tag = 1
-            Left = 228
+            Left = 256
             Top = 0
             Width = 28
             Height = 27
@@ -2681,7 +2681,7 @@ object FFacture: TFFacture
           end
           object BAcompte: TToolbarButton97
             Tag = 1
-            Left = 256
+            Left = 284
             Top = 0
             Width = 28
             Height = 27
@@ -2707,7 +2707,7 @@ object FFacture: TFFacture
           end
           object BActionsLignes: TToolbarButton97
             Tag = 1
-            Left = 182
+            Left = 210
             Top = 0
             Width = 40
             Height = 27
@@ -2733,16 +2733,16 @@ object FFacture: TFFacture
             IsControl = True
           end
           object Sep1: TToolbarSep97
-            Left = 222
+            Left = 250
             Top = 0
           end
           object Sep2: TToolbarSep97
-            Left = 176
+            Left = 204
             Top = 0
           end
           object BOffice: TToolbarButton97
             Tag = 1
-            Left = 508
+            Left = 536
             Top = 0
             Width = 28
             Height = 27
@@ -2768,7 +2768,7 @@ object FFacture: TFFacture
           end
           object BVentil: TToolbarButton97
             Tag = 1
-            Left = 136
+            Left = 164
             Top = 0
             Width = 40
             Height = 27
@@ -2794,7 +2794,7 @@ object FFacture: TFFacture
           end
           object BDescriptif: TToolbarButton97
             Tag = 1
-            Left = 424
+            Left = 452
             Top = 0
             Width = 28
             Height = 27
@@ -2819,7 +2819,7 @@ object FFacture: TFFacture
             IsControl = True
           end
           object BDelete: TToolbarButton97
-            Left = 368
+            Left = 396
             Top = 0
             Width = 28
             Height = 27
@@ -2835,7 +2835,7 @@ object FFacture: TFFacture
             GlobalIndexImage = 'Z0005_S16G1'
           end
           object BImprimer: TToolbarButton97
-            Left = 536
+            Left = 564
             Top = 0
             Width = 28
             Height = 27
@@ -2859,7 +2859,7 @@ object FFacture: TFFacture
           end
           object BPorcs: TToolbarButton97
             Tag = 1
-            Left = 284
+            Left = 312
             Top = 0
             Width = 28
             Height = 27
@@ -2883,7 +2883,7 @@ object FFacture: TFFacture
             IsControl = True
           end
           object BSaisieAveugle: TToolbarButton97
-            Left = 605
+            Left = 633
             Top = 0
             Width = 28
             Height = 27
@@ -2907,7 +2907,7 @@ object FFacture: TFFacture
             GlobalIndexImage = 'Z1334_S16G1'
           end
           object BNouvelArticle: TToolbarButton97
-            Left = 672
+            Left = 700
             Top = 0
             Width = 29
             Height = 27
@@ -2931,7 +2931,7 @@ object FFacture: TFFacture
           end
           object BRetenuGar: TToolbarButton97
             Tag = 1
-            Left = 312
+            Left = 340
             Top = 0
             Width = 28
             Height = 27
@@ -2953,7 +2953,7 @@ object FFacture: TFFacture
             GlobalIndexImage = 'Z0109_S16G1'
           end
           object BPrixMarche: TToolbarButton97
-            Left = 701
+            Left = 729
             Top = 0
             Width = 28
             Height = 27
@@ -2969,7 +2969,7 @@ object FFacture: TFFacture
           end
           object BArborescence: TToolbarButton97
             Tag = 1
-            Left = 396
+            Left = 424
             Top = 0
             Width = 28
             Height = 27
@@ -2994,7 +2994,7 @@ object FFacture: TFFacture
             IsControl = True
           end
           object BtQteAuto: TToolbarButton97
-            Left = 633
+            Left = 661
             Top = 0
             Width = 39
             Height = 27
@@ -3018,7 +3018,7 @@ object FFacture: TFFacture
             GlobalIndexImage = 'Z0213_S16G1'
           end
           object Bminute: TToolbarButton97
-            Left = 729
+            Left = 757
             Top = 0
             Width = 27
             Height = 27
@@ -3033,7 +3033,7 @@ object FFacture: TFFacture
           end
           object RecalculeDocument: TToolbarButton97
             Tag = 1
-            Left = 480
+            Left = 508
             Top = 0
             Width = 28
             Height = 27
@@ -3058,7 +3058,7 @@ object FFacture: TFFacture
           end
           object BCalculDocAuto: TToolbarButton97
             Tag = 1
-            Left = 452
+            Left = 480
             Top = 0
             Width = 28
             Height = 27
@@ -3083,7 +3083,7 @@ object FFacture: TFFacture
             IsControl = True
           end
           object BintegreExcel: TToolbarButton97
-            Left = 564
+            Left = 592
             Top = 0
             Width = 41
             Height = 27
@@ -3133,7 +3133,7 @@ object FFacture: TFFacture
             Visible = False
           end
           object BMinute2: TToolbarButton97
-            Left = 756
+            Left = 784
             Top = 0
             Width = 27
             Height = 27
@@ -3147,7 +3147,7 @@ object FFacture: TFFacture
             GlobalIndexImage = 'Z0445_S16G1'
           end
           object BDEMPRIX: TToolbarButton97
-            Left = 783
+            Left = 811
             Top = 0
             Width = 39
             Height = 27
@@ -3160,7 +3160,7 @@ object FFacture: TFFacture
             GlobalIndexImage = 'Z2213_S16G1'
           end
           object BRENUM: TToolbarButton97
-            Left = 865
+            Left = 893
             Top = 0
             Width = 41
             Height = 27
@@ -3177,6 +3177,8 @@ object FFacture: TFFacture
             Width = 28
             Height = 27
             Hint = 'Voir les totalisations documents'
+            Glyph.Data = {00000000}
+            GlyphMask.Data = {00000000}
             ImageIndex = 0
             Images = HimgTOT
             Opaque = False
@@ -3185,7 +3187,7 @@ object FFacture: TFFacture
             OnClick = TBVOIRTOTClick
           end
           object BGED: TToolbarButton97
-            Left = 822
+            Left = 850
             Top = 0
             Width = 43
             Height = 27
@@ -3255,14 +3257,22 @@ object FFacture: TFFacture
             ParentShowHint = False
             ShowHint = True
           end
+          object BToolPhases: TToolbarButton97
+            Left = 28
+            Top = 0
+            Width = 28
+            Height = 27
+            OnClick = BToolPhasesClick
+            GlobalIndexImage = 'M0055_S16G1'
+          end
         end
         object Valide97: TToolbar97
-          Left = 915
+          Left = 943
           Top = 0
           Caption = 'Validation'
           CloseButton = False
           DefaultDock = DockBottom
-          DockPos = 915
+          DockPos = 943
           TabOrder = 1
           DesignSize = (
             84
@@ -3470,6 +3480,8 @@ object FFacture: TFFacture
       '\par '
       '\par '
       '\par '
+      '\par '
+      '\par '
       '\par }')
   end
   object BZoomRessource: THBitBtn
@@ -3492,7 +3504,7 @@ object FFacture: TFFacture
   object PGS: TPanel
     Left = 0
     Top = 125
-    Width = 1161
+    Width = 1102
     Height = 411
     Align = alClient
     BevelOuter = bvNone
@@ -3502,7 +3514,7 @@ object FFacture: TFFacture
       Tag = 1
       Left = 0
       Top = 0
-      Width = 1161
+      Width = 1102
       Height = 411
       Align = alClient
       BorderStyle = bsNone
@@ -4273,6 +4285,8 @@ object FFacture: TFFacture
           '0\fnil Times New Roman;}}'
         '{\*\generator Riched20 6.3.9600}\viewkind4\uc1 '
         '\pard\f0\fs20 '
+        '\par '
+        '\par '
         '\par '
         '\par '
         '\par '

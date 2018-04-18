@@ -81,6 +81,7 @@ begin
   Inherited ;
   StringToRich(THRichEditOLE (GetControl('DEVIS')), LaTOB.Getvalue('LO_OBJET'));
   if laTOB.getString('LO_QUALIFIANTBLOB')<>'REA' then SetControlVisible('BDELETE',true);
+  THRichEditOLE(GetControl('DEVIS')).ReadOnly := True;
 end ;
 
 procedure TOF_BVOIRDEVISINT.OnClose ;

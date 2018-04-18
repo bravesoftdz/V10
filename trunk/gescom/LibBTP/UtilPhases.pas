@@ -69,6 +69,8 @@ function GetLibellePhase (Chantier,Phase : string) : string; overload;
 function GetLibelleChantier (TOBL : Tob) : string;
 function ControlePiecePhases (TOBPiece : TOB; var MessageRet : string) : boolean;
 function IsExistPhases (Chantier : string) : boolean;
+procedure ConstitueStructPhases(TOBPiece,TOBSTP : TOB);
+procedure EnvoieInfoPhaseSurLigne(TOBSTP : TOB);
 
 implementation
 uses factutil;
@@ -348,6 +350,8 @@ begin
   TOBPhase.putValue('BPC_AFFAIRE',TOBL.GetValue('GL_AFFAIRE'));
   TOBPhase.putValue('BPC_LIBELLE',TOBL.GetValue('GL_LIBELLE'));
   TOBPhase.putValue('BPC_PHASETRA',EncodePhase);
+  TOBPhase.SetBoolean('BPC_SAISISSABLE',TOBL.GetBoolean('GLC_SAISISSABLE'));
+  TOBPhase.SetBoolean('BPC_VISIBLE',TOBL.GetBoolean('GLC_VISIBLE'));
   indiceCurrent := TOBPhases.detail.count -1;
   CurrentPhase := TOBPhase;
 end;
@@ -366,7 +370,6 @@ begin
   TOBphaseDet.putValue('BLP_NUMERO',TOBL.getValue('GL_NUMERO'));
   TOBphaseDet.putValue('BLP_INDICEG',TOBL.getValue('GL_INDICEG'));
   TOBphaseDet.putValue('BLP_NUMORDRE',TOBL.getValue('GL_NUMORDRE'));
-//  TOBphaseDet.putValue('BLP_INDICECON',TOBL.getValue('GL_INDICECON'));
 end;
 
 constructor TgestionPhase.create;
@@ -768,4 +771,48 @@ procedure TGestionPhase.RepertorieReceptionsHLiensFromLIV (TOBL : TOB ; Affaire 
 begin
 	gestionConso.RepertorieReceptionsHLiensFromLIV (TOBL,Affaire);
 end;
+
+procedure ConstitueStructPhases(TOBPiece,TOBSTP : TOB);
+
+  procedure AjouteUnePhase(TOBL,TOBSTP : TOB);
+  var TOBP : TOB;
+  begin
+    TOBP := TOB.Create ('UNE PHASE',TOBSTP,-1);
+    TOBP.AddChampSupValeur('REFERENCE',TOBL.GetString('GLC_NUMEROTATION'));
+    TOBP.AddChampSupValeur('LIBELLE',TOBL.GetString('GL_LIBELLE'));
+    TOBP.AddChampSupValeur('VISIBLE',TOBL.GetBoolean('GLC_VISIBLE'));
+    TOBP.AddChampSupValeur('SAISISSABLE',TOBL.GetBoolean('GLC_SAISISSABLE'));
+    TOBP.AddChampSupValeur('NIVEAU',TOBL.GetInteger('GL_NIVEAUIMBRIC'));
+    TOBP.data := TOBL;
+  end;
+
+var II : Integer;
+    TOBL : TOB;
+begin
+  for II := 0 to TOBPiece.Detail.count -1 do
+  begin
+    TOBL := TOBPiece.detail[II];
+    if IsDebutParagraphe(TOBL) then
+    begin
+      AjouteUnePhase(TOBL,TOBSTP);    
+    end;
+  end;
+end;
+
+procedure EnvoieInfoPhaseSurLigne(TOBSTP : TOB);
+var II : Integer;
+    TOBP,TOBL : TOB;
+begin
+  for II := 0 TO TOBSTP.detail.count -1 do
+  begin
+    TOBP := TOBSTP.detail[II];
+    TOBL := TOB(TOBP.data);
+    if TOBL <> NIL then
+    begin
+      TOBL.SetBoolean('GLC_VISIBLE',TOBP.GetBoolean('VISIBLE'));
+      TOBL.SetBoolean('GLC_SAISISSABLE',TOBP.GetBoolean('SAISISSABLE'));
+    end;
+  end;
+end;
+
 end.
