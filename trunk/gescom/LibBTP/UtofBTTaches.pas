@@ -1631,20 +1631,22 @@ begin
 //   fTobDet.free;
    if vTOBModeles.detail.count = 0 then begin fTOBDet := nil; exit; END;
    for i := 0 to vTOBModeles.detail.count-1 do
-       Begin
-       fTobDet := TOB.Create('TACHE', fTobTaches, -1);
-       fTobDet.AddChampSupValeur('QTEAPLANIFIERCALC', 0, false);
-       fTobDet.AddChampSupValeur('RAPPTPRCAL', 0, false);
-       fTobDet.AddChampSupValeur('RAPPTPVCAL', 0, false);
-       fStatut := taCreat;
-       InitNewTache(fTobDet);
-       InsererModele(vTOBModeles.detail[i], FtobDet);
-       FtobDet.PutValue('ATA_NUMEROTACHE', IntToStr(StrToInt(NoTacheDup)+i));
-       FtobDet.PutValue('ATA_FAITPARQUI', '');
-       LoadAdresseTache(False, fTobDet);
-       fTobDet.PutEcran(Ecran, fPaDet);
-       FtobDet.InsertDB(nil, true);
-       end;
+   Begin
+     fTobDet := TOB.Create('TACHE', fTobTaches, -1);
+     fTobDet.AddChampSupValeur('QTEAPLANIFIERCALC', 0, false);
+     fTobDet.AddChampSupValeur('RAPPTPRCAL', 0, false);
+     fTobDet.AddChampSupValeur('RAPPTPVCAL', 0, false);
+     fStatut := taCreat;
+     InitNewTache(fTobDet);
+     InsererModele(vTOBModeles.detail[i], FtobDet);
+     FtobDet.PutValue('ATA_NUMEROTACHE', IntToStr(StrToInt(NoTacheDup)+i));
+     FtobDet.PutValue('ATA_FAITPARQUI', '');
+     LoadAdresseTache(False, fTobDet);
+     //FV1 - 20/04/2018 : FS#3065 - VIVIANE - En création tâche contrat perte information tâche après recherche adresse.
+     //fTobDet.PutEcran(Ecran, fPaDet);
+     RefreshAdresse;
+     FtobDet.InsertDB(nil, true);
+   end;
 
    RefreshGrid;
 
@@ -5338,7 +5340,8 @@ begin
   end;
 
   LoadAdresseTache(False, fTobDet);
-  fTobDet.PutEcran(Ecran, fPaDet);
+  //FV1 - 20/04/2018 : FS#3065 - VIVIANE - En création tâche contrat perte information tâche après recherche adresse.
+  //fTobDet.PutEcran(Ecran, fPaDet);
 
   RefreshAdresse;
 
@@ -5356,7 +5359,8 @@ begin
   fTobDet.PutValue('ATA_TYPEADRESSE', '');
   fTobDet.SetAllModifie(true);
   LoadAdresseTache(false, fTobDet);
-  fTobDet.PutEcran(Ecran, fPaDet);
+  //FV1 - 20/04/2018 : FS#3065 - VIVIANE - En création tâche contrat perte information tâche après recherche adresse.
+  //fTobDet.PutEcran(Ecran, fPaDet);
   RefreshAdresse;
   //Recherche du Contact et du type d'action evenement en affichage des lignes de la grille
   LectureTypeAction(GetControlText('ATA_BTETAT'));

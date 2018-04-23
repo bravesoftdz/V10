@@ -686,7 +686,7 @@ begin
 
 	ArticleVersLigne (TOBP,TOBArt,nil,TOBL,TOBT,false);
   ArticleDetailVersLigne(TOBL.getValue('GL_REFARTSAISIE'),TOBart,TOBL, [tModeGridStd]);
-
+  TOBL.SetString('NUMBON',TOBA.GetString('AFF_NUMBON'));
   //--Chargement date de l'intervention dans la date de livraison
   // afin de la récupérer dnas la facture
   TOBL.PutValue('GL_DATELIVRAISON', TobConso.GetValue('BCO_DATEMOUV'));

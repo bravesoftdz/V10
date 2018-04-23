@@ -60,7 +60,7 @@ function AfPlusNatureAchat(BLC:boolean=FALSE;ForPlus : boolean=true) :string;
 {$ENDIF}
 procedure GCTestDepotOblig;
   Procedure MajChampsLibresGED( FF : Tform ) ;
-function MAJJnalEvent(TypeEvt, Etat, Libelle, BlocNote : string) : integer;
+function MAJJnalEvent(TypeEvt, Etat, Libelle, BlocNote : string; FileName: string ='') : integer;
 function TransformeLesInToOr(stIn : string) : string;
 function GereCommercial : boolean;
 procedure TraiteParametresSurTForm(FF : TForm; LesChamps : string=''; AffecteFiltre : boolean=false);
@@ -91,6 +91,7 @@ uses
   Printers
   ,CbpMCD
   ,CbpEnumerator
+  ,UFileAssoc
   ;
 
 const
@@ -1905,7 +1906,7 @@ Modifié le ... :   /  /
 Description .. : Mise à jour de la table journal d'événement
 Mots clefs ... : JOURNAL;EVENEMENT;
 *****************************************************************}
-function MAJJnalEvent(TypeEvt, Etat, Libelle, BlocNote : string) : integer;
+function MAJJnalEvent(TypeEvt, Etat, Libelle, BlocNote : string; FileName: string ='') : integer;
 {$IFNDEF EAGLCLIENT}
 var TobJournal : TOB;
     TSqlJournal : TQuery;
@@ -1930,7 +1931,15 @@ begin
     end;
     Inc (Result);
     TOBJournal.PutValue ('GEV_NUMEVENT', Result);
-    TOBJournal.InsertDB (Nil) ;
+    BEGINTRANS;
+    TRY
+      TOBJournal.InsertDB (Nil) ;
+      //
+      if FileName <> '' then StockeDocumentLie (TfafEvt,TobJournal,FileName);
+      COMMITTRANS;
+    EXCEPT
+      ROLLBACK;
+    END;
   finally
     TobJournal.Free;
   end;

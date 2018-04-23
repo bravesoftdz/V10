@@ -75,7 +75,8 @@ Uses StdCtrls,
      MsgUtil,
      PlanUtil,
      uEntCommun,
-     UtilRT;
+     UtilRT,
+     UFileAssoc;
 
 Type
   TOF_APPEL = Class (TOF)
@@ -398,6 +399,7 @@ Type
     procedure DateInterChange (Sender :TObject);
     procedure DefinieInfoSupp;
     procedure LoadlesPhotos;
+    procedure MnDocsClick (Sender : TObject);
     //
   end;
 
@@ -1540,6 +1542,8 @@ begin
   SetControlVisible ('BTY_LIBUNITE',false);
   //
   THEdit(GetControl('AFF_DATESOUHAIT')).OnChange := DateInterChange;
+  if assigned(TMenuItem(GetControl('MnDocs'))) then TMenuItem(GetControl('MnDocs')).OnClick := MnDocsClick;
+
 end;
 
 Procedure TOF_APPEL.ControleChamp(Champ : String;Valeur : String);
@@ -6743,6 +6747,24 @@ begin
 
   result := True;
 
+end;
+
+procedure TOF_APPEL.MnDocsClick(Sender: TObject);
+var TOBDATA : TOB;
+    TheRef : string;
+begin
+  if CodeAppel = '' then Exit;
+  TOBDATA := TOB.Create('UNE TOB',nil,-1);
+  TOBDATA.AddChampSupValeur('AFF_AFFAIRE',CodeAppel);
+  TOBDATA.AddChampSupValeur('CODE','');
+  TOBDATA.AddChampSupValeur('TYPE',TypeGestionFictoText(TfafInterv));
+  TheRef := ConstitueReferenceStockage(TfafInterv,TOBDATA);
+  TOBDATA.SetString('CODE',TheRef);
+  TRY
+    GestionDocumentsLies ( TfafInterv,TOBDATA,TFVierge(Ecran).TypeAction);
+  FINALLY
+    TOBDATA.free;
+  END;
 end;
 
 Initialization

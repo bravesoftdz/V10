@@ -234,6 +234,7 @@ begin
   TOBL.AddChampSup('QTECHANGE', Soeur);
   TOBL.AddChampSup('_CONTREMARTREF', Soeur);
   TOBL.AddChampSup('SUPPRIME', Soeur);
+  TOBL.AddChampSup('NUMBON', Soeur);
   // Code Barre
   if not TOBL.FieldExists('REGROUPE_CB') then TOBL.AddChampSupValeur ('REGROUPE_CB', '-');
   if not TOBL.FieldExists('UNI_OU_DIM') then TOBL.AddChampSupValeur ('UNI_OU_DIM', '');
@@ -600,6 +601,7 @@ begin
   TOBL.Putvalue(prefixe+'_RECALCULER', '-');
   TOBL.Putvalue('INDICERG', 0);
   TOBL.PutValue('FROMTARIF', '-');
+  TOBL.SetString('NUMBON','');
   // ---
   {$IFDEF BTP}
   InitLesSupLigneBtp (TOBL);

@@ -48,11 +48,18 @@ procedure AnnuleArt(Repertoire,Fichier, RepSauve: string);
 function ChargeFicArt(Repertoire,Fichier, Repsauv, fuser: string): boolean;
 function SauveFicArt(Repertoire, Fichier, RepertSauv: string): boolean;
 
+procedure OuvreDocument (DocName : string);
+
 //
 Function Replace(Str, Car1, Car2: string): string;
 
 implementation
+uses ShellAPI;
 
+procedure OuvreDocument (DocName : string);
+begin
+  ShellExecute(0, PCHAR('open'), PChar(DocName), nil, nil, SW_SHOWNORMAL);
+end;
 
 function EnregistreFichier (RepertBase,SousRepertoire:String;Fichini,FicOut : string) : string;
 var Repertoire,nomfic,nomOut : string;
