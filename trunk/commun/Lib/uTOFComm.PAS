@@ -748,6 +748,8 @@ begin
   begin
 		if Ttoolbarbutton97(GetControl('Bcherche')) <> nil then Ttoolbarbutton97(GetControl('Bcherche')).Onclick := BchercheClick;
   end;
+  Ecran.Caption := GetWindowsCaptionFromArgument(S, Ecran.Caption);
+  UpdateCaption(Ecran);
 end;
 
 procedure tTOFComm.OnClose;

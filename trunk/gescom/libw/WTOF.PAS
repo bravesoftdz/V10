@@ -267,6 +267,11 @@ begin
   wGereFormsByCtx(Ecran, Self, 'OnArgument', True);
   {$ENDIF GPAOLIGHT}
 
+  if Ecran is TFMul then
+    TFMul(Ecran).Caption := GetWindowsCaptionFromArgument(S, Ecran.Caption)
+  else
+    Ecran.Caption := GetWindowsCaptionFromArgument(S, Ecran.Caption);
+
   Inherited;
 
   { Loupe }

@@ -302,6 +302,7 @@ function RepertoireExiste (LeRepertoire :string; bCreation : boolean = false) : 
 {$IFNDEF EAGLSERVER}
 function FormatNumVersion(const Mask: String): String;
 {$ENDIF !EAGLSERVER}
+function GetMyTempPath : string;
 
 implementation
                 
@@ -4507,7 +4508,13 @@ Begin
 
 end;
 
-
+function GetMyTempPath : string;
+  var
+  Buffer: array[0..1023] of Char;
+begin
+  GetTempPath(Sizeof(Buffer)-1,Buffer);
+  SetString(Result, Buffer, StrLen(Buffer));
+end;
 
 Initialization
   {$IFNDEF EAGLSERVER}
