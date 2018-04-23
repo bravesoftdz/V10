@@ -123,7 +123,11 @@ var CodeSto,SToFile,EmplacementStockage : string;
 begin
   if FileName ='' then Exit;
   EmplacementStockage := GetParamSocSecur ('SO_BTEMPLFILEREF','');
-  if EmplacementStockage = '' then Exit;
+  if EmplacementStockage = '' then
+  begin
+    PGIInfo('Veuillez renseigner le paramètre de stockage des fichiers de référence');
+    Exit;
+  end;
   //
   CodeSto := ConstitueReferenceStockage (FonctionSto,TOBDATA);
   if CodeSto = '' then Exit;

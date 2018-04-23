@@ -547,7 +547,8 @@ uses
   BTSAISPOCTS_TOF in '..\SpecifPOC\BTSAISPOCTS_TOF.PAS',
   UTransferts in '..\SpecifPOC\UTransferts.pas',
   BTMODIFMARCHEST_TOF in '..\SpecifPOC\BTMODIFMARCHEST_TOF.PAS',
-  UConnectWSCEGID in '..\..\CONNECTWS\UConnectWSCEGID.pas';
+  UConnectWSCEGID in '..\..\CONNECTWS\UConnectWSCEGID.pas',
+  UFileAssoc in '..\LibBTP\UFileAssoc.pas';
 
 {$R *.RES}
 

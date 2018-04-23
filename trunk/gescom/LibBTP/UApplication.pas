@@ -26,7 +26,7 @@ var
   GCCodesSeria : array[1..12] of string;
   GCTitresSeria : array[1..12] of Hstring;
 	GCCodeDomaine : string;
-  NumRefObligatoire : string = '998.ZZZX';
+  NumRefObligatoire : string = '998.ZZZY';
   VersionInterne : Boolean;
 
 procedure GetInfoApplication;
