@@ -8,6 +8,8 @@ uses
 
 type
 
+  T_WSEntryType = (wsetNone, wsetDocument, wsetPayment, wsetPayer, wsetExtourne, wsetSubContractPayment, wsetStock);
+
   TconnectCEGID = class (TObject)
   private
     factive : Boolean;
@@ -34,6 +36,15 @@ type
     property IsActive : boolean read factive;
   end;
 
+  TGetParamWSCEGID = class (TObject)
+  public
+    class function ConnectToY2 : Boolean;
+    class function GetServer : string;
+    class function GetPort : string;
+    class function GetFolder : string;
+    class function GetLastSynchro : string;
+    class function GetCodeFromWsEt(WsEt : T_WSEntryType) : string;
+  end;
 
 procedure RecupParamCptaFromWS;
 procedure SendEntryCEGID (TOBPiece,TOBecr : TOB; Var SendCegid : boolean);
@@ -725,4 +736,43 @@ begin
   factive :=  (fServer <> '') and (fDossier <> ''); 
 end;
 
+{ TGetParamWSCEGID }
+class function TGetParamWSCEGID.ConnectToY2: Boolean;
+begin
+  Result := (GetFolder <> '');
+end;
+
+class function TGetParamWSCEGID.GetCodeFromWsEt(WsEt : T_WSEntryType) : string;
+begin
+  case WsEt of
+    wsetDocument           : Result := 'DOC'; // Ecriture de pièce
+    wsetPayment            : Result := 'RGT'; // Ecriture de règlement
+    wsetPayer              : Result := 'PAY'; // Ecriture de tiers payeur
+    wsetExtourne           : Result := 'EXT'; // Ecriture d'extourne
+    wsetSubContractPayment : Result := 'SCP'; // Ecriture de règlement de sous-traitance
+    wsetStock              : Result := 'STK'; // Ecriture de stock
+  else
+    Result := '';
+  end;
+end;
+
+class function TGetParamWSCEGID.GetFolder: string;
+begin
+  Result := GetParamSocSecur('SO_BTWSCEGIDDOS', '');
+end;
+
+class function TGetParamWSCEGID.GetLastSynchro: string;
+begin
+  Result := GetParamSocSecur('SO_BTWSLASTSYNC','31/12/2099 23:59:59');
+end;
+
+class function TGetParamWSCEGID.GetPort: string;
+begin
+  Result := GetParamSocSecur('SO_BTWSCEGIDPORT', '');
+end;
+
+class function TGetParamWSCEGID.GetServer: string;
+begin
+  Result := GetParamSocSecur('SO_BTWSSERVEUR', '');
+end;
 end.
