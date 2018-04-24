@@ -2686,6 +2686,9 @@ begin
     if MM.Nature='AF' then BEGIN DD:=-(XD+XXD) ; DP:=-(XP+XXP) ; CD:=0 ; CP:=0 ; END ;
     TOBTTC.PutValue('E_DEBIT',DP)     ; TOBTTC.PutValue('E_CREDIT',CP) ;
     TOBTTC.PutValue('E_DEBITDEV',DD)  ; TOBTTC.PutValue('E_CREDITDEV',CD) ;
+    //FV1 - 23/04/2018 : FS#3043 - Viviane : renseigner le champ "E_ENCAISSEMENT" lors de la validation d'une facture
+    TOBTTC.PutValue('E_ENCAISSEMENT', SensEnc(DP,CP)) ;
+    //
   END ;
 
 end;
@@ -2732,13 +2735,13 @@ BEGIN
       ReajusteCollectifs (TOBVTECOLL,TOBH.GetDouble('GPE_MONTANTECHE'),TOBH.GetDouble('GPE_MONTANTDEV'));
       for II := 0 to TOBVTECOLL.detail.count -1 do
       begin
-    inc(cpt);
+        inc(cpt);
         TOBl:= TOBVTECOLL.detail[II];
-    TOBTTC:=TOB.Create('ECRITURE',TOBEcr,-1) ;
-    PieceVersECR(MM,TOBPiece,TOBTiers,TOBTTC,False) ;
+        TOBTTC:=TOB.Create('ECRITURE',TOBEcr,-1) ;
+        PieceVersECR(MM,TOBPiece,TOBTiers,TOBTTC,False) ;
     {Tiers}
         Collectif := TOBl.getString('BPB_COLLECTIF'); if Collectif = '' then Collectif := GColl;
-    TOBTTC.PutValue('E_AUXILIAIRE',TOBTiers.GetValue('T_AUXILIAIRE')) ;
+        TOBTTC.PutValue('E_AUXILIAIRE',TOBTiers.GetValue('T_AUXILIAIRE')) ;
         TOBTTC.PutValue('E_GENERAL',Collectif) ;
         TOBTTC.PutValue('E_CONSO',TOBTiers.GetValue('T_CONSO')) ;
         {Pièce}
@@ -2778,6 +2781,9 @@ BEGIN
         if MM.Nature='AF' then BEGIN DD:=-(XD+XXD) ; DP:=-(XP+XXP) ; CD:=0 ; CP:=0 ; END ;
         TOBTTC.PutValue('E_DEBIT',DP)     ; TOBTTC.PutValue('E_CREDIT',CP) ;
         TOBTTC.PutValue('E_DEBITDEV',DD)  ; TOBTTC.PutValue('E_CREDITDEV',CD) ;
+        //FV1 - 23/04/2018 : FS#3043 - Viviane : renseigner le champ "E_ENCAISSEMENT" lors de la validation d'une facture
+        TOBTTC.PutValue('E_ENCAISSEMENT', SensEnc(DP,CP)) ;
+        //
         if ((DP=0) and (CP=0)) then TOBTTC.Free else
         BEGIN
           if OkVent then NbEches:=1 else Inc(NbEches) ;
@@ -2844,6 +2850,9 @@ BEGIN
       if MM.Nature='AF' then BEGIN DD:=-(XD+XXD) ; DP:=-(XP+XXP) ; CD:=0 ; CP:=0 ; END ;
       TOBTTC.PutValue('E_DEBIT',DP)     ; TOBTTC.PutValue('E_CREDIT',CP) ;
       TOBTTC.PutValue('E_DEBITDEV',DD)  ; TOBTTC.PutValue('E_CREDITDEV',CD) ;
+      //FV1 - 23/04/2018 : FS#3043 - Viviane : renseigner le champ "E_ENCAISSEMENT" lors de la validation d'une facture
+      TOBTTC.PutValue('E_ENCAISSEMENT', SensEnc(DP,CP)) ;
+      //
       if ((DP=0) and (CP=0)) then TOBTTC.Free else
       BEGIN
         if OkVent then NbEches:=1 else Inc(NbEches) ;
@@ -2905,6 +2914,9 @@ BEGIN
     if MM.Nature='AF' then BEGIN DD:=-XD ; DP:=-XP ; CD:=0 ; CP:=0 ; END ;
     TOBTTC.PutValue('E_DEBIT',DP)     ; TOBTTC.PutValue('E_CREDIT',CP) ;
     TOBTTC.PutValue('E_DEBITDEV',DD)  ; TOBTTC.PutValue('E_CREDITDEV',CD) ;
+    //FV1 - 23/04/2018 : FS#3043 - Viviane : renseigner le champ "E_ENCAISSEMENT" lors de la validation d'une facture
+    TOBTTC.PutValue('E_ENCAISSEMENT', SensEnc(DP,CP)) ;
+    //
     if ((DP=0) and (CP=0)) then TOBTTC.Free else
     BEGIN
       TheTOBRg := TOBTTC;
