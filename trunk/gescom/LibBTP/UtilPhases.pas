@@ -782,7 +782,13 @@ procedure ConstitueStructPhases(TOBPiece,TOBSTP : TOB);
     TOBP.AddChampSupValeur('LIBELLE',TOBL.GetString('GL_LIBELLE'));
     TOBP.AddChampSupValeur('VISIBLE',TOBL.GetBoolean('GLC_VISIBLE'));
     TOBP.AddChampSupValeur('SAISISSABLE',TOBL.GetBoolean('GLC_SAISISSABLE'));
-    TOBP.AddChampSupValeur('NIVEAU',TOBL.GetInteger('GL_NIVEAUIMBRIC'));
+    if TOBL.GetString('GL_TYPEARTICLE')='OUV' then
+    begin
+      TOBP.AddChampSupValeur('NIVEAU',TOBL.GetInteger('GL_NIVEAUIMBRIC')+1);
+    end else
+    begin
+      TOBP.AddChampSupValeur('NIVEAU',TOBL.GetInteger('GL_NIVEAUIMBRIC'));
+    end;
     TOBP.data := TOBL;
   end;
 
@@ -792,7 +798,7 @@ begin
   for II := 0 to TOBPiece.Detail.count -1 do
   begin
     TOBL := TOBPiece.detail[II];
-    if IsDebutParagraphe(TOBL) then
+    if IsDebutParagraphe(TOBL) or (TOBL.GetString('GL_TYPEARTICLE')='OUV') then
     begin
       AjouteUnePhase(TOBL,TOBSTP);    
     end;
