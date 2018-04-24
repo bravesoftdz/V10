@@ -136,7 +136,13 @@ uses Facture,(*Souche,*)dimension,UTomPiece, Traduc
      ,UdroitUtilisation
      ,UTraiteTables
      ,UspecifPOC
-            ;
+     , BRGPDREFERENTIEL_TOF
+     , BRGPDTIERSMUL_TOF
+     , FormsName
+     , BRGDPDUtils
+     , BRGPDRESSOURCEMUL_TOF
+     , BRGPDUTILISATMUL_TOF
+     ;
 {$R *.DFM}
 
 var lesTagsToRemove : string;
@@ -220,19 +226,38 @@ end;
 // ******************* Dispatch gestion interne + Gestion d'affaire  **********
 // ****************************************************************************
 Procedure Dispatch ( Num : Integer ; PRien : THPanel ; var retourforce,sortiehalley : boolean);
-var stParamsocAffiche, stParamsocVire : String;
-    //Datefin 	: TDateTime;
-    stLesExclus : String;
-    //Retour : string;
-    Droits    : string;
-    oldvalue  : boolean;
-    //31708
-	  DateDebut : TDateTime;
-    NumSem    : Integer;
-    AnneeSem  : integer;
-    //StatutAffaire : string;
-    stMessage : String;
-    Souche    : string;
+var
+  stParamsocAffiche, stParamsocVire : String;
+  stLesExclus : String;
+  Droits    : string;
+  oldvalue  : boolean;
+  DateDebut : TDateTime;
+  NumSem    : Integer;
+  AnneeSem  : integer;
+  stMessage : String;
+  Souche    : string;
+
+  function SetWindowCaption(ParentNumber, TagNumber : integer) : string;
+  var
+    Sql : string;
+    Qry : TQuery;
+  begin
+    Result := '';
+    Sql := 'SELECT MN_LIBELLE FROM MENU WHERE MN_TAG IN(' + IntToStr(ParentNumber) + ', ' + IntToStr(TagNumber) + ')';
+    Qry := OpenSQL(Sql, True);
+    try
+      while not Qry.Eof do
+      begin
+        Result := Result + ' - ' + Qry.Fields[0].AsString;
+        Qry.Next;
+      end;
+    finally
+      Ferme(Qry);
+    end;
+    Result := Copy(Result, 4, Length(Result));
+    Result := 'WINDOWCAPTION=' + Result;
+  end;
+
 BEGIN
 	if VersionInterne then V_PGI.VersionDemo:=false;
     ReinitTOBAffaires ; // Eviter les effets de bords
@@ -1037,7 +1062,7 @@ BEGIN
 Cegid,False,False)};
 
    // MODIF LS Confidentialité
-   60208 : GCLanceFiche_Confidentialite( 'YY','YYCONFIDENTIALITE','','','26;27;60;92;111;145;146;147;148;149;150;160;279;283;284;285;304;319;320;321;322;323;325;327;328;329;331');
+   60208 : GCLanceFiche_Confidentialite( 'YY','YYCONFIDENTIALITE','','','26;27;60;92;111;145;146;147;148;149;150;160;279;283;284;285;304;319;320;321;322;323;325;327;328;329;331;280');
    // --
    60203 : ReseauUtilisateurs(False) ;      // utilisateurs connectés
    60204 : VisuLog ;                        // Suivi d'activité
@@ -2064,6 +2089,20 @@ Cegid,False,False)};
 
     60999 : BEGIN AglLanceFiche ('BTP','BTESTFORMULE','','',''); END;
 
+    { RGPD }
+    280011 : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', SetWindowCaption(-280010, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaDataExport));        // Export données personnelles - Client
+    280012 : BLanceFiche_RGPDResourceMul('BTP', rfm_RGPDResourceMul, '', '', SetWindowCaption(-280010, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaDataExport));        // Export données personnelles - Ressources
+    280013 : BLanceFiche_RGPDUtilisatMul('BTP', rfm_RGPDUtilisatMul, '', '', SetWindowCaption(-280010, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaDataExport));        // Export données personnelles - Utilisateurs
+    280021 : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', SetWindowCaption(-280020, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaAnonymization));     // Droit à l'oubli - Client
+    280022 : BLanceFiche_RGPDResourceMul('BTP', rfm_RGPDResourceMul, '', '', SetWindowCaption(-280020, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaAnonymization));     // Droit à l'oubli - Ressources
+    280023 : BLanceFiche_RGPDUtilisatMul('BTP', rfm_RGPDUtilisatMul, '', '', SetWindowCaption(-280020, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaAnonymization));     // Droit à l'oubli - Utilisateurs
+    280031 : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', SetWindowCaption(-280030, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaDataRectification)); // Demande de rectification - Client
+    280032 : BLanceFiche_RGPDResourceMul('BTP', rfm_RGPDResourceMul, '', '', SetWindowCaption(-280030, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaDataRectification)); // Demande de rectification - Ressources
+    280033 : BLanceFiche_RGPDUtilisatMul('BTP', rfm_RGPDUtilisatMul, '', '', SetWindowCaption(-280030, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaDataRectification)); // Demande de rectification - Utilisateurs
+    280041 : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', SetWindowCaption(-280040, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaConsentRequest));    // Demande de consentement - Client
+    280042 : BLanceFiche_RGPDResourceMul('BTP', rfm_RGPDResourceMul, '', '', SetWindowCaption(-280040, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaConsentRequest));    // Demande de consentement - Ressources
+    280043 : BLanceFiche_RGPDUtilisatMul('BTP', rfm_RGPDUtilisatMul, '', '', SetWindowCaption(-280040, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaConsentRequest));    // Demande de consentement - Utilisateurs
+    280051 : BLanceFiche_RGPDReferentiel('BTP', frm_RGPDRepository , '', '', SetWindowCaption(-2580050, Num)); // Référentiel
     // --
     else HShowMessage('2;?caption?;'+TraduireMemoire('Fonction non disponible : ')+';W;O;O;O;',TitreHalley,IntToStr(Num)) ;
      end ;
@@ -2839,7 +2878,7 @@ begin
 	FMenuG.SetModules([145,325,327,283,146,150,147,92,284,304,323,149,160,320,148,60],[24,77,21,74,121,124,41,77,127,73,9,110,69,99,59,34,49]) ;
 end else
 begin
-	FMenuG.SetModules([145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,148,60],[24,77,21,74,72,121,124,41,77,99,127,73,9,110,45,69,99,34,49]) ;
+	FMenuG.SetModules([145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,148,60,280],[24,77,21,74,72,121,124,41,77,99,127,73,9,110,45,69,99,34,49,78]) ;
 end;
 V_PGI.NbColModuleButtons:=2 ; V_PGI.NbRowModuleButtons:=9 ;
 

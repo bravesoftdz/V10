@@ -7906,7 +7906,7 @@ end;
 procedure TOM_Affaire.GenereWordClick(Sender: Tobject);
 var TT : TOB;
 		ListeChamps : string;
-    NomFile,NomDocx : string;
+    NomFile,NomDoc : string;
 begin
 
   NomFile := ExtractFileName(GetControlText('AFF_MODELEWORD'));
@@ -7917,8 +7917,8 @@ begin
   end;
 	NomFile := IncludeTrailingPathDelimiter(GetParamSocSecur('SO_BTCONREPERTMODELE',''))+NomFile;
   //
-  NomDocx := ExtractFileName(GetControlText('DOCGENERE'));
-  if (NomDocx = '') or (NomDocx = '*.doc') then
+  NomDoc := ExtractFileName(GetControlText('DOCGENERE'));
+  if (NomDoc = '') or (NomDoc = '*.doc') then
   begin
   	PGIError('Vous devez renseigner un nom de document de sortie');
     Exit;
@@ -7969,7 +7969,7 @@ begin
 
   TT := TOB.Create ('CONTRAT',nil,-1);
   TRY
-		NomFile := IncludeTrailingPathDelimiter(GetParamSocSecur('SO_BTCONREPERTMODELE',''))+'newDoc.docx';
+		NomFile := IncludeTrailingPathDelimiter(GetParamSocSecur('SO_BTCONREPERTMODELE',''))+'newDoc.doc';
     ConstitueTOB(TT,ListeChamps,GetControlText('AFF_AFFAIRE'),false);
   	LancePublipostage('NEW',NomFile,'',TT,ListeChamps,nil,False);
   finally
@@ -7979,11 +7979,11 @@ begin
 end;
 
 procedure TOM_Affaire.OuvrirWordClick(Sender: Tobject);
-var NomDocx : string;
+var NomDoc : string;
 begin
 //
-  NomDocx := ExtractFileName(GetControlText('DOCGENERE'));
-  if (NomDocx = '') or (NomDocx = '*.doc') then
+  NomDoc := ExtractFileName(GetControlText('DOCGENERE'));
+  if (NomDoc = '') or (NomDoc = '*.doc') then
   begin
   	PGIError('Vous devez renseigner le nom du document');
     Exit;

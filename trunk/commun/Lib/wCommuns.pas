@@ -231,6 +231,8 @@ type
 	tArrondiPrec = (tAPCentaineDeMillier, tAPDizaineDeMillier, tAPMillier, tAPCentaine, tAPDizaine, tAPUnite, tAPDizieme, tAPCentieme, tAPMillieme, tAPDixMillieme);
   tArrondiMeth = (tAMInferieure, tAMSuperieure, tAMPlusProche);
 
+  tTypeField = (ttfNumeric, ttfMemo, ttfBoolean, ttfDate, ttfCombo, ttfText);
+
 	{ Manipulation dans DETABLES, DECHAMPS }
 	function  wGetLibChamp(Const FieldName:String): String;
 	function  wExistFieldInDechamps(Const FieldName:String): Boolean;
@@ -310,6 +312,8 @@ type
                                    const InsertAtPos: Integer = -1): Integer;
   function wExtractSectionFromMemo(const Section: String; var Memo: String; const ModifyMemo: Boolean): String;
   function isVarInt(const ValueV: Variant): Boolean;
+  function GetFieldType(FieldName : string) : tTypeField;
+  function GetFieldSize(FieldName : string) : integer;
 
   { Outil Tob }
   function Find1erTobOnTobSorted(Const TheTob: Tob; Const FieldsName: array of string; FieldsValue: array of Variant): Tob;
@@ -366,6 +370,7 @@ type
   function wStringToAlphaNumString(const St: String; const CharsToIgnore: String = ''): String;
   function wFileSizeToStr(FileSize: Integer; const NbDecimal: Integer): String;
   function wIntToC2(i: Integer): String;
+  function CaseFromString(Value: string; Values: array of string): integer;
 
   { Date }
   function wDateTimeToStr(Const LaDate: tDateTime; Const cFormat:string = 'AAAA-S-T-MM-JJ'; Const lFormat: boolean = True): string;
@@ -553,6 +558,7 @@ type
   function wExecuteSqlOnClonedDB(const Sql: String): Integer;
 //GP_20080204_TS_GP14791 <<<
 
+  function GetWindowsCaptionFromArgument(Argument, DefaultValue : string) : string;
 const
   SELECT_FROM_LISTE = 'SELECT * FROM LISTE WHERE LI_LISTE="%s" AND LI_UTILISATEUR="%s" AND LI_LANGUE="%s" ORDER BY LI_UTILISATEUR DESC';
 
@@ -5181,6 +5187,37 @@ begin
   Result := VarType(ValueV) in [varShortInt, varWord, varByte, varLongWord, varInt64, varInteger]
 end;
 
+function GetFieldType(FieldName : string) : tTypeField;
+begin
+  case CaseFromString(ChampToType(FieldName), ['INTEGER', 'SMALLINT', 'DOUBLE', 'RATE', 'EXTENDED', 'DATE', 'BLOB', 'DATA', 'COMBO', 'BOOLEAN']) of
+    {INTEGER
+     , SMALLINT
+     , DOUBLE
+     , RATE
+     , EXTENDED} 0..4 : Result := ttfNumeric;
+    {DATE}       5    : Result := ttfDate;
+    {BLOB, DATA} 6..7 : Result := ttfMemo;
+    {COMBO}      8    : Result := ttfCombo;
+    {BOOLEAN}    9    : Result := ttfBoolean;
+  else
+     Result := ttfText;
+  end;
+end;
+
+function GetFieldSize(FieldName : string) : integer;
+var
+  FieldType : string;
+  Extract   : string;
+begin
+  if GetFieldType(FieldName) = ttfText then
+  begin
+    FieldType := ChampToType(FieldName);
+    Extract   := Copy(FieldType, pos('(', FieldType) + 1, Length(FieldType));
+    Result    := StrToInt(Copy(Extract, 1, Length(Extract) -1));
+  end else
+    Result := -1;
+end;
+
 { ******************************** Gestion des listes * DEBUT ************************* }
 
 function wGetColsVisibilityFromListe(const ListeName: String; const OnlyFields: Boolean = False): String;
@@ -6123,6 +6160,24 @@ begin
   Result := Result + IntToStr(i);
 end;
 
+function CaseFromString(Value: string; Values: array of string): integer;
+var
+  Cpt : Integer;
+begin
+  Result := -1;
+  if (Value <> '') and (Length(Values) > -1) then
+  begin
+   for Cpt := Low(Values) to High(Values) do
+    begin
+      if Values[Cpt] = Value then
+      begin
+        Result := Cpt;
+        Break;
+      end;
+    end;
+  end;
+end;
+
 { TMemoFindDialog }
 
 {$IFNDEF EAGLSERVER}
@@ -6489,6 +6544,13 @@ begin
   inherited Create(Msg)
 end;
 
+function GetWindowsCaptionFromArgument(Argument, DefaultValue : string) : string;
+begin
+  if Argument <> '' then
+    Result := GetArgumentString(Argument, 'WINDOWCAPTION', False);
+  if Result = '' then
+    Result := DefaultValue;
+end;
 
 {$IFNDEF EAGLSERVER}
 Initialization
