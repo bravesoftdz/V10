@@ -2984,8 +2984,8 @@ end;
 procedure TOF_BSAISIEAVANCPOC.CalculeAvancCorrigeST (TOBL : TOB);
 var PP : double;
 begin
-  if TOBL.GetDouble('BM8_POURCENTAVANC')> TOBL.GetDouble('POURCENTCALC') then PP := TOBL.GetDouble('BM8_POURCENTAVANC')
-                                                                         else PP := TOBL.GetDouble('POURCENTCALC');
+  if TOBL.GetDouble('BM8_POURCENTAVANC')<> 0 then PP := TOBL.GetDouble('BM8_POURCENTAVANC')
+                                             else PP := TOBL.GetDouble('POURCENTCALC');
   TOBL.SetDouble('MTAVANCCORRIGE',ARRONDI(TOBL.GetDouble('DEPENSEESTIME')* PP /100,2));
 end;
 
@@ -3110,6 +3110,7 @@ begin
     QQ.first;
     TL.SetDouble('DEPENSEESTIME',TL.GetDouble('DEPENSEESTIME')+QQ.Fields[0].AsFloat);
   end;
+  TL.SetDouble('DEPENSEESTIME',Arrondi(TL.GetDouble('DEPENSEESTIME'),2));
   Ferme(QQ);
 end;
 
