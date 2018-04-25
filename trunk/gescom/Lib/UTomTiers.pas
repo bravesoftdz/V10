@@ -366,6 +366,7 @@ uses
   ,UtilArticle
   ,ConfidentAffaire
   ,UFonctionsCBP
+  , FormsName
   ;
 
 /////////////////////////////////////////////
@@ -1904,7 +1905,7 @@ var CodeTiers, NumChrono, LibelleTiers, NatureTiers, ret, stNat : String;
 	LePays : string;
     Etat   : string;
 begin
-Inherited;
+  Inherited;
 
   {$IFDEF GRC}
   if stNatureAuxi <>'CON' then
@@ -2232,22 +2233,22 @@ end ;
    // Gestion des champs obligatoires Clients et Prospect en attendant mieux....)
    // grc : pas de contôle sur les concurrents
    // mcd 20/09/02 ce test est déplacé, était mis au dessus end précdent ==> n'étais pas fait pour FOU
-if GetField ('T_NATUREAUXI') <> 'CON' then
-      if ChampsObligatoires then exit;
+  if GetField ('T_NATUREAUXI') <> 'CON' then
+        if ChampsObligatoires then exit;
 
-{Contrôle n° adresse livraison}
-if (Valeur(GetControlText('YTC_NADRESSELIV')) <> 0) and (not LookupvalueExist(thedit(getControl('YTC_NADRESSELIV')))) then
-begin
-  SetLastError(47, 'YTC_NADRESSELIV');
-  exit;
-end;
+  {Contrôle n° adresse livraison}
+  if (Valeur(GetControlText('YTC_NADRESSELIV')) <> 0) and (not LookupvalueExist(thedit(getControl('YTC_NADRESSELIV')))) then
+  begin
+    SetLastError(47, 'YTC_NADRESSELIV');
+    exit;
+  end;
 
-{Contrôle n° adresse facturation}
-if (Valeur(GetControlText('YTC_NADRESSEFAC')) <> 0) and (not LookupvalueExist(thedit(getControl('YTC_NADRESSEFAC')))) then
-begin
- SetLastError(48, 'YTC_NADRESSEFAC');
- exit;
-end;
+  {Contrôle n° adresse facturation}
+  if (Valeur(GetControlText('YTC_NADRESSEFAC')) <> 0) and (not LookupvalueExist(thedit(getControl('YTC_NADRESSEFAC')))) then
+  begin
+   SetLastError(48, 'YTC_NADRESSEFAC');
+   exit;
+  end;
 
 // gestion Tiers Fournisseurs ====================================================================
 
@@ -2334,42 +2335,30 @@ if (GetField ('T_NATUREAUXI') <> 'CLI') and (GetField ('T_NATUREAUXI') <> 'PRO')
 // Fin gestion Tiers Fournisseurs ====================================================================
 
    // on regarde si collectif existe dans fiche
-if Not Presence('GENERAUX','G_GENERAL',GetField('T_COLLECTIF')) then
+  if Not Presence('GENERAUX','G_GENERAL',GetField('T_COLLECTIF')) then
   begin
   SetLastError(24, 'T_COLLECTIF');
   exit;
   end;
-// debut Affaire
-if (ctxSCOT in V_PGI.PGIContexte) and (GetField ('T_NATUREAUXI') = 'CLI')  then
+  // debut Affaire
+  if (ctxSCOT in V_PGI.PGIContexte) and (GetField ('T_NATUREAUXI') = 'CLI')  then
    begin              // ctrl mois clôture
    if ((GetField ('T_MOISCLOTURE')< 1) or (GetField ('T_MOISCLOTURE')> 12))
       then begin SetLastError(22, 'T_MOSICLOTURE'); exit ; end;
    end;
 
-SetField ('T_DATEMODIF', V_PGI.DateEntree);
-if ModifLot then TFFiche(ecran).BFermeClick(nil);
-if (ds<>nil) and (DS.State=dsInsert) then
+  SetField ('T_DATEMODIF', V_PGI.DateEntree);
+  if ModifLot then TFFiche(ecran).BFermeClick(nil);
+  if (ds<>nil) and (DS.State=dsInsert) then
    begin
    SetBoutonEnabled(TRUE);
    SetControlEnabled('T_TIERS',FALSE);
    SetControlEnabled('T_AUXILIAIRE',FALSE);
    end;
 
-// Modif due à l'ajout d'une seconde table pour la gestion des zones libres
-If (GetField('T_AUXILIAIRE')='') then begin SetLastError(23, 'T_AUXILIAIRE'); exit ; end;
-{if TobZonelibre<>nil then
-    begin
-    if (TFfiche(Ecran)<>nil) and (TobZoneLibre.detail.count>0) then
-       begin
-       TobZoneLibre.detail[0].GetEcran (TFfiche(Ecran),Nil);
-       TobZoneLibre.detail[0].PutValue ('YTC_AUXILIAIRE', GetField('T_AUXILIAIRE')) ;
-       TobZoneLibre.detail[0].PutValue ('YTC_TIERS', GetField('T_TIERS')) ;
-       end;
-    TobZoneLibre.InsertOrUpdateDB (FALSE);
-    TobZoneLibre.Free;
-    TobZoneLibre:=nil;
-    end; }
-if (ds<>nil) then
+  // Modif due à l'ajout d'une seconde table pour la gestion des zones libres
+  If (GetField('T_AUXILIAIRE')='') then begin SetLastError(23, 'T_AUXILIAIRE'); exit ; end;
+  if (ds<>nil) then
   begin
   TobZoneLibre.GetEcran (TFfiche(Ecran),Nil);
   TobZoneLibre.PutValue ('YTC_AUXILIAIRE', GetField('T_AUXILIAIRE')) ;
@@ -2378,9 +2367,9 @@ if (ds<>nil) then
   TobZoneLibre.SetAllModifie(False);
   end;
 
-// grc: si 1 info compl obligatoire, chainage écran saisie infos sinon enregistrement table prospects initialisé
-if (ctxGRC in V_PGI.PGIContexte) and (DS<>nil) and (DS.State=dsInsert) and
-   ( (GetField ('T_NATUREAUXI') = 'CLI') or (GetField ('T_NATUREAUXI') = 'PRO') ) then
+  // grc: si 1 info compl obligatoire, chainage écran saisie infos sinon enregistrement table prospects initialisé
+  if (ctxGRC in V_PGI.PGIContexte) and (DS<>nil) and (DS.State=dsInsert) and
+     ( (GetField ('T_NATUREAUXI') = 'CLI') or (GetField ('T_NATUREAUXI') = 'PRO') ) then
   begin
     ExisteOblig:=ExisteSQL('SELECT RCL_OBLIGATOIRE FROM CHAMPSPRO WHERE RCL_OBLIGATOIRE="X" ');
     if ( not ExisteOblig ) or ( CritereSuspect ) then
@@ -2437,26 +2426,32 @@ if (ctxGRC in V_PGI.PGIContexte) and (DS<>nil) and (DS.State=dsInsert) and
     end;
   end;
 
-if (ds<>nil) and (Ecran is TFFiche) and (TFFiche(Ecran).Name = 'GCTIERS') then TFFiche(Ecran).Retour:=GetField('T_TIERS') ;
-if (ds<>nil) and (Ecran is TFFiche) and (TFFiche(Ecran).Name = 'GCTIERSFO') then TFFiche(Ecran).Retour:=GetField('T_TIERS') ;
-if (ds<>nil) and (Ecran is TFFiche) and (TFFiche(Ecran).Name = 'HRCLIENTS') then TFFiche(Ecran).Retour:=GetField('T_TIERS') ;  //CHR
-
-CodeTiersDP:=GetField('T_TIERS');
-
-OnFerme:=False;
-If (ds<>nil) then
+  if (ds<>nil) and (Ecran is TFFiche) then
   begin
-  if (DS.State in [dsInsert])
-     then DerniereCreate := GetField('T_AUXILIAIRE')
-     else if (DerniereCreate = GetField('T_AUXILIAIRE')) then OnFerme:=True; // le bug arrive on se casse !!!
-  end;
-{$IFDEF GRC}
-if TransProCli then
-    begin
-    RTMajNatureContacts(GetField('T_AUXILIAIRE'),GetField('T_NATUREAUXI'));
-    TransProCli:=false;
+    case CaseFromString(TFFiche(Ecran).Name, [frm_ThirdCliPro, 'GCTIERSFO', 'HRCLIENTS']) of
+      {} 0..2 : TFFiche(Ecran).Retour := GetField('T_TIERS');
+    else
+      TFFiche(Ecran).Retour :=  '';
     end;
-{$ENDIF}
+  end;
+
+
+  CodeTiersDP:=GetField('T_TIERS');
+
+  OnFerme:=False;
+  If (ds<>nil) then
+    begin
+    if (DS.State in [dsInsert])
+       then DerniereCreate := GetField('T_AUXILIAIRE')
+       else if (DerniereCreate = GetField('T_AUXILIAIRE')) then OnFerme:=True; // le bug arrive on se casse !!!
+    end;
+  {$IFDEF GRC}
+  if TransProCli then
+      begin
+      RTMajNatureContacts(GetField('T_AUXILIAIRE'),GetField('T_NATUREAUXI'));
+      TransProCli:=false;
+      end;
+  {$ENDIF}
 end;
 
 Function  TOM_TIERS.ChampsObligatoires : boolean;

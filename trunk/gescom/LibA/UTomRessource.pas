@@ -1244,7 +1244,7 @@ begin
         // fiche
     begin
           // On adapte la sortie de l'écran suivant la provenance de l'appel
-      if (tsArgsReception.Values['ORIGINE'] = 'PSA') then
+      if (tsArgsReception.Values['ORIGINE'] = 'PSA') or (tsArgsReception.Values['ORIGINE'] = 'RGP') then
       begin
         TFFiche(ecran).Retour := GetField('ARS_RESSOURCE');
         tsArgsReception.Free;

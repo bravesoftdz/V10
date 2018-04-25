@@ -183,31 +183,13 @@ begin
 end;
 
 procedure TOM_UTILISAT.OnNewRecord ;
-var
-  SQL                : String ;
-  QLoc               : TQuery ;
 begin
-inherited;
-// 18/05/2006 Lorsqu'on ouvre la fiche par le DispathTT, le champ est renseigné avec US_
-SetField('US_UTILISATEUR','');
-//{$IFDEF GCGC}
-if VH^.CPIFDEFCEGID then
-  SetField('US_GROUPE','INV');
-//{$ENDIF}
-
-//uniquement en line
-// Pas de gestion des groupes d'utilisateurs dans LINE
-// On prend le premier groupe lu (qui devrait être le seul ...) dans la table
-// ceci car le groupe par défaut a changé entre la V7 (CEG) et la V8 (LSE)
-{*
-  SQL := 'SELECT ##TOP 1## UG_GROUPE FROM USERGRP';
-  QLoc := OpenSql ( SQL, True ) ;
-  if Not QLoc.Eof then
-    SetField('US_GROUPE',QLoc.Fields[0].AsString);
-  Ferme ( QLoc ) ;
-*}
-
-  bUtilisateurEws := False;
+  inherited;
+  // 18/05/2006 Lorsqu'on ouvre la fiche par le DispathTT, le champ est renseigné avec US_
+  SetField('US_UTILISATEUR','');
+  if VH^.CPIFDEFCEGID then
+    SetField('US_GROUPE','INV');
+    bUtilisateurEws := False;
 end;
 
 procedure TOM_UTILISAT.OnDeleteRecord;
@@ -313,6 +295,7 @@ var Q                  : TQuery ;
     {$ENDIF BUREAU}
 begin
   Inherited ;
+  TFFiche(ecran).Retour := '';
   if GetControlText ( 'US_ABREGE' ) = '' then
     begin
     SetFocusControl ( 'US_ABREGE' ) ;
@@ -450,7 +433,7 @@ begin
     TobDroitObligation.Free;
    end;
   {$ENDIF}
-
+  TFFiche(ecran).Retour := GetField('US_UTILISATEUR');
 end ;
 
 procedure TOM_UTILISAT.OnAfterUpdateRecord;

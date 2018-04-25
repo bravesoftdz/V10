@@ -82,17 +82,22 @@ Procedure RTLanceFiche_Prospect_Mul(Nat,Cod : String ; Range,Lequel,Argument : s
 implementation
 
 Uses
+  UtilPGI
+  , TiersUtil
+  , uTOFComm
+  , AglInitGC
+  , UFonctionsCBP
+  , FormsName
   {$IFNDEF EAGLSERVER}
     {$IFNDEF ERADIO}
-      AglIsoflex,
-      menus,
+  , AglIsoflex
+  , menus
     {$ENDIF !ERADIO}
   {$ENDIF !EAGLSERVER}
 {$IF Defined(NOMADE) or Defined(GRCLIGHT)}
-  ParamSoc,
+  , ParamSoc
 {$IFEND}
-  UtilPGI,
-  TiersUtil, uTOFComm,AglInitGC,UFonctionsCBP;
+  ;
 
 Procedure RTLanceFiche_Prospect_Mul(Nat,Cod : String ; Range,Lequel,Argument : string) ;
 begin
@@ -355,24 +360,25 @@ end;
 *}
 
 procedure TOF_Prospect_Mul.FlisteDblClick(Sender: TObject);
-var Auxiliaire		: String;
-		NatureAuxi		: String;
-    StArg					: String;
+var
+  Auxiliaire		: String;
+  NatureAuxi		: String;
+  StArg					: String;
 begin
-
   //Si pas d'enreg double click interdit ==> FV 05112008
-{$IFDEF EAGLCLIENT}
+  {$IFDEF EAGLCLIENT}
 	if FListe.RowCount = 0  then exit;
 	TFMul(ecran).Q.TQ.Seek(TFMul(ecran).FListe.Row-1) ;
   Auxiliaire:=TFMul(ecran).Q.FindField('T_AUXILIAIRE').AsString;
   NatureAuxi:=TFMul(ecran).Q.FindField('T_NATUREAUXI').AsString;
-{$ELSE}
+  {$ELSE}
 	if FListe.datasource.DataSet.RecordCount = 0  then exit;
   Auxiliaire:=Fliste.datasource.dataset.FindField('T_AUXILIAIRE').AsString;
   NatureAuxi:=Fliste.datasource.dataset.FindField('T_NATUREAUXI').AsString;
-{$ENDIF}
+  {$ENDIF}
+  OpenForm.CliPro(Auxiliaire, NatureAuxi);
 
-
+(*
   stArg:='ACTION=MODIFICATION;';
 
 
@@ -383,12 +389,11 @@ begin
  		if Not ExJaiLeDroitConcept(TConcept(bt511),False) then stArg:= 'ACTION=CONSULTATION;';
 
   if Auxiliaire <> '' then
-     AGLLanceFiche (Domaine,Nomfiche,'',Auxiliaire,stArg + 'MONOFICHE;T_NATUREAUXI=' + NatureAuxi);
+     AGLLanceFiche ('GC',Nomfiche,'',Auxiliaire,stArg + 'MONOFICHE;T_NATUREAUXI=' + NatureAuxi);
+*)     
 
   if GetParamSocSecur('SO_REFRESHMUL', true) then
-     //TToolBarButton97(GetCOntrol('Bcherche')).Click;
      refreshdb;
-
 end;
 
 procedure TOF_Prospect_Mul.Binsert_OnClick(Sender: TObject);

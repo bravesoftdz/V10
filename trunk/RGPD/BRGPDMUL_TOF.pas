@@ -10,38 +10,61 @@ unit BRGPDMUL_TOF;
 interface
 
 uses
-  StdCtrls, Controls, Classes, mul
+  StdCtrls
+  , Controls
+  , Classes
+  , mul
   {$IFNDEF EAGLCLIENT}
-    , db, uDbxDataSet, FE_Main
+  , db
+  , uDbxDataSet
+  , FE_Main
   {$ENDIF EAGLCLIENT}
-    , uTob, forms, sysutils, ComCtrls, HCtrls, HEnt1, HMsgBox, UTOF, CBPMcd,
-    Htb97, uTOFComm, BRGDPDUtils, HDB;
+  , uTob
+  , forms
+  , sysutils
+  , ComCtrls
+  , HCtrls
+  , HEnt1
+  , HMsgBox
+  , UTOF
+  , CBPMcd
+  , Htb97
+  , uTOFComm
+  , BRGDPDUtils
+  , HDB
+  ;
 
 function BLanceFiche_RGPDThirdMul(Nat, Cod, Range, Lequel, Argument: string): string;
 
 type
   TOF_BRGPDMUL = class(tTOFComm)
   private
-    bOuvrir: TToolbarButton97;
-    Action: T_RGPDActions;
-    Population: T_RGPDPopulation;
-    FListe: THDBGrid;
-    PathFile: string;
-    TobRG2: TOB;
-    TobRG3: TOB;
+    bOuvrir    : TToolbarButton97;
+    Action     : T_RGPDActions;
+    Population : T_RGPDPopulation;
+    FListe     : THDBGrid;
+    PathFile   : string;
+    TobRG2     : TOB;
+    TobRG3     : TOB;
+
     procedure bOuvrir_OnClick(Sender: TObject);
+    procedure FListe_OnDblClick(Sender : TObject);
     procedure LoadTobRG2;
     procedure LoadTobRG3;
     function GetWhereTablesL(Where, FieldName: string): string;
     function GetSelectedFieldsFromTable(TableName: string): string;
+    procedure InsertJnal;
     procedure ExportDatas;
     procedure Anonymization;
+    procedure Rectification;
+
   public
-    sPopulationCode: string;
-    sFieldCode: string;
-    sFieldCode2nd: string;
-    sFieldLabel: string;
-    sFieldLabel2nd: string;
+    sPopulationCode : string;
+    sFieldCode      : string;
+    sFieldCode2nd   : string;
+    sFieldLabel     : string;
+    sFieldLabel2nd  : string;
+
     procedure OnNew; override;
     procedure OnDelete; override;
     procedure OnUpdate; override;
@@ -55,8 +78,14 @@ type
 implementation
 
 uses
-  TntStdCtrls, wCommuns, UtilPGI, BRGPDVALIDTRT_TOF, FormsName, Windows,
-  ShellAPI, UtilGC;
+  TntStdCtrls
+  , wCommuns
+  , UtilPGI
+  , BRGPDVALIDTRT_TOF
+  , FormsName
+  , Windows
+  , ShellAPI
+  , UtilGC;
 
 function BLanceFiche_RGPDThirdMul(Nat, Cod, Range, Lequel, Argument: string): string;
 begin
@@ -91,10 +120,11 @@ begin
   TobRG3 := TOB.Create('BRGPDTABLESL', nil, -1);
   Action := RGPDUtils.GetActionFromCode(GetArgumentString(S, 'ACTION'));
   Population := RGPDUtils.GetPopulationFromCode(sPopulationCode);
-  FListe := THDBGrid(GetControl('FListe'));
-  bOuvrir := TToolbarButton97(GetControl('BOUVRIR'));
-  bOuvrir.OnClick := bOuvrir_OnClick;
+  FListe     := THDBGrid(GetControl('FListe'));
+  bOuvrir    := TToolbarButton97(GetControl('BOUVRIR'));
+  bOuvrir.OnClick       := bOuvrir_OnClick;
   FListe.MultiSelection := (Action = rgdpaConsentRequest);
+  FListe.OnDblClick     := FListe_OnDblClick;
 end;
 
 procedure TOF_BRGPDMUL.OnClose;
@@ -116,21 +146,23 @@ end;
 
 procedure TOF_BRGPDMUL.bOuvrir_OnClick(Sender: TObject);
 var
-  LastParam: string;
-  Params: string;
-  CanContinue: boolean;
+  LastParam   : string;
+  Params      : string;
+  CanContinue : boolean;
 begin
-  if PGIAsk('Veuillez confirmer le traitement.', Ecran.Caption) = mrYes then
+  if    (Action = rgdpaDataRectification)
+     or ((Action <> rgdpaDataRectification) and (PGIAsk('Veuillez confirmer le traitement.', Ecran.Caption) = mrYes))
+  then
   begin
     if Action <> rgdpaConsentRequest then
     begin
       CanContinue := True;
-      LastParam := ';QUI=' + GetString(sFieldCode) + '~' + GetString(sFieldLabel) + '~' + GetString(sFieldLabel2nd)
+      LastParam   := ';QUI=' + GetString(sFieldCode) + '~' + GetString(sFieldLabel) + '~' + GetString(sFieldLabel2nd)
     end
     else
     begin
       CanContinue := (TFMul(Ecran).FListe.nbSelected > 0);
-      LastParam := ';QTE=' + IntToStr(TFMul(Ecran).FListe.nbSelected);
+      LastParam   := ';QTE=' + IntToStr(TFMul(Ecran).FListe.nbSelected);
     end;
     if CanContinue then
     begin
@@ -139,14 +171,10 @@ begin
       if ReadTokenSt(PathFile) = 'OK' then
       begin
         case Action of
-          rgpdaDataExport:
-            ExportDatas;
-          rgpdaAnonymization:
-            Anonymization;
-          rgdpaDataRectification:
-            ;
-          rgdpaConsentRequest:
-            ;
+          rgpdaDataExport        : ExportDatas;
+          rgpdaAnonymization     : Anonymization;
+          rgdpaDataRectification : Rectification;
+          rgdpaConsentRequest    : ;
         end;
       end;
     end
@@ -155,12 +183,22 @@ begin
   end;
 end;
 
+procedure TOF_BRGPDMUL.FListe_OnDblClick(Sender : TObject);
+begin
+  bOuvrir_OnClick(Self);
+end;
+  
 procedure TOF_BRGPDMUL.LoadTobRG2;
 var
   Sql: string;
 begin
   TobRG2.ClearDetail;
-  Sql := 'SELECT RG1_TABLENAME, RG1_KEY, BRGPDTABLESL.*' + ' FROM BRGPDTABLESP' + ' LEFT JOIN BRGPDTABLESL ON RG2_IDRG1 = RG1_ID' + ' WHERE RG1_TABLENAME = "' + RGPDUtils.GetTableNameFromPopulation(Population) + '"';
+  Sql := 'SELECT RG1_TABLENAME'
+       + '     , RG1_KEY'
+       + '     , BRGPDTABLESL.*'
+       + ' FROM BRGPDTABLESP'
+       + ' LEFT JOIN BRGPDTABLESL ON RG2_IDRG1 = RG1_ID' + RGPDUtils.GetSqlTablesException
+       + ' WHERE RG1_TABLENAME = "' + RGPDUtils.GetTableNameFromPopulation(Population) + '"';
   TobRG2.LoadDetailFromSQL(Sql);
 end;
 
@@ -194,8 +232,14 @@ begin
   Value := '|' + FieldName + '|';
   if Pos(Value, Where) > 0 then
   begin
-    ValueLength := length(Value);
-    Result := Copy(Where, 1, Pos(Value, Where) - 1) + GetString(FieldName) + Copy(Where, Pos(Value, Where) + ValueLength, Length(Where));
+    Result := Where;
+    while Pos(Value, Result) > 0 do
+    begin
+      ValueLength := length(Value);
+      Result := Copy(Result, 1, Pos(Value, Result) - 1) + GetString(FieldName) + Copy(Result, Pos(Value, Result) + ValueLength, Length(Result));
+    end;
+//    ValueLength := length(Value);
+//    Result := Copy(Where, 1, Pos(Value, Where) - 1) + GetString(FieldName) + Copy(Where, Pos(Value, Where) + ValueLength, Length(Where));
   end
   else
     Result := '';
@@ -214,40 +258,58 @@ begin
   Result := copy(Result, 2, length(Result));
 end;
 
+procedure TOF_BRGPDMUL.InsertJnal;
+var
+  InfoJnal : string;
+begin
+  InfoJnal := RGPDUtils.GetLabelFromPopulation(Population)
+            + ' '
+            + GetString(sFieldCode)
+            + iif(GetString(sFieldCode2nd)  <> '', ' - ' + GetString(sFieldCode2nd), '')
+            + iif(GetString(sFieldLabel)    <> '', ' - ' + GetString(sFieldLabel), '')
+            + iif(GetString(sFieldLabel2nd) <> '', ' ' + GetString(sFieldLabel2nd), '')
+            ;
+  MAJJnalEvent(RGPDCodeJnal, 'OK', RGPDUtils.GetLabelFromAction(Action), InfoJnal, PathFile);
+end;
+
 procedure TOF_BRGPDMUL.ExportDatas;
 var
-  TobRG2L: TOB;
-  TobResult: TOB;
-  TobResultL: TOB;
-  Cpt: integer;
-  Where: string;
-  TempPath: string;
-  Data: string;
-  tsFile: TStringList;
+  TobRG2L    : TOB;
+  TobResult  : TOB;
+  TobResultL : TOB;
+  Cpt        : integer;
+  Where      : string;
+  TempPath   : string;
+  tsFile     : TStringList;
 
   procedure AddTableValue(TableName, Where: string);
   var
-    Sql: string;
-    FieldName: string;
-    FieldLabel: string;
-    TobData: TOB;
-    CptData: integer;
-    CptFields: integer;
+    Sql        : string;
+    FieldName  : string;
+    FieldLabel : string;
+    FieldsList : string;
+    TobData    : TOB;
+    CptData    : integer;
+    CptFields  : integer;
   begin
     if (TableName <> '') and (Where <> '') then
     begin
       TobData := TOB.Create('_DATA', nil, -1);
       try
-        Sql := 'SELECT ' + GetSelectedFieldsFromTable(TableName) + ' FROM ' + TableName + ' ' + Where;
-        TobData.LoadDetailFromSQL(Sql);
-        for CptData := 0 to pred(TobData.Detail.count) do
+        FieldsList := GetSelectedFieldsFromTable(TableName);
+        if FieldsList <> '' then
         begin
-          for CptFields := 0 to pred(TobData.Detail[CptData].NombreChampSup) do
+          Sql := 'SELECT ' + FieldsList + ' FROM ' + TableName + ' ' + Where;
+          TobData.LoadDetailFromSQL(Sql);
+          for CptData := 0 to pred(TobData.Detail.count) do
           begin
-            TobResultL := TOB.Create('_VALUE', TobResult, -1);
-            FieldName := TobData.Detail[CptData].GetNomChamp(1000 + CptFields);
-            FieldLabel := TobRG3.FindFirst(['RG3_FIELDNAME'], [FieldName], True).GetString('DH_LIBELLE');
-            TobResultL.AddChampSupValeur('_VALUE', TableName + ';' + FieldName + ';' + FieldLabel + ';' + TobData.Detail[CptData].GetString(FieldName));
+            for CptFields := 0 to pred(TobData.Detail[CptData].NombreChampSup) do
+            begin
+              TobResultL := TOB.Create('_VALUE', TobResult, -1);
+              FieldName := TobData.Detail[CptData].GetNomChamp(1000 + CptFields);
+              FieldLabel := TobRG3.FindFirst(['RG3_FIELDNAME'], [FieldName], True).GetString('DH_LIBELLE');
+              TobResultL.AddChampSupValeur('_VALUE', TableName + ';' + FieldName + ';' + FieldLabel + ';' + TobData.Detail[CptData].GetString(FieldName));
+            end;
           end;
         end;
       finally
@@ -290,8 +352,7 @@ begin
       finally
         FreeAndNil(tsFile);
       end;
-      Data := RGPDUtils.GetLabelFromPopulation(Population) + ' ' + GetString(sFieldCode) + iif(GetString(sFieldCode2nd) <> '', ' - ' + GetString(sFieldCode2nd), '') + iif(GetString(sFieldLabel) <> '', ' - ' + GetString(sFieldLabel), '') + iif(GetString(sFieldLabel2nd) <> '', ' ' + GetString(sFieldLabel2nd), '');
-      MAJJnalEvent(RGPDCodeJnal, 'OK', RGPDUtils.GetLabelFromAction(Action), Data, PathFile);
+      InsertJnal;
       ShellExecute(0, pchar('open'), pchar(TempPath), nil, nil, SW_SHOW);
     end;
   finally
@@ -321,22 +382,26 @@ var
     begin
       Sql        := '';
       FieldsList := GetSelectedFieldsFromTable(TableName);
-      if ExisteSQL('SELECT 1 FROM ' + TableName + Where) then
+      if FieldsList <> '' then
       begin
-        while FieldsList <> '' do
+        if ExisteSQL('SELECT 1 FROM ' + TableName + Where) then
         begin
-          FieldName := ReadTokenPipe(FieldsList, ',');
-          case GetFieldType(FieldName) of
-            ttfText    : FieldValue := '"' + wStringRepeat('Z', GetFieldSize(FieldName)) + '"';
-            ttfNumeric : FieldValue := '0';
-            ttfMemo    : FieldValue := '""';
+          while FieldsList <> '' do
+          begin
+            FieldName := ReadTokenPipe(FieldsList, ',');
+            case GetFieldType(FieldName) of
+              ttfText    : FieldValue := 'iif(' + FieldName +  ' <> "", ' + '"' + wStringRepeat('Z', GetFieldSize(FieldName)) + '", "")';
+              ttfNumeric : FieldValue := 'iif(' + FieldName +  ' <> 0, ' + '"0", "")';
+              ttfMemo    : FieldValue := '""';
+              ttfDate    : FieldValue := '"' + DateToStr(iDate1900) + '"';
+            end;
+            Sql := Sql + ', ' + FieldName + ' = ' + FieldValue;
           end;
-          Sql := Sql + ', ' + FieldName + ' = ' + FieldValue;
+          Sql := copy(Sql, 3, Length(Sql));
+          Sql := 'UPDATE ' + TableName + ' SET ' + Sql + Where;
+          TobResultL := TOB.Create('_UPDATE', TobResult, -1);
+          TobResultL.AddChampSupValeur('_UPDATE', Sql);
         end;
-        Sql := copy(Sql, 3, Length(Sql));
-        Sql := 'UPDATE ' + TableName + ' SET ' + Sql + Where;
-        TobResultL := TOB.Create('_UPDATE', TobResult, -1);
-        TobResultL.AddChampSupValeur('_UPDATE', Sql);
       end;
     end;
   end;
@@ -370,6 +435,7 @@ begin
     try
       for Cpt := 0 to pred(TobResult.detail.count) do
         ExecuteSQL(TobResult.Detail[Cpt].GetString('_UPDATE'));
+      InsertJnal;
       CommitTrans;
     except
       Rollback;
@@ -378,6 +444,30 @@ begin
     FreeAndNil(TobResult);
   end;
   TFMul(Ecran).BChercheClick(nil);
+end;
+
+procedure TOF_BRGPDMUL.Rectification;
+var
+  OkUpdate : string;
+  Return   : string;  
+begin
+  case Population of
+    rgpdpThird    : begin
+                      Return   := GetString('T_TIERS');
+                      OkUpdate := OpenForm.CliPro(GetString('T_AUXILIAIRE'), GetString('T_NATUREAUXI'));
+
+                    end;
+    rgpdpResource : begin
+                      Return   := GetString('ARS_RESSOURCE');
+                      OkUpdate := OpenForm.Resource(Return, '', 'ORIGINE=RGP');
+                    end;
+    rgpdpUser     : begin
+                      Return   := GetString('US_UTILISATEUR');
+                      OkUpdate := OpenForm.User(Return);
+                    end;
+  end;
+  if OkUpdate = Return then
+   InsertJnal;
 end;
 
 initialization

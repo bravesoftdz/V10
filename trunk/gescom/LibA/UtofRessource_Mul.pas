@@ -64,7 +64,11 @@ Function AFLanceFiche_Rech_Ressource(Range,Argument:string):variant;
 
 
 implementation
-uses Paramsoc, uTOFComm;
+uses
+  Paramsoc
+  , uTOFComm
+  , FormsName
+  ;
 
 procedure TOF_RESSOURCE_MUL.OnArgument(stArgument : String );
 // Ajout PL le 28/02/02
@@ -444,22 +448,20 @@ begin
      TFMUL(Ecran).Close;
      End
   else
-     Begin
-     stArg:='ACTION=MODIFICATION;';
-	   if Not AGLJaiLeDroitFiche(['RESSOURCE',StArg],2) Then exit;
-     		Begin
-	    	//Aiguillage pour gestion écran Ressource ou Matériel
-//Non en line
-			  AGLLanceFiche ('BTP','BTRESSOURCE','',Ressource, 'TYPERESSOURCE=' + UnType);
-{*			if (UnType = 'SAL') Or (UnType = 'ST') Or (UnType = 'INT') Then
-					 AGLLanceFiche ('BTP','BTRESSOURCE_S1','',Ressource, 'TYPERESSOURCE=' + UnType)
-			  else if (UnType = 'OUT') Or (UnType = 'MAT') Or (UnType = 'LOC') then
-					 AGLLanceFiche ('BTP','BTMATERIEL_S1','',Ressource, 'TYPERESSOURCE=' + UnType);
-*}
-        end;
-     end;
+  Begin
+    OpenForm.Resource(Ressource, UnType);
+(*
+    stArg:='ACTION=MODIFICATION;';
+    if Not AGLJaiLeDroitFiche(['RESSOURCE',StArg],2) Then exit;
+      Begin
+      //Aiguillage pour gestion écran Ressource ou Matériel
+      //Non en line
+      AGLLanceFiche ('BTP','BTRESSOURCE','',Ressource, 'TYPERESSOURCE=' + UnType);
+      end;
+*)
+  end;
 
-	if GetParamSocSecur('SO_REFRESHMUL', true) then refreshdb;
+     if GetParamSocSecur('SO_REFRESHMUL', true) then refreshdb;
 
 
 end;

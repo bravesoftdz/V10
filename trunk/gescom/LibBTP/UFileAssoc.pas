@@ -108,7 +108,7 @@ begin
       RaiseLastOSError;
     end else
     begin
-      result := NomFicDest;
+      result := ExtractFileName(NomFicDest);
     end;
   FINALLY
     FreeMem(SrcFile);

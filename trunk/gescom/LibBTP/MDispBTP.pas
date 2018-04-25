@@ -2091,17 +2091,17 @@ Cegid,False,False)};
 
     { RGPD }
     280011 : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', SetWindowCaption(-280010, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaDataExport));        // Export données personnelles - Client
-    280012 : BLanceFiche_RGPDResourceMul('BTP', rfm_RGPDResourceMul, '', '', SetWindowCaption(-280010, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaDataExport));        // Export données personnelles - Ressources
-    280013 : BLanceFiche_RGPDUtilisatMul('BTP', rfm_RGPDUtilisatMul, '', '', SetWindowCaption(-280010, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaDataExport));        // Export données personnelles - Utilisateurs
+    280012 : BLanceFiche_RGPDResourceMul('BTP', frm_RGPDResourceMul, '', '', SetWindowCaption(-280010, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaDataExport));        // Export données personnelles - Ressources
+    280013 : BLanceFiche_RGPDUtilisatMul('BTP', frm_RGPDUtilisatMul, '', '', SetWindowCaption(-280010, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaDataExport));        // Export données personnelles - Utilisateurs
     280021 : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', SetWindowCaption(-280020, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaAnonymization));     // Droit à l'oubli - Client
-    280022 : BLanceFiche_RGPDResourceMul('BTP', rfm_RGPDResourceMul, '', '', SetWindowCaption(-280020, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaAnonymization));     // Droit à l'oubli - Ressources
-    280023 : BLanceFiche_RGPDUtilisatMul('BTP', rfm_RGPDUtilisatMul, '', '', SetWindowCaption(-280020, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaAnonymization));     // Droit à l'oubli - Utilisateurs
+    280022 : BLanceFiche_RGPDResourceMul('BTP', frm_RGPDResourceMul, '', '', SetWindowCaption(-280020, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaAnonymization));     // Droit à l'oubli - Ressources
+    280023 : BLanceFiche_RGPDUtilisatMul('BTP', frm_RGPDUtilisatMul, '', '', SetWindowCaption(-280020, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaAnonymization));     // Droit à l'oubli - Utilisateurs
     280031 : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', SetWindowCaption(-280030, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaDataRectification)); // Demande de rectification - Client
-    280032 : BLanceFiche_RGPDResourceMul('BTP', rfm_RGPDResourceMul, '', '', SetWindowCaption(-280030, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaDataRectification)); // Demande de rectification - Ressources
-    280033 : BLanceFiche_RGPDUtilisatMul('BTP', rfm_RGPDUtilisatMul, '', '', SetWindowCaption(-280030, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaDataRectification)); // Demande de rectification - Utilisateurs
+    280032 : BLanceFiche_RGPDResourceMul('BTP', frm_RGPDResourceMul, '', '', SetWindowCaption(-280030, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaDataRectification)); // Demande de rectification - Ressources
+    280033 : BLanceFiche_RGPDUtilisatMul('BTP', frm_RGPDUtilisatMul, '', '', SetWindowCaption(-280030, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaDataRectification)); // Demande de rectification - Utilisateurs
     280041 : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', SetWindowCaption(-280040, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaConsentRequest));    // Demande de consentement - Client
-    280042 : BLanceFiche_RGPDResourceMul('BTP', rfm_RGPDResourceMul, '', '', SetWindowCaption(-280040, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaConsentRequest));    // Demande de consentement - Ressources
-    280043 : BLanceFiche_RGPDUtilisatMul('BTP', rfm_RGPDUtilisatMul, '', '', SetWindowCaption(-280040, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaConsentRequest));    // Demande de consentement - Utilisateurs
+    280042 : BLanceFiche_RGPDResourceMul('BTP', frm_RGPDResourceMul, '', '', SetWindowCaption(-280040, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaConsentRequest));    // Demande de consentement - Ressources
+    280043 : BLanceFiche_RGPDUtilisatMul('BTP', frm_RGPDUtilisatMul, '', '', SetWindowCaption(-280040, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaConsentRequest));    // Demande de consentement - Utilisateurs
     280051 : BLanceFiche_RGPDReferentiel('BTP', frm_RGPDRepository , '', '', SetWindowCaption(-2580050, Num)); // Référentiel
     // --
     else HShowMessage('2;?caption?;'+TraduireMemoire('Fonction non disponible : ')+';W;O;O;O;',TitreHalley,IntToStr(Num)) ;

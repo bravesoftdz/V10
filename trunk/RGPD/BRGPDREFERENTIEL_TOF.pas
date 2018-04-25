@@ -36,22 +36,26 @@ function BLanceFiche_RGPDReferentiel(Nat, Cod, Range, Lequel, Argument : string)
 Type
   TOF_BRGPDREFERENTIEL = Class (tTOFComm)
   private
-    Population : THValCombobox;
-    LstTables  : THGrid;
-    LstFields  : THGrid;
-    TobTables  : TOB;
-    TobFields  : TOB;
-    ColsTables : string;
-    ColsFields : string;
-    AddField   : TToolbarButton97;
-    DelField   : TToolbarButton97;
+    Population       : THValCombobox;
+    LstTables        : THGrid;
+    LstFields        : THGrid;
+    TobTables        : TOB;
+    TobFields        : TOB;
+    ColsTables       : string;
+    ColsFields       : string;
+    AddField         : TToolbarButton97;
+    DelField         : TToolbarButton97;
+    NewField         : THEdit;
 
     procedure GridsManagement;
     procedure ButtonManagement;
     procedure LoadTobTable(Sender : TObject);
     procedure LoadTobFields(TableName : string);
     procedure LstTables_OnClick(Sender : TObject);
+    procedure LstFields_OnClick(Sender : TObject);
     procedure LstFields_OnDlbclick(Sender : TObject);
+    procedure AddField_OnClick(Sender : TObject);
+    procedure DelField_OnClick(Sender : TObject);
     function GetTobFromGrid(CurrentGrid : THGrid) : TOB;
 
   public
@@ -70,11 +74,18 @@ Implementation
 uses
   TntStdCtrls
   , wCommuns
+  , LookUp
+  , BRGDPDUtils
   ;
 
 const
   LstNameTables = 'LSTTABLESL';
   LstNameFields = 'LSTCHAMPS';
+  FieldColInternal = 1;
+  FieldColField    = 2;
+  FieldColLabel    = 3;
+  FieldColExport   = 4;
+  FieldColAnonym   = 5;
 
 function BLanceFiche_RGPDReferentiel(Nat, Cod, Range,Lequel,Argument : string) : string;
 begin
@@ -111,11 +122,18 @@ begin
   LstFields  := THGrid(GetControl(LstNameFields));
   AddField   := TToolbarButton97(GetControl('ADDFIELD'));
   DelField   := TToolbarButton97(GetControl('DELFIELD'));
+  NewField   := THEdit(GetControl('NEWFIELD'));
   TobTables  := TOB.Create('_LinkedTables', nil, -1);
   TobFields  := TOB.Create('BRGPDCHAMPS', nil, -1);
   Population.OnChange  := LoadTobTable;
   LstTables.OnClick    := LstTables_OnClick;
-  LstFields.OnDblClick :=  LstFields_OnDlbclick;
+  LstFields.OnClick    := LstFields_OnClick;
+  LstFields.OnDblClick := LstFields_OnDlbclick;
+  AddField.OnClick     := AddField_OnClick;
+  DelField.OnClick     := DelField_OnClick;
+  AddField.Visible     := (RGPDUtils.CanAddDelFieldInRepository);
+  DelField.Visible     := (RGPDUtils.CanAddDelFieldInRepository);
+  TGroupBox(GetControl('GBFIELDS')).Height := iif(RGPDUtils.CanAddDelFieldInRepository, 400, 435);
   GridsManagement;
 end ;
 
@@ -124,7 +142,6 @@ begin
   Inherited ;
   FreeAndNil(TobTables);
   FreeAndNil(TobFields);
-
 end ;
 
 procedure TOF_BRGPDREFERENTIEL.OnDisplay () ;
@@ -158,6 +175,7 @@ begin
        + '       , RG2_LIBELLE   as Label'
        + ' FROM BRGPDTABLESL'
        + ' WHERE RG2_IDRG1 = ' + Id
+       +   RGPDUtils.GetSqlTablesException
        + ' ORDER BY Sort, Label'
        ;
   TobTables.LoadDetailFromSQL(Sql);
@@ -184,22 +202,35 @@ begin
          ;
     TobFields.LoadDetailFromSQL(Sql);
     TobFields.PutGridDetail(LstFields, False, False, ColsFields);
+    ButtonManagement;
   end;
 end;
 
 procedure TOF_BRGPDREFERENTIEL.GridsManagement;
 var
-  Cpt : integer;
-begin
-  ColsTables := 'Label';
-  ColsFields := 'RG3_FIELDNAME;DH_LIBELLE;RG3_EXPORT;RG3_RESET';
-  for Cpt := 3 to 4 do
+  Cpt    : integer;
+
+  procedure ManageBoolean;
   begin
     LstFields.ColAligns[Cpt]  := taCenter;
     LstFields.ColTypes[Cpt]   := 'B';
     LstFields.ColFormats[Cpt] := IntToStr(Integer(csCoche));
   end;
 
+begin
+  ColsTables := 'Label';
+  ColsFields := 'RG3_INTERNE;RG3_FIELDNAME;DH_LIBELLE;RG3_EXPORT;RG3_RESET';
+  for Cpt := 1 to 5 do
+  begin
+    case Cpt of
+      FieldColInternal :  if RGPDUtils.CanAddDelFieldInRepository then
+                            ManageBoolean
+                          else
+                            LstFields.ColWidths[Cpt] := -1 ;
+      FieldColExport
+      , FieldColAnonym :  ManageBoolean;
+    end;
+  end;
 end;
 
 procedure TOF_BRGPDREFERENTIEL.ButtonManagement;
@@ -209,20 +240,27 @@ begin
   TobField := GetTobFromGrid(LstFields);
   if assigned(TobField) then
   begin
+    AddField.Enabled := (TobTables.Detail.Count > 0);
     DelField.Enabled := (not TobField.GetBoolean('RG3_INTERNE'));
   end;
 end;
   
 function TOF_BRGPDREFERENTIEL.GetTobFromGrid(CurrentGrid : THGrid): TOB;
+var
+  TobCurrent : TOB;
 begin
   if Assigned(CurrentGrid) then
   begin
     case CaseFromString(CurrentGrid.Name, [LstNameTables, LstNameFields]) of
-      {LstNameTables} 0 : Result := TobTables.Detail[CurrentGrid.Row - 1];
-      {LstNameFields} 1 : Result := TobFields.Detail[CurrentGrid.Row - 1];
+      {LstNameTables} 0 : TobCurrent := TobTables;
+      {LstNameFields} 1 : TobCurrent := TobFields;
+    else
+      TobCurrent := nil;
+    end;
+    if TobCurrent.Detail.Count > 0 then
+      Result := TobCurrent.Detail[CurrentGrid.Row - 1]
     else
       Result := nil;
-    end;
   end else
     Result := nil;
 end;
@@ -234,6 +272,76 @@ begin
   TobTable := GetTobFromGrid(LstTables);
   if Assigned(TobTable) then
     LoadTobFields(TobTable.GetString('TABLENAME'));
+  ButtonManagement;
+end;
+
+procedure TOF_BRGPDREFERENTIEL.LstFields_OnClick(Sender : TObject);
+begin
+  ButtonManagement;
+end;
+
+procedure TOF_BRGPDREFERENTIEL.AddField_OnClick(Sender : TObject);
+var
+  TobTable  : TOB;
+  TobField  : TOB;
+  TableName : string;
+  Prefix    : string;
+  Where     : string;
+  Cpt       : integer;
+begin
+  TobTable := GetTobFromGrid(LstTables);
+  if Assigned(TobTable) then
+  begin
+    TableName := TobTable.GetString('TABLENAME');
+    Prefix    := TableToPrefixe(TableName);
+    Where     := '     DH_PREFIXE = "' + Prefix + '"'
+               + ' AND DH_CONTROLE LIKE "%L%"'
+               + ' AND DH_TYPECHAMP NOT IN ("BOOLEAN", "COMBO")'
+               + ' AND NOT EXISTS (SELECT 1 FROM BRGPDCHAMPS WHERE RG3_FIELDNAME = DH_NOMCHAMP)'
+               ;
+    NewField.Text := '';
+    LookupList(THCritMaskEdit(NewField), TraduireMemoire('Ajouter un champ'), 'DECHAMPS', 'DH_NOMCHAMP', 'DH_LIBELLE', Where, 'DH_NOMCHAMP', False, 0);
+    if NewField.Text <> '' then
+    begin
+      TobField := TOB.Create('BRGPDCHAMPS', TobFields, -1);
+      TobField.SetString('RG3_TABLENAME', TableName);
+      TobField.SetString('RG3_FIELDNAME', NewField.Text);
+      TobField.SetBoolean('RG3_INTERNE' , False);
+      TobField.SetBoolean('RG3_EXPORT'  , True);
+      TobField.SetBoolean('RG3_RESET'   , RGPDUtils.CanAnonymizableField(TableName, NewField.Text));
+      TobField.InsertDB(nil);
+      LoadTobFields(TableName);
+      for Cpt := 0 to pred(LstFields.RowCount) do
+      begin
+        if LstFields.Cells[FieldColField, Cpt] = NewField.Text then
+        begin
+          LstFields.Col := FieldColField;
+          LstFields.Row := Cpt;
+          break;
+        end;
+      end;
+    end;
+  end;
+end;
+
+procedure TOF_BRGPDREFERENTIEL.DelField_OnClick(Sender: TObject);
+var
+  TobField  : TOB;
+  Sql       : string;
+begin
+  TobField := GetTobFromGrid(LstFields);
+  if Assigned(TobField) then
+  begin
+    if PGIAsk(Format(TraduireMemoire('Veuillez confirmer la suppression de %s'), [TobField.GetString('RG3_FIELDNAME')]), Ecran.Caption) = mrYes then
+    begin
+      Sql := 'DELETE FROM BRGPDCHAMPS'
+           + ' WHERE RG3_TABLENAME = "' + TobField.GetString('RG3_TABLENAME') + '"'
+           + '   AND RG3_FIELDNAME = "' + TobField.GetString('RG3_FIELDNAME') + '"'
+           ;
+      ExecuteSQL(Sql);
+      LoadTobFields(TobField.GetString('RG3_TABLENAME'));
+    end;
+  end;
 end;
 
 procedure TOF_BRGPDREFERENTIEL.LstFields_OnDlbclick(Sender: TObject);
@@ -242,25 +350,34 @@ var
   CurrentCol : integer;
   FieldName  : string;
   Sql        : string;
+  TableValue : string;
+  FieldValue : string;
 begin
   CurrentCol := LstFields.Col;
-  if (CurrentCol = 3) or (CurrentCol = 4) then
+  if (CurrentCol = FieldColExport) or (CurrentCol = FieldColAnonym) then
   begin
     TobField := GetTobFromGrid(LstFields);
     if Assigned(TobField) then
     begin
       case CurrentCol of
-        3 : FieldName := 'RG3_EXPORT';
-        4 : FieldName := 'RG3_RESET';
+        FieldColExport : FieldName := 'RG3_EXPORT';
+        FieldColAnonym : FieldName := 'RG3_RESET';
       end;
-      TobField.SetBoolean(FieldName, iif(TobField.GetBoolean(FieldName), False, True));
-      TobField.PutLigneGrid(LstFields, LstFields.Row, False, False, ColsFields);
-      Sql := 'UPDATE BRGPDCHAMPS'
-           + ' SET ' + FieldName + ' = "' + TobField.GetString(FieldName) + '"'
-           + ' WHERE RG3_TABLENAME = "' + TobField.GetString('RG3_TABLENAME') + '"'
-           + '   AND RG3_FIELDNAME = "' + TobField.GetString('RG3_FIELDNAME') + '"'
-           ;
-      ExecuteSQL(Sql);
+      TableValue := TobField.GetString('RG3_TABLENAME');
+      FieldValue := TobField.GetString('RG3_FIELDNAME');
+      if (FieldName = 'RG3_RESET') and (not RGPDUtils.CanAnonymizableField(TableValue, FieldValue)) then
+        PGIError(TraduireMemoire('Vous ne pouvez pas anonymiser ce champ.'), Ecran.Caption)
+      else
+      begin
+        TobField.SetBoolean(FieldName, iif(TobField.GetBoolean(FieldName), False, True));
+        TobField.PutLigneGrid(LstFields, LstFields.Row, False, False, ColsFields);
+        Sql := 'UPDATE BRGPDCHAMPS'
+             + ' SET ' + FieldName + ' = "' + TobField.GetString(FieldName) + '"'
+             + ' WHERE RG3_TABLENAME = "' + TableValue + '"'
+             + '   AND RG3_FIELDNAME = "' + FieldValue + '"'
+             ;
+        ExecuteSQL(Sql);
+      end;
     end;
   end;
 end;
