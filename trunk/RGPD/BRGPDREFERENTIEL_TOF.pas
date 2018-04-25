@@ -212,6 +212,7 @@ var
 
   procedure ManageBoolean;
   begin
+    LstFields.ColWidths[Cpt] := 30 ;
     LstFields.ColAligns[Cpt]  := taCenter;
     LstFields.ColTypes[Cpt]   := 'B';
     LstFields.ColFormats[Cpt] := IntToStr(Integer(csCoche));
@@ -227,8 +228,7 @@ begin
                             ManageBoolean
                           else
                             LstFields.ColWidths[Cpt] := -1 ;
-      FieldColExport
-      , FieldColAnonym :  ManageBoolean;
+      FieldColExport, FieldColAnonym :  ManageBoolean;
     end;
   end;
 end;
