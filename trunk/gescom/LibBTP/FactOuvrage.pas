@@ -3099,7 +3099,7 @@ BEGIN
       TOBLN.free;
     end;
   until i>=TOBnomen.detail.count;
-  if OptimizeOuv.Arecalc then
+  if (OptimizeOuv <> nil) And (OptimizeOuv.Arecalc) then
   begin
     for II := 0 to TOBgroupenomen.detail.count -1 do
     begin
