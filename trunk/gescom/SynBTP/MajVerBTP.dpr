@@ -548,6 +548,7 @@ uses
   UTransferts in '..\SpecifPOC\UTransferts.pas',
   BTMODIFMARCHEST_TOF in '..\SpecifPOC\BTMODIFMARCHEST_TOF.PAS',
   UConnectWSCEGID in '..\..\CONNECTWS\UConnectWSCEGID.pas',
+  FormsName in '..\..\commun\Lib\FormsName.pas',
   UFileAssoc in '..\LibBTP\UFileAssoc.pas';
 
 {$R *.RES}
