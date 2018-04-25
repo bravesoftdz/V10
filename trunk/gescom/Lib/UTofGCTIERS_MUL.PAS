@@ -16,7 +16,7 @@ Uses StdCtrls, Controls, Classes,AGLInit,M3FP,ParamSoc,
       DBCtrls,db,{$IFNDEF DBXPRESS} dbTables, {$ELSE} uDbxDataSet, {$ENDIF}FichList,Fiche,Fe_Main,HDB,Mul,
 {$ENDIF}
      forms, sysutils,ComCtrls,
-     HCtrls, HEnt1, HMsgBox, UTOF,ent1,UtilPgi ;
+     HCtrls, HTB97, HEnt1, HMsgBox, UTOF,ent1,UtilPgi ;
 
 Type
   TOF_GCTIERS_MUL = Class (TOF)
@@ -24,6 +24,7 @@ Type
    procedure OnUpdate ; override ;
    procedure Onload ; override;
   private
+
     procedure RenommageEnteteColonnes;
 
   end ;
@@ -36,31 +37,33 @@ var stArg, Critere, ChampMul : string;
     PosEgal : integer;
 begin
   Inherited ;
-{$IFDEF NOMADE} //Ajoute l'affichage des prospects dans le mul
-SetControlText('XX_WHERE','OR T_NATUREAUXI="PRO"');
-{$ELSE}
-SetControlText('XX_WHERE','');
-{$ENDIF}
 
-SetControlText('TYPEACTION','ACTION=MODIFICATION'); //Initialisation à modification
-stArg:=Arguments; //Cache les boutons ajout et dupliquer si consultation
-Repeat
+  {$IFDEF NOMADE} //Ajoute l'affichage des prospects dans le mul
+  SetControlText('XX_WHERE','OR T_NATUREAUXI="PRO"');
+  {$ELSE}
+  SetControlText('XX_WHERE','');
+  {$ENDIF}
+
+  SetControlText('TYPEACTION','ACTION=MODIFICATION'); //Initialisation à modification
+  stArg:=Arguments; //Cache les boutons ajout et dupliquer si consultation
+  Repeat
     Critere := UpperCase(Trim(ReadTokenSt(stArg)));
     if Critere<>'' then
-        begin
-        PosEgal := pos('=',Critere);
-        if PosEgal<>0 then ChampMul := copy(Critere,1,PosEgal-1);
-           if ChampMul='ACTION' then SetControlText('TYPEACTION',Critere);
-        end;
-    until Critere='';
-SetControlVisible('bInsert',StringToAction(GetControlText('TYPEACTION'))<>taConsult);
-SetControlVisible('B_DUPLICATION',StringToAction(GetControlText('TYPEACTION'))<>taConsult);
+      begin
+      PosEgal := pos('=',Critere);
+      if PosEgal<>0 then ChampMul := copy(Critere,1,PosEgal-1);
+        if ChampMul='ACTION' then SetControlText('TYPEACTION',Critere);
+      end;
+  until Critere='';
+  SetControlVisible('bInsert',StringToAction(GetControlText('TYPEACTION'))<>taConsult);
+  SetControlVisible('B_DUPLICATION',StringToAction(GetControlText('TYPEACTION'))<>taConsult);
 
-if Not ExJaiLeDroitConcept(TConcept(gcCLICreat),False) then
-   BEGIN
-   SetControlVisible('BINSERT',False) ;
-   SetControlVisible('B_DUPLICATION',False) ;
-   END ;
+  if Not ExJaiLeDroitConcept(TConcept(gcCLICreat),False) then
+  BEGIN
+    SetControlVisible('BINSERT',False) ;
+    SetControlVisible('B_DUPLICATION',False) ;
+  END ;
+
 end ;
 
 Function TOF_GCTIERS_MUL_AGLNatureTiers (Parms: array of variant; nb: integer) : variant ;
@@ -72,7 +75,6 @@ else if GetParamSoc('SO_GCPREFIXETIERS')<>'' then Result:='PRO' else Result:='0'
 Result:='CLI';
 {$ENDIF}
 end;
-
 
 procedure TOF_GCTIERS_MUL.Onload;
 begin

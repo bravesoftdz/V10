@@ -195,7 +195,7 @@ begin
       Champ  := Critere;
     ControleChamp(Champ, Valeur);
     Critere:= uppercase(Trim(ReadTokenSt(StArgument)));
-      end;
+  end;
 
   // gm 10/01/03 plus de tiers payeur personnalisable en GA
   // je le laisse pour ALGOE car utilisé dans les editions d'adresse (cf NLB) 24/01/03
