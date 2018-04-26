@@ -3067,6 +3067,16 @@ begin
 end;
 
 procedure TOF_BSAISIEAVANCPOC.GSSTElipsisClick(Sender: TObject);
+  function GetTiersST(Affaire,CodeMarche : string) : string;
+  var QQ : TQuery;
+  begin
+    QQ := OpenSQL('SELECT BM0_FOURNISSEUR FROM BTMARCHEST WHERE BM0_AFFAIRE="'+Affaire+'" AND BM0_MARCHE="'+Copy(CodeMarche,1,8)+'"',True,1,'',true);
+    if not QQ.eof then
+    begin
+      Result := QQ.fields[0].AsString;
+    end;
+    ferme (QQ);
+  end;
 var FGS : TGSaisie;
     TT : TOB;
     TL : TOB;
@@ -3080,6 +3090,7 @@ begin
     try
       TT.AddChampSupValeur('AFFAIRE',TL.GetString('BM8_AFFAIRE'));
       TT.AddChampSupValeur('CODEMARCHE',TL.GetString('BM8_CODEMARCHE'));
+      TT.AddChampSupValeur('SOUSTRAIT',GetTiersST(TL.GetString('BM8_AFFAIRE'),TL.GetString('BM8_CODEMARCHE')));
       TT.AddChampSupValeur('MODIF','-');
       TheTOB := TT;
       AGLLanceFiche('BTP','BTMODIFMARCHEST','','','ACTION=MODIFICATION');
