@@ -83,8 +83,10 @@ type
     function ChangeEtatZeDoc (BSVDocumentID : string ; TOBDatas: TOB; TheChps,TheValeurReg : string) : boolean;
     procedure Disconnect;
     function FinalizeNewDocument (FileName : string) : Boolean;
+    function FinalizeUpdate (FileName : string) : Boolean;
     procedure GetArchivesList ;
     function GetDocumentId : WideString;
+    function SetDocumentId (ID : string) : boolean;
     procedure GetWorkFlowList (ArchiveId : Integer);
     procedure ResetCookies ;
     function SetNumChunks (NBchunks : Integer) : boolean;
@@ -95,7 +97,7 @@ type
     //
     function StockeThisPdf ( FileName : Widestring) : WideString;
     //
-    function UploadDocument (FileName : string) : boolean;
+    function UploadDocument (FileName : string; Update : boolean=false) : boolean;
   end;
 
 function GetEmail (CodeUser : string) : string;
@@ -105,6 +107,7 @@ function SetFactureRegleBSV (BSVDocumentID : string) : boolean;
 procedure VisuDocumentBSV (TOBPiece : TOB);
 function StoreDocumentBSV (FileName : string; TOBFields : TOB;StoreWF : boolean=true) : WideString;
 procedure GetParamStockageBSV (TOBFIelds : TOB; NaturePiece : string);
+function EcraseDocumentBSV (FileName : string; TOBFields : TOB; IDZeDoc : string) : boolean;
 
 implementation
 
@@ -132,6 +135,51 @@ begin
     TOBFIelds.LoadDetailDB('BSVPARPIECE','','',QQ,false);
   end;
   ferme (QQ);
+end;
+
+function EcraseDocumentBSV (FileName : string; TOBFields : TOB; IDZeDoc : string) : boolean;
+var QQ : TQuery;
+    XX : TconnectBSV;
+    Currentpasswd : Widestring;
+    TheArchive,TheWorkFlowId : Integer;
+    TOBParamsBSV : TOB;
+begin
+  TheArchive := 0;
+  TheWorkFlowId := 0;
+  TOBParamsBSV := TOB.Create('LES PARAMS',nil,-1);
+  XX := TconnectBSV.create;
+  TRY
+    QQ := OpenSQL('SELECT * FROM BSVSERVER',True,1,'',true);
+    TRY
+      if not QQ.eof then
+      begin
+        XX.BSVServer := QQ.findfield('BP2_SERVERNAME').AsString;
+        XX.BSVPORT := QQ.findfield('BP2_PORT').AsString;
+        TheArchive := QQ.findfield('BP2_ARCHIVE').AsInteger;
+        TheWorkFlowId := QQ.findfield('BP2_WFVALIDBAST').AsInteger;
+      end;
+    FINALLY
+      ferme (QQ);
+    end;
+    if (XX.BSVServer='') or (XX.BSVPORT='0') or (TheArchive=0) then Exit;
+    //
+    Currentpasswd := AnsiLowerCase_(MD5(DeCryptageSt(V_PGI.Password)));
+    Currentpasswd := FindEtReplace(Currentpasswd,'-','',true);
+    if not XX.ConnectToServer(GetEmail(V_PGI.UserLogin),Currentpasswd,false) then Exit;
+    if Not XX.ConnectToArchive(TheArchive) then Exit;
+    if not XX.SetDocumentId(IDZeDoc) then Exit;
+    if Not XX.SetArchiveId then Exit;
+
+    XX.GetTOBFieldsUpload(TOBParamsBSV);
+
+    if not XX.SetFields (TOBFields,TOBParamsBSV) then Exit;
+    if not  XX.UploadDocument (FileName,True) then Exit;
+    Result := true;
+  FINALLY
+    TOBParamsBSV.free;
+    XX.Disconnect;
+    XX.Free;
+  END;
 end;
 
 
@@ -1766,7 +1814,7 @@ begin
   end;
 end;
 
-function TconnectBSV.UploadDocument(FileName: string): boolean;
+function TconnectBSV.UploadDocument(FileName: string; Update : boolean=false): boolean;
 
   function ArrayToString(const a: array of Char): string;
   begin
@@ -1818,9 +1866,16 @@ begin
     TheMemFile.free;
   end;
   if not SetDocumentMD5Hash (FileName) then Exit;
-  if not FinalizeNewDocument (FileName) then exit;
+  if not Update then
+  begin
+    if not FinalizeNewDocument (FileName) then exit;
+  end else
+  begin
+    if not FinalizeUpdate (FileName) then exit;
+  end;
   result := true;
 end;
+
 
 function TconnectBSV.FiltreDatas (Src : string) : string;
 begin
@@ -2965,6 +3020,224 @@ begin
     http := nil;
   end;
 
+end;
+
+function TconnectBSV.SetDocumentId(ID: string): boolean;
+
+  function ConstitueTheMessage (ID : String) : WideString;
+  begin
+    Result := format('<?xml version="1.0" encoding="utf-8"?>'+
+              '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'+
+              '<soap:Body>'+
+              '<SetDocumentId xmlns="http://ZeDOC.fr/ZeDOCNetSolution/">'+
+              '<documentId>%s</documentId>'+
+              '<connectionId>%s</connectionId>'+
+              '</SetDocumentId>'+
+              '</soap:Body>'+
+              '</soap:Envelope>',[ID,fUID]);
+    Result := UTF8Encode(Result);
+  end;
+
+  function GetResponse (HTTPresponse : WideString) : WideString;
+  var XmlDoc : IXMLDocument ;
+      NodeFolder,OneNode,OneErr : IXMLNode;
+      II,JJ,KK : Integer;
+  begin
+    result := '';
+    XmlDoc := NewXMLDocument();
+    TRY
+      TRY
+        XmlDoc.LoadFromXML(HTTPResponse);
+      EXCEPT
+        On E: Exception do
+        begin
+          PgiError('Erreur durant Chargement XML : ' + E.Message );
+        end;
+      end;
+      if not XmlDoc.IsEmptyDoc then
+      begin
+        For II := 0 to Xmldoc.DocumentElement.ChildNodes.Count -1 do
+        begin
+          NodeFolder := XmlDoc.DocumentElement.ChildNodes[II]; // Liste des <Folder>
+          if NodeFolder.NodeName = 'soap:Body' then
+          begin
+            for JJ := 0 to NodeFolder.ChildNodes.Count -1 do
+            begin
+              OneNode := NodeFolder.ChildNodes [JJ];
+              if OneNode.NodeName = 'GetDocumentIdResponse' then
+              begin
+                for KK := 0 to OneNode.ChildNodes.Count -1 do
+                begin
+                  OneErr := OneNode.ChildNodes [KK];
+                  if OneErr.NodeName = 'GetDocumentIdResult' then
+                  begin
+                    result := OneErr.NodeValue;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    FINALLY
+      XmlDoc:= nil;
+    end;
+  end;
+
+
+var
+  http: IWinHttpRequest;
+  url : string;
+  TheXml : WideString;
+begin
+  Result := false;
+  if fServer = '' then
+  begin
+    PgiInfo('LE Serveur BSV n''est pas défini');
+    Exit;
+  end;
+  url := Format(UPLOADURL,[fServer,fport]);
+  http := CoWinHttpRequest.Create;
+  try
+    http.SetAutoLogonPolicy(2); // Disable SSO
+    http.Open('POST', url, False);
+    http.SetRequestHeader('Content-Type', 'text/xml');
+    http.SetRequestHeader('charset', 'utf8');
+    http.SetRequestHeader('Accept', 'text/xml,*/*');
+    TheXml := constitueTheMessage (ID);
+    http.SetRequestHeader('Content-Length',IntToStr(length(TheXml)));
+    http.SetRequestHeader('Cookie','ASP.NET_SessionId='+fcookie_session);
+    http.SetRequestHeader('SOAPAction','http://ZeDOC.fr/ZeDOCNetSolution/SetDocumentId');
+    TRY
+      http.Send(TheXml);
+    EXCEPT
+      on E: Exception do
+      begin
+        ShowMessage(E.Message);
+        exit;
+      end;
+    END;
+    if http.status = 200 then
+    begin
+      Result := true;
+    end else
+    begin
+      ShowMessage(GetError(http.ResponseText));
+    end;
+  finally
+    http := nil;
+  end;
+end;
+
+function TconnectBSV.FinalizeUpdate(FileName: string): Boolean;
+
+  function ConstitueTheMessage(ErrorMessage,FileName: string) : WideString;
+  begin
+    Result := format('<?xml version="1.0" encoding="utf-8"?>'+
+              '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'+
+              '<soap:Body>'+
+              '<Finalize xmlns="http://ZeDOC.fr/ZeDOCNetSolution/">'+
+              '<ErrorMessage>%s</ErrorMessage>'+
+              '<connectionId>%s</connectionId>'+
+              '</Finalize>'+
+              '</soap:Body>'+
+              '</soap:Envelope>',[ErrorMessage,fUId]);
+    Result := UTF8Encode(Result);
+  end;
+
+  function GetResponse (HTTPresponse : WideString; var ResponseErr : string) : boolean;
+  var XmlDoc : IXMLDocument ;
+      NodeFolder,OneNode,OneErr : IXMLNode;
+      II,JJ,KK : Integer;
+  begin
+    result := false;
+    XmlDoc := NewXMLDocument();
+    TRY
+      TRY
+        XmlDoc.LoadFromXML(HTTPResponse);
+      EXCEPT
+        On E: Exception do
+        begin
+          PgiError('Erreur durant Chargement XML : ' + E.Message );
+        end;
+      end;
+      if not XmlDoc.IsEmptyDoc then
+      begin
+        For II := 0 to Xmldoc.DocumentElement.ChildNodes.Count -1 do
+        begin
+          NodeFolder := XmlDoc.DocumentElement.ChildNodes[II]; // Liste des <Folder>
+          if NodeFolder.NodeName = 'soap:Body' then
+          begin
+            for JJ := 0 to NodeFolder.ChildNodes.Count -1 do
+            begin
+              OneNode := NodeFolder.ChildNodes [JJ];
+              if OneNode.NodeName = 'FinalizeResponse' then
+              begin
+                for KK := 0 to OneNode.ChildNodes.Count -1 do
+                begin
+                  OneErr := OneNode.ChildNodes [KK];
+                  if OneErr.NodeName = 'FinalizeResult' then
+                  begin
+                    result := OneErr.NodeValue;
+                  end else if OneErr.NodeName = 'ErrorMessage' then
+                  begin
+                    if OneErr.NodeValue <> null then ResponseErr := OneErr.NodeValue;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    FINALLY
+      XmlDoc:= nil;
+    end;
+  end;
+
+var
+  http: IWinHttpRequest;
+  url : string;
+  TheXml : WideString;
+  ErrorMessage : string;
+begin
+  Result := false;
+  if fServer = '' then
+  begin
+    PgiInfo('LE Serveur BSV n''est pas défini');
+    Exit;
+  end;
+  url := Format(UPLOADURL,[fServer,fport]);
+  http := CoWinHttpRequest.Create;
+  try
+    http.SetAutoLogonPolicy(2); // Disable SSO
+    http.Open('POST', url, False);
+    http.SetRequestHeader('Content-Type', 'text/xml');
+    http.SetRequestHeader('charset', 'utf8');
+    http.SetRequestHeader('Accept', 'text/xml,*/*');
+    TheXml := constitueTheMessage('',ExtractFileName(FileName));
+    http.SetRequestHeader('Content-Length',IntToStr(length(TheXml)));
+    http.SetRequestHeader('Cookie','ASP.NET_SessionId='+fcookie_session);
+    http.SetRequestHeader('SOAPAction','http://ZeDOC.fr/ZeDOCNetSolution/Finalize');
+    TRY
+      http.Send(TheXml);
+    EXCEPT
+      on E: Exception do
+      begin
+        ShowMessage(E.Message);
+        exit;
+      end;
+    END;
+    if http.status = 200 then
+    begin
+      Result  := GetResponse(http.ResponseText, ErrorMessage);
+      if not Result then ShowMessage(ErrorMessage);
+    end else
+    begin
+      ShowMessage(GetError(http.ResponseText));
+    end;
+  finally
+    http := nil;
+  end;
 end;
 
 { TlistArchive }
