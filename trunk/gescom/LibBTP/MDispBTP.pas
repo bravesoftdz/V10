@@ -238,28 +238,6 @@ var
   stMessage : String;
   Souche    : string;
   Sql       : string;
-
-  function SetWindowCaption(ParentNumber, TagNumber : integer) : string;
-  var
-    Sql : string;
-    Qry : TQuery;
-  begin
-    Result := '';
-    Sql := 'SELECT MN_LIBELLE FROM MENU WHERE MN_TAG IN(' + IntToStr(ParentNumber) + ', ' + IntToStr(TagNumber) + ')';
-    Qry := OpenSQL(Sql, True);
-    try
-      while not Qry.Eof do
-      begin
-        Result := Result + ' - ' + Qry.Fields[0].AsString;
-        Qry.Next;
-      end;
-    finally
-      Ferme(Qry);
-    end;
-    Result := Copy(Result, 4, Length(Result));
-    Result := 'WINDOWCAPTION=' + Result;
-  end;
-
 BEGIN
 	if VersionInterne then V_PGI.VersionDemo:=false;
     ReinitTOBAffaires ; // Eviter les effets de bords
@@ -2137,7 +2115,7 @@ Cegid,False,False)};
     280049 : OpenForm.RGPDWindows(rgpdpUser    , -280040, Num, rgdpaConsentResponse);   // Retour demande de consentement - Utilisateurs
     280052 : OpenForm.RGPDWindows(rgpdpSuspect , -280040, Num, rgdpaConsentResponse);   // Retour demande de consentement - Suspects
     {  Référentiel }
-    280061 : BLanceFiche_RGPDReferentiel('BTP', frm_RGPDRepository , '', '', SetWindowCaption(-2580050, Num)); // Référentiel
+    280061 : BLanceFiche_RGPDReferentiel('BTP', frm_RGPDRepository , '', '', OpenForm.SetWindowCaption(-280060, Num)); // Référentiel
     // --
     else HShowMessage('2;?caption?;'+TraduireMemoire('Fonction non disponible : ')+';W;O;O;O;',TitreHalley,IntToStr(Num)) ;
      end ;
