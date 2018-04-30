@@ -24,7 +24,6 @@ Type
     class function GetSqlTablesException : string;
     class function CanAnonymizableField(TableName, FieldName : string) : boolean;
     class function GetPath(PathType : T_RGPDTypePath) : string;
-    class function SetWindowCaption(Action : T_RGPDActions; Population : T_RGPDPopulation; ParentNumber, TagNumber : integer) : string;
   end;
 
 Const
@@ -217,29 +216,6 @@ begin
   else ;
     Result := '';
   end;
-end;
-
-class function RGPDUtils.SetWindowCaption(Action : T_RGPDActions; Population : T_RGPDPopulation; ParentNumber, TagNumber : integer) : string;
-var
-  Sql : string;
-  Qry : TQuery;
-  IsConsent : boolean;
-begin
-  IsConsent := ((Action = rgdpaConsentRequest) or (Action = rgdpaConsentResponse));
-  Sql := 'SELECT MN_LIBELLE FROM MENU WHERE MN_TAG IN(' + IntToStr(ParentNumber) + ', ' + IntToStr(TagNumber) + ')';
-  Qry := OpenSQL(Sql, True);
-  try
-    while not Qry.Eof do
-    begin
-      Result := Result + iif(IsConsent, ' ' + RGPDUtils.GetLabelFromPopulation(Population), '') + ' - ' + Qry.Fields[0].AsString;
-      Qry.Next;
-    end;
-  finally
-    Ferme(Qry);
-  end;
-  if IsConsent then
-    Result := Copy(Result, 4, Length(Result));
-  Result := 'WINDOWCAPTION=' + Result;
 end;
 
 end.

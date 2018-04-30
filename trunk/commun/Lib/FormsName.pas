@@ -27,6 +27,7 @@ type
       class function SetArgument(Argument : string) : string;
 
     public
+      class function SetWindowCaption(ParentNumber, TagNumber : integer; Action : T_RGPDActions=rgpdaNone; Population : T_RGPDPopulation=rgpdpNone) : string;
       class function CliPro(Auxiliary, ThirdType : string; Argument : string='') : string;
       class function Resource(ResourceCode, ResourceType : string; Argument : string='') : string;
       class function User(UserCode : string) : string;
@@ -60,6 +61,33 @@ begin
     Result := ';' + Argument
   else
     Result := Argument;
+end;
+
+class function OpenForm.SetWindowCaption(ParentNumber, TagNumber : integer; Action : T_RGPDActions=rgpdaNone; Population : T_RGPDPopulation=rgpdpNone) : string;
+var
+  Sql : string;
+  Qry : TQuery;
+  IsConsent : boolean;
+  Num       : Integer;
+begin
+  IsConsent := ((Action = rgdpaConsentRequest) or (Action = rgdpaConsentResponse));
+  Num := 0;
+  Sql := 'SELECT MN_LIBELLE FROM MENU WHERE MN_TAG IN(' + IntToStr(ParentNumber) + ', ' + IntToStr(TagNumber) + ')';
+  Qry := OpenSQL(Sql, True);
+  try
+    while not Qry.Eof do
+    begin
+      Inc(Num);
+      Result := Result + ' - ' + Qry.Fields[0].AsString;
+      if (IsConsent) and (Num > 1) then
+        Result := Result + ' ' + RGPDUtils.GetLabelFromPopulation(Population);
+      Qry.Next;
+    end;
+  finally
+    Ferme(Qry);
+  end;
+  Result := Copy(Result, 4, Length(Result));
+  Result := 'WINDOWCAPTION=' + Result;
 end;
 
 class function OpenForm.CliPro(Auxiliary, ThirdType : string; Argument : string='') : string;
@@ -127,10 +155,10 @@ end;
 class function OpenForm.RGPDWindows(Population: T_RGPDPopulation; TagMother, TagNumber: integer; Action: T_RGPDActions): string;
 begin
   case Population of
-    rgpdpThird    : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', RGPDUtils.SetWindowCaption(Action, Population, TagMother, TagNumber)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
-    rgpdpResource : BLanceFiche_RGPDResourceMul('BTP', frm_RGPDResourceMul, '', '', RGPDUtils.SetWindowCaption(Action, Population, TagMother, TagNumber)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
-    rgpdpUser     : BLanceFiche_RGPDUtilisatMul('BTP', frm_RGPDUtilisatMul, '', '', RGPDUtils.SetWindowCaption(Action, Population, TagMother, TagNumber)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
-    rgpdpSuspect  : BLanceFiche_RGPDSuspectMul ('BTP', frm_RGPDSuspectMul , '', '', RGPDUtils.SetWindowCaption(Action, Population, TagMother, TagNumber)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
+    rgpdpThird    : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', OpenForm.SetWindowCaption(TagMother, TagNumber, Action, Population)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
+    rgpdpResource : BLanceFiche_RGPDResourceMul('BTP', frm_RGPDResourceMul, '', '', OpenForm.SetWindowCaption(TagMother, TagNumber, Action, Population)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
+    rgpdpUser     : BLanceFiche_RGPDUtilisatMul('BTP', frm_RGPDUtilisatMul, '', '', OpenForm.SetWindowCaption(TagMother, TagNumber, Action, Population)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
+    rgpdpSuspect  : BLanceFiche_RGPDSuspectMul ('BTP', frm_RGPDSuspectMul , '', '', OpenForm.SetWindowCaption(TagMother, TagNumber, Action, Population)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
   end;
 end;
 
