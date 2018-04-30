@@ -556,7 +556,9 @@ uses
   BRGPDTIERSMUL_TOF in '..\..\RGPD\BRGPDTIERSMUL_TOF.pas',
   BRGPDUTILISATMUL_TOF in '..\..\RGPD\BRGPDUTILISATMUL_TOF.pas',
   BRGPDMUL_TOF in '..\..\RGPD\BRGPDMUL_TOF.pas',
-  BRGPDVALIDTRT_TOF in '..\..\RGPD\BRGPDVALIDTRT_TOF.pas';
+  BRGPDVALIDTRT_TOF in '..\..\RGPD\BRGPDVALIDTRT_TOF.pas',
+  FormsName in '..\..\commun\Lib\FormsName.pas',
+  UFileAssoc in '..\LibBTP\UFileAssoc.pas';
 
 {$R *.RES}
 

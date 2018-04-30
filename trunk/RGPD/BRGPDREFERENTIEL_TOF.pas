@@ -219,6 +219,7 @@ var
 
   procedure ManageBoolean;
   begin
+    LstFields.ColWidths[Cpt] := 30 ;
     LstFields.ColAligns[Cpt]  := taCenter;
     LstFields.ColTypes[Cpt]   := 'B';
     LstFields.ColFormats[Cpt] := IntToStr(Integer(csCoche));
