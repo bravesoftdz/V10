@@ -164,13 +164,8 @@ type  TCPRevision = record
                     {$ENDIF}
                     end ;
 
-{$IFNDEF CHR}
-Const
-      MaxEche = 12 ;
-{$ELSE}
 Const
       MaxEche = 50 ;
-{$ENDIF}
       MaxCatBud = 10 ;
       MaxTableLibre = 9 ;
       NBDECIMALTAUX = 6; {JP 25/05/05 : Nombre de décimale sur les taux de changes des devises}

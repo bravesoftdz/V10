@@ -3099,6 +3099,7 @@ BEGIN
       TOBLN.free;
     end;
   until i>=TOBnomen.detail.count;
+  //FV1 - 25/04/2018 : FS#3084 - ESPACS : Violation d'accès sur certaines factures en Saisie de réglements
   if (OptimizeOuv <> nil) And (OptimizeOuv.Arecalc) then
   begin
     for II := 0 to TOBgroupenomen.detail.count -1 do

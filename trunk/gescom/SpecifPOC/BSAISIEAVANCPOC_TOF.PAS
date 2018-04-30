@@ -2984,9 +2984,16 @@ end;
 procedure TOF_BSAISIEAVANCPOC.CalculeAvancCorrigeST (TOBL : TOB);
 var PP : double;
 begin
-  if TOBL.GetDouble('BM8_POURCENTAVANC')> TOBL.GetDouble('POURCENTCALC') then PP := TOBL.GetDouble('BM8_POURCENTAVANC')
-                                                                         else PP := TOBL.GetDouble('POURCENTCALC');
-  TOBL.SetDouble('MTAVANCCORRIGE',ARRONDI(TOBL.GetDouble('DEPENSEESTIME')* PP /100,2));
+  PP := 0;
+  if TOBL.GetDouble('BM8_POURCENTAVANC')<> 0 then
+  begin
+    PP := TOBL.GetDouble('BM8_POURCENTAVANC');
+    TOBL.SetDouble('MTAVANCCORRIGE',ARRONDI(TOBL.GetDouble('DEPENSEESTIME')* PP /100,2));
+  end else
+  begin
+    TOBL.SetDouble('MTAVANCCORRIGE',TOBL.GetDouble('DEPENSECUMUL'));
+  end;
+
 end;
 
 procedure TOF_BSAISIEAVANCPOC.CalculFinal;
@@ -3060,6 +3067,16 @@ begin
 end;
 
 procedure TOF_BSAISIEAVANCPOC.GSSTElipsisClick(Sender: TObject);
+  function GetTiersST(Affaire,CodeMarche : string) : string;
+  var QQ : TQuery;
+  begin
+    QQ := OpenSQL('SELECT BM0_FOURNISSEUR FROM BTMARCHEST WHERE BM0_AFFAIRE="'+Affaire+'" AND BM0_MARCHE="'+Copy(CodeMarche,1,8)+'"',True,1,'',true);
+    if not QQ.eof then
+    begin
+      Result := QQ.fields[0].AsString;
+    end;
+    ferme (QQ);
+  end;
 var FGS : TGSaisie;
     TT : TOB;
     TL : TOB;
@@ -3073,6 +3090,7 @@ begin
     try
       TT.AddChampSupValeur('AFFAIRE',TL.GetString('BM8_AFFAIRE'));
       TT.AddChampSupValeur('CODEMARCHE',TL.GetString('BM8_CODEMARCHE'));
+      TT.AddChampSupValeur('SOUSTRAIT',GetTiersST(TL.GetString('BM8_AFFAIRE'),TL.GetString('BM8_CODEMARCHE')));
       TT.AddChampSupValeur('MODIF','-');
       TheTOB := TT;
       AGLLanceFiche('BTP','BTMODIFMARCHEST','','','ACTION=MODIFICATION');
@@ -3110,6 +3128,7 @@ begin
     QQ.first;
     TL.SetDouble('DEPENSEESTIME',TL.GetDouble('DEPENSEESTIME')+QQ.Fields[0].AsFloat);
   end;
+  TL.SetDouble('DEPENSEESTIME',Arrondi(TL.GetDouble('DEPENSEESTIME'),2));
   Ferme(QQ);
 end;
 

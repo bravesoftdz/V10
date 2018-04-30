@@ -173,6 +173,7 @@ var TOBI,TT,TOBE,TOBAFF : TOB;
     TheResultID : string;
     QQ : TQuery;
     TF,TXML,REPIN,REPSAV,REPERR : string;
+    ResultEcrase : Boolean;
 begin
   LibDoc := '';
   Result := 0;
@@ -306,16 +307,33 @@ begin
       Result := -1;
       Exit;
     end;
-    TheResultID := StoreDocumentBSV(TF,TOBI,true);
-    if TheResultId <> '' then
+
+    IF TOBE.GetString('BM4_IDZEDOC') = '0' then
     begin
-      TOBE.setString('BM4_IDZEDOC',TheResultId);
-      TOBE.updateDB(false);
-      Rapport.lines.Add('BAST stocké dans la GED : Fournisseur : '+SousTraitant+' Code Marché : '+CodeMarche+' Situation : '+NumSituation);
+      // nouveau BAST
+      TheResultID := StoreDocumentBSV(TF,TOBI,true);
+      if TheResultId <> '' then
+      begin
+        TOBE.setString('BM4_IDZEDOC',TheResultId);
+        TOBE.updateDB(false);
+        Rapport.lines.Add('BAST stocké dans la GED : Fournisseur : '+SousTraitant+' Code Marché : '+CodeMarche+' Situation : '+NumSituation);
+      end else
+      begin
+        Rapport.lines.Add('Erreur d''envoi dans la GED : Fournisseur : '+SousTraitant+' Code Marché : '+CodeMarche+' Situation : '+NumSituation);
+        Result := -1;
+      end;
     end else
     begin
-      Rapport.lines.Add('Erreur d''envoi dans la GED : Fournisseur : '+SousTraitant+' Code Marché : '+CodeMarche+' Situation : '+NumSituation);
-      Result := -1;
+      // Réécriture BAST
+      ResultEcrase := EcraseDocumentBSV(TF,TOBI,TOBE.GetString('BM4_IDZEDOC'));
+      if ResultEcrase then
+      begin
+        Rapport.lines.Add('BAST mis à jour dans la GED : Fournisseur : '+SousTraitant+' Code Marché : '+CodeMarche+' Situation : '+NumSituation);
+      end else
+      begin
+        Rapport.lines.Add('Erreur de mise à jour dans la GED : Fournisseur : '+SousTraitant+' Code Marché : '+CodeMarche+' Situation : '+NumSituation);
+        Result := -1;
+      end;
     end;
   FINALLY
     TOBI.free;

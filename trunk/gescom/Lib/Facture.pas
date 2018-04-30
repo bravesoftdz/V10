@@ -17760,6 +17760,10 @@ begin
   SAVAUTOLIQUID := TobPiece.GetBoolean('GP_AUTOLIQUID');
   TOBPiece.GetEcran(Self, PEntete);
   TOBPiece.putvalue('ISDEJAFACT',BoolToStr_(IsDejafacture));
+  //FV1 - 24/04/2018 : FS#3078 - SCETEC : en saisie de document modification entête non reprises en complément entête
+  TOBPiece.putvalue('GP_REFINTERNE',GP_REFINTERNE.text);
+  TOBPiece.putvalue('GP_REFEXTERNE',GP_REFEXTERNE.text);
+  //
   TheTob := TobPiece;
 
   TobPiece.data := TobAdresses;
