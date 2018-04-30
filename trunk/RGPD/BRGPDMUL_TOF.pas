@@ -40,23 +40,26 @@ type
   TOF_BRGPDMUL = class(tTOFComm)
   private
     bOuvrir    : TToolbarButton97;
+    JnalEvent  : TToolbarButton97;
     Action     : T_RGPDActions;
     Population : T_RGPDPopulation;
     FListe     : THDBGrid;
-    PathFile   : string;
     TobRG2     : TOB;
     TobRG3     : TOB;
 
     procedure bOuvrir_OnClick(Sender: TObject);
+    procedure JnalEvent_OnClick(Sender: TObject);
     procedure FListe_OnDblClick(Sender : TObject);
     procedure LoadTobRG2;
     procedure LoadTobRG3;
     function GetWhereTablesL(Where, FieldName: string): string;
     function GetSelectedFieldsFromTable(TableName: string): string;
-    procedure InsertJnal;
-    procedure ExportDatas;
-    procedure Anonymization;
-    procedure Rectification;
+    procedure InsertJnal(PathFile : string; AdditionalInformation : string='');
+    procedure ExportDatas(PathFile : string);
+    procedure Anonymization(PathFile : string);
+    procedure Rectification(PathFile : string);
+    procedure ConsentRequest(PathFile : string);
+    procedure ConsentResponse(PathFile : string);
 
   public
     sPopulationCode : string;
@@ -85,7 +88,12 @@ uses
   , FormsName
   , Windows
   , ShellAPI
-  , UtilGC;
+  , UtilGC
+  , BTPUtil
+  , TntDBGrids
+  , ed_Tools
+  ;
+
 
 function BLanceFiche_RGPDThirdMul(Nat, Cod, Range, Lequel, Argument: string): string;
 begin
@@ -122,9 +130,12 @@ begin
   Population := RGPDUtils.GetPopulationFromCode(sPopulationCode);
   FListe     := THDBGrid(GetControl('FListe'));
   bOuvrir    := TToolbarButton97(GetControl('BOUVRIR'));
+  JnalEvent  := TToolbarButton97(GetControl('VOIRJNAL'));
   bOuvrir.OnClick       := bOuvrir_OnClick;
+  bOuvrir.Caption       := TraduireMemoire('Valider');
   FListe.MultiSelection := (Action = rgdpaConsentRequest);
   FListe.OnDblClick     := FListe_OnDblClick;
+  JnalEvent.OnClick     := JnalEvent_OnClick;
 end;
 
 procedure TOF_BRGPDMUL.OnClose;
@@ -148,21 +159,19 @@ procedure TOF_BRGPDMUL.bOuvrir_OnClick(Sender: TObject);
 var
   LastParam   : string;
   Params      : string;
+  PathFile    : string;
   CanContinue : boolean;
 begin
   if    (Action = rgdpaDataRectification)
      or ((Action <> rgdpaDataRectification) and (PGIAsk('Veuillez confirmer le traitement.', Ecran.Caption) = mrYes))
   then
   begin
-    if Action <> rgdpaConsentRequest then
-    begin
-      CanContinue := True;
-      LastParam   := ';QUI=' + GetString(sFieldCode) + '~' + GetString(sFieldLabel) + '~' + GetString(sFieldLabel2nd)
-    end
-    else
+    CanContinue := True;
+    LastParam   := ';QUI=' + GetString(sFieldCode) + '~' + GetString(sFieldLabel) + '~' + GetString(sFieldLabel2nd) + ';CODEFILENAME=' + sFieldCode;
+    if Action = rgdpaConsentRequest then
     begin
       CanContinue := (TFMul(Ecran).FListe.nbSelected > 0);
-      LastParam   := ';QTE=' + IntToStr(TFMul(Ecran).FListe.nbSelected);
+      LastParam   := LastParam + ';QTE=' + IntToStr(TFMul(Ecran).FListe.nbSelected)
     end;
     if CanContinue then
     begin
@@ -171,16 +180,22 @@ begin
       if ReadTokenSt(PathFile) = 'OK' then
       begin
         case Action of
-          rgpdaDataExport        : ExportDatas;
-          rgpdaAnonymization     : Anonymization;
-          rgdpaDataRectification : Rectification;
-          rgdpaConsentRequest    : ;
+          rgpdaDataExport        : ExportDatas(GetArgumentString(PathFile, 'INPUT'));
+          rgpdaAnonymization     : Anonymization(GetArgumentString(PathFile, 'INPUT'));
+          rgdpaDataRectification : Rectification(GetArgumentString(PathFile, 'INPUT'));
+          rgdpaConsentRequest    : ConsentRequest(PathFile);
+          rgdpaConsentResponse   : ConsentResponse(PathFile);
         end;
       end;
     end
     else
       PGIError(TraduireMemoire('Veuillez effectuer une sélection.'), Ecran.Caption);
   end;
+end;
+
+procedure TOF_BRGPDMUL.JnalEvent_OnClick(Sender: TObject);
+begin
+  OpenForm.JnalEvent('TYPEEVENT=RGP;LABEL=' + RGPDUtils.GetLabelFromAction(Action));
 end;
 
 procedure TOF_BRGPDMUL.FListe_OnDblClick(Sender : TObject);
@@ -258,7 +273,7 @@ begin
   Result := copy(Result, 2, length(Result));
 end;
 
-procedure TOF_BRGPDMUL.InsertJnal;
+procedure TOF_BRGPDMUL.InsertJnal(PathFile : string; AdditionalInformation : string='');
 var
   InfoJnal : string;
 begin
@@ -268,11 +283,12 @@ begin
             + iif(GetString(sFieldCode2nd)  <> '', ' - ' + GetString(sFieldCode2nd), '')
             + iif(GetString(sFieldLabel)    <> '', ' - ' + GetString(sFieldLabel), '')
             + iif(GetString(sFieldLabel2nd) <> '', ' ' + GetString(sFieldLabel2nd), '')
+            + iif(AdditionalInformation     <> '', ' - ' + AdditionalInformation, '')
             ;
   MAJJnalEvent(RGPDCodeJnal, 'OK', RGPDUtils.GetLabelFromAction(Action), InfoJnal, PathFile);
 end;
 
-procedure TOF_BRGPDMUL.ExportDatas;
+procedure TOF_BRGPDMUL.ExportDatas(PathFile : string);
 var
   TobRG2L    : TOB;
   TobResult  : TOB;
@@ -352,7 +368,7 @@ begin
       finally
         FreeAndNil(tsFile);
       end;
-      InsertJnal;
+      InsertJnal(PathFile);
       ShellExecute(0, pchar('open'), pchar(TempPath), nil, nil, SW_SHOW);
     end;
   finally
@@ -362,7 +378,7 @@ begin
   TobRG3.ClearDetail;
 end;
 
-procedure TOF_BRGPDMUL.Anonymization;
+procedure TOF_BRGPDMUL.Anonymization(PathFile : string);
 var
   TobResult : TOB;
   TobRG2L   : TOB;
@@ -390,10 +406,10 @@ var
           begin
             FieldName := ReadTokenPipe(FieldsList, ',');
             case GetFieldType(FieldName) of
-              ttfText    : FieldValue := 'iif(' + FieldName +  ' <> "", ' + '"' + wStringRepeat('Z', GetFieldSize(FieldName)) + '", "")';
-              ttfNumeric : FieldValue := 'iif(' + FieldName +  ' <> 0, ' + '"0", "")';
-              ttfMemo    : FieldValue := '""';
-              ttfDate    : FieldValue := '"' + DateToStr(iDate1900) + '"';
+              ttfText            : FieldValue := 'iif(' + FieldName +  ' <> "", ' + '"' + wStringRepeat('Z', GetFieldSize(FieldName)) + '", "")';
+              ttfInt, ttfNumeric : FieldValue := 'iif(' + FieldName +  ' <> 0, ' + '"0", "")';
+              ttfMemo            : FieldValue := '""';
+              ttfDate            : FieldValue := '"' + DateToStr(iDate1900) + '"';
             end;
             Sql := Sql + ', ' + FieldName + ' = ' + FieldValue;
           end;
@@ -435,9 +451,11 @@ begin
     try
       for Cpt := 0 to pred(TobResult.detail.count) do
         ExecuteSQL(TobResult.Detail[Cpt].GetString('_UPDATE'));
-      InsertJnal;
+      InsertJnal(PathFile);
+      PGIInfo('Traitement effecuté avec succès.', Ecran.Caption);
       CommitTrans;
     except
+      PGIInfo('Erreur durant l''exécution du traitement.', Ecran.Caption);
       Rollback;
     end;
   finally
@@ -446,7 +464,7 @@ begin
   TFMul(Ecran).BChercheClick(nil);
 end;
 
-procedure TOF_BRGPDMUL.Rectification;
+procedure TOF_BRGPDMUL.Rectification(PathFile : string);
 var
   OkUpdate : string;
   Return   : string;  
@@ -465,13 +483,79 @@ begin
                       Return   := GetString('US_UTILISATEUR');
                       OkUpdate := OpenForm.User(Return);
                     end;
+    rgpdpSuspect  : begin
+                      Return   := GetString('RSU_SUSPECT');
+                      OkUpdate := OpenForm.Suspect(Return);
+                    end;
   end;
   if OkUpdate = Return then
-   InsertJnal;
+   InsertJnal(PathFile);
+end;
+
+procedure TOF_BRGPDMUL.ConsentRequest(PathFile : string);
+var
+  NbSelected  : integer;
+  Cpt         : Integer;
+  FieldKey    : string;
+  FieldValue  : string;
+  Where       : string;
+  TemplateDoc : string;
+  PathFiles   : string;
+  FileName    : string;
+begin
+  NbSelected := pred(FListe.nbSelected);
+  InitMoveProgressForm(Ecran, 'Génération en cours.', Ecran.Caption, NbSelected + 1, False, True);
+  try
+    TemplateDoc := GetArgumentString(PathFile, 'INPUT'); //ReadTokenSt(PathFile);
+    PathFiles   := GetArgumentString(PathFile, 'OUTPUT'); //ReadTokenSt(PathFile);
+    case Population of
+      rgpdpThird    : FieldKey := ' T_TIERS';
+      rgpdpResource : FieldKey := ' ARS_RESSOURCE';
+      rgpdpUser     : FieldKey := ' US_UTILISATEUR';
+      rgpdpSuspect  : FieldKey := ' RSU_SUSPECT';
+    end;
+    for Cpt := 0 to NbSelected do
+    begin
+      FListe.GotoLeBookmark(Cpt);
+      case Population of
+        rgpdpThird    : FieldValue := Fliste.DataSource.DataSet.FindField('T_TIERS').AsString;
+        rgpdpResource : FieldValue := Fliste.DataSource.DataSet.FindField('ARS_RESSOURCE').AsString;
+        rgpdpUser     : FieldValue := Fliste.DataSource.DataSet.FindField('US_UTILISATEUR').AsString;
+        rgpdpSuspect  : FieldValue := Fliste.DataSource.DataSet.FindField('RSU_SUSPECT').AsString;
+      end;
+      MoveCurProgressForm(Format('%s (%s/%s)', [FieldValue, IntToStr(Cpt + 1), IntToStr(NbSelected + 1)]));
+      Where    := FieldKey + ' = "' + FieldValue + '"';
+      FileName := IncludeTrailingBackslash(PathFiles)
+                + FormatDateTime('yyyymmdd',Date)
+                + '_' + RGPDUtils.GetLabelFromPopulation(Population)
+                + '_' + FieldValue + '.DOC'
+                ;
+      Publipost.MergeExecute(RGPDUtils.GetTableNameFromPopulation(Population), Where, TemplateDoc, FileName);
+      InsertJnal(FileName);
+    end;
+  finally
+    FiniMoveProgressForm;
+    PGIInfo(Format('Document(s) généré(s) dans %s.', [PathFiles]), Ecran.Caption);
+  end;
+end;
+
+procedure TOF_BRGPDMUL.ConsentResponse(PathFile: string);
+var
+  PathFiles  : string;
+  Response   : string;
+  Complement : string;
+begin
+  PathFiles := GetArgumentString(PathFile, 'INPUT');
+  Response  := GetArgumentString(PathFile, 'RESPONSE');
+  case CaseFromString(Response, ['V', 'R']) of
+    {Validée} 0 : Complement := 'Demande validée.';
+    {Refusée} 1 : Complement := 'Demande refusée.';
+  end;
+  InsertJnal(PathFiles, Complement);
+  PGIInfo('Réponse enregistrée.', Ecran.Caption);
 end;
 
 initialization
   registerclasses([TOF_BRGPDMUL]);
-
 end.
 

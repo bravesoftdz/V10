@@ -2,15 +2,24 @@ unit FormsName;
 
 Interface
 
+uses
+  Hent1
+  , BRGDPDUtils
+  ;
+
 const
   frm_RGPDRepository  = 'BRGPDREFERENTIEL';
   frm_RGPDThirdMul    = 'BRGPDTIERSMUL';
   frm_RGPDTrtValid    = 'BRGPDVALIDTRT';
   frm_RGPDResourceMul = 'BRGPDRESSOURCEMUL';
   frm_RGPDUtilisatMul = 'BRGPDUTILISATMUL';
+  frm_RGPDSuspectMul  = 'BRGPDSUSPECTMUL';
+  frm_RGPDSensibilization = 'BRGPDSENSIBILISAT';
   frm_ThirdCliPro     = 'GCTIERS';
   frm_Resource        = 'BTRESSOURCE';
   frm_Utilisat        = 'YYUTILISAT';
+  frm_Suspect         = 'RTSUSPECTS';
+  frm_JnalEvent       = 'YYJNALEVENT';
 
 type
   OpenForm = class
@@ -21,6 +30,10 @@ type
       class function CliPro(Auxiliary, ThirdType : string; Argument : string='') : string;
       class function Resource(ResourceCode, ResourceType : string; Argument : string='') : string;
       class function User(UserCode : string) : string;
+      class function Suspect(SuspectCode : string) : string;
+      class function JnalEvent(Params : string='') : string;
+      class function RGPDSensibilisation : string;
+      class function RGPDWindows(Population : T_RGPDPopulation; TagMother, TagNumber : integer; Action : T_RGPDActions) : string;
     end;
 
 implementation
@@ -30,9 +43,15 @@ uses
   , BTPUtil
   , Fe_Main
   , uTOFComm
-  , HEnt1
   , ConfidentAffaire
   , HCtrls
+  , SysUtils
+  , wCommuns
+  , BRGPDTIERSMUL_TOF
+  , BRGPDRESSOURCEMUL_TOF
+  , BRGPDUTILISATMUL_TOF
+  , BRGPDSUSPECTMUL_TOF
+  , uDbxDataSet
   ;
 
 class function OpenForm.SetArgument(Argument: string): string;
@@ -84,6 +103,35 @@ class function OpenForm.User(UserCode: string): string;
 begin
   if (UserCode <> '') and (JaiLeDroitTag(60202)) then
     Result := AGLLanceFiche('YY', frm_Utilisat, '', UserCode, 'ACTION=MODIFICATION');
+end;
+
+class function OpenForm.Suspect(SuspectCode: string): string;
+begin
+  if (SuspectCode <> '') and (JaiLeDroitTag(92106)) then
+    Result := AGLLanceFiche('RT', frm_Suspect, '', SuspectCode, 'MONOFICHE;ACTION=MODIFICATION');
+end;
+
+class function OpenForm.JnalEvent(Params : string): string;
+begin
+  Result := AGLLanceFiche('YY', frm_JnalEvent, '', '', Params);
+end;
+
+class function OpenForm.RGPDSensibilisation : string;
+begin
+  V_PGI.ZoomOle := True;
+  Result := AGLLanceFiche('BTP', frm_RGPDSensibilization, '', '', '');
+  V_PGI.ZoomOle := False;
+
+end;
+
+class function OpenForm.RGPDWindows(Population: T_RGPDPopulation; TagMother, TagNumber: integer; Action: T_RGPDActions): string;
+begin
+  case Population of
+    rgpdpThird    : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', RGPDUtils.SetWindowCaption(Action, Population, TagMother, TagNumber)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
+    rgpdpResource : BLanceFiche_RGPDResourceMul('BTP', frm_RGPDResourceMul, '', '', RGPDUtils.SetWindowCaption(Action, Population, TagMother, TagNumber)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
+    rgpdpUser     : BLanceFiche_RGPDUtilisatMul('BTP', frm_RGPDUtilisatMul, '', '', RGPDUtils.SetWindowCaption(Action, Population, TagMother, TagNumber)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
+    rgpdpSuspect  : BLanceFiche_RGPDSuspectMul ('BTP', frm_RGPDSuspectMul , '', '', RGPDUtils.SetWindowCaption(Action, Population, TagMother, TagNumber)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
+  end;
 end;
 
 end.

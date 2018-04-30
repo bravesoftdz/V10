@@ -142,6 +142,7 @@ uses Facture,(*Souche,*)dimension,UTomPiece, Traduc
      , BRGDPDUtils
      , BRGPDRESSOURCEMUL_TOF
      , BRGPDUTILISATMUL_TOF
+     , BRGPDSUSPECTMUL_TOF
      ;
 {$R *.DFM}
 
@@ -236,6 +237,7 @@ var
   AnneeSem  : integer;
   stMessage : String;
   Souche    : string;
+  Sql       : string;
 
   function SetWindowCaption(ParentNumber, TagNumber : integer) : string;
   var
@@ -438,6 +440,25 @@ BEGIN
           end;
 
           SPIGAOOBJ.MonteToaster;
+
+          { Test date du dernier changement de mot de passe }
+          if GetParamSocSecur('SO_BTDELAIPASSWORD', 0) > 0 then
+          begin
+            Sql := 'SELECT 1 FROM UTILISAT WHERE US_UTILISATEUR = "' + V_PGI.User + '" AND US_DATECHANGEPWD <= "' + UsDateTime(IncMonth(Date, -3)) + '"';
+            if ExisteSql(Sql) then
+              PGIInfo(TraduireMemoire('Il est conseillé de changer régulièrement son mot de passe .'), TraduireMemoire('Information.'));
+          end;
+          { Si l'utilisateur n'a pas encore validé le message de sensibilisation RGPD, affiche le message }
+          Sql := 'SELECT 1 FROM UTILISAT WHERE US_UTILISATEUR = "' + V_PGI.User + '" AND US_RGPDOK <> "X"';
+          if ExisteSql(Sql) then
+          begin
+            Sql := OpenForm.RGPDSensibilisation;
+            if Sql <> 'X' then
+              FMenuG.Quitter
+            else
+              ExecuteSQL('UPDATE UTILISAT SET US_RGPDOK = "X" WHERE US_UTILISATEUR = "' + V_PGI.User + '"');
+          end;
+
         END ;
    11 : BEGIN
         //uniquement en line
@@ -1069,7 +1090,7 @@ Cegid,False,False)};
    60205 : ReseauUtilisateurs(True) ;       // RAZ connexions
     /////// Outils
 //   60301 : AGLLanceFiche('GC','GCJNALEVENT_MUL','','','') ;
-   60301: AGLLanceFiche('YY', 'YYJNALEVENT', '', '', ''); // Journal evenements
+   60301: OpenForm.JnalEvent; // Journal evenements
 
    60401 : AGLLanceFiche('GC','GCCPTADIFF','','','') ;
    60402 : EntreeStockAjust;
@@ -2090,19 +2111,33 @@ Cegid,False,False)};
     60999 : BEGIN AglLanceFiche ('BTP','BTESTFORMULE','','',''); END;
 
     { RGPD }
-    280011 : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', SetWindowCaption(-280010, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaDataExport));        // Export données personnelles - Client
-    280012 : BLanceFiche_RGPDResourceMul('BTP', frm_RGPDResourceMul, '', '', SetWindowCaption(-280010, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaDataExport));        // Export données personnelles - Ressources
-    280013 : BLanceFiche_RGPDUtilisatMul('BTP', frm_RGPDUtilisatMul, '', '', SetWindowCaption(-280010, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaDataExport));        // Export données personnelles - Utilisateurs
-    280021 : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', SetWindowCaption(-280020, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaAnonymization));     // Droit à l'oubli - Client
-    280022 : BLanceFiche_RGPDResourceMul('BTP', frm_RGPDResourceMul, '', '', SetWindowCaption(-280020, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaAnonymization));     // Droit à l'oubli - Ressources
-    280023 : BLanceFiche_RGPDUtilisatMul('BTP', frm_RGPDUtilisatMul, '', '', SetWindowCaption(-280020, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgpdaAnonymization));     // Droit à l'oubli - Utilisateurs
-    280031 : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', SetWindowCaption(-280030, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaDataRectification)); // Demande de rectification - Client
-    280032 : BLanceFiche_RGPDResourceMul('BTP', frm_RGPDResourceMul, '', '', SetWindowCaption(-280030, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaDataRectification)); // Demande de rectification - Ressources
-    280033 : BLanceFiche_RGPDUtilisatMul('BTP', frm_RGPDUtilisatMul, '', '', SetWindowCaption(-280030, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaDataRectification)); // Demande de rectification - Utilisateurs
-    280041 : BLanceFiche_RGPDThirdMul   ('BTP', frm_RGPDThirdMul   , '', '', SetWindowCaption(-280040, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaConsentRequest));    // Demande de consentement - Client
-    280042 : BLanceFiche_RGPDResourceMul('BTP', frm_RGPDResourceMul, '', '', SetWindowCaption(-280040, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaConsentRequest));    // Demande de consentement - Ressources
-    280043 : BLanceFiche_RGPDUtilisatMul('BTP', frm_RGPDUtilisatMul, '', '', SetWindowCaption(-280040, Num) + ';ACTION=' + RGPDUtils.GetCodeFromAction(rgdpaConsentRequest));    // Demande de consentement - Utilisateurs
-    280051 : BLanceFiche_RGPDReferentiel('BTP', frm_RGPDRepository , '', '', SetWindowCaption(-2580050, Num)); // Référentiel
+    {  Export données personnelles }
+    280011 : OpenForm.RGPDWindows(rgpdpThird   , -280010, Num, rgpdaDataExport);        // Export données personnelles - Clients
+    280012 : OpenForm.RGPDWindows(rgpdpResource, -280010, Num, rgpdaDataExport);        // Export données personnelles - Ressources
+    280013 : OpenForm.RGPDWindows(rgpdpUser    , -280010, Num, rgpdaDataExport);        // Export données personnelles - Utilisateurs
+    280014 : OpenForm.RGPDWindows(rgpdpSuspect , -280010, Num, rgpdaDataExport);        // Export données personnelles - Suspects
+    {  Droit à l'oubli }
+    280021 : OpenForm.RGPDWindows(rgpdpThird   , -280020, Num, rgpdaAnonymization);     // Droit à l'oubli - Clients
+    280022 : OpenForm.RGPDWindows(rgpdpResource, -280020, Num, rgpdaAnonymization);     // Droit à l'oubli - Ressources
+    280023 : OpenForm.RGPDWindows(rgpdpUser    , -280020, Num, rgpdaAnonymization);     // Droit à l'oubli - Utilisateurs
+    280024 : OpenForm.RGPDWindows(rgpdpSuspect , -280020, Num, rgpdaAnonymization);     // Droit à l'oubli - Suspects
+    {  Demande de rectification }
+    280031 : OpenForm.RGPDWindows(rgpdpThird   , -280030, Num, rgdpaDataRectification); // Demande de rectification - Clients
+    280032 : OpenForm.RGPDWindows(rgpdpResource, -280030, Num, rgdpaDataRectification); // Demande de rectification - Ressources
+    280033 : OpenForm.RGPDWindows(rgpdpUser    , -280030, Num, rgdpaDataRectification); // Demande de rectification - Utilisateurs
+    280034 : OpenForm.RGPDWindows(rgpdpSuspect , -280030, Num, rgdpaDataRectification); // Demande de rectification - Suspects
+    {  Demande de consentement }
+    280042 : OpenForm.RGPDWindows(rgpdpThird   , -280040, Num, rgdpaConsentRequest);    // Demande de consentement - Clients
+    280045 : OpenForm.RGPDWindows(rgpdpResource, -280040, Num, rgdpaConsentRequest);    // Demande de consentement - Ressources
+    280048 : OpenForm.RGPDWindows(rgpdpUser    , -280040, Num, rgdpaConsentRequest);    // Demande de consentement - Utilisateurs
+    280051 : OpenForm.RGPDWindows(rgpdpSuspect , -280040, Num, rgdpaConsentRequest);    // Demande de consentement - Suspects
+    {  Retour demande de consentement }
+    280043 : OpenForm.RGPDWindows(rgpdpThird   , -280040, Num, rgdpaConsentResponse);   // Retour demande de consentement - Clients
+    280046 : OpenForm.RGPDWindows(rgpdpResource, -280040, Num, rgdpaConsentResponse);   // Retour demande de consentement - Ressources
+    280049 : OpenForm.RGPDWindows(rgpdpUser    , -280040, Num, rgdpaConsentResponse);   // Retour demande de consentement - Utilisateurs
+    280052 : OpenForm.RGPDWindows(rgpdpSuspect , -280040, Num, rgdpaConsentResponse);   // Retour demande de consentement - Suspects
+    {  Référentiel }
+    280061 : BLanceFiche_RGPDReferentiel('BTP', frm_RGPDRepository , '', '', SetWindowCaption(-2580050, Num)); // Référentiel
     // --
     else HShowMessage('2;?caption?;'+TraduireMemoire('Fonction non disponible : ')+';W;O;O;O;',TitreHalley,IntToStr(Num)) ;
      end ;
