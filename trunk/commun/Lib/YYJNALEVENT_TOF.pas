@@ -29,16 +29,17 @@ Uses
   , CBPMcd
   , Htb97
   , uTOFComm
+  , HDB
   ;
 
 
 Type
   TOF_YYJNALEVENT = Class (tTOFComm)
   private
-    FListe  : THGrid;
+    lFListe  : THDBGrid;
     VoirDoc : TToolbarButton97;
 
-    procedure FListe_OnRowEnter(Sender: TObject; Ou: Integer; var Cancel: Boolean; Chg: Boolean);
+    procedure FListe_OnRowEnter(Sender: TObject);
     procedure VoirDoc_OnClick(Sender : TObject);
     function GetBFilesKey :  string;
     function GetFileName : string;
@@ -61,6 +62,9 @@ uses
   , ParamSoc
   , Windows
   , wCommuns
+  , Mul
+  , TntDBGrids
+  , utilPGI
   ;
 
 procedure TOF_YYJNALEVENT.OnNew ;
@@ -76,6 +80,7 @@ end ;
 procedure TOF_YYJNALEVENT.OnUpdate ;
 begin
   Inherited ;
+  FListe_OnRowEnter(Self);
 end ;
 
 procedure TOF_YYJNALEVENT.OnLoad ;
@@ -84,12 +89,20 @@ begin
 end ;
 
 procedure TOF_YYJNALEVENT.OnArgument (S : String ) ;
+var
+  Arg : string;
 begin
   Inherited ;
-  VoirDoc := TToolbarButton97(GetControl('VOIRDOC'));
-  FListe  := THGrid(GetControl('FLISTE'));
-  VoirDoc.OnClick   := VoirDoc_OnClick;
-  FListe.OnRowEnter := FListe_OnRowEnter;
+  VoirDoc            := TToolbarButton97(GetControl('VOIRDOC'));
+  lFListe            := TFMul(Ecran).FListe;
+  VoirDoc.OnClick    := VoirDoc_OnClick;
+  lFListe.OnRowEnter := FListe_OnRowEnter;
+  Arg := GetArgumentString(S, 'TYPEEVENT');
+  if Arg <> '' then
+    THValComboBox(GetControl('GEV_TYPEEVENT')).Value := Arg;
+  Arg := GetArgumentString(S, 'LABEL', False);
+  if Arg <> '' then
+    THEdit(GetControl('GEV_LIBELLE')).Text := Arg;
 end ;
 
 procedure TOF_YYJNALEVENT.OnClose ;
@@ -118,14 +131,14 @@ begin
     ShellExecute(0, pchar('open'), pchar(Path), nil, nil, SW_SHOW);
 end;
 
-procedure TOF_YYJNALEVENT.FListe_OnRowEnter(Sender: TObject; Ou: Integer; var Cancel: Boolean; Chg: Boolean);
+procedure TOF_YYJNALEVENT.FListe_OnRowEnter(Sender: TObject);
 begin
   VoirDoc.Visible := (ExisteSQL('SELECT 1 FROM BFILES WHERE BF0_CODE = "' + GetBFilesKey + '"'));
 end;
 
 function TOF_YYJNALEVENT.GetBFilesKey: string;
 begin
-  Result := 'EVT;RGP;' + GetString('GEV_NUMEVENT') + '"';
+  Result := 'EVT;RGP;' + lFliste.DataSource.DataSet.FindField('GEV_NUMEVENT').AsString;
 end;
 
 function TOF_YYJNALEVENT.GetFileName: string;

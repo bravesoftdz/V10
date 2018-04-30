@@ -8,11 +8,13 @@ uses Classes,HEnt1,Ent1,EntGC,UTob, AGLInit, SaisUtil, UtilPGI,forms,Math,HrichO
 {$ELSE}
      {$IFNDEF DBXPRESS} dbTables, {$ELSE} uDbxDataSet, {$ENDIF}EdtREtat,FE_Main,uPDFBatch,
 {$ENDIF}
-		 BTFactImprTob,  
+		 BTFactImprTob,
      UtilPhases,HRichEdt,
      FactTOB,TiersUtil,
      UTofGCDatePiece,FactUtil,HCtrls,ParamSoc,SysUtils,FactComm,uRecupSQLModele,
-     hPDFPrev,hPDFViewer,hmsgbox,CalcOLEGenericBTP,UTofListeInv,FactCommBtp,uEntCommun;
+     hPDFPrev,hPDFViewer,hmsgbox,CalcOLEGenericBTP,UTofListeInv,FactCommBtp,uEntCommun
+    , DB
+    ;
 
 Const { Concepts }
       //bt500 modification des TAG du menu concept pour éviter confusion avec Gescom et Affaire
@@ -179,12 +181,40 @@ Function FormatMultiValComboforSQL(Champ : String) : String;
 function ExRichToString (TheObj : ThRichEdit) : string;
 function GetPiecesVenteBTP (ForWhat : integer = 3; ForPlus : boolean=true): string;
 
+type
+  Publipost = class
+  public
+    class function GetPrefixFromTableName(TableName : string) : string;
+    class function GetTranslateData(FieldName, Code : string) : string;
+    class procedure SetData(TobData : TOB; FF : TField);
+    class procedure SetFieldsList(Prefix, TableName : string; var FieldsList, SqlFieldsList : string);
+    class procedure AddFieldsInTob(TobData : TOB; TableName, SqlFieldsList, Where : string; WithData: Boolean);
+    class procedure NewModel(InputFilePath : string; TobFields : TOB; FieldsList : string);
+    class procedure UpdateModel(InputFilePath : string; TobFields : TOB; FieldsList : string);
+    class function DeleteModel(InputFilePath, Title : string) : Boolean;
+    class procedure MergeExecute(TableName, Where, TemplateDoc, OtputDoc : string); 
+
+  end;
+
 implementation
 
-uses AffaireUtil, Facture, FactRg,FactGrp,FactureBTP, TntWideStrings,UtilTOBPiece,factOuvrage,
-  StockUtil,
-  DB,FactPiece, Mask,CbpMCD,
-  CbpEnumerator;
+uses
+  AffaireUtil
+  , Facture
+  , FactRg
+  , FactGrp
+  , FactureBTP
+  , TntWideStrings
+  , UtilTOBPiece
+  , factOuvrage
+  , StockUtil
+  , FactPiece
+  , Mask
+  , CbpMCD
+  , CbpEnumerator
+  , UtilWord
+  , wCommuns
+  ;
 
 function GetPiecesVenteBTP (ForWhat : integer = 3; ForPlus : boolean=true): string;
 begin
@@ -5258,6 +5288,169 @@ begin
 
   Result := Copy(Result, 1, Length(Result)-1);
 
+end;
+
+{ Publipost }
+
+class function Publipost.GetPrefixFromTableName(TableName : string) : string;
+begin
+  case CaseFromString(TableName, ['AFFAIRE', 'TIERS', 'PIECEADRESSE', 'RESSOURCE', 'UTILISAT', 'SUSPECTS']) of
+    0 : Result := 'Contrat';     {AFFAIRE}
+    1 : Result := 'CliFac';      {TIERS}
+    2 : Result := 'AdrInt';      {PIECEADRESSE}
+    3 : Result := 'Ressource';   {RESSOURCE}
+    4 : Result := 'Utilisateur'; {UTILISAT}
+    5 : Result := 'Suspect';     {SUSPECTS}
+  else
+    Result := '';
+  end;
+end;
+
+class function Publipost.GetTranslateData(FieldName, Code : string) : string;
+var
+  Sql     : string;
+  Suffixe : string;
+  Qry     : TQuery;
+begin
+  Suffixe := ExtractSuffixe(FieldName);
+  Sql     := 'SELECT DO_COMBO FROM DECOMBOS WHERE DO_NOMCHAMP LIKE "%' +Suffixe + '%"';
+  Qry     := OpenSQL(Sql,True,1,'',true);
+  try
+    Result := iif(not Qry.Eof, Qry.Fields[0].AsString, '');
+  finally
+    ferme (Qry);
+  end;
+  if Result = '' then
+    Result := Code
+  else
+    Result := RechDom(Result, Code, False);
+end;
+
+class procedure Publipost.NewModel(InputFilePath : string; TobFields : TOB; FieldsList : string);
+begin
+  if (InputFilePath <> '') and (Assigned(TobFields)) and (FieldsList <> '') then
+    LancePublipostage('NEW', InputFilePath, '', TobFields, FieldsList, nil, False);
+end;
+
+class procedure Publipost.UpdateModel(InputFilePath: string; TobFields: TOB; FieldsList: string);
+begin
+  if (InputFilePath <> '') and (Assigned(TobFields)) and (FieldsList <> '') then
+    LancePublipostage('OPEN', InputFilePath, '', TobFields, FieldsList, nil, False);
+end;
+
+class function Publipost.DeleteModel(InputFilePath, Title : string): Boolean;
+begin
+  Result := False;
+  if not FileExists(InputFilePath) then
+  	PGIError(Format('Le modèle %s n''existe pas', [InputFilePath]))
+  else
+  if PGIAsk(Format('Désirez-vous réellement supprimer le modèle %s ?', [InputFilePath]), Title) = mrYes then
+    Result := (DeleteFile(PAnsiChar(InputFilePath)));
+end;
+
+class procedure Publipost.SetFieldsList(Prefix, TableName : string; var FieldsList, SqlFieldsList : string);
+var
+  Qry : TQuery;
+	Sql : string;
+begin
+  SqlFieldsList := '';
+  FieldsList    := '';
+  Sql := 'SELECT DH_NOMCHAMP,DH_LIBELLE'
+       + ' FROM DECHAMPS'
+       + ' WHERE DH_PREFIXE = (SELECT DT_PREFIXE FROM DETABLES WHERE DT_NOMTABLE = "' + TableName + '") AND DH_CONTROLE LIKE "%W%"'
+       ;
+	Qry := OpenSql(Sql, True, 0, '', True);
+  try
+    if Not Qry.Eof then
+    begin
+      Qry.first;
+      While not Qry.eof do
+      begin
+        SqlFieldsList := SqlFieldsList + ',' + Qry.Fields[0].AsString;
+        FieldsList    := FieldsList    + ';' + Prefix + '_' + Qry.Fields[1].AsString;
+        Qry.Next;
+      end;
+      SqlFieldsList := Copy(SqlFieldsList, 2, Length(SqlFieldsList));
+      FieldsList    := Copy(FieldsList, 2, Length(FieldsList));
+    end;
+  finally
+    Ferme (Qry);
+  end;
+end;
+
+class procedure Publipost.SetData(TobData: TOB; FF: TField);
+var
+  FieldName : string;
+  II        : Integer;
+begin
+  FieldName := FF.FullName;
+  if  Copy(FieldName,1,7 )= 'T_TABLE' then // cas Particulier des tables libres tiers
+  begin
+    II := StrToInt(Copy(FieldName, 8, 1)) + 1;
+    TobData.AddChampSupvaleur(FieldName, RechDom('GCZONELIBRE' + InttoStr(II), FF.AsString, False));
+  end else if  Copy(FieldName, 1, 12) = 'AFF_LIBREAFF' then // cas Particulier des tables libres affaires
+    TobData.AddChampSupvaleur(FieldName, GetTranslateData(FieldName, FF.AsString))
+  else
+  begin
+    case GetFieldType(FieldName) of
+      ttfInt     : TobData.AddChampSupvaleur(FieldName, IntToStr(FF.AsInteger));
+      ttfNumeric : TobData.AddChampSupvaleur(FieldName, StrF00(FF.AsFloat, 2));
+      ttfDate    : TobData.AddChampSupvaleur(FieldName, DateToStr(FF.AsDateTime));
+      ttfMemo    : TobData.AddChampSupvaleur(FieldName, FF.AsString);
+      ttfCombo   : TobData.AddChampSupvaleur(FieldName, GetTranslateData(FieldName, FF.AsString));
+    else
+      TobData.AddChampSupvaleur(FieldName, FF.AsString);
+    end;
+  end;
+end;
+
+class procedure Publipost.AddFieldsInTob(TobData : TOB; TableName, SqlFieldsList, Where : string; WithData: Boolean);
+var
+  Sql  : string;
+  Qry  : TQuery;
+  Cpt  : Integer;
+begin
+  if     (assigned(TobData))
+     and (TableName <> '')
+     and (SqlFieldsList <> '')
+     and (Where <> '')
+  then
+  begin
+    Sql := 'SELECT '  + SqlFieldsList
+          + ' FROM '  + TableName
+          + ' WHERE ' + Where;
+    Qry := OpenSQL(Sql, True, 1, '', True);
+    try
+      for Cpt := 0 to Qry.Fields.Count -1 do
+      begin
+        if WithData then
+          SetData(TobData, Qry.Fields[Cpt])
+        else
+          TobData.AddChampSupvaleur(Qry.Fields[Cpt].FullName, '');
+      end;
+    finally
+      Ferme(Qry);
+    end;
+  end;
+end;
+
+class procedure Publipost.MergeExecute(TableName, Where, TemplateDoc, OtputDoc : string);
+var
+  TobFields     : TOB;
+  FieldsList    : string;
+  FieldsListSql : string;
+begin
+  if (TableName <> '') and (Where <> '') and (TemplateDoc <> '') and (OtputDoc <> '') then
+  begin
+    TobFields := TOB.Create ('CONTRAT',nil,-1);
+    try
+      Publipost.SetFieldsList(Publipost.GetPrefixFromTableName(TableName), TableName, FieldsList, FieldsListSql);
+      Publipost.AddFieldsInTob(TobFields, TableName, FieldsListSql, Where, True);
+      LancePublipostage('TOB', TemplateDoc, OtputDoc, TobFields, FieldsList, nil, True);
+    finally
+      FreeAndNil(TobFields);
+    end;
+  end;
 end;
 
 end.

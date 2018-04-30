@@ -45,10 +45,12 @@ Type
     ColsFields       : string;
     AddField         : TToolbarButton97;
     DelField         : TToolbarButton97;
+    AdvancedSetting  : TToolbarButton97;
     NewField         : THEdit;
 
     procedure GridsManagement;
     procedure ButtonManagement;
+    procedure AdvancedSettingsManagment;
     procedure LoadTobTable(Sender : TObject);
     procedure LoadTobFields(TableName : string);
     procedure LstTables_OnClick(Sender : TObject);
@@ -56,6 +58,7 @@ Type
     procedure LstFields_OnDlbclick(Sender : TObject);
     procedure AddField_OnClick(Sender : TObject);
     procedure DelField_OnClick(Sender : TObject);
+    procedure AdvancedSetting_OnClick(Sender : TObject);
     function GetTobFromGrid(CurrentGrid : THGrid) : TOB;
 
   public
@@ -76,6 +79,10 @@ uses
   , wCommuns
   , LookUp
   , BRGDPDUtils
+  , ParamSoc
+  , AglInit
+  , BTCONFIRMPASS_TOF
+  , HSysMenu
   ;
 
 const
@@ -117,24 +124,24 @@ end ;
 procedure TOF_BRGPDREFERENTIEL.OnArgument (S : String ) ;
 begin
   Inherited ;
-  Population := THValCombobox(GetControl('POPULATION'));
-  LstTables  := THGrid(GetControl(LstNameTables));
-  LstFields  := THGrid(GetControl(LstNameFields));
-  AddField   := TToolbarButton97(GetControl('ADDFIELD'));
-  DelField   := TToolbarButton97(GetControl('DELFIELD'));
-  NewField   := THEdit(GetControl('NEWFIELD'));
-  TobTables  := TOB.Create('_LinkedTables', nil, -1);
-  TobFields  := TOB.Create('BRGPDCHAMPS', nil, -1);
-  Population.OnChange  := LoadTobTable;
-  LstTables.OnClick    := LstTables_OnClick;
-  LstFields.OnClick    := LstFields_OnClick;
-  LstFields.OnDblClick := LstFields_OnDlbclick;
-  AddField.OnClick     := AddField_OnClick;
-  DelField.OnClick     := DelField_OnClick;
-  AddField.Visible     := (RGPDUtils.CanAddDelFieldInRepository);
-  DelField.Visible     := (RGPDUtils.CanAddDelFieldInRepository);
-  TGroupBox(GetControl('GBFIELDS')).Height := iif(RGPDUtils.CanAddDelFieldInRepository, 400, 435);
+  Population      := THValCombobox(GetControl('POPULATION'));
+  LstTables       := THGrid(GetControl(LstNameTables));
+  LstFields       := THGrid(GetControl(LstNameFields));
+  AddField        := TToolbarButton97(GetControl('ADDFIELD'));
+  DelField        := TToolbarButton97(GetControl('DELFIELD'));
+  AdvancedSetting := TToolbarButton97(GetControl('PARAMAVANCE'));
+  NewField        := THEdit(GetControl('NEWFIELD'));
+  TobTables       := TOB.Create('_LinkedTables', nil, -1);
+  TobFields       := TOB.Create('BRGPDCHAMPS', nil, -1);
+  Population.OnChange     := LoadTobTable;
+  LstTables.OnClick       := LstTables_OnClick;
+  LstFields.OnClick       := LstFields_OnClick;
+  LstFields.OnDblClick    := LstFields_OnDlbclick;
+  AddField.OnClick        := AddField_OnClick;
+  DelField.OnClick        := DelField_OnClick;
+  AdvancedSetting.OnClick := AdvancedSetting_OnClick;
   GridsManagement;
+  AdvancedSettingsManagment;
 end ;
 
 procedure TOF_BRGPDREFERENTIEL.OnClose ;
@@ -224,11 +231,14 @@ begin
   for Cpt := 1 to 5 do
   begin
     case Cpt of
-      FieldColInternal :  if RGPDUtils.CanAddDelFieldInRepository then
-                            ManageBoolean
-                          else
-                            LstFields.ColWidths[Cpt] := -1 ;
-      FieldColExport, FieldColAnonym :  ManageBoolean;
+      FieldColInternal :  if RGPDUtils.AdvancedSettingsEnabled then
+                          begin
+                            LstFields.ColWidths[Cpt] := 55;
+                            ManageBoolean;
+                          end else
+                            LstFields.ColWidths[Cpt] := -1;
+      FieldColExport
+      , FieldColAnonym :  ManageBoolean;
     end;
   end;
 end;
@@ -244,7 +254,22 @@ begin
     DelField.Enabled := (not TobField.GetBoolean('RG3_INTERNE'));
   end;
 end;
-  
+
+procedure TOF_BRGPDREFERENTIEL.AdvancedSettingsManagment;
+var
+  HMTrad : THSystemMenu;
+begin
+  TGroupBox(GetControl('GBFIELDS')).Height := iif(RGPDUtils.AdvancedSettingsEnabled, 400, 435);
+  AddField.Visible        := (RGPDUtils.AdvancedSettingsEnabled);
+  DelField.Visible        := (RGPDUtils.AdvancedSettingsEnabled);
+  AdvancedSetting.Visible := (not RGPDUtils.AdvancedSettingsEnabled);
+  GridsManagement;
+  if Population.Value <> '' then
+    LoadTobTable(Self);
+  HMTrad.ResizeGridColumns(LstFields);
+  LstFields.Refresh;
+end;
+
 function TOF_BRGPDREFERENTIEL.GetTobFromGrid(CurrentGrid : THGrid): TOB;
 var
   TobCurrent : TOB;
@@ -294,10 +319,11 @@ begin
   begin
     TableName := TobTable.GetString('TABLENAME');
     Prefix    := TableToPrefixe(TableName);
-    Where     := '     DH_PREFIXE = "' + Prefix + '"'
-               + ' AND DH_CONTROLE LIKE "%L%"'
-               + ' AND DH_TYPECHAMP NOT IN ("BOOLEAN", "COMBO")'
-               + ' AND NOT EXISTS (SELECT 1 FROM BRGPDCHAMPS WHERE RG3_FIELDNAME = DH_NOMCHAMP)'
+    Where     := '     DH_PREFIXE = "' + Prefix + '"'                                                         // Préfixe de la table en cours
+               + ' AND DH_CONTROLE LIKE "%L%"'                                                                // Les champs ayant L dans DH_CONTROLE
+               + ' AND DH_TYPECHAMP NOT IN ("BOOLEAN", "COMBO")'                                              // Pas de Boolean ou Combo
+               + ' AND DH_NOMCHAMP <> (SELECT DT_CLE1 FROM DETABLES WHERE DT_NOMTABLE = "' + TableName + '")' // Pas champs de la clé 1
+               + ' AND NOT EXISTS (SELECT 1 FROM BRGPDCHAMPS WHERE RG3_FIELDNAME = DH_NOMCHAMP)'              // Pas déjà présent dans le référentiel
                ;
     NewField.Text := '';
     LookupList(THCritMaskEdit(NewField), TraduireMemoire('Ajouter un champ'), 'DECHAMPS', 'DH_NOMCHAMP', 'DH_LIBELLE', Where, 'DH_NOMCHAMP', False, 0);
@@ -341,6 +367,15 @@ begin
       ExecuteSQL(Sql);
       LoadTobFields(TobField.GetString('RG3_TABLENAME'));
     end;
+  end;
+end;
+
+procedure TOF_BRGPDREFERENTIEL.AdvancedSetting_OnClick(Sender : TObject);
+begin
+  if IsOkDayPass then
+  begin
+    SetParamSoc('SO_RGPDPARAMAVANCE', 'X');
+    AdvancedSettingsManagment;
   end;
 end;
 

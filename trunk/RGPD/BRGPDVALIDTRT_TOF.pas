@@ -1,5 +1,5 @@
 {***********UNITE*************************************************
-Auteur  ...... : 
+Auteur  ...... :
 Créé le ...... : 18/04/2018
 Modifié le ... :   /  /
 Description .. : Source TOF de la FICHE : BRGPDREFERENTIEL ()
@@ -41,11 +41,21 @@ Type
     Action       : T_RGPDActions;
     Population   : T_RGPDPopulation;
     PdfFile      : THEdit;
+    GenerateDoc  : THEdit;
     Confirmation : THLabel;
     FileLabel    : THLabel;
     bValider     : TToolbarButton97;
+    bInsert      : TToolbarButton97;
+    sCode        : string;
+    sLabel       : string;
+    sLabel2nd    : string;
+    CodeFileName : string;
+    CurrentPath  : string;
+    ResponseChoice : THRadioGroup;
 
     procedure PdfFile_OnChange(Sender : TObject);
+    procedure PdfFile_OnElipsisClick(Sender : TObject);
+    procedure bInsert_OnClick(Sender : TObject);
 
   public
     procedure OnNew                    ; override ;
@@ -64,6 +74,10 @@ uses
   wCommuns
   , UtilPGI
   , Vierge
+  , BTPUtil
+  , Paramsoc
+  , FileCtrl
+  , dialogs
   ;
 
 function BLanceFiche_RGPDValidTrt(Nat, Cod, Range,Lequel,Argument : string) : string;
@@ -99,11 +113,21 @@ begin
     if Cancel then
       PGIError(Format(TraduireMemoire('Le fichier %s n''existe pas.'), [PdfFile.Text]), Ecran.Caption);
   end;
+  if (not Cancel) and (Action = rgdpaConsentResponse) then
+  begin
+    Cancel := (ResponseChoice.Value = 'A'); // A=Attente, V=Validée, R=Refusée
+    if Cancel then
+      PGIError(TraduireMemoire('Veuillez choisir une réponse.'), Ecran.Caption);
+  end;
   if Cancel then
   begin
     TFVierge(Ecran).ModalResult := 0;
   end else
-    TFVierge(Ecran).Retour := 'OK;' + PdfFile.Text;
+    TFVierge(Ecran).Retour := 'OK;'
+                            + 'INPUT=' + PdfFile.Text
+                            + iif(GenerateDoc.Text <> '', ';OUTPUT=' + GenerateDoc.Text, '')
+                            + iif(Action = rgdpaConsentResponse, ';RESPONSE=' + ResponseChoice.Value, '');
+                            ;
 end ;
 
 procedure TOF_BRGPDVALIDTRT.OnLoad ;
@@ -114,65 +138,76 @@ end ;
 procedure TOF_BRGPDVALIDTRT.OnArgument (S : String ) ;
 var
   Who       : string;
-  sCode     : string;
-  sLabel    : string;
-  sLabel2nd : string;
+  LDocGen   : THLabel;
   Cpt       : integer;
 begin
   Inherited ;
-  Action       := RGPDUtils.GetActionFromCode(GetArgumentString(S, 'ACTION'));
-  Population   := RGPDUtils.GetPopulationFromCode(GetArgumentString(S, 'ORIGINE'));
-  Confirmation := THLabel(GetControl('CONFIRMATION'));
-  FileLabel    := THLabel(GetControl('LABEL'));
-  PdfFile      := THEdit(GetControl('PDFFILE'));
-  bValider     := TToolbarButton97(GetControl('BVALIDER'));
-  sCode        := '';
-  sLabel       := '';
-  sLabel2nd    := '';
-  Who          := GetArgumentString(S, 'QUI', False);
-  if Who <> '' then
+  Action         := RGPDUtils.GetActionFromCode(GetArgumentString(S, 'ACTION'));
+  Population     := RGPDUtils.GetPopulationFromCode(GetArgumentString(S, 'ORIGINE'));
+  Confirmation   := THLabel(GetControl('CONFIRMATION'));
+  FileLabel      := THLabel(GetControl('LABEL'));
+  LDocGen        := THLabel(GetControl('LDOCGENERE'));
+  PdfFile        := THEdit(GetControl('PDFFILE'));
+  GenerateDoc    := THEdit(GetControl('DOCGENERE'));
+  bValider       := TToolbarButton97(GetControl('BVALIDER'));
+  bInsert        := TToolbarButton97(GetControl('BINSERT'));
+  ResponseChoice := THRadioGroup(GetControl('RESPONSECONSENT'));
+  sCode     := '';
+  sLabel    := '';
+  sLabel2nd := '';
+  Who       := GetArgumentString(S, 'QUI', False);
+  Cpt := 0;
+  while Cpt < 3 do
   begin
-    Cpt := 0;
-    while Cpt < 3 do
-    begin
-      case Cpt of
-        0 : sCode     := ReadTokenPipe(Who, '~');
-        1 : sLabel    := ReadTokenPipe(Who, '~');
-        2 : sLabel2nd := ReadTokenPipe(Who, '~');
-      end;
-      Inc(Cpt);
+    case Cpt of
+      0 : sCode     := ReadTokenPipe(Who, '~');
+      1 : sLabel    := ReadTokenPipe(Who, '~');
+      2 : sLabel2nd := ReadTokenPipe(Who, '~');
     end;
-  end else
-    sLabel    := GetArgumentString(S, 'QTE', False);
+    Inc(Cpt);
+  end;
+  if Action = rgdpaConsentRequest then
+    sLabel := GetArgumentString(S, 'QTE', False);
+  CodeFileName := GetArgumentString(S, 'CODEFILENAME', False);
   case Action of
     rgpdaDataExport
     , rgpdaAnonymization
     , rgdpaDataRectification :  begin
                                   FileLabel.Caption := TraduireMemoire('Sélection de la demande');
-                                  PdfFile.DataType  := 'OPENFILE(*.PDF;*.*)';
+                                  //PdfFile.DataType  := 'OPENFILE(*.PDF;*.*)';
                                   Ecran.Caption     := Format('%s - %s %s %s', [  RGPDUtils.GetLabelFromAction(Action)
-                                                                                                    , RGPDUtils.GetLabelFromPopulation(Population)
-                                                                                                    , sLabel
-                                                                                                    , sLabel2nd
-                                                                                                   ]);
+                                                                                , RGPDUtils.GetLabelFromPopulation(Population)
+                                                                                , sLabel
+                                                                                , sLabel2nd
+                                                                               ]);
                                 end;
-    rgdpaConsentRequest      :  begin
-                                  FileLabel.Caption := TraduireMemoire('Sélection du modèle');
-                                  PdfFile.DataType  := 'OPENFILE(*.DOTX)';
+    rgdpaConsentRequest
+    , rgdpaConsentResponse   :  begin
+                                  FileLabel.Caption := iif(Action = rgdpaConsentRequest, TraduireMemoire('Sélection du modèle'), TraduireMemoire('Sélection du document de réponse'));
+                                  //PdfFile.DataType  := 'OPENFILE(*.DOTX)';
                                   Ecran.Caption     := Format(TraduireMemoire('%s pour %s %s'), [  RGPDUtils.GetLabelFromAction(Action)
                                                                                                  , sLabel
                                                                                                  , RGPDUtils.GetLabelFromPopulationM(Population)
                                                                                                 ]);
                                 end;
   end;
+  LDocGen.Visible        := ((Action = rgdpaConsentRequest) or (Action = rgdpaConsentResponse));
+  LDocGen.Caption        := iif(Action = rgdpaConsentRequest, 'Répertoire des documents à générer', 'Réponse');
+  GenerateDoc.Visible    := (Action = rgdpaConsentRequest);
+  bInsert.Visible        := (Action = rgdpaConsentRequest);
+  ResponseChoice.Visible := (Action = rgdpaConsentResponse);
+  GenerateDoc.Text       := iif(Action = rgdpaConsentRequest, RGPDUtils.GetPath(rgpdtGenerationConsent), '');
   bValider.Enabled       := (Action <> rgdpaConsentRequest);
+  bInsert.OnClick        := bInsert_OnClick;
   PdfFile.OnChange       := PdfFile_OnChange;
+  PdfFile.OnElipsisClick := PdfFile_OnElipsisClick;
   TFVierge(Ecran).Retour := '';
 end ;
 
 procedure TOF_BRGPDVALIDTRT.OnClose ;
 begin
   Inherited ;
+  SetCurrentDir(CurrentPath);
 end ;
 
 procedure TOF_BRGPDVALIDTRT.OnDisplay () ;
@@ -189,6 +224,53 @@ end ;
 procedure TOF_BRGPDVALIDTRT.PdfFile_OnChange(Sender: TObject);
 begin
   bValider.Enabled := ((Action <> rgdpaConsentRequest) or ((Action = rgdpaConsentRequest) and (PdfFile.Text <> '')));
+end;
+
+procedure TOF_BRGPDVALIDTRT.PdfFile_OnElipsisClick;
+var
+  GetPath : TOpenDialog;
+begin
+  GetPath := TOpenDialog.Create(Ecran);
+  try
+    if Action = rgdpaConsentRequest then
+    begin
+      GetPath.FileName   := RGPDUtils.GetPath(rgpdtTemplateConsent) + '*.DOTX';
+      GetPath.Title      := 'Choix du modèle';
+      GetPath.Filter     := '*.DOTX';
+    end else
+    begin
+      GetPath.FileName   := RGPDUtils.GetPath(rgpdtIncomingRequest) + '*.PDF';
+      GetPath.Title      := 'Choix de la demande';
+      GetPath.Filter     := '*.PDF';
+    end;
+    GetPath.Options    := GetPath.Options + [ofNoChangeDir];
+    if GetPath.Execute then
+      PdfFile.Text := GetPath.FileName;
+  finally
+    FreeAndNil(GetPath);
+  end;
+end;
+
+procedure TOF_BRGPDVALIDTRT.bInsert_OnClick(Sender: TObject);
+var
+  InputFilePath : string;
+  TableName     : string;
+  FieldsList    : string;
+  FieldsListSql : string;
+  Where         : string;
+  TobFields     : TOB;
+begin
+  TobFields := TOB.Create('', nil, -1);
+  try
+    InputFilePath := IncludeTrailingPathDelimiter(RGPDUtils.GetPath(rgpdtTemplateConsent)) + 'NewDoc.doc';
+    TableName     := RGPDUtils.GetTableNameFromPopulation(Population);
+    Where         := CodeFileName + '= "' + sCode + '"';
+    Publipost.SetFieldsList(Publipost.GetPrefixFromTableName(TableName), TableName, FieldsList, FieldsListSql);
+    Publipost.AddFieldsInTob(TobFields, TableName, FieldsListSql, Where, True);
+    Publipost.NewModel(InputFilePath, TobFields, FieldsList);
+  finally
+    FreeAndNil(TobFields);
+  end;
 end;
 
 Initialization

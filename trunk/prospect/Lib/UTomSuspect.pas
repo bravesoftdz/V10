@@ -135,6 +135,8 @@ begin
     if (ds.state = dsinsert) then SetParamSoc('SO_RTCOMPTEURSUSP',CodeSuspect) ;
 
     end;
+    TFFiche(Ecran).Retour :=  GetField('RSU_SUSPECT');
+
 end;
 
 procedure TOM_SUSPECTS.OnAfterUpdateRecord;

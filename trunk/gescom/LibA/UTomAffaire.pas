@@ -6,7 +6,7 @@ uses StdCtrls,
   Controls,
   Classes,
   Vierge,
-  Messages,
+  Messages,                                                        
 {$IFDEF EAGLCLIENT}
   eFiche,
   MaineAGL,
@@ -236,7 +236,6 @@ type
     procedure SelectDocWord (Sender : TObject);
 
 		procedure ConstitueTOB(OneTOB: TOB; var ListeChamps : string; CodeContrat: string; WithData : boolean=true);
-    procedure ConstitueListe(Prefixe, TABLE: string; var ListeChamps,ListChampsSql: string);
     procedure AjouteChampsClientFac(OneTOB: TOB; ListSqlAFF: string; WithData: Boolean);
     procedure AjouteAdressesInt(OneTOB: TOB; var ListNomAdrInt,ListSqlAFF: string;WithData: Boolean);
     procedure AjouteChampsContrat(OneTOB: TOB; var ListNomAFF,ListSqlAFF: string; WithData: Boolean);
@@ -537,8 +536,18 @@ procedure AFLanceFiche_Affaire (lequel, argument: string) ;
 procedure AFLanceFiche_LienAffaireTiers (Range, lequel, argument: string) ;
 
 implementation
-uses UtofAfRegroupeAffaire,Facttiers,PiecesRecalculs, DateUtils, UCotraitance,HrichOle, UtilWord, ShellApi,
-UPrintScreen;
+uses
+  UtofAfRegroupeAffaire
+  , Facttiers
+  , PiecesRecalculs
+  , DateUtils
+  , UCotraitance
+  , HrichOle
+  , UtilWord
+  , ShellApi
+  , UPrintScreen
+  ;
+
 // ******* TOM Détail des Echéances de l'affaire *************
 
 procedure TOM_FactAff.OnNewRecord;
@@ -8019,81 +8028,6 @@ begin
   end;
 end;
 
-procedure TOM_Affaire.ConstitueListe(Prefixe,TABLE : string; var ListeChamps,ListChampsSql : string);
-var QQ : TQuery;
-		Sql : string;
-begin
-  Sql := 'SELECT DH_NOMCHAMP,DH_LIBELLE FROM DECHAMPS '+
-         'WHERE DH_PREFIXE = (SELECT DT_PREFIXE FROM DETABLES WHERE DT_NOMTABLE="'+TABLE+'") AND DH_CONTROLE LIKE "%W%"';
-
-	QQ := OpenSql(Sql,True,0,'',true);
-  if Not QQ.Eof then
-  begin
-    QQ.first;
-		While not QQ.eof do
-    begin
-      if ListChampsSql <> '' then ListChampsSql := ListChampsSql + ',';
-      ListChampsSql := ListChampsSql +QQ.Fields [0].AsString;
-			if ListeChamps <> '' then ListeChamps := ListeChamps + ';';
-			ListeChamps := ListeChamps + Prefixe+'_'+QQ.Fields [1].AsString;
-
-      QQ.Next;
-    end;
-  end;
-  ferme (QQ);
-end;
-
-function GetValeurTrad( NomChamp,Code : string) : string;
-var TheRequete,Suffixe : string;
-		QQ : TQuery;
-begin
-  Result := '';
-  Suffixe := ExtractSuffixe(NomChamp);
-	Therequete := 'SELECT DO_COMBO FROM DECOMBOS WHERE DO_NOMCHAMP LIKE "%'+Suffixe+'%"';
-  QQ := OpenSQL(TheRequete,True,1,'',true);
-  if not QQ.Eof then result := QQ.Fields [0].AsString;
-  ferme (QQ);
-  if Result = '' then
-  begin
-  	Result := Code;
-    Exit;
-  end;
-  Result := RechDom(Result,Code,false);
-end;
-
-procedure SetData (TT : TOB;FF : TField);
-var II : Integer;
-begin
-  if  Copy(FF.FullName,1,7)='T_TABLE' then
-  begin
-  	// cas Particulier des tables libres tiers
-    II := StrToInt(Copy(FF.FullName,8,1))+1;
-    TT.AddChampSupvaleur(FF.FullName,RechDom('GCZONELIBRE'+InttoStr(II),FF.AsString,false));
-  end else if  Copy(FF.FullName,1,12)='AFF_LIBREAFF' then
-  begin
-  	// cas Particulier des tables libres affaires
-    TT.AddChampSupvaleur(FF.FullName,GetValeurTrad(FF.FullName,FF.AsString));
-  end else if  Pos(ChampToType(FF.FullName),'INTEGER;SMALLINT') > 0 then
-  begin
-    TT.AddChampSupvaleur(FF.FullName,IntToStr(FF.AsInteger));
-  end else if  Pos(ChampToType(FF.FullName),'DOUBLE;EXTENDED;RATE') > 0 then
-  begin
-    TT.AddChampSupvaleur(FF.FullName,StrF00(FF.AsFloat,2));
-  end else if  Pos(ChampToType(FF.FullName),'DATE') > 0 then
-  begin
-    TT.AddChampSupvaleur(FF.FullName,DateToStr(FF.AsDateTime));
-  end else if  Pos(ChampToType(FF.FullName),'BLOB') > 0 then
-  begin
-    TT.AddChampSupvaleur(FF.FullName,FF.AsString);
-  end else if  Pos(ChampToType(FF.FullName),'COMBO') > 0 then
-  begin
-    TT.AddChampSupvaleur(FF.FullName,GetValeurTrad(FF.FullName,FF.AsString));
-  end else
-  begin
-    TT.AddChampSupvaleur(FF.FullName,FF.AsString);
-  end;
-end;
-
 procedure TOM_Affaire.AjouteChampsContrat (OneTOB : TOB; var ListNomAFF,ListSqlAFF : string; WithData: Boolean);
 
 	procedure GetMtDoc(Affaire: string;var MtDocHt,MtDocTTC : double);
@@ -8121,9 +8055,9 @@ begin
   for II := 0 to QQ.Fields.Count -1 do
   begin
     if WithData then
-    begin
-    	SetData (OneTOB,QQ.fields[II]);
-    end else OneTOB.AddChampSupvaleur(QQ.Fields[II].FullName,'');
+      Publipost.SetData(OneTOB, QQ.fields[II])
+    else
+      OneTOB.AddChampSupvaleur(QQ.Fields[II].FullName,'');
   end;
   ferme(QQ);
   //
@@ -8191,9 +8125,9 @@ begin
   for II := 0 to QQ.Fields.Count -1 do
   begin
     if WithData then
-    begin
-    	SetData (OneTOB,QQ.fields[II]);
-    end else OneTOB.AddChampSupvaleur(QQ.Fields[II].FullName,'');
+      Publipost.SetData(OneTOB, QQ.fields[II])
+    else
+      OneTOB.AddChampSupvaleur(QQ.Fields[II].FullName,'');
   end;
   ferme(QQ);
   // Ajout des infos concernant l'interlocuteur de l'adresse d'intervention
@@ -8248,21 +8182,21 @@ begin
   for II := 0 to QQ.Fields.Count -1 do
   begin
     if WithData then
-    begin
-    	SetData (OneTOB,QQ.fields[II]);
-    end else OneTOB.AddChampSupvaleur(QQ.Fields[II].FullName,'');
+      Publipost.SetData(OneTOB, QQ.fields[II])
+    else
+      OneTOB.AddChampSupvaleur(QQ.Fields[II].FullName,'');
   end;
   ferme(QQ);
 end;
 
 procedure TOM_Affaire.ConstitueTOB(OneTOB: TOB; Var ListeChamps : string; CodeContrat: string; WithData : boolean=true);
-var ListSqlAFF,ListSQlTiersFac,ListSQlTiersint,ListSqlAdrFac,ListSqlAdrInt : string;
-		ListnomAFF,ListnomTiersFac,ListNomTiersint,ListNomAdrFac,ListNomAdrInt : string;
-
+var
+  ListSqlAFF,ListSQlTiersFac,ListSQlTiersint,ListSqlAdrFac,ListSqlAdrInt : string;
+	ListnomAFF,ListnomTiersFac,ListNomTiersint,ListNomAdrFac,ListNomAdrInt : string;
 begin
-  ConstitueListe('Contrat','AFFAIRE',ListNomAFF,ListSqlAFF);
-  ConstitueListe('CliFac','TIERS',ListNomTiersFac,ListSQlTiersFac);
-  ConstitueListe('AdrInt','PIECEADRESSE',ListNomAdrInt,ListSqlAdrInt);
+  Publipost.SetFieldsList(Publipost.GetPrefixFromTableName('AFFAIRE')     , 'AFFAIRE'     , ListNomAFF     , ListSqlAFF);
+  Publipost.SetFieldsList(Publipost.GetPrefixFromTableName('TIERS')       , 'TIERS'       , ListNomTiersFac, ListSQlTiersFac);
+  Publipost.SetFieldsList(Publipost.GetPrefixFromTableName('PIECEADRESSE'), 'PIECEADRESSE', ListNomAdrInt  , ListSqlAdrInt);
   //
   AjouteChampsContrat (OneTOB,ListNomAFF,ListSqlAFF,WithData);
   AjouteChampsClientFac (OneTOB,ListSQlTiersFac,WithData);
