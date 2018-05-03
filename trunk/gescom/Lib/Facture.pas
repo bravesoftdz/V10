@@ -3165,6 +3165,8 @@ begin
   begin
     // Transformation de pièce --> init
     InitDemandePrix (TOBPieceDemPrix,TOBArticleDemPrix,TOBfournDemprix,TOBDetailDemprix);
+    // --- 
+    TOBPiece.setString('GP_BSVREF','');
     // -----------------------------------
     // Provisoire : Reinitialisation des échéances
     TOBEches.ClearDetail;
