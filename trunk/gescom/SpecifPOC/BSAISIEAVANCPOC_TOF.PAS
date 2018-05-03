@@ -44,6 +44,7 @@ const
    stLigMOI = 'IND;TYPELIGNE;BM8_PHASETRA;BM8_FAMILLENIV2;BM8_LIBELLE;BM8_QTEMARCHE;BM8_UNITE;BM8_RADQTE;SUMQTECONSO;BM8_POURCENTAVANC;'; // Main d'oeuvre indirecte
    stLigFI  = 'IND;TYPELIGNE;BM8_PHASETRA;BM8_FAMILLENIV2;BM8_LIBELLE;BM8_QTEMARCHE;BM8_UNITE;BM8_RADQTE;BM8_RADPU;BM8_RADMT;MTAVANCCALC;SUMQTECONSO;DEPENSECUMUL;ECARTDEPENSE;'; // Frais indirect
    stLigST  = 'IND;TYPELIGNE;BM8_PHASETRA;BM8_CODEMARCHE;BM8_LIBELLE;BM8_QTEMARCHE;BM8_UNITE;PU;DEPENSECUMUL;DEPENSEESTIME;POURCENTCALC;BM8_POURCENTAVANC;MTAVANCCORRIGE;ECARTDEPENSE;'; // Sous-traitance
+   stLigHP  = 'IND;DATEMVT;CODEARTICLE;LIBELLE;QUANTITE;PUACH;MONTANTACH;'; // hors phase
    STAVANCSQL = 'SELECT BAVANCTECHDET.*, '+
                 '0 AS PU,'+
                 '0 AS QTEAVANC,'+
@@ -57,6 +58,12 @@ const
                 '0 AS DEPENSECUMUL,'+
                 '0 AS MTAVANCCORRIGE,'+
                 '"LIG" AS TYPELIGNE,'+
+                '"" AS DATEMVT,'+
+                '"" AS CODEARTICLE,'+
+                '"" AS LIBELLE,'+
+                '0 AS QUANTITE,'+
+                '0 AS PUACH,'+
+                '0 AS MONTANTACH,'+
                 '1 AS NIVEAU,'+
                 '"-" AS NEWONE '+
                 'FROM BAVANCTECHDET';
@@ -132,8 +139,8 @@ Type
     TOBSTRUCTLIG : TOB;
     TheListGrid : TListGs;
     ZeCurSaisie : TGSaisie;
-    TOBPP,TOBMOI,TOBFI,TOBST : TOB;
-    GSPP,GSMOI,GSFI,GSST : THGrid;
+    TOBPP,TOBMOI,TOBFI,TOBST,TOBHP : TOB;
+    GSPP,GSMOI,GSFI,GSST,GSHP : THGrid;
     FFP,FFQ : string;
     ImList : TImageList;
     FamFraisIndirect : string;
@@ -373,12 +380,14 @@ begin
     TOBMOI := TOB.Create('SAISIE MOI',nil,-1);
     TOBFI := TOB.Create('SAISIE FI',nil,-1);
     TOBST := TOB.Create('SAISIE ST',nil,-1);
+    TOBHP := TOB.Create ('HORS PHASES',nil,-1);
     //
     TheListGrid := TListGs.create;
     TheListGrid.AddGrille(THGrid(GetControl('GSPP')),'GSPP',stLigPP,TOBPP);
     TheListGrid.AddGrille(THGrid(GetControl('GSMOI')),'GSMOI',stLigMOI,TOBMOI);
     TheListGrid.AddGrille(THGrid(GetControl('GSFI')),'GSFI',stLigFI,TOBFI);
     TheListGrid.AddGrille(THGrid(GetControl('GSST')),'GSST',stLigST,TOBST);
+    TheListGrid.AddGrille(THGrid(GetControl('GSHP')),'GSHP',stLigHP,TOBHP);
     PrepareGrids;
     //
     ChargeTOBS (CodeAffaire);
@@ -411,6 +420,7 @@ begin
     TFvierge(Ecran).HMTrad.ResizeGridColumns(GSMOI);
     TFvierge(Ecran).HMTrad.ResizeGridColumns(GSFI);
     TFvierge(Ecran).HMTrad.ResizeGridColumns(GSST);
+    TFvierge(Ecran).HMTrad.ResizeGridColumns(GSHP);
     //
     EnterGrid ('GSPP');
   FINALLY
@@ -490,6 +500,7 @@ begin
   GSMOI := THGrid(getControl('GSMOI'));
   GSFI := THGrid(getControl('GSFI'));
   GSST:= THGrid(getControl('GSST'));
+  GSHP:= THGrid(getControl('GSHP'));
   //
   STSt := S;
   //
@@ -618,6 +629,7 @@ begin
   afficheLaGrid('GSMOI');
   afficheLaGrid('GSFI');
   afficheLaGrid('GSST');
+  afficheLaGrid('GSHP');
 end;
 
 
@@ -1169,6 +1181,7 @@ begin
   PrepareGrid('GSMOI');
   PrepareGrid('GSFI');
   PrepareGrid('GSST');
+  PrepareGrid('GSHP');
 end;
 
 
@@ -1386,6 +1399,43 @@ begin
     TGS.GS.ColFormats[colonne] := '#,##0.00;#,##0.00; ;';
     TGS.GS.ColAligns[Colonne] := taRightJustify;
     TGS.SG_MTAVANCCORRIGE := colonne;
+  end else if NomChamps='DATEMVT' then
+  begin
+    TGS.GS.cells[Colonne,0] := 'Date Mvt';
+    TGS.GS.ColWidths[colonne] := 12*TGS.GS.canvas.TextWidth('w');
+    TGS.GS.ColFormats[colonne] := ShortDateFormat;
+    TGS.GS.ColAligns[Colonne] := taLeftJustify;
+  end else if NomChamps='CODEARTICLE' then
+  begin
+    TGS.GS.cells[Colonne,0] := 'Code';
+    TGS.GS.ColWidths[colonne] := 18*TGS.GS.canvas.TextWidth('w');
+    TGS.GS.ColAligns[Colonne] := taLeftJustify;
+  end else if NomChamps='LIBELLE' then
+  begin
+    TGS.GS.cells[Colonne,0] := 'Libellé';
+    TGS.GS.ColWidths[colonne] := 70*TGS.GS.canvas.TextWidth('w');
+    TGS.GS.ColAligns[Colonne] := taLeftJustify;
+  end else if NomChamps='QUANTITE' then
+  begin
+    TGS.GS.cells[Colonne,0] := 'Qte';
+    TGS.GS.ColWidths[colonne] := 12*TGS.GS.canvas.TextWidth('w');
+    TGS.GS.ColLengths[colonne] := 12;
+    TGS.GS.ColFormats[colonne] := '#,##0.00;#,##0.00; ;';
+    TGS.GS.ColAligns[Colonne] := taRightJustify;
+  end else if NomChamps='PUACH' then
+  begin
+    TGS.GS.cells[Colonne,0] := 'PUA';
+    TGS.GS.ColWidths[colonne] := 12*TGS.GS.canvas.TextWidth('w');
+    TGS.GS.ColLengths[colonne] := 12;
+    TGS.GS.ColFormats[colonne] := '#,##0.00;#,##0.00; ;';
+    TGS.GS.ColAligns[Colonne] := taRightJustify;
+  end else if NomChamps='MONTANTACH' then
+  begin
+    TGS.GS.cells[Colonne,0] := 'Montant achat';
+    TGS.GS.ColWidths[colonne] := 12*TGS.GS.canvas.TextWidth('w');
+    TGS.GS.ColLengths[colonne] := 12;
+    TGS.GS.ColFormats[colonne] := '#,##0.00;#,##0.00; ;';
+    TGS.GS.ColAligns[Colonne] := taRightJustify;
   end;
 end;
 
@@ -2818,6 +2868,21 @@ procedure TOF_BSAISIEAVANCPOC.RecupereConsos;
     TL.SetDouble('BM8_MTCONSOMOIS',TL.GetDouble('BM8_MTCONSOMOIS')+TLC.GetDouble('SUMMT'));
   end;
 
+  procedure AjouteLigneHP(TL : TOB);
+  var TF,TP : TOB;
+      Index : Integer;
+  begin
+    TF := CreTOBLigne;
+    TF.SetDateTime('DATEMVT',TL.GetDateTime('BCO_DATEMOUV'));
+    TF.SetString('CODEARTICLE',TL.GetString('BCO_DATEMOUV'));
+    TF.SetString('LIBELLE',TL.GetString('BCO_LIBELLE'));
+    TF.SetString('QUANTITE',TL.GetString('BCO_QUANTITE'));
+    TF.SetString('PUACH',TL.GetString('BCO_DPA'));
+    TF.SetString('MONTANTACH',TL.GetString('BCO_MONTANTACH'));
+    TF.ChangeParent(TOBHP,-1);
+  end;
+
+
   procedure AjouteLigne(TL : TOB;TheType,CurrentPhase : string;NiveauImbric : integer; MoisCourant : boolean=true);
   var TF,TP : TOB;
       Index : Integer;
@@ -2898,7 +2963,7 @@ begin
     end;
     //
     TTC.ClearDetail;
-    //
+    //  --> consommations du mois
     SQL := 'SELECT BCO_PHASETRA,BCO_FAMILLENIV2,SUM(BCO_QUANTITE) AS SUMQTE, SUM(BCO_MONTANTACH) AS SUMMT,'+
            '(SELECT CC_LIBELLE FROM CHOIXCOD WHERE CC_TYPE="FN2" AND CC_CODE=BCO_FAMILLENIV2) AS LIBELLE '+
            'FROM CONSOMMATIONS '+
@@ -2925,6 +2990,28 @@ begin
         AjouteLigne (TLC,TheType,ThePhase,NiveauImbric);
       end;
     end;
+    // recupération des hors phases --> erreur de saisie
+    TTC.ClearDetail;
+    SQL := 'SELECT BCO_DATEMOUV,BCO_CODEARTICLE,BCO_LIBELLE,BCO_QUANTITE,BCO_DPA,BCO_MONTANTACH '+
+           'FROM CONSOMMATIONS '+
+           'WHERE '+
+           'BCO_NATUREPIECEG IN ("LBT","") AND '+
+           'BCO_AFFAIRE="'+CodeAffaire+'" AND '+
+           'BCO_PHASETRA="" AND '+
+           'BCO_DATEMOUV <= "'+USDATETIME(FinMois)+'" ';
+    QQ := OpenSQL(SQL,True,-1,'',true);
+    if Not QQ.eof then
+    begin
+      TTC.LoadDetailDB('CONSOMMATIONS','','',QQ,false);
+    end;
+    ferme(QQ);
+    for II := 0 to TTC.detail.count -1 do
+    begin
+      XX.MoveK2000;
+      TLC := TTC.detail[II];
+      AjouteLigneHP (TLC);
+    end;
+
   FINALLY
     TTC.Free;
   END;
