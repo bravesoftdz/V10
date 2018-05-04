@@ -1470,11 +1470,14 @@ begin
         if ActF = 'ENR' then
           TOBL.PutValue('GL_VIVANTE', '-');
       end;
+      if not ReliquatMt then TOBL.PutValue('GL_MTRESTE',0);
+      (*
       //--- GUINIER : Gestion des Reliquats sur Montant pour Prestation
       if not ReliquatMt then
         TOBL.PutValue('GL_MTRESTE',0)
       else
         TOBL.PutValue('GL_MTRESTE', TOBL.GEtVALUE('GL_MONTANTHTDEV'));
+      *)
     end;
     {$IFDEF BTP}
     if TOBL.getValue('INDICERG') <> 0 then
