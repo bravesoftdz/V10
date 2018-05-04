@@ -5987,6 +5987,7 @@ BEGIN
 //AC 18/08/03 NV GESTION COMPTA DIFF
 //Si compta différée pour pièce et acompte, ne gère rien içi
 Result := True;
+if TOBPiece.GetBoolean('GP_HORSCOMPTA') then Exit;
 if not IsComptaPce(TOBPiece.GetValue('GP_NATUREPIECEG')) then exit;
 // Fin AC
 // Modif BTP
