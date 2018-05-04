@@ -1298,6 +1298,10 @@ begin
     begin
     	UpDateDecoupePiece('GP_BSVREF=""',' AND GP_BSVREF IS NULL');
     end;
+    if VersionBaseDest < '998.ZZZZ1' then
+    begin
+    	UpDateDecoupePiece('GP_HORSCOMPTA="-"',' AND GP_HORSCOMPTA IS NULL');
+    end;
   end else if nomTable ='PIECETRAIT' then
   begin
     if VersionBaseDest < '998.W' then
