@@ -5,7 +5,7 @@ Modifié le ... :   /  /
 Description .. : Source TOF de la FICHE : BRGPDREFERENTIEL ()
 Mots clefs ... : TOF;BRGPDREFERENTIEL
 *****************************************************************}
-Unit BRGPDTIERSMUL_TOF ;
+Unit BRGPDCONTACTMUL_TOF ;
 
 Interface
 
@@ -31,10 +31,10 @@ Uses
   , BRGPDUtils
   ;
 
-function BLanceFiche_RGPDThirdMul(Nat, Cod, Range, Lequel, Argument : string) : string;
+function BLanceFiche_RGPDContactMul(Nat, Cod, Range, Lequel, Argument : string) : string;
 
 Type
-  TOF_BRGPDTIERSMUL = Class (TOF_BRGPDMUL)
+  TOF_BRGPDCONTACTMUL = Class (TOF_BRGPDMUL)
   private
 
   public
@@ -50,63 +50,58 @@ Type
 
 Implementation
 
-uses
-   BRGPDVALIDTRT_TOF
-  , FormsName
-  ;
-
-function BLanceFiche_RGPDThirdMul(Nat, Cod, Range,Lequel,Argument : string) : string;
+function BLanceFiche_RGPDContactMul(Nat, Cod, Range,Lequel,Argument : string) : string;
 begin
   Result := AglLanceFiche(Nat, Cod, Range, Lequel, Argument);
 end;
 
-procedure TOF_BRGPDTIERSMUL.OnNew ;
+procedure TOF_BRGPDCONTACTMUL.OnNew ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDTIERSMUL.OnDelete ;
+procedure TOF_BRGPDCONTACTMUL.OnDelete ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDTIERSMUL.OnUpdate ;
+procedure TOF_BRGPDCONTACTMUL.OnUpdate ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDTIERSMUL.OnLoad ;
+procedure TOF_BRGPDCONTACTMUL.OnLoad ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDTIERSMUL.OnArgument (S : String ) ;
+procedure TOF_BRGPDCONTACTMUL.OnArgument (S : String ) ;
 begin
-  sPopulationCode := RGPDThird;
-  sFieldCode      := 'T_TIERS';
-  sFieldCode2     := 'T_AUXILIAIRE';
-  sFieldCode3     := '';
-  sFieldLabel     := 'T_LIBELLE';
-  sFieldLabel2nd  := 'T_PRENOM'; 
+  sPopulationCode := RGPDContact;
+  sFieldCode      := 'C_TIERS'; //'C_AUXILIAIRE';
+  sFieldCode2     := 'C_NUMEROCONTACT';
+  sFieldCode3     := ''; //'C_TIERS';
+  sFieldLabel     := 'C_NOM';
+  sFieldLabel2nd  := 'C_PRENOM'; 
   Inherited ;
 end ;
 
-procedure TOF_BRGPDTIERSMUL.OnClose ;
-begin
-  Inherited ;
-end ;
-
-procedure TOF_BRGPDTIERSMUL.OnDisplay () ;
+procedure TOF_BRGPDCONTACTMUL.OnClose ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDTIERSMUL.OnCancel () ;
+procedure TOF_BRGPDCONTACTMUL.OnDisplay () ;
+begin
+  Inherited ;
+end ;
+
+procedure TOF_BRGPDCONTACTMUL.OnCancel () ;
 begin
   Inherited ;
 end ;
 
 Initialization
-  registerclasses ( [ TOF_BRGPDTIERSMUL ] ) ;
+  registerclasses ( [ TOF_BRGPDCONTACTMUL ] ) ;
 end.
 

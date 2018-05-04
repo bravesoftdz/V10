@@ -28,7 +28,7 @@ Uses
   , UTOF
   , CBPMcd
   , BRGPDMUL_TOF
-  , BRGDPDUtils
+  , BRGPDUtils
   ;
 
 function BLanceFiche_RGPDUtilisatMul(Nat, Cod, Range, Lequel, Argument : string) : string;
@@ -84,7 +84,8 @@ procedure TOF_BRGPDUTILISATMUL.OnArgument (S : String ) ;
 begin
   sPopulationCode := RGPDUser;
   sFieldCode      := 'US_UTILISATEUR';
-  sFieldCode2nd   := '';
+  sFieldCode2     := '';
+  sFieldCode3     := '';
   sFieldLabel     := 'US_LIBELLE';
   sFieldLabel2nd  := ''; 
   Inherited ;

@@ -5294,13 +5294,14 @@ end;
 
 class function Publipost.GetPrefixFromTableName(TableName : string) : string;
 begin
-  case CaseFromString(TableName, ['AFFAIRE', 'TIERS', 'PIECEADRESSE', 'RESSOURCE', 'UTILISAT', 'SUSPECTS']) of
+  case CaseFromString(TableName, ['AFFAIRE', 'TIERS', 'PIECEADRESSE', 'RESSOURCE', 'UTILISAT', 'SUSPECTS', 'CONTACT']) of
     0 : Result := 'Contrat';     {AFFAIRE}
     1 : Result := 'CliFac';      {TIERS}
     2 : Result := 'AdrInt';      {PIECEADRESSE}
     3 : Result := 'Ressource';   {RESSOURCE}
     4 : Result := 'Utilisateur'; {UTILISAT}
     5 : Result := 'Suspect';     {SUSPECTS}
+    6 : Result := 'Contact';     {CONTACT}
   else
     Result := '';
   end;

@@ -30,7 +30,7 @@ Uses
   , CBPMcd
   , Htb97
   , uTOFComm
-  , BRGDPDUtils
+  , BRGPDUtils
   ;
 
 function BLanceFiche_RGPDValidTrt(Nat, Cod, Range, Lequel, Argument : string) : string;
@@ -266,6 +266,9 @@ begin
     TableName     := RGPDUtils.GetTableNameFromPopulation(Population);
     Where         := CodeFileName + '= "' + sCode + '"';
     Publipost.SetFieldsList(Publipost.GetPrefixFromTableName(TableName), TableName, FieldsList, FieldsListSql);
+    { Spécif pour les contacts, il faut trouver la 1ère adresse éventuellement associée }
+//    if Population = rgpdpContact then
+//      ;
     Publipost.AddFieldsInTob(TobFields, TableName, FieldsListSql, Where, True);
     Publipost.NewModel(InputFilePath, TobFields, FieldsList);
   finally

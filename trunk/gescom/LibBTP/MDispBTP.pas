@@ -139,7 +139,7 @@ uses Facture,(*Souche,*)dimension,UTomPiece, Traduc
      , BRGPDREFERENTIEL_TOF
      , BRGPDTIERSMUL_TOF
      , FormsName
-     , BRGDPDUtils
+     , BRGPDUtils
      , BRGPDRESSOURCEMUL_TOF
      , BRGPDUTILISATMUL_TOF
      , BRGPDSUSPECTMUL_TOF
@@ -419,22 +419,30 @@ BEGIN
 
           SPIGAOOBJ.MonteToaster;
 
+          { Si module RGPD visible et si l'utilisateur n'a pas encore validé le message de sensibilisation RGPD, affiche le message }
+          Sql := 'SELECT 1 FROM MENU'
+               + ' WHERE MN_1 = 0'
+               + '   AND MN_2 = 280'
+               + '   AND SUBSTRING(MN_ACCESGRP, 1, (SELECT COUNT(UG_GROUPE) FROM USERGRP)) = REPLICATE("-", (SELECT COUNT(UG_GROUPE) FROM USERGRP))'
+                 ;
+          if not ExisteSQL(Sql) then
+          begin
+            Sql := 'SELECT 1 FROM UTILISAT WHERE US_UTILISATEUR = "' + V_PGI.User + '" AND US_RGPDOK <> "X"';
+            if ExisteSql(Sql) then
+            begin
+              Sql := OpenForm.RGPDSensibilisation;
+              if Sql <> 'X' then
+                FMenuG.Quitter
+              else
+                ExecuteSQL('UPDATE UTILISAT SET US_RGPDOK = "X" WHERE US_UTILISATEUR = "' + V_PGI.User + '"');
+            end;
+          end;
           { Test date du dernier changement de mot de passe }
           if GetParamSocSecur('SO_BTDELAIPASSWORD', 0) > 0 then
           begin
             Sql := 'SELECT 1 FROM UTILISAT WHERE US_UTILISATEUR = "' + V_PGI.User + '" AND US_DATECHANGEPWD <= "' + UsDateTime(IncMonth(Date, -3)) + '"';
             if ExisteSql(Sql) then
               PGIInfo(TraduireMemoire('Il est conseillé de changer régulièrement son mot de passe .'), TraduireMemoire('Information.'));
-          end;
-          { Si l'utilisateur n'a pas encore validé le message de sensibilisation RGPD, affiche le message }
-          Sql := 'SELECT 1 FROM UTILISAT WHERE US_UTILISATEUR = "' + V_PGI.User + '" AND US_RGPDOK <> "X"';
-          if ExisteSql(Sql) then
-          begin
-            Sql := OpenForm.RGPDSensibilisation;
-            if Sql <> 'X' then
-              FMenuG.Quitter
-            else
-              ExecuteSQL('UPDATE UTILISAT SET US_RGPDOK = "X" WHERE US_UTILISATEUR = "' + V_PGI.User + '"');
           end;
 
         END ;
@@ -2094,26 +2102,31 @@ Cegid,False,False)};
     280012 : OpenForm.RGPDWindows(rgpdpResource, -280010, Num, rgpdaDataExport);        // Export données personnelles - Ressources
     280013 : OpenForm.RGPDWindows(rgpdpUser    , -280010, Num, rgpdaDataExport);        // Export données personnelles - Utilisateurs
     280014 : OpenForm.RGPDWindows(rgpdpSuspect , -280010, Num, rgpdaDataExport);        // Export données personnelles - Suspects
+    280015 : OpenForm.RGPDWindows(rgpdpContact , -280010, Num, rgpdaDataExport);        // Export données personnelles - Contacts
     {  Droit à l'oubli }
     280021 : OpenForm.RGPDWindows(rgpdpThird   , -280020, Num, rgpdaAnonymization);     // Droit à l'oubli - Clients
     280022 : OpenForm.RGPDWindows(rgpdpResource, -280020, Num, rgpdaAnonymization);     // Droit à l'oubli - Ressources
     280023 : OpenForm.RGPDWindows(rgpdpUser    , -280020, Num, rgpdaAnonymization);     // Droit à l'oubli - Utilisateurs
     280024 : OpenForm.RGPDWindows(rgpdpSuspect , -280020, Num, rgpdaAnonymization);     // Droit à l'oubli - Suspects
+    280025 : OpenForm.RGPDWindows(rgpdpContact , -280020, Num, rgpdaAnonymization);     // Droit à l'oubli - Contacts
     {  Demande de rectification }
     280031 : OpenForm.RGPDWindows(rgpdpThird   , -280030, Num, rgdpaDataRectification); // Demande de rectification - Clients
     280032 : OpenForm.RGPDWindows(rgpdpResource, -280030, Num, rgdpaDataRectification); // Demande de rectification - Ressources
     280033 : OpenForm.RGPDWindows(rgpdpUser    , -280030, Num, rgdpaDataRectification); // Demande de rectification - Utilisateurs
     280034 : OpenForm.RGPDWindows(rgpdpSuspect , -280030, Num, rgdpaDataRectification); // Demande de rectification - Suspects
+    280035 : OpenForm.RGPDWindows(rgpdpContact , -280030, Num, rgdpaDataRectification); // Demande de rectification - Contacts
     {  Demande de consentement }
     280042 : OpenForm.RGPDWindows(rgpdpThird   , -280040, Num, rgdpaConsentRequest);    // Demande de consentement - Clients
     280045 : OpenForm.RGPDWindows(rgpdpResource, -280040, Num, rgdpaConsentRequest);    // Demande de consentement - Ressources
     280048 : OpenForm.RGPDWindows(rgpdpUser    , -280040, Num, rgdpaConsentRequest);    // Demande de consentement - Utilisateurs
     280051 : OpenForm.RGPDWindows(rgpdpSuspect , -280040, Num, rgdpaConsentRequest);    // Demande de consentement - Suspects
+    280054 : OpenForm.RGPDWindows(rgpdpContact , -280040, Num, rgdpaConsentRequest);    // Demande de consentement - Contacts
     {  Retour demande de consentement }
     280043 : OpenForm.RGPDWindows(rgpdpThird   , -280040, Num, rgdpaConsentResponse);   // Retour demande de consentement - Clients
     280046 : OpenForm.RGPDWindows(rgpdpResource, -280040, Num, rgdpaConsentResponse);   // Retour demande de consentement - Ressources
     280049 : OpenForm.RGPDWindows(rgpdpUser    , -280040, Num, rgdpaConsentResponse);   // Retour demande de consentement - Utilisateurs
     280052 : OpenForm.RGPDWindows(rgpdpSuspect , -280040, Num, rgdpaConsentResponse);   // Retour demande de consentement - Suspects
+    280055 : OpenForm.RGPDWindows(rgpdpContact , -280040, Num, rgdpaConsentResponse);   // Retour demande de consentement - Contacts
     {  Référentiel }
     280061 : BLanceFiche_RGPDReferentiel('BTP', frm_RGPDRepository , '', '', OpenForm.SetWindowCaption(-280060, Num)); // Référentiel
     // --
@@ -2891,7 +2904,7 @@ begin
 	FMenuG.SetModules([145,325,327,283,146,150,147,92,284,304,323,149,160,320,148,60],[24,77,21,74,121,124,41,77,127,73,9,110,69,99,59,34,49]) ;
 end else
 begin
-	FMenuG.SetModules([145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,148,60,280],[24,77,21,74,72,121,124,41,77,99,127,73,9,110,45,69,99,34,49,78]) ;
+	FMenuG.SetModules([145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,148,280,60],[24,77,21,74,72,121,124,41,77,99,127,73,9,110,45,69,99,34,78,49]) ;
 end;
 V_PGI.NbColModuleButtons:=2 ; V_PGI.NbRowModuleButtons:=9 ;
 

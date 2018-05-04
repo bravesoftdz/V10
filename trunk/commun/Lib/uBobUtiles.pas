@@ -100,6 +100,10 @@ begin
 	end else if NamFic = 'BAT30999F650.BOB' then
   begin
     ExecuteSQL('DELETE FROM MENU WHERE MN_1=280');
+	end else if NamFic = 'BAT30999F660.BOB' then
+  begin
+    ExecuteSQL('DELETE FROM BRGPDTABLESP');
+    ExecuteSQL('DELETE FROM BRGPDTABLESL');
 	end;
 end;
 

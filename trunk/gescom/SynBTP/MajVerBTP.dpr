@@ -550,13 +550,14 @@ uses
   UConnectWSCEGID in '..\..\CONNECTWS\UConnectWSCEGID.pas',
   UFileAssoc in '..\LibBTP\UFileAssoc.pas',
   FormsName in '..\..\commun\Lib\FormsName.pas',
-  BRGDPDUtils in '..\..\RGPD\BRGDPDUtils.pas',
   BRGPDRESSOURCEMUL_TOF in '..\..\RGPD\BRGPDRESSOURCEMUL_TOF.pas',
   BRGPDSUSPECTMUL_TOF in '..\..\RGPD\BRGPDSUSPECTMUL_TOF.pas',
   BRGPDTIERSMUL_TOF in '..\..\RGPD\BRGPDTIERSMUL_TOF.pas',
   BRGPDUTILISATMUL_TOF in '..\..\RGPD\BRGPDUTILISATMUL_TOF.pas',
   BRGPDMUL_TOF in '..\..\RGPD\BRGPDMUL_TOF.pas',
-  BRGPDVALIDTRT_TOF in '..\..\RGPD\BRGPDVALIDTRT_TOF.pas';
+  BRGPDVALIDTRT_TOF in '..\..\RGPD\BRGPDVALIDTRT_TOF.pas',
+  BRGPDUtils in '..\..\RGPD\BRGPDUtils.pas',
+  BRGPDCONTACTMUL_TOF in '..\..\RGPD\BRGPDCONTACTMUL_TOF.pas';
 
 {$R *.RES}
 

@@ -28,7 +28,7 @@ Uses
   , UTOF
   , CBPMcd
   , BRGPDMUL_TOF
-  , BRGDPDUtils
+  , BRGPDUtils
   ;
 
 function BLanceFiche_RGPDSuspectMul(Nat, Cod, Range, Lequel, Argument : string) : string;
@@ -84,7 +84,8 @@ procedure TOF_BRGPDSUSPECTMUL.OnArgument (S : String ) ;
 begin
   sPopulationCode := RGPDSuspect;
   sFieldCode      := 'RSU_SUSPECT';
-  sFieldCode2nd   := '';
+  sFieldCode2     := '';
+  sFieldCode3     := '';  
   sFieldLabel     := 'RSU_LIBELLE';
   sFieldLabel2nd  := 'RSU_PRENOM';
   Inherited ;

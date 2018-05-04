@@ -78,7 +78,7 @@ uses
   TntStdCtrls
   , wCommuns
   , LookUp
-  , BRGDPDUtils
+  , BRGPDUtils
   , ParamSoc
   , AglInit
   , BTCONFIRMPASS_TOF

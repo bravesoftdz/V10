@@ -100,9 +100,11 @@ begin
   Arg := GetArgumentString(S, 'TYPEEVENT');
   if Arg <> '' then
     THValComboBox(GetControl('GEV_TYPEEVENT')).Value := Arg;
+  THValComboBox(GetControl('GEV_TYPEEVENT')).Enabled := (Arg <> 'RGP');
   Arg := GetArgumentString(S, 'LABEL', False);
   if Arg <> '' then
     THEdit(GetControl('GEV_LIBELLE')).Text := Arg;
+  
 end ;
 
 procedure TOF_YYJNALEVENT.OnClose ;
