@@ -104,6 +104,9 @@ begin
   begin
     ExecuteSQL('DELETE FROM BRGPDTABLESP');
     ExecuteSQL('DELETE FROM BRGPDTABLESL');
+	end else if NamFic = 'BAT30999F661.BOB' then
+  begin
+    ExecuteSQL('DELETE FROM BRGPDTABLESL');
 	end;
 end;
 
