@@ -36,6 +36,7 @@ function BLanceFiche_RGPDUtilisatMul(Nat, Cod, Range, Lequel, Argument : string)
 Type
   TOF_BRGPDUTILISATMUL = Class (TOF_BRGPDMUL)
   private
+    UtilAdr : THCheckbox;
 
   public
     procedure OnNew                    ; override ;
@@ -53,6 +54,9 @@ Implementation
 uses
    BRGPDVALIDTRT_TOF
   , FormsName
+  , wCommuns
+  , UtilPGI
+  , Mul
   ;
 
 function BLanceFiche_RGPDUtilisatMul(Nat, Cod, Range,Lequel,Argument : string) : string;
@@ -78,17 +82,23 @@ end ;
 procedure TOF_BRGPDUTILISATMUL.OnLoad ;
 begin
   Inherited ;
+  if (UtilAdr.Checked) and (IsConsent) then
+    SetControlText('XX_WHERE', ' AND EXISTS (SELECT 1 FROM SALARIES WHERE PSA_SALARIE = US_AUXILIAIRE AND CONCAT(PSA_ADRESSE1, PSA_ADRESSE2, PSA_ADRESSE3, PSA_CODEPOSTAL, PSA_VILLE) <> "")')
+  else
+    SetControlText('XX_WHERE', '');
 end ;
 
 procedure TOF_BRGPDUTILISATMUL.OnArgument (S : String ) ;
 begin
   sPopulationCode := RGPDUser;
   sFieldCode      := 'US_UTILISATEUR';
-  sFieldCode2     := '';
+  sFieldCode2     := 'US_AUXILIAIRE';
   sFieldCode3     := '';
   sFieldLabel     := 'US_LIBELLE';
-  sFieldLabel2nd  := ''; 
+  sFieldLabel2nd  := '';
   Inherited ;
+  UtilAdr         := THCheckbox(GetControl('UTILADR'));
+  UtilAdr.Visible := (RgpdAction = rgdpaConsentRequest);
 end ;
 
 procedure TOF_BRGPDUTILISATMUL.OnClose ;

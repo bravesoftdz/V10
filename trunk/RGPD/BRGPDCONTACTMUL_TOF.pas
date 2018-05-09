@@ -36,6 +36,7 @@ function BLanceFiche_RGPDContactMul(Nat, Cod, Range, Lequel, Argument : string) 
 Type
   TOF_BRGPDCONTACTMUL = Class (TOF_BRGPDMUL)
   private
+    ContactAdr : THCheckbox;
 
   public
     procedure OnNew                    ; override ;
@@ -49,6 +50,12 @@ Type
   end ;
 
 Implementation
+
+uses
+  utilPGI
+  , wCommuns
+  , mul
+  ;
 
 function BLanceFiche_RGPDContactMul(Nat, Cod, Range,Lequel,Argument : string) : string;
 begin
@@ -73,17 +80,27 @@ end ;
 procedure TOF_BRGPDCONTACTMUL.OnLoad ;
 begin
   Inherited ;
+  if (ContactAdr.Checked) and (IsConsent) then
+    SetControlText('XX_WHERE', ' AND EXISTS (SELECT 1 FROM ADRESSES WHERE ADR_REFCODE = C_TIERS AND ADR_NUMEROCONTACT = C_NUMEROCONTACT)')
+  else
+    SetControlText('XX_WHERE', '');
 end ;
 
 procedure TOF_BRGPDCONTACTMUL.OnArgument (S : String ) ;
 begin
-  sPopulationCode := RGPDContact;
-  sFieldCode      := 'C_TIERS'; //'C_AUXILIAIRE';
-  sFieldCode2     := 'C_NUMEROCONTACT';
-  sFieldCode3     := ''; //'C_TIERS';
-  sFieldLabel     := 'C_NOM';
-  sFieldLabel2nd  := 'C_PRENOM'; 
+  sPopulationCode    := RGPDContact;
+  sFieldCode         := 'C_TIERS';
+  sFieldCode2        := 'C_NUMEROCONTACT';
+  sFieldCode3        := '';
+  sFieldLabel        := 'C_NOM';
+  sFieldLabel2nd     := 'C_PRENOM';
   Inherited ;
+  ContactAdr         := THCheckbox(GetControl('CONTACTADR'));
+  ContactAdr.Visible := (RgpdAction = rgdpaConsentRequest);
+  if RgPDAction = rgpdaAnonymization then
+    THCheckBox(GetControl('C_PRINCIPAL')).State := cbUnchecked
+  else
+    THCheckBox(GetControl('C_PRINCIPAL')).State := cbGrayed;
 end ;
 
 procedure TOF_BRGPDCONTACTMUL.OnClose ;

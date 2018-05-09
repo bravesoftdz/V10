@@ -29,6 +29,7 @@ Uses
   , CBPMcd
   , Htb97
   , uTOFComm
+  , HSysMenu
   ;
 
 function BLanceFiche_RGPDReferentiel(Nat, Cod, Range, Lequel, Argument : string) : string;
@@ -47,6 +48,7 @@ Type
     DelField         : TToolbarButton97;
     AdvancedSetting  : TToolbarButton97;
     NewField         : THEdit;
+    HMTrad           : THSystemMenu;
 
     procedure GridsManagement;
     procedure ButtonManagement;
@@ -82,7 +84,8 @@ uses
   , ParamSoc
   , AglInit
   , BTCONFIRMPASS_TOF
-  , HSysMenu
+  , Windows
+  , UtilPGI
   ;
 
 const
@@ -171,15 +174,15 @@ begin
   TobTables.ClearDetail;
   TobFields.ClearDetail;
   Id  := Population.Value;
-  Sql := ' SELECT 1              as Sort'
-       + '       , RG1_TABLENAME as TableName'
-       + '       , RG1_LABEL     as Label'
+  Sql := ' SELECT 1              as SORT'
+       + '       , RG1_TABLENAME as TABLENAME'
+       + '       , RG1_LABEL     as LABEL'
        + ' FROM BRGPDTABLESP'
        + ' WHERE RG1_ID = ' + Id
        + ' UNION'
-       + ' SELECT 2              as Sort'
-       + '       , RG2_NOMTABLE  as TableName'
-       + '       , RG2_LIBELLE   as Label'
+       + ' SELECT 2              as SORT'
+       + '       , RG2_NOMTABLE  as TABLENAME'
+       + '       , RG2_LIBELLE   as LABEL'
        + ' FROM BRGPDTABLESL'
        + ' WHERE RG2_IDRG1 = ' + Id
        +   RGPDUtils.GetSqlTablesException
@@ -256,8 +259,6 @@ begin
 end;
 
 procedure TOF_BRGPDREFERENTIEL.AdvancedSettingsManagment;
-var
-  HMTrad : THSystemMenu;
 begin
   TGroupBox(GetControl('GBFIELDS')).Height := iif(RGPDUtils.AdvancedSettingsEnabled, 400, 435);
   AddField.Visible        := (RGPDUtils.AdvancedSettingsEnabled);
@@ -372,7 +373,7 @@ end;
 
 procedure TOF_BRGPDREFERENTIEL.AdvancedSetting_OnClick(Sender : TObject);
 begin
-  if IsOkDayPass then
+  if IsOkDayPass(GetMyComputerName) then
   begin
     SetParamSoc('SO_RGPDPARAMAVANCE', 'X');
     AdvancedSettingsManagment;

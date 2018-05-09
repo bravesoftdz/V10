@@ -196,7 +196,7 @@ begin
   GenerateDoc.Visible    := (Action = rgdpaConsentRequest);
   bInsert.Visible        := (Action = rgdpaConsentRequest);
   ResponseChoice.Visible := (Action = rgdpaConsentResponse);
-  GenerateDoc.Text       := iif(Action = rgdpaConsentRequest, RGPDUtils.GetPath(rgpdtGenerationConsent), '');
+  GenerateDoc.Text       := iif(Action = rgdpaConsentRequest, RGPDUtils.GetRgpdPSoc(rgpdtGenerationConsent), '');
   bValider.Enabled       := (Action <> rgdpaConsentRequest);
   bInsert.OnClick        := bInsert_OnClick;
   PdfFile.OnChange       := PdfFile_OnChange;
@@ -234,12 +234,12 @@ begin
   try
     if Action = rgdpaConsentRequest then
     begin
-      GetPath.FileName   := RGPDUtils.GetPath(rgpdtTemplateConsent) + '*.DOTX';
+      GetPath.FileName   := RGPDUtils.GetRgpdPSoc(rgpdtTemplateConsent) + '*.DOTX';
       GetPath.Title      := 'Choix du modèle';
       GetPath.Filter     := '*.DOTX';
     end else
     begin
-      GetPath.FileName   := RGPDUtils.GetPath(rgpdtIncomingRequest) + '*.PDF';
+      GetPath.FileName   := RGPDUtils.GetRgpdPSoc(rgpdtIncomingRequest) + '*.PDF';
       GetPath.Title      := 'Choix de la demande';
       GetPath.Filter     := '*.PDF';
     end;
@@ -253,23 +253,47 @@ end;
 
 procedure TOF_BRGPDVALIDTRT.bInsert_OnClick(Sender: TObject);
 var
-  InputFilePath : string;
-  TableName     : string;
-  FieldsList    : string;
-  FieldsListSql : string;
-  Where         : string;
-  TobFields     : TOB;
+  InputFilePath  : string;
+  CodeFileNameL  : string;
+  TableName      : string;
+  FieldsList     : string;
+  FieldsListSql  : string;
+  FieldsList1    : string;
+  FieldsListSql1 : string;
+  Where          : string;
+  TobFields      : TOB;
+
+  procedure AddAdress(sTableName : string);
+  begin
+    Publipost.SetFieldsList(Publipost.GetPrefixFromTableName(TableName), sTableName, FieldsList1, FieldsListSql1);
+    Publipost.AddFieldsInTob(TobFields, sTableName, FieldsListSql1, Where, True);
+    FieldsList := FieldsList + ';' + FieldsList1;
+  end;
+
 begin
   TobFields := TOB.Create('', nil, -1);
   try
-    InputFilePath := IncludeTrailingPathDelimiter(RGPDUtils.GetPath(rgpdtTemplateConsent)) + 'NewDoc.doc';
+    InputFilePath := IncludeTrailingPathDelimiter(RGPDUtils.GetRgpdPSoc(rgpdtTemplateConsent)) + 'NewDoc.doc';
+    CodeFileNameL := CodeFileName;
     TableName     := RGPDUtils.GetTableNameFromPopulation(Population);
-    Where         := CodeFileName + '= "' + sCode + '"';
+    while CodeFileNameL <> '' do
+      Where := Where + ' AND ' + ReadTokenPipe(CodeFileNameL, '|') + ' = "' + ReadTokenPipe(sCode, '|') + '"';
+    Where := Copy(Where, 5, length(Where));
     Publipost.SetFieldsList(Publipost.GetPrefixFromTableName(TableName), TableName, FieldsList, FieldsListSql);
-    { Spécif pour les contacts, il faut trouver la 1ère adresse éventuellement associée }
-//    if Population = rgpdpContact then
-//      ;
     Publipost.AddFieldsInTob(TobFields, TableName, FieldsListSql, Where, True);
+    { Pour les contacts, il faut trouver la 1ère adresse éventuellement associée }
+    if (Population = rgpdpContact) then
+    begin
+      Where := StringReplace(Where, 'C_TIERS', 'ADR_REFCODE', [rfReplaceAll]);
+      Where := StringReplace(Where, 'C_NUMEROCONTACT', 'ADR_NUMEROCONTACT', [rfReplaceAll]);
+      AddAdress('ADRESSES');
+    end else
+    { Pour les utilisateurs, il faut trouver l'adresse associée au salarié si existe }
+    if (Population = rgpdpUser) then 
+    begin
+      Where := ' PSA_SALARIE = ' + Copy(Where, Pos('US_AUXILIAIRE', Where) + 16, Length(Where));
+      AddAdress('SALARIES');
+    end;
     Publipost.NewModel(InputFilePath, TobFields, FieldsList);
   finally
     FreeAndNil(TobFields);
@@ -279,4 +303,5 @@ end;
 Initialization
   registerclasses ( [ TOF_BRGPDVALIDTRT ] ) ;
 end.
+
 

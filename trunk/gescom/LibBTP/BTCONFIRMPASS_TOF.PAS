@@ -28,7 +28,7 @@ Uses StdCtrls,
      HEnt1,
      HMsgBox,
      LicUtil,
-     UTOF ;
+     UTOF;
 
 Type
   TOF_BTCONFIRMPASS = Class (TOF)
@@ -36,6 +36,9 @@ Type
   	TOBOMFG : TOB;
     IsDayPass : boolean;
     Irpt : integer;
+    ePwd : THEdit;
+    Complement : string;
+
   public
     procedure OnNew                    ; override ;
     procedure OnDelete                 ; override ;
@@ -47,20 +50,25 @@ Type
     procedure OnCancel                 ; override ;
   end ;
 
-function IsOkDayPass : Boolean;
+function IsOkDayPass(Complement : string='') : Boolean;
 
 Implementation
 
-function IsOkDayPass : Boolean;
-var OneTOB : TOB;
+uses
+  wCommuns
+  , UtilPGI
+  ;
+
+function IsOkDayPass(Complement : string='') : Boolean;
+var
+  OneTOB : TOB;
 begin
-  Result := false;
 	OneTOB := TOB.Create('UNE TOB',nil,-1);
   try
     OneTOB.AddChampSupValeur('RESULTAT','NOK');
     OneTOB.AddChampSupValeur('DAYPASS','YES');
     TheTOB := OneTOB;
-    AGLLanceFiche('BTP','BTCONFIRMPASS','','','');
+    AGLLanceFiche('BTP','BTCONFIRMPASS','','',iif(Complement <>'', 'COMPLEMENT=' + Complement, ''));
     TheTOB := nil;
     Result := (OneTOB.GetString('RESULTAT')='OK'); 
   finally
@@ -83,7 +91,7 @@ begin
   Inherited ;
   if (IsDayPass) then
   begin
-    if THEdit (GetControl('EPASSWORD')).Text <> DayPass(Now) then
+    if (THEdit(GetControl('EPASSWORD')).Text) <> (DayPass(Now) + Complement) then
     begin
     	THLabel(getCOntrol('TMESSAGEBAD')).visible := true;
     	THLabel(getCOntrol('TMESSAGEBAD')).Caption := 'Mot de passe invalide';
@@ -109,6 +117,9 @@ begin
   IsDayPass := TOBOMFG.fieldExists('DAYPASS');
   THLabel(getCOntrol('TMESSAGEBAD')).visible := false;
   Irpt :=0;
+  ePwd       := THEdit(GetControl('EPASSWORD'));
+  Complement := GetArgumentString(S, 'COMPLEMENT');
+  ePwd.MaxLength := iif(Complement = '', ePwd.MaxLength, 0);
 end ;
 
 procedure TOF_BTCONFIRMPASS.OnClose ;

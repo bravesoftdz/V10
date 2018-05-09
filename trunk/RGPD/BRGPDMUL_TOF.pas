@@ -40,15 +40,14 @@ function BLanceFiche_RGPDThirdMul(Nat, Cod, Range, Lequel, Argument: string): st
 type
   TOF_BRGPDMUL = class(tTOFComm)
   private
-    bOuvrir     : TToolbarButton97;
-    bSelectAll  : TToolbarButton97;
-    Action      : T_RGPDActions;
-    Population  : T_RGPDPopulation;
-    FListe      : THDBGrid;
-    TobRG2      : TOB;
-    TobRG3      : TOB;
-    PZoom       : TPopupMenu;
-    mnJnalEvent : TMenuItem;
+    bOuvrir          : TToolbarButton97;
+    bSelectAll       : TToolbarButton97;
+    RgpdPopulation   : T_RGPDPopulation;
+    FListe           : THDBGrid;
+    TobRG2           : TOB;
+    TobRG3           : TOB;
+    PZoom            : TPopupMenu;
+    mnJnalEvent      : TMenuItem;
     mnFormPopulation : TMenuItem;
 
     procedure bOuvrir_OnClick(Sender: TObject);
@@ -65,6 +64,10 @@ type
     procedure ConsentRequest(PathFile : string);
     procedure ConsentResponse(PathFile : string);
     procedure Zoom_OnClick(Sender : TObject);
+
+  protected
+    RgpdAction : T_RGPDActions;
+    IsConsent  : Boolean;
 
   public
     sPopulationCode : string;
@@ -129,26 +132,27 @@ procedure TOF_BRGPDMUL.OnArgument(S: string);
 begin
   inherited;
   fMulDeTraitement := True;
-  TobRG2 := TOB.Create('BRGPDTABLESL', nil, -1);
-  TobRG3 := TOB.Create('BRGPDTABLESL', nil, -1);
-  Action := RGPDUtils.GetActionFromCode(GetArgumentString(S, 'ACTION'));
-  Population       := RGPDUtils.GetPopulationFromCode(sPopulationCode);
+  TobRG2           := TOB.Create('BRGPDTABLESL', nil, -1);
+  TobRG3           := TOB.Create('BRGPDTABLESL', nil, -1);
+  RgpdAction       := RGPDUtils.GetActionFromCode(GetArgumentString(S, 'ACTION'));
+  RgpdPopulation   := RGPDUtils.GetPopulationFromCode(sPopulationCode);
   FListe           := THDBGrid(GetControl('FListe'));
   bOuvrir          := TToolbarButton97(GetControl('BOUVRIR'));
   bSelectAll       := TToolbarButton97(GetControl('BSELECTALL'));
   PZoom            := TPopupMenu(GetControl('PZOOM'));
   mnJnalEvent      := TMenuItem(GetControl('mnJnalEvent'));
   mnFormPopulation := TMenuItem(GetControl('mnFormPopulation'));
+  IsConsent        := ((RgpdAction = rgdpaConsentRequest) or (RgpdAction = rgdpaConsentResponse));
   bOuvrir.OnClick       := bOuvrir_OnClick;
   bOuvrir.Caption       := TraduireMemoire('Valider');
-  FListe.MultiSelection := (Action = rgdpaConsentRequest);
+  FListe.MultiSelection := (RgpdAction = rgdpaConsentRequest);
   FListe.OnDblClick     := FListe_OnDblClick;
-  TToolbarButton97(GetControl('BSELECTALL')).Visible := (Action = rgdpaConsentRequest);
+  TToolbarButton97(GetControl('BSELECTALL')).Visible := (RgpdAction = rgdpaConsentRequest);
   mnJnalEvent.Tag          := 0;
   mnJnalEvent.OnClick      := Zoom_OnClick;
   mnFormPopulation.Tag     := 1;
   mnFormPopulation.OnClick := Zoom_OnClick;
-  mnFormPopulation.Caption := RGPDUtils.GetLabelFromPopulation(Population);
+  mnFormPopulation.Caption := RGPDUtils.GetLabelFromPopulation(RgpdPopulation);
 end;
 
 procedure TOF_BRGPDMUL.OnClose;
@@ -175,24 +179,29 @@ var
   PathFile    : string;
   CanContinue : boolean;
 begin
-  if    (Action = rgdpaDataRectification)
-     or ((Action <> rgdpaDataRectification) and (PGIAsk('Veuillez confirmer le traitement.', Ecran.Caption) = mrYes))
+  if    (RgpdAction = rgdpaDataRectification)
+     or ((RgpdAction <> rgdpaDataRectification) and (PGIAsk('Veuillez confirmer le traitement.', Ecran.Caption) = mrYes))
   then
   begin
     CanContinue := True;
-    LastParam   := ';QUI=' + GetString(sFieldCode) + '~' + GetString(sFieldLabel) + '~' + GetString(sFieldLabel2nd) + ';CODEFILENAME=' + sFieldCode;
-    if Action = rgdpaConsentRequest then
+    LastParam   := ';QUI='
+                 + GetString(sFieldCode)
+                 + iif(GetString(sFieldCode2) <> '', '|' + GetString(sFieldCode2), '')
+                 + '~' + GetString(sFieldLabel)
+                 + '~' + GetString(sFieldLabel2nd)
+                 + ';CODEFILENAME=' + sFieldCode + iif(sFieldCode2 <> '', '|' + sFieldCode2, '');
+    if RgpdAction = rgdpaConsentRequest then
     begin
       CanContinue := ((TFMul(Ecran).FListe.nbSelected > 0) or (TFMul(Ecran).FListe.AllSelected));
       LastParam   := LastParam + ';QTE=' + IntToStr(TFMul(Ecran).FListe.nbSelected)
     end;
     if CanContinue then
     begin
-      Params := 'ORIGINE=' + RGPDUtils.GetCodeFromPopulation(Population) + ';ACTION=' + RGPDUtils.GetCodeFromAction(Action) + LastParam;
+      Params := 'ORIGINE=' + RGPDUtils.GetCodeFromPopulation(RgpdPopulation) + ';ACTION=' + RGPDUtils.GetCodeFromAction(RgpdAction) + LastParam;
       PathFile := BLanceFiche_RGPDValidTrt('BTP', frm_RGPDTrtValid, '', '', Params);
       if ReadTokenSt(PathFile) = 'OK' then
       begin
-        case Action of
+        case RgpdAction of
           rgpdaDataExport        : ExportDatas(GetArgumentString(PathFile, 'INPUT'));
           rgpdaAnonymization     : Anonymization(GetArgumentString(PathFile, 'INPUT'));
           rgdpaDataRectification : Rectification(GetArgumentString(PathFile, 'INPUT'));
@@ -207,50 +216,60 @@ end;
 
 procedure TOF_BRGPDMUL.FListe_OnDblClick(Sender : TObject);
 begin
-  if Action <> rgdpaConsentRequest then
+  if RgpdAction <> rgdpaConsentRequest then
     bOuvrir_OnClick(Self);
 end;
   
 procedure TOF_BRGPDMUL.LoadTobRG2;
 var
-  Sql: string;
+  Sql : string;
 begin
   TobRG2.ClearDetail;
   Sql := 'SELECT RG1_TABLENAME'
        + '     , RG1_KEY'
-       + iif(Population <> rgpdpContact, ', BRGPDTABLESL.*', '')
+       + iif(RgpdPopulation <> rgpdpContact, ', BRGPDTABLESL.*', '')
        + ' FROM BRGPDTABLESP'
-       + iif(Population <> rgpdpContact, ' LEFT JOIN BRGPDTABLESL ON RG2_IDRG1 = RG1_ID' + RGPDUtils.GetSqlTablesException, '')
-       + ' WHERE RG1_TABLENAME = "' + RGPDUtils.GetTableNameFromPopulation(Population) + '"';
+       + iif(RgpdPopulation <> rgpdpContact, ' LEFT JOIN BRGPDTABLESL ON RG2_IDRG1 = RG1_ID' + RGPDUtils.GetSqlTablesException, '')
+       + ' WHERE RG1_TABLENAME = "' + RGPDUtils.GetTableNameFromPopulation(RgpdPopulation) + '"';
   TobRG2.LoadDetailFromSQL(Sql);
 end;
 
 procedure TOF_BRGPDMUL.LoadTobRG3;
 var
-  Sql: string;
+  Sql : string;
 
   function GetWhere: string;
   begin
-    Result := ' WHERE RG1_TABLENAME = "' + RGPDUtils.GetTableNameFromPopulation(Population) + '"';
-    case Action of
-      rgpdaDataExport:
-        Result := Result + ' AND RG3_EXPORT = "X"';
-      rgpdaAnonymization:
-        Result := Result + ' AND RG3_RESET  = "X"';
+    Result := ' WHERE RG1_TABLENAME = "' + RGPDUtils.GetTableNameFromPopulation(RgpdPopulation) + '"';
+    case RgpdAction of
+      rgpdaDataExport    : Result := Result + ' AND RG3_EXPORT = "X"';
+      rgpdaAnonymization : Result := Result + ' AND RG3_RESET  = "X"';
     end;
   end;
 
 begin
   TobRG3.ClearDetail;
-  Sql := 'SELECT 1 AS SORT, BRGPDCHAMPS.*, DH_LIBELLE' + ' FROM BRGPDTABLESP' + ' JOIN BRGPDCHAMPS ON RG3_TABLENAME = RG1_TABLENAME' + ' JOIN DECHAMPS    ON DH_NOMCHAMP   = RG3_FIELDNAME' + GetWhere + 'UNION ' + 'SELECT 2 AS SORT, BRGPDCHAMPS.*, DH_LIBELLE' + ' FROM BRGPDTABLESP' + ' JOIN BRGPDTABLESL ON RG2_IDRG1     = RG1_ID' + ' JOIN BRGPDCHAMPS  ON RG3_TABLENAME = RG2_NOMTABLE' + ' JOIN DECHAMPS     ON DH_NOMCHAMP   = RG3_FIELDNAME' + GetWhere;
+  Sql := 'SELECT 1 AS SORT'
+       + '     , BRGPDCHAMPS.*'
+       + '     , DH_LIBELLE'
+       + ' FROM BRGPDTABLESP'
+       + ' JOIN BRGPDCHAMPS ON RG3_TABLENAME = RG1_TABLENAME'
+       + ' JOIN DECHAMPS    ON DH_NOMCHAMP   = RG3_FIELDNAME' + GetWhere
+       + 'UNION '
+       + 'SELECT 2 AS SORT, BRGPDCHAMPS.*, DH_LIBELLE'
+       + ' FROM BRGPDTABLESP'
+       + ' JOIN BRGPDTABLESL ON RG2_IDRG1     = RG1_ID'
+       + ' JOIN BRGPDCHAMPS  ON RG3_TABLENAME = RG2_NOMTABLE'
+       + ' JOIN DECHAMPS     ON DH_NOMCHAMP   = RG3_FIELDNAME'
+       + GetWhere;
   Sql := Sql + ' ORDER BY SORT, RG3_TABLENAME, RG3_FIELDNAME';
   TobRG3.LoadDetailFromSQL(Sql);
 end;
 
 function TOF_BRGPDMUL.GetWhereTablesL(Where, FieldName: string): string;
 var
-  Value: string;
-  ValueLength: Integer;
+  Value       : string;
+  ValueLength : Integer;
 begin
   Result := Where;
   Value  := '|' + FieldName + '|';
@@ -262,8 +281,6 @@ begin
       Result := Copy(Result, 1, Pos(Value, Result) - 1) + GetString(FieldName) + Copy(Result, Pos(Value, Result) + ValueLength, Length(Result));
     end;
   end;
-//  else
-//    Result := OrigValue;
 end;
 
 function TOF_BRGPDMUL.GetSelectedFieldsFromTable(TableName: string): string;
@@ -293,7 +310,7 @@ procedure TOF_BRGPDMUL.InsertJnal(PathFile : string; AdditionalInformation : str
 var
   InfoJnal : string;
 begin
-  InfoJnal := RGPDUtils.GetLabelFromPopulation(Population)
+  InfoJnal := RGPDUtils.GetLabelFromPopulation(RgpdPopulation)
             + ' '
             + GetString(sFieldCode)
             + iif(GetString(sFieldCode2)    <> '', ' - ' + GetString(sFieldCode2), '')
@@ -301,7 +318,7 @@ begin
             + iif(GetString(sFieldLabel2nd) <> '', ' ' + GetString(sFieldLabel2nd), '')
             + iif(AdditionalInformation     <> '', ' - ' + AdditionalInformation, '')
             ;
-  MAJJnalEvent(RGPDCodeJnal, 'OK', RGPDUtils.GetLabelFromAction(Action), InfoJnal, PathFile);
+  MAJJnalEvent(RGPDCodeJnal, 'OK', RGPDUtils.GetLabelFromAction(RgpdAction), InfoJnal, PathFile);
 end;
 
 procedure TOF_BRGPDMUL.ExportDatas(PathFile : string);
@@ -487,7 +504,7 @@ var
   OkUpdate : string;
   Return   : string;  
 begin
-  case Population of
+  case RgpdPopulation of
     rgpdpThird    : begin
                       Return   := GetString('T_TIERS');
                       OkUpdate := OpenForm.CliPro(GetString('T_AUXILIAIRE'), GetString('T_NATUREAUXI'));
@@ -533,7 +550,7 @@ var
     CptValues   : integer;
     PosV        : integer;
   begin
-    case Population of
+    case RgpdPopulation of
       rgpdpThird    : FieldValue := Fliste.DataSource.DataSet.FindField('T_TIERS').AsString;
       rgpdpResource : FieldValue := Fliste.DataSource.DataSet.FindField('ARS_RESSOURCE').AsString;
       rgpdpUser     : FieldValue := Fliste.DataSource.DataSet.FindField('US_UTILISATEUR').AsString;
@@ -545,7 +562,7 @@ var
     MoveCurProgressForm(Format('%s (%s/%s)', [FieldValue, IntToStr(Cpt + 1), IntToStr(NbSelected + 1)]));
     FileName := IncludeTrailingBackslash(PathFiles)
               + FormatDateTime('yyyymmdd',Date)
-              + '_' + RGPDUtils.GetLabelFromPopulation(Population)
+              + '_' + RGPDUtils.GetLabelFromPopulation(RgpdPopulation)
               + '_' + FieldValue + '.DOC';;
     if pos('|V1|', FieldKey) = 0 then
       Where := FieldKey + '"' + FieldValue + '"'
@@ -556,13 +573,27 @@ var
       FieldValues := FieldValue;
       while FieldValues <> '' do
       begin
-         Inc(CptValues);
+         Inc(CptValues);                                                                                   
          Value := ReadTokenPipe(FieldValues, '-');
          PosV  := Pos('|V' + IntToStr(Cptvalues), Where) - 1;
          Where := Copy(Where, 1, PosV) + Value + Copy(Where, PosV + 5, Length(Where));
       end;
     end;
-    Publipost.MergeExecute(RGPDUtils.GetTableNameFromPopulation(Population), Where, TemplateDoc, FileName);
+    { Pour les contacts, il faut trouver l'éventuelle 1ère adresse associée si demandé }
+    if (RgpdPopulation = rgpdpContact) then
+      RGPDUtils.MergExecuteContactAndAdressFromContact(Fliste.DataSource.DataSet.FindField('C_TIERS').AsString
+                                                     , Fliste.DataSource.DataSet.FindField('C_NUMEROCONTACT').AsInteger
+                                                     , TemplateDoc
+                                                     , FileName
+                                                     )
+    { Pour les utilisateurs, il faut trouver l'adresse du salarié associée si existe }
+    else if (RgpdPopulation = rgpdpUser) then
+      RGPDUtils.MergExecuteUtilisatAndAdressFromSalarie(Fliste.DataSource.DataSet.FindField('US_UTILISATEUR').AsString
+                                                      , TemplateDoc
+                                                      , FileName
+                                                      )
+    else
+      Publipost.MergeExecute(RGPDUtils.GetTableNameFromPopulation(RgpdPopulation), Where, TemplateDoc, FileName);
     InsertJnal(FileName);
   end;
 
@@ -574,7 +605,7 @@ begin
   try
     TemplateDoc := GetArgumentString(PathFile, 'INPUT');
     PathFiles   := GetArgumentString(PathFile, 'OUTPUT');
-    case Population of
+    case RgpdPopulation of
       rgpdpThird    : FieldKey := ' T_TIERS = ';
       rgpdpResource : FieldKey := ' ARS_RESSOURCE = ';
       rgpdpUser     : FieldKey := ' US_UTILISATEUR = ';
@@ -627,13 +658,11 @@ begin
   PGIInfo('Réponse enregistrée.', Ecran.Caption);
 end;
 
-
-
 procedure TOF_BRGPDMUL.Zoom_OnClick(Sender: TObject);
 begin
   case THMenuItem(Sender).Tag of
-    {JnalEvent}  0 : OpenForm.JnalEvent('TYPEEVENT=RGP;LABEL=' + RGPDUtils.GetLabelFromAction(Action));
-    {Zoom fiche} 1 : case Population of
+    {JnalEvent}  0 : OpenForm.JnalEvent('TYPEEVENT=RGP;LABEL=' + RGPDUtils.GetLabelFromAction(RgpdAction));
+    {Zoom fiche} 1 : case RgpdPopulation of
                        rgpdpThird    : OpenForm.CliPro(GetString('T_AUXILIAIRE'), GetString('T_NATUREAUXI'), '', True);
                        rgpdpUser     : OpenForm.User(GetString('US_UTILISATEUR'), True);
                        rgpdpResource : OpenForm.Resource(GetString('ARS_RESSOURCE'), '', 'ORIGINE=RGP', True);

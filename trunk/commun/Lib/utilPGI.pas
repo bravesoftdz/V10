@@ -303,6 +303,7 @@ function RepertoireExiste (LeRepertoire :string; bCreation : boolean = false) : 
 function FormatNumVersion(const Mask: String): String;
 {$ENDIF !EAGLSERVER}
 function GetMyTempPath : string;
+function GetMyComputerName : string;
 
 implementation
                 
@@ -4514,6 +4515,16 @@ function GetMyTempPath : string;
 begin
   GetTempPath(Sizeof(Buffer)-1,Buffer);
   SetString(Result, Buffer, StrLen(Buffer));
+end;
+
+function GetMyComputerName : string;
+var
+  ComputerName : array[0..MAX_COMPUTERNAME_LENGTH] of Char;
+  nSize        : DWord;
+begin
+  nSize := SizeOf(ComputerName);
+  GetComputerName(@ComputerName, nSize);
+  Result := ComputerName;
 end;
 
 Initialization

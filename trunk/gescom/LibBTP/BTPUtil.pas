@@ -5358,7 +5358,7 @@ begin
   FieldsList    := '';
   Sql := 'SELECT DH_NOMCHAMP,DH_LIBELLE'
        + ' FROM DECHAMPS'
-       + ' WHERE DH_PREFIXE = (SELECT DT_PREFIXE FROM DETABLES WHERE DT_NOMTABLE = "' + TableName + '") AND DH_CONTROLE LIKE "%W%"'
+       + ' WHERE DH_PREFIXE IN (SELECT DT_PREFIXE FROM DETABLES WHERE DT_NOMTABLE IN ("' + TableName + '")) AND DH_CONTROLE LIKE "%W%"'
        ;
 	Qry := OpenSql(Sql, True, 0, '', True);
   try
