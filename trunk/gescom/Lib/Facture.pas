@@ -7391,14 +7391,14 @@ begin
       end;
     end else
     begin
-      if copy(TOBL.GetString('GL_TYPELIGNE'),1,2)='DP' then
+      if (copy(TOBL.GetString('GL_TYPELIGNE'),1,2)='DP') or (copy(TOBL.GetString('GL_TYPELIGNE'),1,2)='DV') then
       begin
         Result := (ACol = SG_NUMAUTO) or (ACol = SG_Lib) ;
       end else
       begin
-      Result := ((ACol = SG_ContreM) or (ACol = SG_RefArt) or (ACol = SG_Lib) or (ACol = SG_DateLiv) or (ACol = Sg_Folio) or ((ACol = SG_Motif) and (TypeDim =
-        'GEN')));
-    end;
+        Result := ((ACol = SG_ContreM) or (ACol = SG_RefArt) or (ACol = SG_Lib) or (ACol = SG_DateLiv) or (ACol = Sg_Folio) or ((ACol = SG_Motif) and (TypeDim =
+          'GEN')));
+      end;
     end;
     {$ENDIF} // FIN CHR
   end else

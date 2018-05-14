@@ -554,7 +554,7 @@ begin
   
   TRY
     if (TOBImp.getValue('TYPE') = fTypeInfo) then
-  BEGIN
+    BEGIN
       if IsSousDetail(TOBL) then
       begin
         // Phase de controle
@@ -578,66 +578,66 @@ begin
         end;
       end else
       begin
-    For Indice :=0 to TOBImp.detail.count -1 do
-    begin
-      TOBLoc := TOBImp.detail[Indice];
-      if FIrstPass then
-      begin
-        DepartIns := Arow;
-        FirstPass := false;
+        For Indice :=0 to TOBImp.detail.count -1 do
+        begin
+          TOBLoc := TOBImp.detail[Indice];
+          if FIrstPass then
+          begin
+            DepartIns := Arow;
+            FirstPass := false;
+          end;
+          AjouteLigneImport (TOBLoc,Niveau,Arow,SauteAFinPar,ArticleNonOk);
+          FinIns := Arow;
+        end;
       end;
-      AjouteLigneImport (TOBLoc,Niveau,Arow,SauteAFinPar,ArticleNonOk);
-      FinIns := Arow;
     end;
-  end;
-    end;
-  if ArticleNonOk then TFFacture(fform).HPiece.Execute(44,TFFacture(fform).Caption,'') ;
-  Arow := SavRow;
+    if ArticleNonOk then TFFacture(fform).HPiece.Execute(44,TFFacture(fform).Caption,'') ;
+    Arow := SavRow;
   //NumeroteLignesGC(nil,TOBpiece);
     if ColleinSousDetail then
     begin
-      TFFacture(fform).SuppressionDetailOuvrage(TOBLignedoc.getIndex+1,true); 
+      TFFacture(fform).SuppressionDetailOuvrage(TOBLignedoc.getIndex+1,true);
     end;
-  if TOBLR.detail.count > 0 then
-  begin
-    Indice := 0;
-    repeat
-      TOBDLR := TOBLR.detail[Indice];
-      TOBL := FindLigne(TOBDLR.getValue('NUMORDRE'));
-      if TOBL <> nil then
-      begin
-        Localisation := TOBL.getIndex;
-          LoadLesLibDetOuvLig (TOBPIece,TOBOuvrage,TOBTiers,TOBAffaire,TOBL,nil,Localisation,DEV, TheMetredoc,TFFacture(fform).AffSousDetailUnitaire);
-        ZeroLigneMontant (TOBL);
-      end;
-      TOBDLR.free;
-    until TOBLR.detail.count = 0;
-    //
-  end;
-  JustNumerote (TObpiece,DepartIns-1);
+    if TOBLR.detail.count > 0 then
+    begin
+      Indice := 0;
+      repeat
+        TOBDLR := TOBLR.detail[Indice];
+        TOBL := FindLigne(TOBDLR.getValue('NUMORDRE'));
+        if TOBL <> nil then
+        begin
+          Localisation := TOBL.getIndex;
+            LoadLesLibDetOuvLig (TOBPIece,TOBOuvrage,TOBTiers,TOBAffaire,TOBL,nil,Localisation,DEV, TheMetredoc,TFFacture(fform).AffSousDetailUnitaire);
+          ZeroLigneMontant (TOBL);
+        end;
+        TOBDLR.free;
+      until TOBLR.detail.count = 0;
+      //
+    end;
+    JustNumerote (TObpiece,DepartIns-1);
     for II := Arow to FinIns do
     begin
       TTNUMP.SetInfoLigne (TOBPiece,II);
     end;
   //
-  if TOBPiece.Detail.Count>=fgrid.RowCount-1 then
-  begin
-    fgrid.RowCount:=TOBPiece.Detail.Count+2 ;
-  end;
-  TOBPiece.putValue('GP_RECALCULER','X');
-  TFFacture(FForm).CalculeLaSaisie (-1,-1,false,true,DepartIns,FinIns);
-  // --
-  TFFacture(FForm).GS.BeginUpdate;
-  for indice := DepartIns to TOBPiece.Detail.Count - 1 do TFFacture(FForm).AfficheLaLigne(Indice + 1);
-  TFFacture(FF).GoToLigne(SavRow,SavCol);
-  fGrid.row := SavRow;
-  fGRid.col := SavCol;
-  fgrid.refresh;
-  deselectionneRows;
-  TFFacture(FForm).GS.EndUpdate;
-  TFFacture(FForm).AfficheLaLigne(fgrid.row);
-  TFFacture(fform).GoToLigne (SavRow,SavCol);
-  TFFacture(fform).PosValueCell (fgrid.Cells[SavCol,SavRow]) ;
+    if TOBPiece.Detail.Count>=fgrid.RowCount-1 then
+    begin
+      fgrid.RowCount:=TOBPiece.Detail.Count+2 ;
+    end;
+    TOBPiece.putValue('GP_RECALCULER','X');
+    TFFacture(FForm).CalculeLaSaisie (-1,-1,false,true,DepartIns,FinIns);
+    // --
+    TFFacture(FForm).GS.BeginUpdate;
+    for indice := DepartIns to TOBPiece.Detail.Count - 1 do TFFacture(FForm).AfficheLaLigne(Indice + 1);
+    TFFacture(FF).GoToLigne(SavRow,SavCol);
+    fGrid.row := SavRow;
+    fGRid.col := SavCol;
+    fgrid.refresh;
+    deselectionneRows;
+    TFFacture(FForm).GS.EndUpdate;
+    TFFacture(FForm).AfficheLaLigne(fgrid.row);
+    TFFacture(fform).GoToLigne (SavRow,SavCol);
+    TFFacture(fform).PosValueCell (fgrid.Cells[SavCol,SavRow]) ;
   FINALLY
     TOBIMP.free;
     TOBLR.ClearDetail;
@@ -2039,7 +2039,7 @@ begin
      exit;
      end;
   if Acol < fgrid.FixedCols then Acol := fgrid.fixedCols;
-  PositionneCell(Acol,Arow);
+//  PositionneCell(Acol,Arow);
 //  TFfacture(FF).GoToLigne(RowOri,ColOri);
   if TFFacture(fform).Action = TaConsult then MenuEnabled (false)
                                          else MenuEnabled (true);
