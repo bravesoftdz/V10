@@ -669,7 +669,7 @@ begin
   begin
     if VersionBaseDest < '998.ZZZY' then
     begin
-      ExecuteSQL('UPDATE BTRESSOURCE SET BRS_GERECHANTIER="-" WHERE BRS_GERECHANTIER IS NULL');
+      ExecuteSQL('UPDATE BTRESSOURCE SET BRS_GERECHANTIER="X" WHERE BRS_GERECHANTIER IS NULL');
     end;
   end else if NomTable ='UTILISAT' then
   begin
