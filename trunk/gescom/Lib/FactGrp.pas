@@ -4285,21 +4285,31 @@ BEGIN
       	 (GenereMode = 'CBTTOLIVC') or (GenereMode = 'FACCONSO') or (genereMode ='CCTOLIVCLI') or
          (GenereMode = 'FACDETAILCONSO') or (GenereMode = 'DEVTOCTE')  then
          begin
-      	 if (GenereMode = 'FACDETAILCONSO') or
-          	(genereMode = 'FACCONSO') then
-            Intervention := true
-         else
-            Intervention := false;
-				 G_LigneCommentaireBTP (newTOBP,TOBL,true,Intervention);
-    	   G_LigneCommentaireNumBon (newTOBP,TOBL,true,True);
+           if (GenereMode = 'FACDETAILCONSO') or
+              (genereMode = 'FACCONSO') then
+              Intervention := true
+           else
+              Intervention := false;
+           if TOBL.GetString('NUMBON')<> '' then
+           begin
+            G_LigneCommentaireNumBon (newTOBP,TOBL,true,True);
+           end else
+           begin
+            G_LigneCommentaireBTP (newTOBP,TOBL,true,Intervention);
+           end;
          end;
     end;
 
 {$IFDEF BTP}
 		if (GenereMode = 'FACCONSO') and (TOBL.GetValue('GL_AFFAIRE')<>LastAffaire) then
     begin
-    	G_LigneCommentaireBTP (newTOBP,TOBL,true,True);
-    	G_LigneCommentaireNumBon (newTOBP,TOBL,true,True);
+      if TOBL.GetString('NUMBON')<> '' then
+      begin
+    	  G_LigneCommentaireNumBon (newTOBP,TOBL,true,True);
+      end else
+      begin
+    	  G_LigneCommentaireBTP (newTOBP,TOBL,true,True);
+      end;
       LastAffaire := TOBL.GetValue('GL_AFFAIRE');
     end;
 

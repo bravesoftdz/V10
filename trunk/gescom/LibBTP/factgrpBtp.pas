@@ -471,11 +471,7 @@ BEGIN
   NewL.PutValue('GL_NUMORDRE', 0) ;
   PieceVersLigne (TOBPiece,Newl);
 
-  RefP:= 'Bon N° '+TOBL.GetString('NUMBON');
-  if TOBL.GetValue('GL_AFFAIRE')<> '' then
-  begin
-    RefP := RefP + ' Appel : '+ BTPCodeAffaireAffiche(TOBL.GetValue('GL_AFFAIRE'));
-  end;
+  RefP:= 'Bon N° '+TOBL.GetString('NUMBON')+ ' du ' + DateToStr(TOBL.GetValue('GL_DATELIVRAISON'));
   RefP:=Copy(RefP,1,70) ;
   NewL.PutValue('GL_LIBELLE',RefP)    ; NewL.PutValue('GL_TYPELIGNE','COM') ;
   NewL.PutValue('GL_TYPEDIM','NOR')   ; NewL.PutValue('GL_CODEARTICLE','') ;
