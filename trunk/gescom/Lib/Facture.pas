@@ -5473,6 +5473,8 @@ begin
     taCreat:
       begin
         InitEnteteDefaut(True);
+        //FV1 : 04/04/2018 - FS#2955 - DSA - Ne pas pouvoir éditer un document si en création ou modif mais que ce dernier n'est pas créé
+        Bimprimer.visible := False;
         // pour definition des champs sup
         MemoriseChampsSupLigneETL (NewNature,true);
   			MemoriseChampsSupLigneOUV (NewNature);
@@ -5486,6 +5488,8 @@ begin
       end;
     taModif:
       begin
+        //FV1 : 04/04/2018 - FS#2955 - DSA - Ne pas pouvoir éditer un document si en création ou modif mais que ce dernier n'est pas créé
+        Bimprimer.visible := True;
   			if fmodeAudit then fAuditPerf.Debut('Mémorisation structures lignes');
         MemoriseChampsSupLigneETL (cledoc.NaturePiece,true);
   			MemoriseChampsSupLigneOUV (cledoc.NaturePiece);
