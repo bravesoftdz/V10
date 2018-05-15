@@ -271,7 +271,7 @@ BEGIN
       DeflagerFactureOrigine(TOBPiece);
 
     //Réinitialisation Conso dans le cas d'un appel
-    if (STATUT = 'APP') or (Statut = 'GRP') then AnnulConso(TobPiece);
+    if (Statut='W') or (STATUT = 'APP') or (Statut = 'GRP') then AnnulConso(TobPiece);
 
 	  SupFactPro(Tobpiece);
 
