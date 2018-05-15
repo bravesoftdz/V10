@@ -971,7 +971,7 @@ begin
     end;
   end;
   //
-  TOBMOI.detail.Sort('TYPELIGNE;BM8_PHASETRA;BM8_FAMILLENIV2');
+  // TOBMOI.detail.Sort('TYPELIGNE;BM8_PHASETRA;BM8_FAMILLENIV2');
   //
 end;
 
@@ -2878,11 +2878,11 @@ procedure TOF_BSAISIEAVANCPOC.RecupereConsos;
   begin
     TF := CreTOBLigne;
     TF.SetDateTime('DATEMVT',TL.GetDateTime('BCO_DATEMOUV'));
-    TF.SetString('CODEARTICLE',TL.GetString('BCO_DATEMOUV'));
+    TF.SetString('CODEARTICLE',TL.GetString('BCO_CODEARTICLE'));
     TF.SetString('LIBELLE',TL.GetString('BCO_LIBELLE'));
-    TF.SetString('QUANTITE',TL.GetString('BCO_QUANTITE'));
-    TF.SetString('PUACH',TL.GetString('BCO_DPA'));
-    TF.SetString('MONTANTACH',TL.GetString('BCO_MONTANTACH'));
+    TF.SetDouble('QUANTITE',TL.Getdouble('BCO_QUANTITE'));
+    TF.SetDouble('PUACH',TL.GetDouble('BCO_DPA'));
+    TF.SetDouble('MONTANTACH',TL.GetDouble('BCO_MONTANTACH'));
     TF.ChangeParent(TOBHP,-1);
   end;
 
