@@ -235,6 +235,7 @@ Type
     procedure BeforeUpdate;
     procedure UpdateDatas;
     procedure SetInConsultation;
+    function GetEmplacementLigne(TheType, CurrentPhase, FamilleNiv2: string): TOB;
   end ;
 
 Implementation
@@ -697,6 +698,46 @@ begin
   until TheLast = nil;
 end;
 
+function TOF_BSAISIEAVANCPOC.GetEmplacementLigne (TheType,CurrentPhase,FamilleNiv2 : string) : TOB;
+var ThePhase,TheTOBP,TheCUrr : TOB;
+    II : Integer;
+begin
+  Result := nil;
+  if TheTYpe = '000' then
+  begin
+    TheTOBP := TOBPP;
+    ThePhase := TOBPP.FindFirst(['BM8_PHASETRA'],[CurrentPhase],true)
+  end else if TheTYpe = '001' then
+  begin
+    TheTOBP := TOBMOI;
+    ThePhase := TOBMOI.FindFirst(['BM8_PHASETRA'],[CurrentPhase],true)
+  end else if TheTYpe = '002' then
+  begin
+    TheTOBP := TOBFI;
+    ThePhase := TOBFI.FindFirst(['BM8_PHASETRA'],[CurrentPhase],true)
+  end else if TheTYpe = '003' then
+  begin
+    TheTOBP := TOBST;
+    ThePhase := TOBST.FindFirst(['BM8_PHASETRA'],[CurrentPhase],true);
+  end;
+  if ThePhase = nil Then exit;
+  for II := ThePhase.GetIndex+1 to TheTOBP.detail.count -1 do
+  begin
+    TheCUrr := TheTOBP.detail[II];
+    if (TheCUrr.GetString('BM8_PHASETRA')<>CurrentPhase) and (TheCUrr.GetString('BM8_PHASETRA')<>'') then
+    begin
+      result := TheCurr;
+      break;
+    end;
+    if (TheCUrr.GetString('BM8_FAMILLENIV2') > FamilleNiv2) then
+    begin
+      result := TheCurr;
+      break;
+    end;
+  end;
+end;
+
+
 procedure TOF_BSAISIEAVANCPOC.ConstitueLesTOBS (TTS,TTD,TTL,TTOP : TOB);
 
   procedure AddChampsTOBNiv (TN : TOB);
@@ -791,7 +832,13 @@ procedure TOF_BSAISIEAVANCPOC.ConstitueLesTOBS (TTS,TTD,TTL,TTOP : TOB);
       TF.SetString('NEWONE','-');
       if not IsParagraphe(TL) then
       begin
-        TP := FindEmplacementLigne (TheType,CurrentPhase);
+        if TheType <>'003' then
+        begin
+          TP := GetEmplacementLigne (TheType,CurrentPhase,TF.GetString('BM8_FAMILLENIV2'));
+        end else
+        begin
+          TP := FindEmplacementLigne (TheType,CurrentPhase) ;
+        end;
         if TP = nil then Index := -1
                     else Index := TP.GetIndex+1;
       end else
@@ -825,9 +872,15 @@ procedure TOF_BSAISIEAVANCPOC.ConstitueLesTOBS (TTS,TTD,TTL,TTOP : TOB);
       TF.SetString('BM8_UNITE','');
       TF.SetInteger('NIVEAU',NiveauImbric+1);
       TF.SetString('NEWONE','-');
-      TP := FindEmplacementLigne (TheType,CurrentPhase) ;
+      if TheType <>'003' then
+      begin
+        TP := GetEmplacementLigne (TheType,CurrentPhase,TF.GetString('BM8_FAMILLENIV2'));
+      end else
+      begin
+        TP := FindEmplacementLigne (TheType,CurrentPhase) ;
+      end;
       if TP = nil then Index := -1
-                  else Index := TP.GetIndex+1;
+                  else Index := TP.GetIndex;
       if TheType = '000' then TF.Changeparent(TOBPP,Index)
       else if TheType = '001' then TF.Changeparent(TOBMOI,Index)
       else if TheType = '002' then TF.Changeparent(TOBFI,Index)
@@ -2913,9 +2966,16 @@ procedure TOF_BSAISIEAVANCPOC.RecupereConsos;
       TF.SetString('NEWONE','-');
       if not IsParagraphe(TL) then
       begin
-        TP := FindEmplacementLigne (TheType,CurrentPhase);
+        if TheType <>'003' then
+        begin
+          TP := GetEmplacementLigne (TheType,CurrentPhase,TF.GetString('BM8_FAMILLENIV2'));
+        end else
+        begin
+          TP := FindEmplacementLigne (TheType,CurrentPhase) ;
+        end;
+//        TP := FindEmplacementLigne (TheType,CurrentPhase);
         if TP = nil then Index := -1
-                    else Index := TP.GetIndex+1;
+                    else Index := TP.GetIndex;
       end else
       begin
         Index := -1;
