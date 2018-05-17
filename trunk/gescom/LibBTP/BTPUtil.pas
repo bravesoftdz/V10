@@ -3609,8 +3609,11 @@ begin
         If TheModele = '' Then TheModele := ImpressionViaTOB.GetModeleAssocie(Modele);
         if TheModele = '' then break;
         UneTOB := ImpressionViaTOB.TOBAIMPRIMER;
-        if LanceEtatTOB ('E','GPJ',TheModele,UneTOB,Bapercu,false,false,nil,'','',false) < 0 then
-        V_PGI.IoError:=oeUnknown ;
+        Try
+          if LanceEtatTOB ('E','GPJ',TheModele,UneTOB,Bapercu,false,false,nil,'','',false) < 0 then V_PGI.IoError:=oeUnknown ;
+        except
+          V_PGI.IoError:=oeUnknown ;
+        end;
       end;
     Until (Not RelancerEtat) or (V_PGI.IoError=oeUnknown);
   End;
