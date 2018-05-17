@@ -1598,6 +1598,7 @@ begin
     //
     TOBNL.SetInteger('NUMTRANSFERT',TOBTRFPOC.GetInteger('BT2_UNIQUE'));
     TOBNL.SetInteger('GL_NIVEAUIMBRIC',TOBPAR.getInteger('GL_NIVEAUIMBRIC'));
+    TOBNL.SetString('GL_LIBELLE',TOBT.GetString('LIBELLE'));
     TOBNL.SetDouble('GL_QTEFACT',TOBT.GetDouble('QTE'));
     TOBNL.SetDouble('GL_QTERESTE',TOBT.GetDouble('QTE'));
     TOBNL.SetDouble('GL_QTESTOCK',TOBT.GetDouble('QTE'));

@@ -62,6 +62,8 @@ type
        StSQL : string;
        StTiers : string ;  // renseigné qd appel des contacts depuis GCTIERS (rend les boutons GRC actifs)
        CodeTiers : string; // pr MAJ c_tiers en création de contact
+       Origin : string;
+       IsModify : Boolean;
 {$ifdef GIGI}
        CodeAuxiliaire : string; // mcd 07/09/2006 12599
          TobValTiers:tob;
@@ -186,6 +188,7 @@ Uses SysUtils, HCtrls, HEnt1,HDB,
      ,UtilAlertes,YAlertesConst,Entpgi,BtpUtil,HrichOle
    ,CbpMCD
    ,CbpEnumerator
+   , HPanel
 ;
 function GetAllSelectFields(TableN : String) : String ;
 var
@@ -324,6 +327,7 @@ FromSaisie:=False;
 StTiers:='';
 bComplement:=false;
 bAnnuaire:=false;
+Origin := GetArgumentString(Arguments, 'ORIGIN');
 Repeat
    Critere:=uppercase(Trim(ReadTokenSt(Arguments))) ;
    if Critere<>'' then
@@ -730,6 +734,7 @@ inherited;
   TOBCONTACTBTP.SetString('BC1_NUMEROCONTACT',GetField ('C_NUMEROCONTACT'));
   TOBCONTACTBTP.SetAllModifie(true);
   TOBCONTACTBTP.InsertOrUpdateDB(false);
+  IsModify := (Origin = 'RGPD');
 end;
 
 // Initialisation du n° de contact
@@ -939,6 +944,11 @@ if (ctxscot in V_PGI.PgiContexte) and (ecran<>Nil)and (Guidper <>'' )then      /
   FindContactBTP (GetField('C_TYPECONTACT'),GetField('C_AUXILIAIRE'),GetField('C_NUMEROCONTACT'));
   TOBCONTACTBTP.PutEcran(ecran);
   SetEvents (true);
+  if Origin = 'RGPD' then
+  begin
+    THGrid(GetControl('FLISTE')).Enabled := False;
+    SetControlVisible('BDelete', False);
+  end;
 end;
 
 procedure TOM_CONTACT.OnClose ;
@@ -980,6 +990,13 @@ if GetField('C_AUXILIAIRE')<>'' then
    TFSaisieList(Ecran).Retour:= GetField('C_TYPECONTACT')+';'+GetField('C_AUXILIAIRE')+';'+IntToStr(GetField('C_NUMEROCONTACT'));
 {$ENDIF}
   if Assigned( AlerteInitTob) then AlerteInitTob.free;
+  if Origin = 'RGPD' then
+  begin
+    if IsModify then
+      TFSaisieList(Ecran).Retour := GetField('C_TYPECONTACT')+';'+GetField('C_AUXILIAIRE')+';'+IntToStr(GetField('C_NUMEROCONTACT'))
+    else
+      TFSaisieList(Ecran).Retour := '';
+  end;
 end;
 
 procedure TOM_CONTACT.OnChangeField(F: TField);

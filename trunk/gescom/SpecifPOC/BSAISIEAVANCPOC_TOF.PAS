@@ -44,6 +44,7 @@ const
    stLigMOI = 'IND;TYPELIGNE;BM8_PHASETRA;BM8_FAMILLENIV2;BM8_LIBELLE;BM8_QTEMARCHE;BM8_UNITE;BM8_RADQTE;SUMQTECONSO;BM8_POURCENTAVANC;'; // Main d'oeuvre indirecte
    stLigFI  = 'IND;TYPELIGNE;BM8_PHASETRA;BM8_FAMILLENIV2;BM8_LIBELLE;BM8_QTEMARCHE;BM8_UNITE;BM8_RADQTE;BM8_RADPU;BM8_RADMT;MTAVANCCALC;SUMQTECONSO;DEPENSECUMUL;ECARTDEPENSE;'; // Frais indirect
    stLigST  = 'IND;TYPELIGNE;BM8_PHASETRA;BM8_CODEMARCHE;BM8_LIBELLE;BM8_QTEMARCHE;BM8_UNITE;PU;DEPENSECUMUL;DEPENSEESTIME;POURCENTCALC;BM8_POURCENTAVANC;MTAVANCCORRIGE;ECARTDEPENSE;'; // Sous-traitance
+   stLigHP  = 'IND;DATEMVT;CODEARTICLE;LIBELLE;QUANTITE;PUACH;MONTANTACH;'; // hors phase
    STAVANCSQL = 'SELECT BAVANCTECHDET.*, '+
                 '0 AS PU,'+
                 '0 AS QTEAVANC,'+
@@ -57,6 +58,12 @@ const
                 '0 AS DEPENSECUMUL,'+
                 '0 AS MTAVANCCORRIGE,'+
                 '"LIG" AS TYPELIGNE,'+
+                '"" AS DATEMVT,'+
+                '"" AS CODEARTICLE,'+
+                '"" AS LIBELLE,'+
+                '0 AS QUANTITE,'+
+                '0 AS PUACH,'+
+                '0 AS MONTANTACH,'+
                 '1 AS NIVEAU,'+
                 '"-" AS NEWONE '+
                 'FROM BAVANCTECHDET';
@@ -132,8 +139,8 @@ Type
     TOBSTRUCTLIG : TOB;
     TheListGrid : TListGs;
     ZeCurSaisie : TGSaisie;
-    TOBPP,TOBMOI,TOBFI,TOBST : TOB;
-    GSPP,GSMOI,GSFI,GSST : THGrid;
+    TOBPP,TOBMOI,TOBFI,TOBST,TOBHP : TOB;
+    GSPP,GSMOI,GSFI,GSST,GSHP : THGrid;
     FFP,FFQ : string;
     ImList : TImageList;
     FamFraisIndirect : string;
@@ -228,6 +235,7 @@ Type
     procedure BeforeUpdate;
     procedure UpdateDatas;
     procedure SetInConsultation;
+    function GetEmplacementLigne(TheType, CurrentPhase, FamilleNiv2: string): TOB;
   end ;
 
 Implementation
@@ -373,12 +381,14 @@ begin
     TOBMOI := TOB.Create('SAISIE MOI',nil,-1);
     TOBFI := TOB.Create('SAISIE FI',nil,-1);
     TOBST := TOB.Create('SAISIE ST',nil,-1);
+    TOBHP := TOB.Create ('HORS PHASES',nil,-1);
     //
     TheListGrid := TListGs.create;
     TheListGrid.AddGrille(THGrid(GetControl('GSPP')),'GSPP',stLigPP,TOBPP);
     TheListGrid.AddGrille(THGrid(GetControl('GSMOI')),'GSMOI',stLigMOI,TOBMOI);
     TheListGrid.AddGrille(THGrid(GetControl('GSFI')),'GSFI',stLigFI,TOBFI);
     TheListGrid.AddGrille(THGrid(GetControl('GSST')),'GSST',stLigST,TOBST);
+    TheListGrid.AddGrille(THGrid(GetControl('GSHP')),'GSHP',stLigHP,TOBHP);
     PrepareGrids;
     //
     ChargeTOBS (CodeAffaire);
@@ -411,6 +421,7 @@ begin
     TFvierge(Ecran).HMTrad.ResizeGridColumns(GSMOI);
     TFvierge(Ecran).HMTrad.ResizeGridColumns(GSFI);
     TFvierge(Ecran).HMTrad.ResizeGridColumns(GSST);
+    TFvierge(Ecran).HMTrad.ResizeGridColumns(GSHP);
     //
     EnterGrid ('GSPP');
   FINALLY
@@ -490,6 +501,7 @@ begin
   GSMOI := THGrid(getControl('GSMOI'));
   GSFI := THGrid(getControl('GSFI'));
   GSST:= THGrid(getControl('GSST'));
+  GSHP:= THGrid(getControl('GSHP'));
   //
   STSt := S;
   //
@@ -618,6 +630,7 @@ begin
   afficheLaGrid('GSMOI');
   afficheLaGrid('GSFI');
   afficheLaGrid('GSST');
+  afficheLaGrid('GSHP');
 end;
 
 
@@ -684,6 +697,46 @@ begin
     end;
   until TheLast = nil;
 end;
+
+function TOF_BSAISIEAVANCPOC.GetEmplacementLigne (TheType,CurrentPhase,FamilleNiv2 : string) : TOB;
+var ThePhase,TheTOBP,TheCUrr : TOB;
+    II : Integer;
+begin
+  Result := nil;
+  if TheTYpe = '000' then
+  begin
+    TheTOBP := TOBPP;
+    ThePhase := TOBPP.FindFirst(['BM8_PHASETRA'],[CurrentPhase],true)
+  end else if TheTYpe = '001' then
+  begin
+    TheTOBP := TOBMOI;
+    ThePhase := TOBMOI.FindFirst(['BM8_PHASETRA'],[CurrentPhase],true)
+  end else if TheTYpe = '002' then
+  begin
+    TheTOBP := TOBFI;
+    ThePhase := TOBFI.FindFirst(['BM8_PHASETRA'],[CurrentPhase],true)
+  end else if TheTYpe = '003' then
+  begin
+    TheTOBP := TOBST;
+    ThePhase := TOBST.FindFirst(['BM8_PHASETRA'],[CurrentPhase],true);
+  end;
+  if ThePhase = nil Then exit;
+  for II := ThePhase.GetIndex+1 to TheTOBP.detail.count -1 do
+  begin
+    TheCUrr := TheTOBP.detail[II];
+    if (TheCUrr.GetString('BM8_PHASETRA')<>CurrentPhase) and (TheCUrr.GetString('BM8_PHASETRA')<>'') then
+    begin
+      result := TheCurr;
+      break;
+    end;
+    if (TheCUrr.GetString('BM8_FAMILLENIV2') > FamilleNiv2) then
+    begin
+      result := TheCurr;
+      break;
+    end;
+  end;
+end;
+
 
 procedure TOF_BSAISIEAVANCPOC.ConstitueLesTOBS (TTS,TTD,TTL,TTOP : TOB);
 
@@ -779,7 +832,13 @@ procedure TOF_BSAISIEAVANCPOC.ConstitueLesTOBS (TTS,TTD,TTL,TTOP : TOB);
       TF.SetString('NEWONE','-');
       if not IsParagraphe(TL) then
       begin
-        TP := FindEmplacementLigne (TheType,CurrentPhase);
+        if TheType <>'003' then
+        begin
+          TP := GetEmplacementLigne (TheType,CurrentPhase,TF.GetString('BM8_FAMILLENIV2'));
+        end else
+        begin
+          TP := FindEmplacementLigne (TheType,CurrentPhase) ;
+        end;
         if TP = nil then Index := -1
                     else Index := TP.GetIndex+1;
       end else
@@ -813,9 +872,15 @@ procedure TOF_BSAISIEAVANCPOC.ConstitueLesTOBS (TTS,TTD,TTL,TTOP : TOB);
       TF.SetString('BM8_UNITE','');
       TF.SetInteger('NIVEAU',NiveauImbric+1);
       TF.SetString('NEWONE','-');
-      TP := FindEmplacementLigne (TheType,CurrentPhase) ;
+      if TheType <>'003' then
+      begin
+        TP := GetEmplacementLigne (TheType,CurrentPhase,TF.GetString('BM8_FAMILLENIV2'));
+      end else
+      begin
+        TP := FindEmplacementLigne (TheType,CurrentPhase) ;
+      end;
       if TP = nil then Index := -1
-                  else Index := TP.GetIndex+1;
+                  else Index := TP.GetIndex;
       if TheType = '000' then TF.Changeparent(TOBPP,Index)
       else if TheType = '001' then TF.Changeparent(TOBMOI,Index)
       else if TheType = '002' then TF.Changeparent(TOBFI,Index)
@@ -958,6 +1023,9 @@ begin
       TD.SetDouble('BM8_MTCONSOPRE',TL.GetDouble('BM8_QTECONSOPRE'));
     end;
   end;
+  //
+  // TOBMOI.detail.Sort('TYPELIGNE;BM8_PHASETRA;BM8_FAMILLENIV2');
+  //
 end;
 
 function TOF_BSAISIEAVANCPOC.ChargeTOBS  (CodeAffaire : string) : boolean;
@@ -1161,6 +1229,7 @@ begin
     TTL.free;
     TTOP.Free;
   END;
+
 end;
 
 procedure TOF_BSAISIEAVANCPOC.PrepareGrids;
@@ -1169,6 +1238,7 @@ begin
   PrepareGrid('GSMOI');
   PrepareGrid('GSFI');
   PrepareGrid('GSST');
+  PrepareGrid('GSHP');
 end;
 
 
@@ -1386,6 +1456,43 @@ begin
     TGS.GS.ColFormats[colonne] := '#,##0.00;#,##0.00; ;';
     TGS.GS.ColAligns[Colonne] := taRightJustify;
     TGS.SG_MTAVANCCORRIGE := colonne;
+  end else if NomChamps='DATEMVT' then
+  begin
+    TGS.GS.cells[Colonne,0] := 'Date Mvt';
+    TGS.GS.ColWidths[colonne] := 12*TGS.GS.canvas.TextWidth('w');
+    TGS.GS.ColFormats[colonne] := ShortDateFormat;
+    TGS.GS.ColAligns[Colonne] := taLeftJustify;
+  end else if NomChamps='CODEARTICLE' then
+  begin
+    TGS.GS.cells[Colonne,0] := 'Code';
+    TGS.GS.ColWidths[colonne] := 18*TGS.GS.canvas.TextWidth('w');
+    TGS.GS.ColAligns[Colonne] := taLeftJustify;
+  end else if NomChamps='LIBELLE' then
+  begin
+    TGS.GS.cells[Colonne,0] := 'Libellé';
+    TGS.GS.ColWidths[colonne] := 70*TGS.GS.canvas.TextWidth('w');
+    TGS.GS.ColAligns[Colonne] := taLeftJustify;
+  end else if NomChamps='QUANTITE' then
+  begin
+    TGS.GS.cells[Colonne,0] := 'Qte';
+    TGS.GS.ColWidths[colonne] := 12*TGS.GS.canvas.TextWidth('w');
+    TGS.GS.ColLengths[colonne] := 12;
+    TGS.GS.ColFormats[colonne] := '#,##0.00;#,##0.00; ;';
+    TGS.GS.ColAligns[Colonne] := taRightJustify;
+  end else if NomChamps='PUACH' then
+  begin
+    TGS.GS.cells[Colonne,0] := 'PUA';
+    TGS.GS.ColWidths[colonne] := 12*TGS.GS.canvas.TextWidth('w');
+    TGS.GS.ColLengths[colonne] := 12;
+    TGS.GS.ColFormats[colonne] := '#,##0.00;#,##0.00; ;';
+    TGS.GS.ColAligns[Colonne] := taRightJustify;
+  end else if NomChamps='MONTANTACH' then
+  begin
+    TGS.GS.cells[Colonne,0] := 'Montant achat';
+    TGS.GS.ColWidths[colonne] := 12*TGS.GS.canvas.TextWidth('w');
+    TGS.GS.ColLengths[colonne] := 12;
+    TGS.GS.ColFormats[colonne] := '#,##0.00;#,##0.00; ;';
+    TGS.GS.ColAligns[Colonne] := taRightJustify;
   end;
 end;
 
@@ -2818,6 +2925,21 @@ procedure TOF_BSAISIEAVANCPOC.RecupereConsos;
     TL.SetDouble('BM8_MTCONSOMOIS',TL.GetDouble('BM8_MTCONSOMOIS')+TLC.GetDouble('SUMMT'));
   end;
 
+  procedure AjouteLigneHP(TL : TOB);
+  var TF,TP : TOB;
+      Index : Integer;
+  begin
+    TF := CreTOBLigne;
+    TF.SetDateTime('DATEMVT',TL.GetDateTime('BCO_DATEMOUV'));
+    TF.SetString('CODEARTICLE',TL.GetString('BCO_CODEARTICLE'));
+    TF.SetString('LIBELLE',TL.GetString('BCO_LIBELLE'));
+    TF.SetDouble('QUANTITE',TL.Getdouble('BCO_QUANTITE'));
+    TF.SetDouble('PUACH',TL.GetDouble('BCO_DPA'));
+    TF.SetDouble('MONTANTACH',TL.GetDouble('BCO_MONTANTACH'));
+    TF.ChangeParent(TOBHP,-1);
+  end;
+
+
   procedure AjouteLigne(TL : TOB;TheType,CurrentPhase : string;NiveauImbric : integer; MoisCourant : boolean=true);
   var TF,TP : TOB;
       Index : Integer;
@@ -2844,9 +2966,16 @@ procedure TOF_BSAISIEAVANCPOC.RecupereConsos;
       TF.SetString('NEWONE','-');
       if not IsParagraphe(TL) then
       begin
-        TP := FindEmplacementLigne (TheType,CurrentPhase);
+        if TheType <>'003' then
+        begin
+          TP := GetEmplacementLigne (TheType,CurrentPhase,TF.GetString('BM8_FAMILLENIV2'));
+        end else
+        begin
+          TP := FindEmplacementLigne (TheType,CurrentPhase) ;
+        end;
+//        TP := FindEmplacementLigne (TheType,CurrentPhase);
         if TP = nil then Index := -1
-                    else Index := TP.GetIndex+1;
+                    else Index := TP.GetIndex;
       end else
       begin
         Index := -1;
@@ -2898,7 +3027,7 @@ begin
     end;
     //
     TTC.ClearDetail;
-    //
+    //  --> consommations du mois
     SQL := 'SELECT BCO_PHASETRA,BCO_FAMILLENIV2,SUM(BCO_QUANTITE) AS SUMQTE, SUM(BCO_MONTANTACH) AS SUMMT,'+
            '(SELECT CC_LIBELLE FROM CHOIXCOD WHERE CC_TYPE="FN2" AND CC_CODE=BCO_FAMILLENIV2) AS LIBELLE '+
            'FROM CONSOMMATIONS '+
@@ -2925,6 +3054,28 @@ begin
         AjouteLigne (TLC,TheType,ThePhase,NiveauImbric);
       end;
     end;
+    // recupération des hors phases --> erreur de saisie
+    TTC.ClearDetail;
+    SQL := 'SELECT BCO_DATEMOUV,BCO_CODEARTICLE,BCO_LIBELLE,BCO_QUANTITE,BCO_DPA,BCO_MONTANTACH '+
+           'FROM CONSOMMATIONS '+
+           'WHERE '+
+           'BCO_NATUREPIECEG IN ("LBT","") AND '+
+           'BCO_AFFAIRE="'+CodeAffaire+'" AND '+
+           'BCO_PHASETRA="" AND '+
+           'BCO_DATEMOUV <= "'+USDATETIME(FinMois)+'" ';
+    QQ := OpenSQL(SQL,True,-1,'',true);
+    if Not QQ.eof then
+    begin
+      TTC.LoadDetailDB('CONSOMMATIONS','','',QQ,false);
+    end;
+    ferme(QQ);
+    for II := 0 to TTC.detail.count -1 do
+    begin
+      XX.MoveK2000;
+      TLC := TTC.detail[II];
+      AjouteLigneHP (TLC);
+    end;
+
   FINALLY
     TTC.Free;
   END;
@@ -3067,6 +3218,16 @@ begin
 end;
 
 procedure TOF_BSAISIEAVANCPOC.GSSTElipsisClick(Sender: TObject);
+  function GetTiersST(Affaire,CodeMarche : string) : string;
+  var QQ : TQuery;
+  begin
+    QQ := OpenSQL('SELECT BM0_FOURNISSEUR FROM BTMARCHEST WHERE BM0_AFFAIRE="'+Affaire+'" AND BM0_MARCHE="'+Copy(CodeMarche,1,8)+'"',True,1,'',true);
+    if not QQ.eof then
+    begin
+      Result := QQ.fields[0].AsString;
+    end;
+    ferme (QQ);
+  end;
 var FGS : TGSaisie;
     TT : TOB;
     TL : TOB;
@@ -3080,6 +3241,7 @@ begin
     try
       TT.AddChampSupValeur('AFFAIRE',TL.GetString('BM8_AFFAIRE'));
       TT.AddChampSupValeur('CODEMARCHE',TL.GetString('BM8_CODEMARCHE'));
+      TT.AddChampSupValeur('SOUSTRAIT',GetTiersST(TL.GetString('BM8_AFFAIRE'),TL.GetString('BM8_CODEMARCHE')));
       TT.AddChampSupValeur('MODIF','-');
       TheTOB := TT;
       AGLLanceFiche('BTP','BTMODIFMARCHEST','','','ACTION=MODIFICATION');
@@ -3130,7 +3292,7 @@ procedure TOF_BSAISIEAVANCPOC.CalculSousTraitance;
   begin
     TL.SetDouble('DEPENSECUMUL',0);
     SQL :='SELECT BM4_CODEMARCHE,BM4_NUMSITUATION,BM4_REFGESCOM,'+
-          '(SELECT SUM(BM5_MTSITUATION) FROM BASTLIG WHERE BM5_AFFAIRE=BM4_AFFAIRE AND BM5_CODEMARCHE=BM4_CODEMARCHE AND BM5_TYPELBAST="001" AND BM5_TYPELIG="TOT" AND BM5_NUMSITUATION=BM4_NUMSITUATION) AS MTSITUATION '+
+          '(SELECT SUM(BM5_MTSITUATION) FROM BASTLIG WHERE BM5_AFFAIRE=BM4_AFFAIRE AND BM5_CODEMARCHE=BM4_CODEMARCHE AND BM5_TYPELBAST="001" AND BM5_TYPELIG="TOT" AND BM5_NUMSITUATION=BM4_NUMSITUATION AND BM5_PAIEMENTPOC=BM4_PAIEMENTPOC) AS MTSITUATION '+
           'FROM BASTENT '+
           'WHERE '+
           'BM4_AFFAIRE="'+TL.GetString('BM8_AFFAIRE')+'" AND '+

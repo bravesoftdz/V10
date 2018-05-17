@@ -28,7 +28,7 @@ Uses
   , UTOF
   , CBPMcd
   , BRGPDMUL_TOF
-  , BRGDPDUtils
+  , BRGPDUtils
   ;
 
 function BLanceFiche_RGPDThirdMul(Nat, Cod, Range, Lequel, Argument : string) : string;
@@ -84,7 +84,8 @@ procedure TOF_BRGPDTIERSMUL.OnArgument (S : String ) ;
 begin
   sPopulationCode := RGPDThird;
   sFieldCode      := 'T_TIERS';
-  sFieldCode2nd   := 'T_AUXILIAIRE';
+  sFieldCode2     := 'T_AUXILIAIRE';
+  sFieldCode3     := '';
   sFieldLabel     := 'T_LIBELLE';
   sFieldLabel2nd  := 'T_PRENOM'; 
   Inherited ;

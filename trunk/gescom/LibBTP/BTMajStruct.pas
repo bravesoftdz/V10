@@ -669,7 +669,13 @@ begin
   begin
     if VersionBaseDest < '998.ZZZY' then
     begin
-      ExecuteSQL('UPDATE BTRESSOURCE SET BRS_GERECHANTIER="-" WHERE BRS_GERECHANTIER IS NULL');
+      ExecuteSQL('UPDATE BTRESSOURCE SET BRS_GERECHANTIER="X" WHERE BRS_GERECHANTIER IS NULL');
+    end;
+  end else if NomTable ='UTILISAT' then
+  begin
+    if VersionBaseDest < '998.ZZZZ' then
+    begin
+      ExecuteSQL('UPDATE UTILISAT SET US_RGPDOK="-" WHERE US_RGPDOK IS NULL');
     end;
   end else if NomTable ='PHASESCHANTIER' then
   begin
@@ -1291,6 +1297,10 @@ begin
     if VersionBaseDest < '998.ZZZL' then
     begin
     	UpDateDecoupePiece('GP_BSVREF=""',' AND GP_BSVREF IS NULL');
+    end;
+    if VersionBaseDest < '998.ZZZZ1' then
+    begin
+    	UpDateDecoupePiece('GP_HORSCOMPTA="-"',' AND GP_HORSCOMPTA IS NULL');
     end;
   end else if nomTable ='PIECETRAIT' then
   begin

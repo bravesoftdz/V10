@@ -5,7 +5,7 @@ Modifié le ... :   /  /
 Description .. : Source TOF de la FICHE : BRGPDREFERENTIEL ()
 Mots clefs ... : TOF;BRGPDREFERENTIEL
 *****************************************************************}
-Unit BRGPDUTILISATMUL_TOF ;
+Unit BRGPDSUSPECTMUL_TOF ;
 
 Interface
 
@@ -31,12 +31,11 @@ Uses
   , BRGPDUtils
   ;
 
-function BLanceFiche_RGPDUtilisatMul(Nat, Cod, Range, Lequel, Argument : string) : string;
+function BLanceFiche_RGPDSuspectMul(Nat, Cod, Range, Lequel, Argument : string) : string;
 
 Type
-  TOF_BRGPDUTILISATMUL = Class (TOF_BRGPDMUL)
+  TOF_BRGPDSUSPECTMUL = Class (TOF_BRGPDMUL)
   private
-    UtilAdr : THCheckbox;
 
   public
     procedure OnNew                    ; override ;
@@ -54,69 +53,60 @@ Implementation
 uses
    BRGPDVALIDTRT_TOF
   , FormsName
-  , wCommuns
-  , UtilPGI
-  , Mul
   ;
 
-function BLanceFiche_RGPDUtilisatMul(Nat, Cod, Range,Lequel,Argument : string) : string;
+function BLanceFiche_RGPDSuspectMul(Nat, Cod, Range,Lequel,Argument : string) : string;
 begin
   Result := AglLanceFiche(Nat, Cod, Range, Lequel, Argument);
 end;
 
-procedure TOF_BRGPDUTILISATMUL.OnNew ;
+procedure TOF_BRGPDSUSPECTMUL.OnNew ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDUTILISATMUL.OnDelete ;
+procedure TOF_BRGPDSUSPECTMUL.OnDelete ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDUTILISATMUL.OnUpdate ;
+procedure TOF_BRGPDSUSPECTMUL.OnUpdate ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDUTILISATMUL.OnLoad ;
-begin
-  Inherited ;
-  if (UtilAdr.Checked) and (IsConsent) then
-    SetControlText('XX_WHERE', ' AND EXISTS (SELECT 1 FROM SALARIES WHERE PSA_SALARIE = US_AUXILIAIRE AND CONCAT(PSA_ADRESSE1, PSA_ADRESSE2, PSA_ADRESSE3, PSA_CODEPOSTAL, PSA_VILLE) <> "")')
-  else
-    SetControlText('XX_WHERE', '');
-end ;
-
-procedure TOF_BRGPDUTILISATMUL.OnArgument (S : String ) ;
-begin
-  sPopulationCode := RGPDUser;
-  sFieldCode      := 'US_UTILISATEUR';
-  sFieldCode2     := 'US_AUXILIAIRE';
-  sFieldCode3     := '';
-  sFieldLabel     := 'US_LIBELLE';
-  sFieldLabel2nd  := '';
-  Inherited ;
-  UtilAdr         := THCheckbox(GetControl('UTILADR'));
-  UtilAdr.Visible := (RgpdAction = rgdpaConsentRequest);
-end ;
-
-procedure TOF_BRGPDUTILISATMUL.OnClose ;
+procedure TOF_BRGPDSUSPECTMUL.OnLoad ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDUTILISATMUL.OnDisplay () ;
+procedure TOF_BRGPDSUSPECTMUL.OnArgument (S : String ) ;
+begin
+  sPopulationCode := RGPDSuspect;
+  sFieldCode      := 'RSU_SUSPECT';
+  sFieldCode2     := '';
+  sFieldCode3     := '';  
+  sFieldLabel     := 'RSU_LIBELLE';
+  sFieldLabel2nd  := 'RSU_PRENOM';
+  Inherited ;
+end ;
+
+procedure TOF_BRGPDSUSPECTMUL.OnClose ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDUTILISATMUL.OnCancel () ;
+procedure TOF_BRGPDSUSPECTMUL.OnDisplay () ;
+begin
+  Inherited ;
+end ;
+
+procedure TOF_BRGPDSUSPECTMUL.OnCancel () ;
 begin
   Inherited ;
 end ;
 
 Initialization
-  registerclasses ( [ TOF_BRGPDUTILISATMUL ] ) ;
+  registerclasses ( [ TOF_BRGPDSUSPECTMUL ] ) ;
 end.
 

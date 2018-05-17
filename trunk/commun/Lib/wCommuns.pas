@@ -231,7 +231,7 @@ type
 	tArrondiPrec = (tAPCentaineDeMillier, tAPDizaineDeMillier, tAPMillier, tAPCentaine, tAPDizaine, tAPUnite, tAPDizieme, tAPCentieme, tAPMillieme, tAPDixMillieme);
   tArrondiMeth = (tAMInferieure, tAMSuperieure, tAMPlusProche);
 
-  tTypeField = (ttfNumeric, ttfMemo, ttfBoolean, ttfDate, ttfCombo, ttfText);
+  tTypeField = (ttfNumeric, ttfInt, ttfMemo, ttfBoolean, ttfDate, ttfCombo, ttfText);
 
 	{ Manipulation dans DETABLES, DECHAMPS }
 	function  wGetLibChamp(Const FieldName:String): String;
@@ -5190,15 +5190,12 @@ end;
 function GetFieldType(FieldName : string) : tTypeField;
 begin
   case CaseFromString(ChampToType(FieldName), ['INTEGER', 'SMALLINT', 'DOUBLE', 'RATE', 'EXTENDED', 'DATE', 'BLOB', 'DATA', 'COMBO', 'BOOLEAN']) of
-    {INTEGER
-     , SMALLINT
-     , DOUBLE
-     , RATE
-     , EXTENDED} 0..4 : Result := ttfNumeric;
-    {DATE}       5    : Result := ttfDate;
-    {BLOB, DATA} 6..7 : Result := ttfMemo;
-    {COMBO}      8    : Result := ttfCombo;
-    {BOOLEAN}    9    : Result := ttfBoolean;
+    0..1 : Result := ttfInt;     {INTEGER , SMALLINT}
+    2..4 : Result := ttfNumeric; {DOUBLE, RATE, EXTENDED}
+    5    : Result := ttfDate;    {DATE}
+    6..7 : Result := ttfMemo;    {BLOB, DATA}
+    8    : Result := ttfCombo;   {COMBO}
+    9    : Result := ttfBoolean; {BOOLEAN}
   else
      Result := ttfText;
   end;

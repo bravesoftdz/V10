@@ -186,8 +186,6 @@ begin
   if Venteachat = 'ACH' then NatureAuxi := 'FOU' else NatureAuxi := 'CLI';
   //
   GereReliquat := GetInfoParPiece(TOBPiece.GetString('GP_NATUREPIECEG'), 'GPP_RELIQUAT')='X';
-  // FS#46 - Dans les BL, visualisation du document de la GED correspondant à la commande
-  TOBPiece.SetString('GP_BSVREF',''); // protection pour éviter de faire suivre dans les documents générés
   //
   for II := 0 to TOBPiece.Detail.count -1 do
   begin
@@ -474,10 +472,19 @@ begin
        (SumTaxe<> TOBEnteteScan.GetDouble('B10_TOTALTAXE')) then
     begin
       //
-      TOBPiece.setDouble('GP_TOTALTTCDEV',TOBEnteteScan.GetDouble('B10_TOTALTTC'));
-      TOBPiece.setDouble('GP_TOTALHTDEV',TOBEnteteScan.GetDouble('B10_TOTALHT'));
-      Coef := TOBPiece.GetDouble('GP_TOTALHTDEV')/ TOBEnteteScan.GetDouble('B10_TOTALHT');
-      CoefTaxe := SumTaxe/ TOBEnteteScan.GetDouble('B10_TOTALTAXE');
+      if TOBEnteteScan.GetDouble('B10_TOTALTTC') = 0 then
+      begin
+        TOBPiece.setDouble('GP_TOTALTTCDEV',TOBEnteteScan.GetDouble('B10_TOTALHT'));
+        TOBPiece.setDouble('GP_TOTALHTDEV',TOBEnteteScan.GetDouble('B10_TOTALHT'));
+      end else
+      begin
+        TOBPiece.setDouble('GP_TOTALTTCDEV',TOBEnteteScan.GetDouble('B10_TOTALTTC'));
+        TOBPiece.setDouble('GP_TOTALHTDEV',TOBEnteteScan.GetDouble('B10_TOTALHT'));
+      end;
+      if  TOBEnteteScan.GetDouble('B10_TOTALHT') = 0 then Coef := 1
+                                                     else Coef := TOBPiece.GetDouble('GP_TOTALHTDEV')/ TOBEnteteScan.GetDouble('B10_TOTALHT');
+      if TOBEnteteScan.GetDouble('B10_TOTALTAXE') = 0 then CoefTaxe := 1
+                                                      else CoefTaxe := SumTaxe/ TOBEnteteScan.GetDouble('B10_TOTALTAXE');
       //
       SumCalcB := 0;
       SumCalcT := 0;

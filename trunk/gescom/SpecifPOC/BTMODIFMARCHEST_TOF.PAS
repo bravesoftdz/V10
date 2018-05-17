@@ -27,6 +27,7 @@ Uses StdCtrls,
      HEnt1,
      HMsgBox,
      Vierge,
+     HTB97,
      UTOF ;
 
 Type
@@ -55,12 +56,14 @@ Type
     procedure GSColWidthsChanged (Sender : TObject);
     function ZoneAccessible(ACol, ARow: Integer): boolean;
     procedure ZoneSuivanteOuOk(var ACol, ARow: Integer;var Cancel: boolean);
-
+    procedure AddAvenants (Sender : TObject);
   end ;
 
 const
   stChamps = 'LIBELLE;MARCHE;AVENANTS;ARECEVOIR;';
 Implementation
+
+uses USpecifPOC;
 
 procedure TOF_BTMODIFMARCHEST.OnNew ;
 begin
@@ -134,6 +137,7 @@ begin
   GSCellEnter (Self,Acol,Arow,cancel);
   GBAS.Col := 0;
   GBAS.Row := 0;
+  TToolbarButton97 (GetControl('Binsert')).onclick := AddAvenants; 
 end ;
 
 procedure TOF_BTMODIFMARCHEST.OnClose ;
@@ -393,6 +397,11 @@ begin
   begin
     GBAS.ColWidths [II] := GS.ColWidths [II];
   end;
+end;
+
+procedure TOF_BTMODIFMARCHEST.AddAvenants(Sender: TObject);
+begin
+  AppelMarcheST (LaTOB.GetString('AFFAIRE'),LaTOB.GetString('SOUSTRAIT'),Copy(LaTOB.GetString('CODEMARCHE'),1,8))
 end;
 
 Initialization

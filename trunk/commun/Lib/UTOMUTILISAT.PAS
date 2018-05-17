@@ -59,6 +59,7 @@ Type
 {$ENDIF}
     bUtilisateurEws       :Boolean;
     bOnLoading            :Boolean;
+    OldPwd : string;
 
     {$IFDEF BUREAU}
     bModifierDroitObligation : boolean;
@@ -388,6 +389,9 @@ begin
     end;
 {$ENDIF}
 
+  if PW1.Text <> OldPwd then
+    SetField('US_DATECHANGEPWD', Date);
+
   SetField ( 'US_PASSWORD', CryptageSt ( PW1.Text ) ) ;
 
   SetField ( 'US_EMAILPASSWORD', CryptageSt ( EPW1.Text ) ) ;
@@ -433,6 +437,7 @@ begin
     TobDroitObligation.Free;
    end;
   {$ENDIF}
+
   TFFiche(ecran).Retour := GetField('US_UTILISATEUR');
 end ;
 
@@ -495,6 +500,7 @@ begin
   PW2.Text := DeCryptageSt ( GetField ( 'US_PASSWORD' ) ) ;
   EPW1.Text := DeCryptageSt ( GetField ( 'US_EMAILPASSWORD' ) ) ;
   EPW2.Text := DeCryptageSt ( GetField ( 'US_EMAILPASSWORD' ) ) ;
+  OldPwd := PW1.Text;
   if Assigned ( GetControl ( 'SPW1' ) ) then
     begin
     SPW1.Text := DeCryptageSt ( GetField ( 'US_EMAILSMTPPWD' ) ) ;

@@ -3165,6 +3165,8 @@ begin
   begin
     // Transformation de pièce --> init
     InitDemandePrix (TOBPieceDemPrix,TOBArticleDemPrix,TOBfournDemprix,TOBDetailDemprix);
+    // --- 
+    TOBPiece.setString('GP_BSVREF','');
     // -----------------------------------
     // Provisoire : Reinitialisation des échéances
     TOBEches.ClearDetail;
@@ -7394,14 +7396,14 @@ begin
       end;
     end else
     begin
-      if copy(TOBL.GetString('GL_TYPELIGNE'),1,2)='DP' then
+      if (copy(TOBL.GetString('GL_TYPELIGNE'),1,2)='DP') or (copy(TOBL.GetString('GL_TYPELIGNE'),1,2)='DV') then
       begin
         Result := (ACol = SG_NUMAUTO) or (ACol = SG_Lib) ;
       end else
       begin
-      Result := ((ACol = SG_ContreM) or (ACol = SG_RefArt) or (ACol = SG_Lib) or (ACol = SG_DateLiv) or (ACol = Sg_Folio) or ((ACol = SG_Motif) and (TypeDim =
-        'GEN')));
-    end;
+        Result := ((ACol = SG_ContreM) or (ACol = SG_RefArt) or (ACol = SG_Lib) or (ACol = SG_DateLiv) or (ACol = Sg_Folio) or ((ACol = SG_Motif) and (TypeDim =
+          'GEN')));
+      end;
     end;
     {$ENDIF} // FIN CHR
   end else
@@ -10873,8 +10875,6 @@ var TOBL          : TOB;
     OldMt         : Double;
     MtResteInit   : Double;
     MtReliquatInit: Double;
-    MtInit        : Double;
-    Prix          : Double;
 begin
   //
   result := true;
@@ -10950,10 +10950,10 @@ begin
   begin
     MtResteInit     := TOBL.GetValue('GL_MTRESTE');
     MtReliquatInit  := TOBL.GetValue('GL_MTRELIQUAT');
-    MtInit          := TOBL.GetValue('GL_MONTANTHTDEV');
+    OldMt          := TOBL.GetValue('GL_PUHTDEV');
+    NewMt := Valeur(GS.Cells[Sg_Px, ARow]);
   end;
   //
-  if Ok_ReliquatMt then Prix := Valeur(GS.Cells[Sg_Px, ARow]);
 
   if GP_FACTUREHT.Checked then
   begin
@@ -11042,15 +11042,12 @@ begin
   //
   if Ok_ReliquatMt then
   begin
-    NewMt := Valeur(GS.Cells[SG_PX, ARow]);
-    Ecart := TOBL.GetValue('GL_MTRELIQUAT');
-    OldMt := TOBL.GetValue('GL_MONTANTHTDEV');
-    MtInit:= OldMt + Ecart;
     //
-    if MtInit > NewMt then Ecart := MtInit - NewMt else Ecart := 0;
-    TOBL.PutValue('GL_MTRELIQUAT', Ecart);
-    TOBL.PutValue('GL_QTERESTE', TOBL.GetValue('GL_QTEFACT'));
-
+    if OldMt <> NewMt then
+    begin
+      TOBL.PutValue('GL_MTRESTE', TOBL.GetValue('GL_MTRESTE')-oldMt+NewMt);
+      PutMTReliquat (TOBL,OldMt);
+    end;
     TOBPiece.PutValue('GP_RECALCULER', 'X');
     TOBL.PutValue('GL_RECALCULER', 'X');
   end;
@@ -11777,18 +11774,11 @@ begin
   QteStockInit := TOBL.GetValue('GL_QTESTOCK');
   // --- GUINIER ---
   Ok_ReliquatMt := CtrlOkReliquat(TOBL,  'GL');
-  if Ok_ReliquatMt then
-  begin
-    MtResteInit     := TOBL.GetValue('GL_MTRESTE');
-    MtReliquatInit  := TOBL.GetValue('GL_MTRELIQUAT');
-    MtInit          := TOBL.GetValue('GL_MONTANTHTDEV');
-  end;
   //
   BligneModif := true;
 
   {$ENDIF}
   Qte := Valeur(GS.Cells[ACol, ARow]);
-  if Ok_ReliquatMt then MT := Qte * TOBL.GetValue('GL_PUHTDEV');
 
   // Ajout protection modification des factures directes en provenance de devis
   if (Pos(TOBPiece.GetValue('GP_NATUREPIECEG'),'FBT;FBP')>0) and
@@ -11828,7 +11818,6 @@ begin
         end;
       end;
     	Qte := Valeur(GS.cells[Acol,Arow]);
-      if Ok_ReliquatMt then  MT := Qte * TOBL.GetValue('GL_PUHTDEV');
       fModifSousDetail.ModifQteAvancSousDet (TOBL,Qte,TypeFacturation,DEV);
     end else
     begin
@@ -11940,8 +11929,6 @@ begin
   begin
     { NEWPIECE }
     NewQte := Valeur(GS.Cells[ACol, ARow]);
-    // --- GUINIER ---
-    if Ok_ReliquatMt then NewMt := Mt;
     //
     if (ACol = SG_QS) then
     begin
@@ -11958,20 +11945,10 @@ begin
 // MODIF BRL 28/06/05			if GetInfoParPiece(NewNature, 'GPP_RECALCULPRIX') = 'X' then TOBL.PutValue('RECALCULTARIF','X');
     end;
     //
-    if Ok_ReliquatMt then OldMt := TOBL.GetValue('GL_MONTANTHTDEV');
     if (OldQte <> NewQte) then // and (not EstLigneSoldee(TOBL)) then     DBR 07112003
     begin
       TOBL.PutValue('GL_QTERESTE', TOBL.GetValue('GL_QTERESTE') - OldQte + NewQte);
       PutQteReliquat(Tobl, OldQte);
-    end;
-    // Je vois pas comment faire avec un montant ???
-    if Ok_ReliquatMt then
-    begin
-      if (OldMt <> NewMt) then
-      begin
-        TOBL.PutValue('GL_MTRESTE', TOBL.GetValue('GL_MTRESTE') - OldMT + NewMt);
-        PutMtReliquat(Tobl, OldMT);
-      end;
     end;
     if (TOBL.GetValue('RECALCULTARIF') = 'X') and (not GetParamSoc('SO_PREFSYSTTARIF')) then
     begin
@@ -12047,15 +12024,6 @@ begin
       OldQte := TOBLiee.GetValue('GL_QTERESTE');
       if OldQte > NewQte then Ecart := OldQte - NewQte else Ecart := 0;
       TOBL.PutValue('GL_QTERELIQUAT', Ecart);
-      // Si on mlodifie la quantité ça modifie forcément le montant...
-      // --- GUINIER ---
-      if CtrlOkReliquat(TOBL, 'GL') then
-      begin
-        NewQte := TOBL.GetValue('GL_MONTANTHTDEV');
-        OldQte := TOBLiee.GetValue('GL_MTRESTE');
-        if OldQte > NewQte then Ecart := OldQte - NewQte else Ecart := 0;
-        TOBL.PutValue('GL_MTRELIQUAT', Ecart);
-      end;
       TOBPiece.PutValue('GP_RECALCULER', 'X');
       TOBL.PutValue('GL_RECALCULER', 'X');
     end;
@@ -13389,9 +13357,6 @@ begin
     TOBL.putvalue('GL_QTESTOCK', result);
     TOBL.putvalue('GL_QTERESTE', result);
 
-    // --- GUINIER ---
-    If CtrlOkReliquat(TOBL, 'GL') then TOBL.putvalue('GL_MTRESTE',  TOBL.GetValue('GL_MONTANTHTDEV'));
-
     if GetQteDetailOuv (TOBL,TOBOuvrage) = 0 then
     Begin
       QteDuDetail := TobL.GetValue('GL_QTEFACT');
@@ -13405,6 +13370,9 @@ begin
 
     if GS.cells[GS.col, GS.row] <> StCellCur then ATraiterQte := False;
 
+    // --- GUINIER ---
+    If CtrlOkReliquat(TOBL, 'GL') then TOBL.putvalue('GL_MTRESTE',  TOBL.GetValue('GL_PUHTDEV'));
+    // ---
     if (GereDocEnAchat)  then
       TraitePrixAch(ARow)
     else
@@ -13413,6 +13381,7 @@ begin
   //
   //
   //
+
   // Modif LS Pour OPTIMISATION
   if (GereDocEnAchat) or (BCalculDocAuto.down) then
   begin

@@ -28,7 +28,7 @@ Uses
   , UTOF
   , CBPMcd
   , BRGPDMUL_TOF
-  , BRGDPDUtils
+  , BRGPDUtils
   ;
 
 function BLanceFiche_RGPDResourceMul(Nat, Cod, Range, Lequel, Argument : string) : string;
@@ -78,17 +78,19 @@ end ;
 procedure TOF_BRGPDRESSOURCEMUL.OnLoad ;
 begin
   Inherited ;
-  SetControlText('XX_WHERE', ' AND ARS_TYPERESSOURCE IN ("SAL", "INT")');
+  SetcontrolText('XX_WHERE', '(ARS_TYPERESSOURCE IN("SAL", "INT"))');
 end ;
 
 procedure TOF_BRGPDRESSOURCEMUL.OnArgument (S : String ) ;
 begin
   sPopulationCode := RGPDResource;
   sFieldCode      := 'ARS_RESSOURCE';
-  sFieldCode2nd   := '';
+  sFieldCode2     := '';
+  sFieldCode3     := '';
   sFieldLabel     := 'ARS_LIBELLE';
   sFieldLabel2nd  := '';
   Inherited ;
+  THValCombobox(GetControl('ARS_TYPERESSOURCE')).Plus := ' AND (CC_CODE IN("SAL", "INT"))';
 end ;
 
 procedure TOF_BRGPDRESSOURCEMUL.OnClose ;

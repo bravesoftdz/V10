@@ -463,65 +463,64 @@ Procedure G_LigneCommentaireNumBon ( TOBPiece,TOBL : TOB; ALaFin : boolean=false
 Var NewL : TOB ;
     RefP : String ;
 BEGIN
-//
-if TOBL.GetString('NUMBON')= '' then exit;
-//
-if AlAFin then NewL:=NewTOBLigne(TOBPiece,-1)
-					else NewL:=NewTOBLigne(TOBPiece,1);
-NewL.PutValue('GL_NUMORDRE', 0) ;
-PieceVersLigne (TOBPiece,Newl);
+  //
+  if TOBL.GetString('NUMBON')= '' then exit;
+  //
+  if AlAFin then NewL:=NewTOBLigne(TOBPiece,-1)
+            else NewL:=NewTOBLigne(TOBPiece,1);
+  NewL.PutValue('GL_NUMORDRE', 0) ;
+  PieceVersLigne (TOBPiece,Newl);
 
-RefP:= 'Bon N° '+TOBL.GetString('NUMBON');
+  RefP:= 'Bon N° '+TOBL.GetString('NUMBON')+ ' du ' + DateToStr(TOBL.GetValue('GL_DATELIVRAISON'));
+  RefP:=Copy(RefP,1,70) ;
+  NewL.PutValue('GL_LIBELLE',RefP)    ; NewL.PutValue('GL_TYPELIGNE','COM') ;
+  NewL.PutValue('GL_TYPEDIM','NOR')   ; NewL.PutValue('GL_CODEARTICLE','') ;
+  NewL.PutValue('GL_ARTICLE','')      ; NewL.PutValue('GL_QTEFACT',0) ;
+  NewL.PutValue('GL_QTESTOCK',0)      ; NewL.PutValue('GL_PUHTDEV',0) ;
+  NewL.PutValue('GL_QTERESTE',0)      ; { NEWPIECE }
+  //--- GUINIER ---
+  NewL.PutValue('GL_MTRESTE',0)       ; {NEWPIECE}
 
-RefP:=Copy(RefP,1,70) ;
-NewL.PutValue('GL_LIBELLE',RefP)    ; NewL.PutValue('GL_TYPELIGNE','COM') ;
-NewL.PutValue('GL_TYPEDIM','NOR')   ; NewL.PutValue('GL_CODEARTICLE','') ;
-NewL.PutValue('GL_ARTICLE','')      ; NewL.PutValue('GL_QTEFACT',0) ;
-NewL.PutValue('GL_QTESTOCK',0)      ; NewL.PutValue('GL_PUHTDEV',0) ;
-NewL.PutValue('GL_QTERESTE',0)      ; { NEWPIECE }
-//--- GUINIER ---
-NewL.PutValue('GL_MTRESTE',0)       ; {NEWPIECE}
+  NewL.PutValue('GL_PUTTCDEV',0)      ; NewL.PutValue('GL_TYPEARTICLE','') ;
+  NewL.PutValue('GL_PUHT',0)          ; NewL.PutValue('GL_PUHTNET',0) ;
+  NewL.PutValue('GL_DPA',0)           ; NewL.PutValue('GL_DPR',0) ;
+  NewL.PutValue('GL_PMAP',0)          ; NewL.PutValue('GL_PMRP',0) ;
+  NewL.PutValue('GL_PUTTC',0)         ; NewL.PutValue('GL_PUTTCNET',0) ;
+  NewL.PutValue('GL_PUHTBASE',0)      ; NewL.PutValue('GL_FAMILLETAXE1','') ;
+  NewL.PutValue('GL_TYPENOMENC','')   ; NewL.PutValue('GL_QUALIFMVT','') ;
+  NewL.PutValue('GL_REFARTSAISIE','') ; NewL.PutValue('GL_REFARTBARRE','') ;
+  NewL.PutValue('GL_REFCATALOGUE','') ; NewL.PutValue('GL_TYPEREF','') ;
+  NewL.PutValue('GL_REFARTTIERS','')  ;
+  {Modif AC 4/07/03 Pas de GL_CODESDIM sur les lignes commentaire}
+  NewL.PutValue('GL_CODESDIM','')  ;
+  {Fin Modif AC}
+  {Modif JLD 20/06/2002}
+  NewL.PutValue('GL_ESCOMPTE',TOBPiece.GetValue('GP_ESCOMPTE')) ;
+  NewL.PutValue('GL_REMISEPIED',TOBPiece.GetValue('GP_REMISEPIED')) ;
+  {Fin modif}
 
-NewL.PutValue('GL_PUTTCDEV',0)      ; NewL.PutValue('GL_TYPEARTICLE','') ;
-NewL.PutValue('GL_PUHT',0)          ; NewL.PutValue('GL_PUHTNET',0) ;
-NewL.PutValue('GL_DPA',0)           ; NewL.PutValue('GL_DPR',0) ;
-NewL.PutValue('GL_PMAP',0)          ; NewL.PutValue('GL_PMRP',0) ;
-NewL.PutValue('GL_PUTTC',0)         ; NewL.PutValue('GL_PUTTCNET',0) ;
-NewL.PutValue('GL_PUHTBASE',0)      ; NewL.PutValue('GL_FAMILLETAXE1','') ;
-NewL.PutValue('GL_TYPENOMENC','')   ; NewL.PutValue('GL_QUALIFMVT','') ;
-NewL.PutValue('GL_REFARTSAISIE','') ; NewL.PutValue('GL_REFARTBARRE','') ;
-NewL.PutValue('GL_REFCATALOGUE','') ; NewL.PutValue('GL_TYPEREF','') ;
-NewL.PutValue('GL_REFARTTIERS','')  ;
-{Modif AC 4/07/03 Pas de GL_CODESDIM sur les lignes commentaire}
-NewL.PutValue('GL_CODESDIM','')  ;
-{Fin Modif AC}
-{Modif JLD 20/06/2002}
-NewL.PutValue('GL_ESCOMPTE',TOBPiece.GetValue('GP_ESCOMPTE')) ;
-NewL.PutValue('GL_REMISEPIED',TOBPiece.GetValue('GP_REMISEPIED')) ;
-{Fin modif}
+  //JS 17/06/03
+  NewL.PutValue('GL_INDICESERIE',0) ; NewL.PutValue('GL_INDICELOT',0) ;
+  NewL.PutValue('GL_REMISELIGNE',0) ;
+  // Modif BTP
+  NewL.PutValue('GL_TYPEARTICLE','EPO');
+  NewL.PutValue('GL_PUHTNETDEV',0)    ; NewL.PutValue('GL_PUTTCNETDEV',0) ;
+  NewL.PutValue('GL_BLOCNOTE','')    ; NewL.PutValue('GL_QUALIFQTEVTE','') ;
+  NewL.PutValue('GL_INDICENOMEN',0) ;
+  NewL.PutValue('GL_NUMORDRE',0) ;
+  NewL.PutValue('GL_VIVANTE','X') ;
+  Newl.putvalue('GL_NIVEAUIMBRIC',0);
+  NewL.PutValue('GL_MONTANTPA',0)  ;
+  NewL.PutValue('GL_MONTANTPR',0)  ;
+  NewL.PutValue('GL_MONTANTPAFG',0)  ;
+  NewL.PutValue('GL_MONTANTPAFC',0)  ;
+  NewL.PutValue('GL_MONTANTPAFR',0)  ;
+  NewL.PutValue('GL_MONTANTFC',0)  ;
+  NewL.PutValue('GL_MONTANTFG',0)  ;
+  NewL.PutValue('GL_MONTANTFR',0)  ;
 
-//JS 17/06/03
-NewL.PutValue('GL_INDICESERIE',0) ; NewL.PutValue('GL_INDICELOT',0) ;
-NewL.PutValue('GL_REMISELIGNE',0) ;
-// Modif BTP
-NewL.PutValue('GL_TYPEARTICLE','EPO');
-NewL.PutValue('GL_PUHTNETDEV',0)    ; NewL.PutValue('GL_PUTTCNETDEV',0) ;
-NewL.PutValue('GL_BLOCNOTE','')    ; NewL.PutValue('GL_QUALIFQTEVTE','') ;
-NewL.PutValue('GL_INDICENOMEN',0) ;
-NewL.PutValue('GL_NUMORDRE',0) ;
-NewL.PutValue('GL_VIVANTE','X') ;
-Newl.putvalue('GL_NIVEAUIMBRIC',0);
-NewL.PutValue('GL_MONTANTPA',0)  ;
-NewL.PutValue('GL_MONTANTPR',0)  ;
-NewL.PutValue('GL_MONTANTPAFG',0)  ;
-NewL.PutValue('GL_MONTANTPAFC',0)  ;
-NewL.PutValue('GL_MONTANTPAFR',0)  ;
-NewL.PutValue('GL_MONTANTFC',0)  ;
-NewL.PutValue('GL_MONTANTFG',0)  ;
-NewL.PutValue('GL_MONTANTFR',0)  ;
-
-// ---
-ZeroLigne(NewL) ;
+  // ---
+  ZeroLigne(NewL) ;
 END ;
 
 Procedure G_LigneCommentaireBTP ( TOBPiece : TOB; Cledoc : R_cledoc; ALaFin : boolean=false; Intervention:boolean=false) ; overload;

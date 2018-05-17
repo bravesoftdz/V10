@@ -36,6 +36,8 @@ procedure LoadLesTOBTS (Cledoc : R_CLEDOC;TOBTSPOC : TOB);
 procedure GestionTsPOC(TOBPiece,OneTOB,TOBTSPOC : TOB);
 procedure ValideLesTOBTS ( TOBPiece,TOBTSPOC : TOB);
 function SetFactureReglePOC (TOBPiece : TOB) : boolean;
+procedure AppelMarcheST (CodeChantier,SousTrait,CodeMarche : string);
+
 implementation
 uses FactComm,UtilPGI,FactTOB,FactPiece,FactRG,FactUtil,ParamSOc,ENt1,AglInit,M3FP,cbpPath,LicUtil,UtilTOBPiece,UconnectBSV;
 
@@ -420,18 +422,24 @@ begin
   end;
 end;
 
-function AGLAppelMarcheST( parms: array of variant; nb: integer ) : variant;
-var CodeChantier,SousTrait,CodeMarche,DBName,ServerName : string;
+procedure AppelMarcheST (CodeChantier,SousTrait,CodeMarche : string);
+var DBName,ServerName : string;
     TheLance,EmailPasswd : string;
 begin
   EmailPasswd := DecryptageSt(V_PGI.EMailPassword);
-  CodeChantier := parms[0];
-  SousTrait := parms[1];
-  CodeMarche := parms[2];
   DBName := V_PGI.DBName;
   ServerName := GetServerName;
   TheLance := IncludeTrailingBackslash(TcbpPath.GetCegid)+'Specif-POC\APP\MarcheST.exe /userLSE='+V_PGI.User+' /EmailPwd='+EmailPasswd +' /Serveur='+ServerName+' /BaseDeDonnees='+DBName+' /CodeChantier="'+CodeChantier+'" /SousTraitant="'+SousTrait+'" /CodeMarche="'+CodeMarche+'" /Action=M';
   FileExecAndWait (TheLance);
+end;
+
+function AGLAppelMarcheST( parms: array of variant; nb: integer ) : variant;
+var CodeChantier,SousTrait,CodeMarche: string;
+begin
+  CodeChantier := parms[0];
+  SousTrait := parms[1];
+  CodeMarche := parms[2];
+  AppelMarcheST (CodeChantier,SousTrait,CodeMarche);
 end;
 
 function AGLAppelCreationMarcheST( parms: array of variant; nb: integer ) : variant;

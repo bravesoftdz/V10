@@ -5,7 +5,7 @@ Modifié le ... :   /  /
 Description .. : Source TOF de la FICHE : BRGPDREFERENTIEL ()
 Mots clefs ... : TOF;BRGPDREFERENTIEL
 *****************************************************************}
-Unit BRGPDUTILISATMUL_TOF ;
+Unit BRGPDCONTACTMUL_TOF ;
 
 Interface
 
@@ -31,12 +31,12 @@ Uses
   , BRGPDUtils
   ;
 
-function BLanceFiche_RGPDUtilisatMul(Nat, Cod, Range, Lequel, Argument : string) : string;
+function BLanceFiche_RGPDContactMul(Nat, Cod, Range, Lequel, Argument : string) : string;
 
 Type
-  TOF_BRGPDUTILISATMUL = Class (TOF_BRGPDMUL)
+  TOF_BRGPDCONTACTMUL = Class (TOF_BRGPDMUL)
   private
-    UtilAdr : THCheckbox;
+    ContactAdr : THCheckbox;
 
   public
     procedure OnNew                    ; override ;
@@ -52,71 +52,73 @@ Type
 Implementation
 
 uses
-   BRGPDVALIDTRT_TOF
-  , FormsName
+  utilPGI
   , wCommuns
-  , UtilPGI
-  , Mul
+  , mul
   ;
 
-function BLanceFiche_RGPDUtilisatMul(Nat, Cod, Range,Lequel,Argument : string) : string;
+function BLanceFiche_RGPDContactMul(Nat, Cod, Range,Lequel,Argument : string) : string;
 begin
   Result := AglLanceFiche(Nat, Cod, Range, Lequel, Argument);
 end;
 
-procedure TOF_BRGPDUTILISATMUL.OnNew ;
+procedure TOF_BRGPDCONTACTMUL.OnNew ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDUTILISATMUL.OnDelete ;
+procedure TOF_BRGPDCONTACTMUL.OnDelete ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDUTILISATMUL.OnUpdate ;
+procedure TOF_BRGPDCONTACTMUL.OnUpdate ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDUTILISATMUL.OnLoad ;
+procedure TOF_BRGPDCONTACTMUL.OnLoad ;
 begin
   Inherited ;
-  if (UtilAdr.Checked) and (IsConsent) then
-    SetControlText('XX_WHERE', ' AND EXISTS (SELECT 1 FROM SALARIES WHERE PSA_SALARIE = US_AUXILIAIRE AND CONCAT(PSA_ADRESSE1, PSA_ADRESSE2, PSA_ADRESSE3, PSA_CODEPOSTAL, PSA_VILLE) <> "")')
+  if (ContactAdr.Checked) and (IsConsent) then
+    SetControlText('XX_WHERE', ' AND EXISTS (SELECT 1 FROM ADRESSES WHERE ADR_REFCODE = C_TIERS AND ADR_NUMEROCONTACT = C_NUMEROCONTACT)')
   else
     SetControlText('XX_WHERE', '');
 end ;
 
-procedure TOF_BRGPDUTILISATMUL.OnArgument (S : String ) ;
+procedure TOF_BRGPDCONTACTMUL.OnArgument (S : String ) ;
 begin
-  sPopulationCode := RGPDUser;
-  sFieldCode      := 'US_UTILISATEUR';
-  sFieldCode2     := 'US_AUXILIAIRE';
-  sFieldCode3     := '';
-  sFieldLabel     := 'US_LIBELLE';
-  sFieldLabel2nd  := '';
+  sPopulationCode    := RGPDContact;
+  sFieldCode         := 'C_TIERS';
+  sFieldCode2        := 'C_NUMEROCONTACT';
+  sFieldCode3        := '';
+  sFieldLabel        := 'C_NOM';
+  sFieldLabel2nd     := 'C_PRENOM';
   Inherited ;
-  UtilAdr         := THCheckbox(GetControl('UTILADR'));
-  UtilAdr.Visible := (RgpdAction = rgdpaConsentRequest);
+  ContactAdr         := THCheckbox(GetControl('CONTACTADR'));
+  ContactAdr.Visible := (RgpdAction = rgdpaConsentRequest);
+  if RgPDAction = rgpdaAnonymization then
+    THCheckBox(GetControl('C_PRINCIPAL')).State := cbUnchecked
+  else
+    THCheckBox(GetControl('C_PRINCIPAL')).State := cbGrayed;
 end ;
 
-procedure TOF_BRGPDUTILISATMUL.OnClose ;
+procedure TOF_BRGPDCONTACTMUL.OnClose ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDUTILISATMUL.OnDisplay () ;
+procedure TOF_BRGPDCONTACTMUL.OnDisplay () ;
 begin
   Inherited ;
 end ;
 
-procedure TOF_BRGPDUTILISATMUL.OnCancel () ;
+procedure TOF_BRGPDCONTACTMUL.OnCancel () ;
 begin
   Inherited ;
 end ;
 
 Initialization
-  registerclasses ( [ TOF_BRGPDUTILISATMUL ] ) ;
+  registerclasses ( [ TOF_BRGPDCONTACTMUL ] ) ;
 end.
 
