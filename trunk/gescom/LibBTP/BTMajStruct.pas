@@ -667,19 +667,19 @@ begin
   //
   if NomTable ='BTRESSOURCE' then
   begin
-    if VersionBaseDest < '998.ZZZY' then
+    if VersionBaseDest < '998.ZZZZ1' then
     begin
       ExecuteSQL('UPDATE BTRESSOURCE SET BRS_GERECHANTIER="X" WHERE BRS_GERECHANTIER IS NULL');
     end;
   end else if NomTable ='UTILISAT' then
   begin
-    if VersionBaseDest < '998.ZZZZ' then
+    if VersionBaseDest < '998.ZZZZ1' then
     begin
       ExecuteSQL('UPDATE UTILISAT SET US_RGPDOK="-" WHERE US_RGPDOK IS NULL');
     end;
   end else if NomTable ='PHASESCHANTIER' then
   begin
-    if VersionBaseDest < '998.ZZZY' then
+    if VersionBaseDest < '998.ZZZZ1' then
     begin
       ExecuteSQL('UPDATE PHASESCHANTIER SET BPC_VISIBLE="X",BPC_SAISISSABLE="X" WHERE BPC_VISIBLE IS NULL');
     end;
