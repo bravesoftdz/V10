@@ -99,7 +99,7 @@ begin
     ExecuteSQL('DELETE FROM PARAMSALARIE WHERE PPP_PREDEFINI = "CEG" AND PPP_PGTYPEINFOLS = "PCI"');
 	end else if NamFic = 'BAT30999F650.BOB' then
   begin
-    ExecuteSQL('DELETE FROM MENU WHERE MN_1=280');
+//    ExecuteSQL('DELETE FROM MENU WHERE MN_1=280');
 	end else if NamFic = 'BAT30999F660.BOB' then
   begin
     ExecuteSQL('DELETE FROM BRGPDTABLESP');
