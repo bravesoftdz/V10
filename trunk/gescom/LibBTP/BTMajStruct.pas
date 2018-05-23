@@ -2432,6 +2432,10 @@ begin
   TheMenusSpecif := TOB.create ('LES MENUS SPECIFS',nil,-1);
 
   NumeroMenu := TheLIstRef.GetValue ('BTV_NOMELT');
+  if TheListRef.GetValue ('BTV_FORCE') = 'X' Then
+  begin
+    ExecuteSQL('DELETE FROM MENU WHERE MN_1="'+READTOKENST(NumeroMenu)+'"');
+  end;
 	XX.Titre.Caption := 'Mise à jour des Menus';
   XX.Titre.visible := true;
   XX.Titre.Refresh;
