@@ -1,7 +1,7 @@
 unit Facture;
 
 interface
-               
+
 uses {$IFDEF VER150} variants,{$ENDIF}
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   Grids, Hctrls, ExtCtrls, HTB97, StdCtrls, HPanel, UIUtil, Hent1, Menus,
@@ -972,6 +972,12 @@ type
     function ConstitueEdition(filename: string; DGD: boolean): boolean;
     function ControleAffaireAchat(var MsgErreur: String): Boolean;
     function ControleAffaireVente(var MsgErreur: string): Boolean;
+    function ParagrapheSuprimable(TOBLigne: TOB): boolean;
+    function ISPhaseUsed(Affaire, Phase: string): Boolean;
+    function OuvrageSupprimable(TOBL: TOB): boolean;
+    function ElementsSuivantSupprimable(TOBLigne: TOB): Boolean;
+    function ParagraphesSuivantSuprimable(TOBLigne: TOB): boolean;
+    function BeforeInsert(Arow: Integer): boolean;
   protected
     GereStatPiece, AvoirDejaInverse: boolean;
     GX, GY: Integer;
@@ -17359,6 +17365,17 @@ begin
 {$ENDIF}
 end;
 
+function TFFacture.BeforeInsert (Arow : Integer) : boolean;
+var TOBL : TOB;
+begin
+  Result := true;
+  TOBL := GetTOBLigne(TOBPiece,Arow-1);
+  if not ElementsSuivantSupprimable (TOBL) then
+  begin
+    Result := false;
+  end;
+end;
+
 procedure TFFacture.TInsLigneClick(Sender: TObject);
 begin
   if IsSousDetail ( Dessus(GS.row)) and IsSousDetail(Courante(GS.row)) then
@@ -17375,6 +17392,112 @@ begin
     ClickInsert(GS.Row);
   end;
 end;
+
+function TFFacture.ISPhaseUsed (Affaire,Phase : string) : Boolean;
+begin
+  Result := ExisteSql('SELECT 1 FROM CONSOMMATIONS WHERE BCO_AFFAIRE="'+Affaire+'" AND BCO_PHASETRA="'+ Phase+'"');
+end;
+
+function TFFacture.OuvrageSupprimable (TOBL : TOB) : boolean;
+begin
+  Result := True;
+  if (TOBL.GetString('BLP_PHASETRA')= '') or (TOBPiece.GetString('GP_AFFAIRE')='') then exit;
+  //
+  if ISPhaseUsed(TOBPiece.GetString('GP_AFFAIRE'),TOBL.GetString('BLP_PHASETRA')) then
+  begin
+    result := false;
+  end;
+end;
+
+function TFFacture.ElementsSuivantSupprimable (TOBLigne : TOB) : Boolean;
+var Niv : Integer;
+    TOBL : TOB;
+    II : Integer;
+begin
+  result := True;
+  Niv := TOBLigne.getInteger('GL_NIVEAUIMBRIC');  
+  for II :=  TOBLigne.GetIndex+1 to TOBPiece.detail.count -1 do
+  begin
+    TOBL := TOBPiece.detail[II];
+    if (Niv > 0) and (IsFinParagraphe(TOBL,Niv)) then break; // on arrive a la fin du paragraphe contenant l'ouvrage
+    if (not IsOuvrage(TOBL)) and (not IsParagraphe(TOBL)) then Continue; 
+    if IsOuvrage(TOBL) then
+    begin
+      if (not OuvrageSupprimable(TOBL)) then
+      begin
+        Result := false;
+        break;
+      end;
+    end else if IsParagraphe(TOBL) then
+    begin
+      if (not ParagrapheSuprimable(TOBL)) then
+      begin
+        Result := false;
+        break;
+      end;
+    end;
+  end;
+end;
+
+function TFFacture.ParagraphesSuivantSuprimable(TOBLigne : TOB) : boolean;
+var II : Integer;
+    Niv : Integer;
+    TOBL : TOB;
+begin
+  result := True;
+  Niv := StrToInt(Copy(TOBLigne.GetString('GL_TYPELIGNE'),3,1)); if Niv=1 then exit;
+  //
+  for II := TOBLigne.GetIndex+1 to TOBPiece.detail.count -1 do
+  begin
+    TOBL := TOBPiece.detail[II];
+
+    if IsFinParagraphe(TOBL,Niv-1) then break; // si on arrive a la fin du paragraphe contenant on s'arrete
+    if IsFinParagraphe(TOBL,Niv) then continue;
+    if (Not ISDebutParagraphe (TOBL,Niv)) and (not IsOuvrage(TOBL)) then continue;
+    //
+    if IsDebutParagraphe(TOBL) then
+    begin
+      if (not ParagrapheSuprimable(TOBL)) then
+      begin
+        result := false;
+        break;
+      end;
+    end else if IsOuvrage(TOBL) then
+    begin
+      if (not OuvrageSupprimable(TOBL)) then
+      begin
+        result := false;
+        break;
+      end;
+    end;
+  end;
+  //
+end;
+
+
+function TFFacture.ParagrapheSuprimable(TOBLigne : TOB) : boolean;
+var II : Integer;
+    Niv : Integer;
+    TOBL : TOB;
+begin
+  result := True;
+  Niv := StrToInt(Copy(TOBLigne.GetString('GL_TYPELIGNE'),3,1));
+  for II := TOBLigne.GetIndex+1 to TOBPiece.detail.count -1 do
+  begin
+    TOBL := TOBPiece.detail[II];
+    if IsFinParagraphe(TOBL,Niv) then break;
+    if IsFinParagraphe(TOBL) then continue;
+    if (TOBL.GetString('BLP_PHASETRA')<> '') and (TOBPiece.GetString('GP_AFFAIRE')<>'') then
+    begin
+      if ISPhaseUsed(TOBPiece.GetString('GP_AFFAIRE'),TOBL.GetString('BLP_PHASETRA')) then
+      begin
+        result := false;
+        break;
+      end;
+    end;
+  end;
+end;
+
 
 procedure TFFacture.TSupLigneClick(Sender: TObject);
 var TypeL : string;
@@ -17399,10 +17522,32 @@ begin
   //
   if (TOBPiece.GetString('GP_NATUREPIECEG') = 'BCE') and (VH_GC.BTCODESPECIF = '001')  then
   begin
+    if (IsParagraphe(TOBL)) and (not ParagrapheSuprimable(TOBL)) then
+    begin
+      PgiInfo('Vous ne pouvez pas supprimer ce paragraphe. Déjà utilisé.');
+      exit;
+    end;
+    if (IsParagraphe(TOBL)) and (not ParagraphesSuivantSuprimable(TOBL)) then
+    begin
+      PgiInfo('Vous ne pouvez pas supprimer ce paragraphe. Déjà utilisé.');
+      exit;
+    end;
+    if (IsOuvrage(TOBL)) and (not OuvrageSupprimable(TOBL)) then
+    begin
+      PgiInfo('Vous ne pouvez pas supprimer cette phase. Déjà utilisé.');
+      exit;
+    end;
+    //
+    if (IsOuvrage(TOBL)) and (not ElementsSuivantSupprimable(TOBL)) then
+    begin
+      PgiInfo('Vous ne pouvez pas supprimer cette phase. Déjà utilisé.');
+      exit;
+    end;
+    //
     if (TOBL.GetDouble('MTTRANSFERT')<> 0) or (TOBL.GetString('NUMTRANSFERT')<> '') then
     begin
       PgiInfo('Vous ne pouvez pas supprimer un transfert comme ceci.');
-      exit;  
+      exit;
     end;
   end;
   if IsSousDetail ( TOBL) then
@@ -17559,6 +17704,15 @@ var ACol: integer;
 {$ENDIF}
 begin
   if Action = taConsult then Exit;
+
+  if (TOBPiece.GetString('GP_NATUREPIECEG') = 'BCE') and (VH_GC.BTCODESPECIF = '001')  then
+  begin
+    if not BeforeInsert (GS.Row) then
+    begin
+      PgiInfo('Vous ne pouvez pas insérer de ligne à cet endroit');
+      exit;
+    end;
+  end;
 
 //  if (origineExcel) and (tModeSaisieBordereau in SaContexte) then exit;
   if (tModeSaisieBordereau in SaContexte) then exit;
@@ -24004,6 +24158,15 @@ begin
   {$IFDEF BTP}
   if IsFromExcel(TOBL) then exit;
   {$ENDIF}
+  if (TOBPiece.GetString('GP_NATUREPIECEG') = 'BCE') and (VH_GC.BTCODESPECIF = '001')  then
+  begin
+    if not BeforeInsert (GS.Row) then
+    begin
+      PgiInfo('Vous ne pouvez pas insérer de ligne à cet endroit');
+      exit;
+    end;
+  end;
+
   BouttonInVisible;
 //  if BTypeArticle.Visible then BTypeArticle.Visible := false;
   TOBL := GetTOBLigne(TOBPiece, GS.Row);

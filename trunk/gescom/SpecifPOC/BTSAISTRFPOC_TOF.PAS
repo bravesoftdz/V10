@@ -1439,7 +1439,8 @@ procedure TOF_BTSAISTRFPOC.AjouteLesDatas;
   begin
     Result := -1;
     TOBL := TFFacture (XX).LaPieceCourante.detail[NumDepart-1];
-    if not IsOuvrage(TOBL) then BEGIN Result := NumDepart +1; Exit; END;
+    if not IsOuvrage(TOBL) then BEGIN Result := NumDepart +1; Exit; END;  // ajuout d'une ligne ne décale pas les paragraphes
+    //
     for II := NumDepart+1 to TFFacture(XX).GS.rowCount -1 do
     begin
       TOBL := TFFacture (XX).LaPieceCourante.detail[II-1];

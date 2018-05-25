@@ -620,6 +620,7 @@ begin
           if TOBL.GetString('TYPETRANSFERT')<> 'X' then
           begin
             AjoutePhase (TOBL);
+            AssocieALaPhase(TOBL);
             RemontePhase;
           end;
         end else
@@ -812,7 +813,7 @@ begin
     TOBL := TOBPiece.detail[II];
     if IsDebutParagraphe(TOBL) or (TOBL.GetString('GL_TYPEARTICLE')='OUV') then
     begin
-      AjouteUnePhase(TOBL,TOBSTP);    
+      if TOBL.GetString('TYPETRANSFERT')<> 'X' then AjouteUnePhase(TOBL,TOBSTP);
     end;
   end;
 end;
