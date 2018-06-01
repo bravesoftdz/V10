@@ -671,6 +671,12 @@ begin
     begin
       ExecuteSQL('UPDATE BTRESSOURCE SET BRS_GERECHANTIER="X" WHERE BRS_GERECHANTIER IS NULL');
     end;
+  end else if NomTable ='BASTENT' then
+  begin
+    if VersionBaseDest < '998.ZZZZ2' then
+    begin
+      ExecuteSQL('UPDATE BASTENT SET BM4_HORSCOMPTA="-" WHERE BM4_HORSCOMPTA IS NULL');
+    end;
   end else if NomTable ='UTILISAT' then
   begin
     if VersionBaseDest < '998.ZZZZ1' then

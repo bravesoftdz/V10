@@ -117,6 +117,7 @@ begin
     THPanel(GetControl('PCRIT')).enabled := false;
     SetControlVisible('BDelete',true);
     RemplitDatas;
+    ChangeNature (self);
   end else
   begin
     TToolbarButton97 (GetControl('BFIND')).OnClick := AjouteDatas;
