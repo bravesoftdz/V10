@@ -1470,14 +1470,14 @@ Procedure CalculFacture ( TOBAffaire,TOBPiece,TOBPieceTrait,TOBSSTRAIT,TOBouvrag
       if EnHT then
       BEGIN
         CalculeLigneHT(TOBOL,TOBTaxesL,TOBPiece,DEV, NbDec,False,TOBTiers) ;
-        if (VenteAchat = 'VEN') and (IsDetailleCollectif) then CumuleCollectifs(TOBOL,TOBTaxesL,TOBVTECOLL,TOBSSTRAIT);
+        if {(VenteAchat = 'VEN') and} (IsDetailleCollectif) then CumuleCollectifs(TOBOL,TOBTaxesL,TOBVTECOLL,TOBSSTRAIT,TOBArticles,TOBTiers,TOBAffaire);
         ChangeParentLignesBases (TOBBasesL,TOBtaxesL,NBdec);
         //
         SommeLignePlat(TOBOL,TOBL,EnHT) ;
       END else
       BEGIN
         CalculeLigneTTC(TOBOL,TOBTaxesL,TOBPiece,DEV, NbDec,False,TOBTiers) ;
-        if (VenteAchat = 'VEN') and (IsDetailleCollectif) then CumuleCollectifs(TOBOL,TOBTaxesL,TOBVTECOLL,TOBSSTRAIT);
+        if {(VenteAchat = 'VEN') and }(IsDetailleCollectif) then CumuleCollectifs(TOBOL,TOBTaxesL,TOBVTECOLL,TOBSSTRAIT,TOBArticles,TOBTiers,TOBAffaire);
         ChangeParentLignesBases (TOBBasesL,TOBtaxesL,NBdec);
         //
         SommeLignePlat(TOBOL,TOBL,EnHT) ;
@@ -1661,7 +1661,7 @@ BEGIN
             end;
           end;
           CalculeLigneHT(TOBL,TOBTaxesL,TOBPiece,DEV, NbDec,False,TOBTiers) ;
-          if (VenteAchat = 'VEN') and (IsDetailleCollectif) then CumuleCollectifs(TOBL,TOBTaxesL,TOBVTECOLL,TOBSSTRAIT);
+          if {(VenteAchat = 'VEN') and} (IsDetailleCollectif) then CumuleCollectifs(TOBL,TOBTaxesL,TOBVTECOLL,TOBSSTRAIT,TOBArticles,TOBTiers,TOBAffaire);
           ChangeParentLignesBases (TOBBasesL,TOBtaxesL,NBdec);
           //
           if (not IsVariante(TOBL)) and (not IsLigneFromCentralis(TOBL)) then
@@ -1671,7 +1671,7 @@ BEGIN
         END else
         BEGIN
           CalculeLigneTTC(TOBL,TOBTaxesL,TOBPiece,DEV, NbDec,False,TOBTiers) ;
-          if (VenteAchat = 'VEN') and (IsDetailleCollectif) then CumuleCollectifs(TOBL,TOBTaxesL,TOBVTECOLL,TOBSSTRAIT);
+          if {(VenteAchat = 'VEN') and }(IsDetailleCollectif) then CumuleCollectifs(TOBL,TOBTaxesL,TOBVTECOLL,TOBSSTRAIT,TOBArticles,TOBTiers,TOBAffaire);
           ChangeParentLignesBases (TOBBasesL,TOBtaxesL,NBdec);
           //
           if (not IsVariante(TOBL)) and (not IsLigneFromCentralis(TOBL)) then

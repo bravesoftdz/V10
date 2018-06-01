@@ -18,7 +18,7 @@ Type
      private
         LesColonnes : string ;
         GS : THGRID ;
-        ColCptaArt,ColCpteVte,ColCpteAch,ColCpteStock,ColCpteVarStk,ColTiers,ColVenteAchat,ColEtabliss : integer ;
+        ColCptaArt,ColCpteVte,ColCpteAch,ColCpteStock,ColCpteVarStk,ColTiers,ColVenteAchat,ColEtabliss,Colaffaire : integer ;
         TobToDelete : Tob ;
         NextRang, LastRang : Integer ;
         NoAchat,AvecImmoDiv,AvecStock : Boolean ;
@@ -42,6 +42,7 @@ Type
         procedure BImprimerClick(Sender: TObject);
         procedure PrepareGrid;
         function  PrepareImpression : integer ;
+        procedure VentilColl;
      protected
         procedure Onclose  ; override ;
      public
@@ -448,6 +449,14 @@ begin
     end;
 end;
 
+procedure AGLVentilColl( parms: array of variant; nb: integer ) ;
+var  F : TForm ; ToTof : TOF ;
+begin
+  F:=TForm(Longint(Parms[0])) ;
+  if (F is TFVierge) then ToTof:=TFVierge(F).LaTof else exit;
+  if (ToTof is TOF_CODECPTA) then TOF_CODECPTA(ToTof).VentilColl else exit;
+end;
+
 procedure AGLVentilCompteHT( parms: array of variant; nb: integer ) ;
 var  F : TForm ; ToTof : TOF ;
 begin
@@ -509,8 +518,11 @@ for i:=0 to GS.ColCount-1 do
    begin
    	GS.ColFormats[i]:='CB=GCVENTEACHAT|AND (CO_CODE="ACH" OR CO_CODE="VEN" OR CO_CODE="CON")|<<Toute>>';
     ColVenteAchat := i;
-   end else if Nam='GCP_COMPTAAFFAIRE' then GS.ColFormats[i]:='CB=AFCOMPTAAFFAIRE||<<Tous>>'
-   else if Nam='GCP_ETABLISSEMENT' then
+   end else if Nam='GCP_COMPTAAFFAIRE' then
+   begin
+    GS.ColFormats[i]:='CB=AFCOMPTAAFFAIRE||<<Tous>>';
+    Colaffaire := I;
+   end else if Nam='GCP_ETABLISSEMENT' then
    begin
    	GS.ColFormats[i]:='CB=TTETABLISSEMENT||<<Tous>>';
     ColEtabliss := i;
@@ -540,7 +552,17 @@ begin
   //
 end;
 
+procedure TOF_CODECPTA.VentilColl;
+var AchatVte,CptaArticle,CptaTiers,CptaAffaire,Etabliss : string;
+begin
+  AchatVte := GS.CellValues [ColVenteAchat,GS.row];
+  CptaArticle := GS.CellValues [ColCptaArt,GS.row];
+  CptaTiers := GS.CellValues [ColTiers,GS.row];
+  CptaAffaire := GS.CellValues [Colaffaire,GS.row];
+end;
+
 Initialization
 registerclasses([TOF_CODECPTA]);
 RegisterAglProc( 'VentilCompteHT', TRUE , 1, AGLVentilCompteHT );
+RegisterAglProc( 'VentilCollectif', TRUE , 1, AGLVentilColl );
 end.

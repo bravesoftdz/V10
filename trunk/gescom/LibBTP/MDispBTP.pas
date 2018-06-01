@@ -1404,8 +1404,10 @@ Cegid,False,False)};
 {$IFDEF V10}     
     74164 : AglLanceFiche ('BTP','BTCOMMENTAIRE','','','') ;
 {$ELSE}
-    74164 : HShowMessage('2;?caption?;'+TraduireMemoire('Fonction disponible uniquement à partir de la Version 10 : ')+';W;O;O;O;',TitreHalley,IntToStr(Num)); 
+    74164 : HShowMessage('2;?caption?;'+TraduireMemoire('Fonction disponible uniquement à partir de la Version 10 : ')+';W;O;O;O;',TitreHalley,IntToStr(Num));
 {$ENDIF}
+    74165 : AglLanceFiche ('BTP','BTVENTILCOLLMUL','','','ACTION=MODIFICATION') ;
+    //
     /// contrats
     14851 : ParametrageTypeAction;
     14852 : ParamTable ('AFTRESILAFF',taCreat,0,PRien,3,'Résiliation contrat / Rejet Devis');

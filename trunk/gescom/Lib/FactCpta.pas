@@ -2730,7 +2730,7 @@ BEGIN
     if (TestReglementArticleFi(TOBH)=true) then Continue;
     {$ENDIF}
   	if (TOBH.GetString('GPE_FOURNISSEUR') <> '') and (not GetparamSocSecur('SO_BTREGLSTTIERS',true)) then continue;
-    if (pos(MM.Nature,'FC;AC')>0) and (TOBH.GetString('GPE_FOURNISSEUR') = '') and (getparamSocSecur('SO_BTVENTCOLLECTIF',false)) and (TOBVTECOLL <> nil)  then
+    if (((pos(MM.Nature,'FC;AC')>0) and (TOBH.GetString('GPE_FOURNISSEUR') = '')) or (pos(MM.Nature,'FF;AF')>0)) and (getparamSocSecur('SO_BTVENTCOLLECTIF',false)) and (TOBVTECOLL <> nil)  then
     begin
       ReajusteCollectifs (TOBVTECOLL,TOBH.GetDouble('GPE_MONTANTECHE'),TOBH.GetDouble('GPE_MONTANTDEV'));
       for II := 0 to TOBVTECOLL.detail.count -1 do
@@ -4178,11 +4178,17 @@ BEGIN
 
     XP := TOBP.getDouble('GPT_TOTALTTC') ;
     XD := TOBP.getDouble('GPT_TOTALTTCDEV');
-    if (XP =0) and (XD = 0) then continue; 
-    CPteRD := TOBP.GEtString('GPT_COLLECTIF');
+    if (XP =0) and (XD = 0) then continue;
+    CPteRD := '';
+    if getparamSocSecur('SO_BTVENTCOLLECTIF',false) then
+    begin
+      CPteRD := FindCollectifRDPlus (TOBP,TObpiece);
+    end;
+    //
     if CPteRD = '' then
     begin
-    end; 
+      CPteRD := TOBP.GEtString('GPT_COLLECTIF');
+    end;
     // Erreur sur Compte retenues de garanties
     if CPteRD='' then BEGIN Result:=rcPar ; LastMsg:=12 ; Exit ; END ;
     {Etude du compte général }
@@ -4266,72 +4272,82 @@ Var CPteRG   : String ;
     DP,CP,DD,CD,XD,XP,XXp,XXD,TheMontantRGTTC : Double ;
     DEV : Rdevise;
 BEGIN
-Result:=rcOk ;
-if GetParamSocSecur ('SO_BTOPTRGCOLLTIE',false) then exit;
-TOBTTC:=Nil ; if TOBEcr.Detail.Count>0 then TOBTTC:=TOBEcr.Detail[0] ;
-if TOBPieceRg = nil then exit;
-if TOBPieceRg.detail.count = 0 then exit;
-DEV.Code:=TOBPiece.GetValue('GP_DEVISE') ; GetInfosDevise(DEV) ;
-{Montants}
-GetMontantRGReliquat(TOBPIeceRG, XD, XP,True);
-TheMontantRGTTC := XD;
-if ((MM.Nature='FC') or (MM.Nature='AC')) then CpteRg:=GetParamSoc('SO_GCCPTERGVTE')
-else if ((MM.Nature='FF') or (MM.Nature='AF')) then CpteRg:=GetParamSoc('SO_GCCPTERGACH');
+  Result:=rcOk ;
+  if GetParamSocSecur ('SO_BTOPTRGCOLLTIE',false) then exit;
+  TOBTTC:=Nil ; if TOBEcr.Detail.Count>0 then TOBTTC:=TOBEcr.Detail[0] ;
+  if TOBPieceRg = nil then exit;
+  if TOBPieceRg.detail.count = 0 then exit;
+  DEV.Code:=TOBPiece.GetValue('GP_DEVISE') ; GetInfosDevise(DEV) ;
+  {Montants}
+  GetMontantRGReliquat(TOBPIeceRG, XD, XP,True);
+  TheMontantRGTTC := XD;
+  CpteRg := '';
+  
+  if getparamSocSecur('SO_BTVENTCOLLECTIF',false) then
+  begin
+    CpteRg := FindCollectifRGPlus (TOBBasesRG,TObpiece);
+  end;
+  
+  if CpteRg = '' then
+  begin
+    if ((MM.Nature='FC') or (MM.Nature='AC')) then CpteRg:=GetParamSoc('SO_GCCPTERGVTE')
+    else if ((MM.Nature='FF') or (MM.Nature='AF')) then CpteRg:=GetParamSoc('SO_GCCPTERGACH');
+  end;
+  
+  // Erreur sur Compte retenues de garanties
+  if CpteRG='' then BEGIN Result:=rcPar ; LastMsg:=12 ; Exit ; END ;
+  {Etude du compte général }
+  TOBG:=CreerTOBGeneral(CpteRG) ;
+  // Erreur sur Compte RG
+  if TOBG=Nil then
+     BEGIN
+     if VH_GC.GCPontComptable='ATT' then Result:=rcPar else
+      if VH_GC.GCPontComptable='REF' then Result:=rcRef else
+         BEGIN
+         if Not CreerCompteGC(TOBG,CpteRg,'','',ccpRG) then Result:=rcPar ;
+         END ;
+     if Result<>rcOk then BEGIN LastMsg:=2 ; Exit ; END ;
+     END ;
+  OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
+  {Ligne d'écriture}
+  TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
+  PieceVersECR(MM,TOBPiece,TOBTiers,TOBE,False) ;
+  {Général}
+  TOBE.PutValue('E_GENERAL',CpteRG) ;
+  TOBE.PutValue('E_CONSO',TOBG.GetValue('G_CONSO')) ;
+  {Divers}
+  TOBE.PutValue('E_TYPEMVT','TTC') ;
+  {Client}
+  TOBE.PutValue('E_AUXILIAIRE',TOBTiers.GetValue('T_AUXILIAIRE')) ;
+  AlimLibEcr(TobE,TobPiece,TobTiers,'Retenue Garantie',tecRG,True,(MM.Simul='S'));
+  {Eche+Vent}
+  NumL:=TOBEcr.Detail.Count-NbEches+1 ; TOBE.PutValue('E_NUMLIGNE',NumL) ;
+  if OkVent then TOBE.PutValue('E_ANA','X') ;
 
-// Erreur sur Compte retenues de garanties
-if CpteRG='' then BEGIN Result:=rcPar ; LastMsg:=12 ; Exit ; END ;
-{Etude du compte général }
-TOBG:=CreerTOBGeneral(CpteRG) ;
-// Erreur sur Compte RG
-if TOBG=Nil then
-   BEGIN
-   if VH_GC.GCPontComptable='ATT' then Result:=rcPar else
-    if VH_GC.GCPontComptable='REF' then Result:=rcRef else
-       BEGIN
-       if Not CreerCompteGC(TOBG,CpteRg,'','',ccpRG) then Result:=rcPar ;
-       END ;
-   if Result<>rcOk then BEGIN LastMsg:=2 ; Exit ; END ;
-   END ;
-OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
-{Ligne d'écriture}
-TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
-PieceVersECR(MM,TOBPiece,TOBTiers,TOBE,False) ;
-{Général}
-TOBE.PutValue('E_GENERAL',CpteRG) ;
-TOBE.PutValue('E_CONSO',TOBG.GetValue('G_CONSO')) ;
-{Divers}
-TOBE.PutValue('E_TYPEMVT','TTC') ;
-{Client}
-TOBE.PutValue('E_AUXILIAIRE',TOBTiers.GetValue('T_AUXILIAIRE')) ;
-AlimLibEcr(TobE,TobPiece,TobTiers,'Retenue Garantie',tecRG,True,(MM.Simul='S'));
-{Eche+Vent}
-NumL:=TOBEcr.Detail.Count-NbEches+1 ; TOBE.PutValue('E_NUMLIGNE',NumL) ;
-if OkVent then TOBE.PutValue('E_ANA','X') ;
-
-if TOBG.GetValue('G_LETTRABLE')='X' then
-BEGIN
-  TOBE.PutValue('E_ECHE','X') ; TOBE.PutValue('E_NUMECHE',1) ; TOBE.PutValue('E_ETATLETTRAGE','AL') ;
-  TOBE.PutValue('E_ETAT','0000000000') ;
-  if TOBTTC <> nil then
-  if TOBTTC<>Nil then
+  if TOBG.GetValue('G_LETTRABLE')='X' then
   BEGIN
-    TOBE.PutValue('E_MODEPAIE',TOBTTC.GetValue('E_MODEPAIE')) ;
-    TOBE.PutValue('E_DATEECHEANCE',TOBTTC.GetValue('E_DATEECHEANCE')) ;
+    TOBE.PutValue('E_ECHE','X') ; TOBE.PutValue('E_NUMECHE',1) ; TOBE.PutValue('E_ETATLETTRAGE','AL') ;
+    TOBE.PutValue('E_ETAT','0000000000') ;
+    if TOBTTC <> nil then
+    if TOBTTC<>Nil then
+    BEGIN
+      TOBE.PutValue('E_MODEPAIE',TOBTTC.GetValue('E_MODEPAIE')) ;
+      TOBE.PutValue('E_DATEECHEANCE',TOBTTC.GetValue('E_DATEECHEANCE')) ;
+    END ;
   END ;
-END ;
-TOBE.PutValue('E_EMETTEURTVA','X') ;
-{Montants}
-//GetSommeRG(TOBPieceRG,XP,XD,XE) ;
+  TOBE.PutValue('E_EMETTEURTVA','X') ;
+  {Montants}
+  //GetSommeRG(TOBPieceRG,XP,XD,XE) ;
 
-DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
-if MM.Nature='FC' then BEGIN DD:=XD ; DP:=XP ; CD:=0 ; CP:=0 ; END else
-if MM.Nature='FF' then BEGIN CD:=XD ; CP:=XP ; DD:=0 ; DP:=0 ; END else
-if MM.Nature='AC' then BEGIN CD:=-XD ; CP:=-XP ; DD:=0 ; DP:=0 ; END else
-if MM.Nature='AF' then BEGIN DD:=-XD ; DP:=-XP ; CD:=0 ; CP:=0 ; END ;
-TOBE.PutValue('E_DEBIT',DP)     ; TOBE.PutValue('E_CREDIT',CP) ;
-TOBE.PutValue('E_DEBITDEV',DD)  ; TOBE.PutValue('E_CREDITDEV',CD) ;
-if ((DP=0) and (CP=0)) then TOBE.Free else TheTOBRG := TOBE;
-TOBG.Free ;
+  DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
+  if MM.Nature='FC' then BEGIN DD:=XD ; DP:=XP ; CD:=0 ; CP:=0 ; END else
+  if MM.Nature='FF' then BEGIN CD:=XD ; CP:=XP ; DD:=0 ; DP:=0 ; END else
+  if MM.Nature='AC' then BEGIN CD:=-XD ; CP:=-XP ; DD:=0 ; DP:=0 ; END else
+  if MM.Nature='AF' then BEGIN DD:=-XD ; DP:=-XP ; CD:=0 ; CP:=0 ; END ;
+  TOBE.PutValue('E_DEBIT',DP)     ; TOBE.PutValue('E_CREDIT',CP) ;
+  TOBE.PutValue('E_DEBITDEV',DD)  ; TOBE.PutValue('E_CREDITDEV',CD) ;
+  if ((DP=0) and (CP=0)) then TOBE.Free else TheTOBRG := TOBE;
+  TOBG.Free ;
 END ;
 
 Function CreerLignesTaxesRG ( TOBEcr,TOBPiece,TOBPieceRG,TOBTiers,TOBBases,TOBBasesRG : TOB ; MM : RMVT ) : T_RetCpta ;

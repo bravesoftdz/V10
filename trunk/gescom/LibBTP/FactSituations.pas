@@ -113,6 +113,7 @@ type
     GppReliquat : Boolean; { NEWPIECE }
     MessageValid : string;
     NumSituation : Integer;
+    IsVentilCollectif : Boolean;
     //
     procedure LoadLesTOB;
     procedure ToutAllouer;
@@ -564,6 +565,7 @@ end;
 
 constructor T_genereFacture.create;
 begin
+  IsVentilCollectif := getparamSocSecur('SO_BTVENTCOLLECTIF',false);
   LesAcomptes := nil;
   ToutAllouer;
 end;
@@ -692,7 +694,7 @@ begin
   //
   if (TOBVTECOLL.Detail.count = 0) then
   begin
-    ConstitueVteCollectif (TOBPiece,TOBSSTRAIT,TOBBases,TOBVTECOLL);
+    if IsVentilCollectif then ConstitueVteCollectif (TOBPiece,TOBSSTRAIT,TOBBases,TOBVTECOLL);
   end;
   TypeFacturation := RenvoieTypeFact(TOBPiece.GetValue('GP_AFFAIREDEVIS'));
   InAvancement := (Pos(Typefacturation,'AVA;DAC')>0);
