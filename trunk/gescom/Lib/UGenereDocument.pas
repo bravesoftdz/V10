@@ -1422,6 +1422,9 @@ begin
     TOBPiece.SetDateTime('GP_DATEPIECE',DateFac);
     TOBPiece.SetDateTime('GP_DATECREATION',TOBBAST.GetDateTime('BM4_DATEVALID'));
     TOBPiece.SetString('GP_REFEXTERNE',TOBBAST.GetString('BM3_NUMERODOC'));
+    // Gestion pour la reprise d'antériorité
+    TOBPiece.SetString('GP_HORSCOMPTA',TOBBAST.GetString('BM4_HORSCOMPTA'));
+    // ------
     TOBPiece.SetString('GP_CREEPAR','BST');
     //
     if (Pos(TOBBAST.GetString('BM4_FAMILLETAXE1'),VH_GC.AutoLiquiTVAST)>0) then
