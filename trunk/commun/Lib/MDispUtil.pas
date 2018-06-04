@@ -339,6 +339,25 @@ begin
       end;
       AGLLanceFiche('BTP','BTPIECEVEN_MUL','GP_NATUREPIECEG=BCE','','CONSULTATION');
     END;
+    // ----
+    279410: BEGIN
+      if not V_PGI.Superviseur then
+      begin
+        PgiInfo ('Vous n''avez pas les droits nécessaires pour effectuer cette opération');
+        exit;
+      end;
+//      AGLLanceFiche('BTP','BTPIECEVEN_MUL','GP_NATUREPIECEG=BCE','','CONSULTATION');
+    END;
+    // ----
+    279420: BEGIN
+      if not V_PGI.Superviseur then
+      begin
+        PgiInfo ('Vous n''avez pas les droits nécessaires pour effectuer cette opération');
+        exit;
+      end;
+      AGLLanceFiche('BTP','BTSELFAC_MUL','AFF_ETATAFFAIRE=ACP','','MODIFICATION;STATUT=AFF;ANTERIORITE') ;
+    END;
+    // ----
   else HShowMessage('2;?caption?;' + TraduireMemoire('Fonction non disponible : ') + ';W;O;O;O;', TitreHalley, IntToStr(Num));
   end;
 end;

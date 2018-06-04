@@ -144,6 +144,7 @@ Type
       ModifSousDetail : boolean;
       ReajusteDossier : boolean;
       ModifSituation : boolean;
+      RepriseAnteriorite : Boolean;
       MaxNumOrdre : Integer;
       // Modified by f.vautrain 07/11/2017 15:53:27 - FS#2774 - GUINIER - Interdire la possibilité de facturer supérieur à 100 %
       {$IFDEF V10}
@@ -261,7 +262,7 @@ Type
       procedure CalculeSousTotal(Ligne, IChampST: integer);
       procedure SetInfoFac(TOBL: TOB);
       procedure AddChampsFac;
-      procedure GenereLafacture (DateFac : TdateTime ; Var Clefac : R_Cledoc; GenereAvoir : boolean=false);
+      procedure GenereLafacture (DateFac : TdateTime ; NumSit : Integer; Var Clefac : R_Cledoc; GenereAvoir : boolean=false);
       function  ExisteLigneSituation : boolean;
       procedure FormKeyDown (Sender: TObject; var Key: Word; Shift: TShiftState);
       procedure DefaireParag (Sender : TObject);
@@ -282,7 +283,7 @@ Type
     	procedure SetInfoFactEcart(TOBL: TOB);
       procedure ClotureFacturation;
       procedure GetPorts (TOBpiece : TOB);
-    	function  DemandeDatesFacturation(var DateFac: TDateTime): boolean;
+    	function  DemandeDatesFacturation(var DateFac: TDateTime; var NumSit : integer): boolean;
     	procedure ConstituelesOnglets;
       procedure CalculeTotauxSaisie;
       procedure ConstitueOngletInit;
@@ -521,6 +522,7 @@ var IsModified : boolean;
 		DateFac : TdateTime;
     Clefac : r_cledoc;
     GenereAvoir : boolean;
+    NumSit : Integer;
 begin
   Inherited ;
   ErreurEcr := '';
@@ -549,7 +551,7 @@ begin
             if TraitementDerniereSituation then
             begin
               TRY
-                if not DemandeDatesFacturation (DateFac) then
+                if not DemandeDatesFacturation (DateFac,NumSit) then
                 begin
                   ecran.ModalResult := 0;
                   TToolWindow97(GetControl('PBouton')).Enabled := true;
@@ -557,7 +559,7 @@ begin
                   V_PGI.Ioerror := oeUnknown;
                   exit;
                 end;
-                GenereLafacture(DateFac,Clefac);
+                GenereLafacture(DateFac,NumSit,Clefac);
               FINALLY
                 if V_PGI.IOError = OeOK then
                 begin
@@ -586,7 +588,7 @@ begin
           if TraitementDerniereSituation then
           begin
             TRY
-              if not DemandeDatesFacturation (DateFac) then
+              if not DemandeDatesFacturation (DateFac,NumSit) then
               begin
                 ecran.ModalResult := 0;
                 TToolWindow97(GetControl('PBouton')).Enabled := true;
@@ -594,7 +596,7 @@ begin
                 V_PGI.Ioerror := oeUnknown;
                 exit;
               end;
-              GenereLafacture(DateFac,Clefac);
+              GenereLafacture(DateFac,NumSit,Clefac);
             FINALLY
               if V_PGI.IOError = OeOK then
               begin
@@ -620,7 +622,7 @@ begin
         begin
           TRY
             GenereAvoir := false;
-            if not DemandeDatesFacturation (DateFac) then
+            if not DemandeDatesFacturation (DateFac,NumSit) then
             begin
               ecran.ModalResult := 0;
               TToolWindow97(GetControl('PBouton')).Enabled := true;
@@ -634,7 +636,7 @@ begin
             // ----------------------------------------
             GenereAvoir := TraitementGestionAvoir;
             // ----------------------------------------
-            GenereLafacture(DateFac,Clefac,GenereAvoir);
+            GenereLafacture(DateFac,NumSit,Clefac,GenereAvoir);
           FINALLY
             if V_PGI.IOError = OeOK then
             Begin
@@ -671,6 +673,7 @@ begin
   ArtEcart := trim(GetParamsoc('SO_BTECARTPMA'));
   // ----
   ModeCloture := false;
+  if Pos('ANTERIORITE',S)>0 then RepriseAnteriorite := True;
   if Pos('CLOTURE',S)>0 then ModeCloture := true;
   if Pos('REAJUSTEDOSSIER',S)>0 then ReajusteDossier := True;
   if Pos('MODIFSITUATION',S)>0 then ModifSituation := True;
@@ -4455,7 +4458,7 @@ begin
 //  TOBLIGNES.PutValue('AFF_GENERAUTO',TOBL.getValue('AFF_GENERAUTO'));
 end;
 
-procedure TOF_BTSAISIEAVANC.GenereLafacture (DateFac : TdateTime; Var Clefac : R_Cledoc; GenereAvoir : boolean=false);
+procedure TOF_BTSAISIEAVANC.GenereLafacture (DateFac : TdateTime; NumSit : Integer; Var Clefac : R_Cledoc; GenereAvoir : boolean=false);
 begin
   if not GenereAvoir then
   begin
@@ -4472,7 +4475,7 @@ begin
   if not GenereFactureFromAvanc (TOBSOUSTraits,TOBLignes,TOBSelect,TOBOuvrages,
   															 TOBAcomptes_O,LESTOBACOMPTES,ModeCloture,ErreurEcr,Clefac,DateFac,
       													 MontantMarche,DejaFacture,MtHorsDevis,
-                                 flastfacture,fCotraitance,ModifSituation,GenereAvoir) then
+                                 flastfacture,fCotraitance,ModifSituation,GenereAvoir,RepriseAnteriorite,NumSit) then
     V_PGI.ioerror := OeUnknown;
 end;
 
@@ -5771,13 +5774,16 @@ begin
   ferme (QQ);
 end;
 
-function TOF_BTSAISIEAVANC.DemandeDatesFacturation(var DateFac: TDateTime ) : boolean;
+function TOF_BTSAISIEAVANC.DemandeDatesFacturation(var DateFac: TDateTime; var NumSit : integer ) : boolean;
 var TobDates : TOB;
 begin
   TOBDates := TOB.Create ('LES DATES', nil,-1);
   TOBDates.AddChampSupValeur('RETOUROK','-');
   TOBDates.AddChampSupValeur('DATFAC',iDate1900);
   TOBDates.AddChampSupValeur('DATESITUATION','-');
+  if (not ModeCloture) and ((ModeGeneration = 'AVA') or (ModeGeneration = 'DAC') and (RepriseAnteriorite))  then TOBDates.AddChampSupValeur('ANTERIORITE','X')
+                                                                                                            else TOBDates.AddChampSupValeur('ANTERIORITE','-');
+  TOBDates.AddChampSupValeur('NUMSIT',0);
   TOBDates.AddChampSupValeur('TYPEDATE','Date de mise à jour');
   TRY
     TheTOB := TOBDates;
@@ -5786,6 +5792,7 @@ begin
     if TOBDates.getValue('RETOUROK')='X' then
     begin
     	DateFac := TOBDates.GetDateTime('DATFAC');
+    	NumSit := TOBDates.GetInteger('NUMSIT');
     end;
   FINALLY
   	result := (TOBDates.getValue('RETOUROK')='X');

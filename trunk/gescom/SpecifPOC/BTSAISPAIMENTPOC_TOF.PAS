@@ -75,6 +75,7 @@ function DemandeReglementSousTrait (TOBPiece,TOBTiers,TOBEches,TOBAcomptes,TObpi
 var TOBParam : TOB;
 begin
   Result := True;
+  if TOBpieceTrait.detail.count = 0 then Exit;
   TOBParam := TOB.Create('LES PARAMS',nil,-1);
   TRY
     TOBParam.AddChampSupValeur('OKOK','X');

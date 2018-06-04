@@ -45,6 +45,8 @@ type
         GenereAvoir : boolean;
         NumSituation : integer;
         PourcentAvanc : double; // pourcentage d'avancement global de la situation
+        RepriseAnteriorite : Boolean;
+        NumSituationReprise : Integer;
         //
         TOBDevis,TOBFacture,TOBOptDevis,TOBTablette,TOBPieceTrait,TOBPieceTraitDevis,TOBAffaireInterv,TOBSousTrait,TOBAffaire : TOB;
         TOBArticles,TOBTiers,TOBEches,TOBAdresses,
@@ -127,7 +129,7 @@ type
      end;
 
 
-function GenereFactureFromAvanc (TOBSOUSTraits,TOBSource,TOBDetailDevis,TOBouvrages,TobAcomptes_O,TOBAcomptes : TOB; ClotureFacturation : boolean; var Erreur : string; var ClePiece : R_CLEDOC; DateFac : TdateTime; MontantMarche,DejaFacture,MtHorsDevis : Double; lastFacture : boolean=false; Cotraitance : boolean=false; ModifSituation : Boolean=false; GenereAvoir : boolean=false) : boolean;
+function GenereFactureFromAvanc (TOBSOUSTraits,TOBSource,TOBDetailDevis,TOBouvrages,TobAcomptes_O,TOBAcomptes : TOB; ClotureFacturation : boolean; var Erreur : string; var ClePiece : R_CLEDOC; DateFac : TdateTime; MontantMarche,DejaFacture,MtHorsDevis : Double; lastFacture : boolean=false; Cotraitance : boolean=false; ModifSituation : Boolean=false; GenereAvoir : boolean=false; RepriseAnteriorite : boolean=false; NumSituation : integer=0) : boolean;
 
 implementation
 
@@ -136,7 +138,7 @@ uses factvariante,FactOuvrage,Ucotraitance,FactTimbres, Math, FactCommBTP, UCumu
    ,CbpEnumerator
 ;
 
-function GenereFactureFromAvanc (TOBSOUSTraits,TOBSource,TOBDetailDevis,TOBouvrages,TobAcomptes_O,TOBAcomptes : TOB; ClotureFacturation : boolean; var Erreur : string; var ClePiece : R_CLEDOC; DateFac : TdateTime; MontantMarche,DejaFacture,MtHorsDevis : Double; lastFacture : boolean=false; Cotraitance : boolean=false; ModifSituation : Boolean=false; GenereAvoir : boolean=false) : boolean;
+function GenereFactureFromAvanc (TOBSOUSTraits,TOBSource,TOBDetailDevis,TOBouvrages,TobAcomptes_O,TOBAcomptes : TOB; ClotureFacturation : boolean; var Erreur : string; var ClePiece : R_CLEDOC; DateFac : TdateTime; MontantMarche,DejaFacture,MtHorsDevis : Double; lastFacture : boolean=false; Cotraitance : boolean=false; ModifSituation : Boolean=false; GenereAvoir : boolean=false; RepriseAnteriorite : boolean=false; NumSituation : integer=0) : boolean;
 var XX      : TgenFacAvanc;
 begin
   XX := TgenFacAvanc.create;
@@ -156,6 +158,8 @@ begin
     XX.Flastfacture     := lastFacture;
     XX.ModifSituation   := ModifSituation;
     XX.GenereAvoir      := GenereAvoir;
+    XX.RepriseAnteriorite := RepriseAnteriorite;
+    XX.NumSituationReprise := NumSituation;
     result              := XX.GenereLaFacture;
     ClePiece.NaturePiece  := XX.NewNature;
     ClePiece.Souche       := XX.NewSouche;
@@ -370,6 +374,11 @@ begin
   GetlesPortsFromDevisprinc ;
   //
   InitFacture (TOBOptdevis.detail.count > 1);
+  if RepriseAnteriorite then
+  begin
+    NumSituation := NumSituationReprise;
+    TOBFacture.SetBoolean('GP_HORSCOMPTA',true);
+  end;
   // TVA Millieme
   TheRepartTva.Initialise;
   TheRepartTva.TOBBases := TOBBases;
@@ -651,7 +660,7 @@ begin
     end;
     if result then
     begin
-      if VH_GC.BTCODESPECIF = '001' then
+      if (VH_GC.BTCODESPECIF = '001') and (not RepriseAnteriorite)  then
       begin
         NumSituation := GetNextNumSituation(TOBfacture);
         // ---- Constitue la situation 0 si elle n'existe pas -----

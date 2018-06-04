@@ -73,6 +73,8 @@ Type
       Avancement : boolean;
       ReajusteDossierfac : boolean;
       RecupSaisie : boolean;
+      RepriseAnteriorite : Boolean;
+
 
       Domaine : THValcomboBox;
       //
@@ -119,6 +121,7 @@ Type
       procedure ControleChamp(Champ, Valeur: String);
     procedure Definifacturation(NaturePieceG, SoucheG: string; Numero,IndiceG: integer);
     function AcompteNonRegle (Naturepieceg,Souche : string; numero,indiceg : integer) : boolean;
+    function ExisteFacturation(DevisPrinc: string): boolean;
     //
   end ;
 
@@ -159,8 +162,9 @@ begin
   //
   ReajusteDossierfac := false;
   RecupSaisie := false;
-  StArgument := S;
+  RepriseAnteriorite  := false;
   //
+  StArgument := S;
   Repeat
   Critere:=uppercase(ReadTokenSt(stArgument)) ;
   if Critere<>'' then
@@ -186,6 +190,11 @@ begin
   if ReajusteDossierfac then
   begin
   	ecran.Caption := Traduirememoire('Réajustement dossier de facturation');
+    UpdateCaption(ecran);
+    TToolbarButton97 (GetControl('BACOMPTES')).Visible := false;
+  end else if RepriseAnteriorite then
+  begin
+  	ecran.Caption := Traduirememoire('Reprise antériorité de l''avancement de facturation');
     UpdateCaption(ecran);
     TToolbarButton97 (GetControl('BACOMPTES')).Visible := false;
   end;
@@ -215,6 +224,10 @@ end ;
 procedure TOF_BTSELFAC_MUL.ControleChamp(Champ : String;Valeur : String);
 var St_Plus : string ;
 begin
+  if Champ = 'ANTERIORITE' then
+  begin
+    RepriseAnteriorite := true;
+  end;
   if Champ = 'REAJUSTEAVANC' then
   begin
     ReajusteDossierfac := true;
@@ -404,102 +417,112 @@ begin
   end;
   if AcompteNonRegle (Naturepieceg,Souche,numero,indiceg) then
   begin
-      system.New(CBtnTxt);
-      TRY
-        CBtnTxt[mbCust1] := 'Abandonner la saisie';
-        CBtnTxt[mbCust3] := 'Continuer';
-        Case ExMessageDlg('L''acompte demandé n''a pas été encore réglé.Que désirez-vous faire ?' + #13#10, mtxWarning, [mbCust1,mbCust3], 0, mbCust2, Application.Icon, CBtnTxt) Of
-          mrCust1: exit;
-          mrCust3: ;
-        else
-          exit;
-        End;
-      FINALLY
-        Dispose(CBtnTxt);
-      END;
+    system.New(CBtnTxt);
+    TRY
+      CBtnTxt[mbCust1] := 'Abandonner la saisie';
+      CBtnTxt[mbCust3] := 'Continuer';
+      Case ExMessageDlg('L''acompte demandé n''a pas été encore réglé.Que désirez-vous faire ?' + #13#10, mtxWarning, [mbCust1,mbCust3], 0, mbCust2, Application.Icon, CBtnTxt) Of
+        mrCust1: exit;
+        mrCust3: ;
+      else
+        exit;
+      End;
+    FINALLY
+      Dispose(CBtnTxt);
+    END;
   end;
   if not RecupSaisie then
   begin
-  RefPieceSel := EncoderefSel (NaturePieceg,Souche,Numero,IndiceG);
+    RefPieceSel := EncoderefSel (NaturePieceg,Souche,Numero,IndiceG);
 
-  QQ := OpenSql ('SELECT BMF_DEVISPRINC FROM BTMEMOFACTURE WHERE BMF_DEVIS="'+RefPieceSel+'"',true);
-  if not QQ.eof then
-  begin
-    // on change la reference de la piece initiale par le devis initial de la facture
-    DevisPrinc  := QQ.findfield('BMF_DEVISPRINC').AsString;
-  end;
-  ferme(QQ);
-  // Phase 1 -- On recup les devis d'une facture existante
-  if DevisPrinc <> '' then
-  begin
-    Sql := 'SELECT * FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="'+DevisPrinc+'"';
-    TOBFacture.LoadDetailDBFromSQL ('BTMEMOFACTURE',Sql,false);
-    TRY
-      RefPieceSel := DevisPrinc;
-      if not Chargefacturation(TOBFacture) then
-      begin
-      	PgiInfo ('Facturation impossible. La facturation à été cloturé',ecran.Caption);
-      	exit;
-      end;
-    FINALLY
-      TOBFacture.free;
-    END;
-  end else
-  begin
-    Sortie := ExisteFacturationOld (Affaire,Naturepieceg,Souche,Numero,IndiceG);
-    if Sortie = Btrsok then
+    QQ := OpenSql ('SELECT BMF_DEVISPRINC FROM BTMEMOFACTURE WHERE BMF_DEVIS="'+RefPieceSel+'"',true);
+    if not QQ.eof then
     begin
-      if ControleEtatDevisPrinc (NaturepieceG,Souche,Numero,IndiceG) then
-      begin
-        MessAttente := TFsplashScreen.Create (ecran);
-        MessAttente.Label1.Caption := 'Récupération de la structure de la facture en cours ...';
-        MessAttente.Animate1.Active := true;
-        MessAttente.Show;
-        MessAttente.Refresh;
-        DevisPrinc := EncoderefSel(NaturepieceG,Souche,Numero,IndiceG);
-        Sql := 'SELECT ##TOP 1## BMF_DEVISPRINC FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="'+DevisPrinc+'"';
-        if ExisteSQL(Sql) then
+      // on change la reference de la piece initiale par le devis initial de la facture
+      DevisPrinc  := QQ.findfield('BMF_DEVISPRINC').AsString;
+    end;
+    ferme(QQ);
+    // Phase 1 -- On recup les devis d'une facture existante
+    if DevisPrinc <> '' then
+    begin
+      Sql := 'SELECT * FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="'+DevisPrinc+'"';
+      TOBFacture.LoadDetailDBFromSQL ('BTMEMOFACTURE',Sql,false);
+      TRY
+        RefPieceSel := DevisPrinc;
+        if (Avancement) and (RepriseAnteriorite) and (ExisteFacturation(DevisPrinc))  then
         begin
-        	Sql := 'SELECT * FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="'+DevisPrinc+'"';
-          TOBFacture.LoadDetailDBFromSQL ('BTMEMOFACTURE',Sql,false);
-          TRY
-            RefPieceSel := DevisPrinc;
-            if not Chargefacturation(TOBFacture) then
-            begin
-              PgiInfo ('Facturation impossible. La facturation à été cloturé',ecran.Caption);
-              exit;
-            end;
-          FINALLY
-            TOBFacture.free;
-          END;
+          PgiInfo ('Saisie antériorité impossible. Des situations ont déjà été créés',ecran.Caption);
+          exit;
+        end;
+        if not Chargefacturation(TOBFacture) then
+        begin
+          PgiInfo ('Facturation impossible. La facturation à été cloturé',ecran.Caption);
+          exit;
+        end;
+      FINALLY
+        TOBFacture.free;
+      END;
+    end else
+    begin
+      Sortie := ExisteFacturationOld (Affaire,Naturepieceg,Souche,Numero,IndiceG);
+      if Sortie = Btrsok then
+      begin
+        if RepriseAnteriorite then
+        begin
+          PgiInfo ('Reprise antériorité impossible. Des situations ont déjà été créés',ecran.Caption);
+          exit;
+        end;
+        if ControleEtatDevisPrinc (NaturepieceG,Souche,Numero,IndiceG) then
+        begin
+          MessAttente := TFsplashScreen.Create (ecran);
+          MessAttente.Label1.Caption := 'Récupération de la structure de la facture en cours ...';
+          MessAttente.Animate1.Active := true;
+          MessAttente.Show;
+          MessAttente.Refresh;
+          DevisPrinc := EncoderefSel(NaturepieceG,Souche,Numero,IndiceG);
+          Sql := 'SELECT ##TOP 1## BMF_DEVISPRINC FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="'+DevisPrinc+'"';
+          if ExisteSQL(Sql) then
+          begin
+            Sql := 'SELECT * FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="'+DevisPrinc+'"';
+            TOBFacture.LoadDetailDBFromSQL ('BTMEMOFACTURE',Sql,false);
+            TRY
+              RefPieceSel := DevisPrinc;
+              if not Chargefacturation(TOBFacture) then
+              begin
+                PgiInfo ('Facturation impossible. La facturation à été cloturé',ecran.Caption);
+                exit;
+              end;
+            FINALLY
+              TOBFacture.free;
+            END;
+          end else
+          begin
+            ChargeOldfacturation (NaturePieceG,Souche,Numero,IndiceG);
+          end;
+          MessAttente.free;
         end else
         begin
-        	ChargeOldfacturation (NaturePieceG,Souche,Numero,IndiceG);
+          Exit;
         end;
-        MessAttente.free;
-      end else
+      end else if Sortie = BtrsNone then
       begin
-      	Exit;
-      end;
-    end else if Sortie = BtrsNone then
-    begin
         if ReajusteDossierfac then Exit;
-      NewFacturation (NaturepieceG,Souche,Numero,IndiceG);
-    end else if Sortie = BtrsAnnul then
-    begin
-      exit;
+        NewFacturation (NaturepieceG,Souche,Numero,IndiceG);
+      end else if Sortie = BtrsAnnul then
+      begin
+        exit;
+      end;
     end;
-  end;
-  TheOldFac.clearDetail;
-  // Phase 2 -- Selection des devis non facturés
+    TheOldFac.clearDetail;
+    // Phase 2 -- Selection des devis non facturés
     if (not ReajusteDossierfac) and (not RecupSaisie) then
     begin
-  ChargeLesDevisNonFacture (Affaire,TypeFac,Numero,IndiceG);
+      ChargeLesDevisNonFacture (Affaire,TypeFac,Numero,IndiceG);
     end;
-  beforeSelection;
-  // Now c'est correct -- On peut afficher la grille de multiselection
-  AfficheLagridGS;
-  GS.Visible := true;
+    beforeSelection;
+    // Now c'est correct -- On peut afficher la grille de multiselection
+    AfficheLagridGS;
+    GS.Visible := true;
   end else
   begin
     // recupération de la situation précédente
@@ -882,23 +905,31 @@ begin
   END;
   if not ReajusteDossierfac then
   begin
-  io := TRANSACTIONS (Majmemorisation,0);
-  if io = OeOk then
-  begin
-    if TOBAFacturer.detail.count > 0 then
+    io := TRANSACTIONS (Majmemorisation,0);
+    if io = OeOk then
     begin
-      // Go la saisie ..go
-      TheTOB := TOBAFACTURER;
-      if ModeTraitement = TmtCloture then TRAITEMENT :='CLOTURE' else TRAITEMENT :='';
-      AglLanceFiche ('BTP','BTSAISIEAVANC','','',TRAITEMENT);
-      TheTOB := Nil;
+      if TOBAFacturer.detail.count > 0 then
+      begin
+        // Go la saisie ..go
+        TheTOB := TOBAFACTURER;
+        // -
+        if ModeTraitement = TmtCloture then
+        begin
+          TRAITEMENT :='CLOTURE'
+        end else if RepriseAnteriorite then
+        begin
+          TRAITEMENT :='ANTERIORITE'
+        end else TRAITEMENT :='';
+        // -
+        AglLanceFiche ('BTP','BTSAISIEAVANC','','',TRAITEMENT);
+        TheTOB := Nil;
+      end;
+      BchercheClick;
+    end else
+    begin
+      PGIError ('ATTENTION : Sélection non enregistrée');
+      BchercheClick;
     end;
-    BchercheClick;
-  end else
-  begin
-    PGIError ('ATTENTION : Sélection non enregistrée');
-    BchercheClick;
-  end;
   end else
   begin
     // reajustement dossier de facturation
@@ -1021,6 +1052,22 @@ begin
   	TOBDFact.free;
   END;
 end;
+
+function TOF_BTSELFAC_MUL.ExisteFacturation (DevisPrinc : string) : boolean;
+var cledoc : R_CLEDOC;
+    ZZ,SQL  :string;
+begin
+  FillChar(cledoc,sizeof(cledoc),#0);
+  ZZ := DevisPrinc;
+  cledoc.NaturePiece := READTOKENST(ZZ);
+  cledoc.Souche := READTOKENST(ZZ);
+  cledoc.NumeroPiece := StrToInt(READTOKENST(ZZ));
+  cledoc.Indice := StrToInt(READTOKENST(ZZ));
+
+  SQL := 'SELECT 1 FROM LIGNEFAC WHERE '+WherePiece (cledoc,ttdLignefac,false);
+  result :=  ExisteSQL(SQL); 
+end;
+
 
 function TOF_BTSELFAC_MUL.ExisteFacturationOld(var Affaire,Naturepieceg,Souche: string; var Numero, Indice: integer): TResultS;
 var QQ : TQuery;

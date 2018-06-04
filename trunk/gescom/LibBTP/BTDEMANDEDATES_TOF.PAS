@@ -57,6 +57,8 @@ begin
   TOBDates.AddChampSupValeur('RETOUROK','-');
   TOBDates.AddChampSupValeur('DATFAC',TOBpiece.GetValue('GP_DATELIVRAISON'));
   TOBDates.AddChampSupValeur('DATESITUATION','-');
+  TOBDates.AddChampSupValeur('ANTERIORITE','-');
+  TOBDates.AddChampSupValeur('NUMSIT',0);
   TOBDates.AddChampSupValeur('TYPEDATE','Date de livraison');
   TRY
     TheTOB := TOBDates;
@@ -85,6 +87,15 @@ end ;
 procedure TOF_BTDEMANDEDATES.OnUpdate ;
 begin
   Inherited ;
+  if TOBData.getValue('ANTERIORITE')='X' then
+  begin
+    if THSpinEdit(GEtControl('NUMSIT')).Value =0 then
+    begin
+      PgiInfo ('Merci de renseigner le numéro de la dernière situation');
+      Ecran.ModalResult := 0;
+      Exit;
+    end;
+  end;
   if Not IsValidDate(GetControlText('DATEFAC')) Then
   begin
     PgiInfo ('La date est incorrecte. Merci de la modifier');
@@ -98,6 +109,7 @@ begin
     Exit;
   end;
   TOBData.SetDateTime ('DATFAC',StrToDate(GetControlText('DATEFAC')));
+  TOBData.SetInteger ('NUMSIT',THSpinEdit(GEtControl('NUMSIT')).Value);
   TOBData.putValue('RETOUROK','X');
 end ;
 
@@ -121,6 +133,11 @@ begin
   begin
   	ecran.Caption := TraduireMemoire (TOBData.getValue('TYPEDATE'));
     SetControlCaption('TDATEFAC',TOBData.getValue('TYPEDATE'));
+  end;
+  if TOBData.getValue('ANTERIORITE')='X' then
+  begin
+    SetControlVisible('LNUMSIT',true);
+    SetControlVisible('NUMSIT',true);
   end;
 end ;
 
