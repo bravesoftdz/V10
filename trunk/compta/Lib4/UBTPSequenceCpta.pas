@@ -222,7 +222,7 @@ begin
           if QQ.ExecSQL = 0 then
           begin
             Result := -1;
-            Raise Exception.Create('Erreur mise à jour compteur pièece comptable');
+            Raise Exception.Create('Erreur mise à jour compteur pièce comptable');
           end;
         end;
       FINALLY
