@@ -559,6 +559,16 @@ begin
                       'BT3_INDICEG=GL_INDICEG AND '+
                       'BT3_NUMORDRE=GL_NUMORDRE '+
                       ') AS MTTRANSFERT, ';
+//
+    Result := Result + 'CASE WHEN EXISTS ('+
+                       'SELECT 1 FROM BTRFDETAIL WHERE '+
+                       'BT3_NATUREPIECEG=GL_NATUREPIECEG AND BT3_SOUCHE=GL_SOUCHE AND BT3_NUMERO=GL_NUMERO AND BT3_INDICEG=GL_INDICEG AND '+
+                       'BT3_NUMORDRE=GL_NUMORDRE AND BT3_UNIQUEBLO=0 AND BT3_TYPELIGNETRF="001" AND BT3_CONTREP="-"'+
+                       ')'+
+                       'THEN GL_MONTANTHTDEV '+
+                       'ELSE 0 '+
+                       'END AS TRANSFERED, ';
+//
     Result := Result +
                       '('+
                 'SELECT SUM(BLE_MONTANT) '+

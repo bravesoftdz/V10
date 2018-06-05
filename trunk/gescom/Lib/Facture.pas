@@ -198,6 +198,7 @@ type R_Col = record
     SG_CODECOND : Integer;
     SG_CODEMARCHE : Integer;
     SG_TOTALTS : Integer;
+    SG_MTTRANSFERT : Integer;
   end;
 
 const StColNameGSA = 'CB;LIBELLE;QTE;';
@@ -6685,6 +6686,7 @@ begin
   RCOL.SG_CODECOND :=  SG_CODECOND ;
   RCOL.SG_CODEMARCHE :=  SG_CODECOND ;
   RCOL.SG_TOTALTS := SG_TOTALTS;
+  RCol.SG_MTTRANSFERT := SG_MTTRANSFERT;
 end;
 
 procedure TFFacture.RestoreColList;
@@ -6761,6 +6763,7 @@ begin
   SG_CODECOND :=  RCOL.SG_CODECOND ;
   SG_CODEMARCHE :=  RCOL.SG_CODEMARCHE ;
   SG_TOTALTS := RCOL.SG_TOTALTS;
+  SG_MTTRANSFERT := RCol.SG_MTTRANSFERT;
 
 	MemoriseChampsSupLigneETL (cledoc.NaturePiece,true);
   MemoriseChampsSupLigneOUV (cledoc.NaturePiece);
@@ -7874,12 +7877,12 @@ begin
       TOBRG := FindRetenue (TOBPieceRG,TOBL.GetInteger('GL_NUMORDRE'));
       if (TOBRG <> nil) and (not TOBRG.GetBoolean('PRG_MTMANUEL')) then
       begin
-    	TheText := StrF00(TOBL.Getvalue('GL_MONTANTHTDEV'),V_PGI.OkDecV);
-      GS.Canvas.TextOut (Arect.Right-canvas.TextWidth(TheText+' ')-2,Arect.Top+1,TheText);
-      GS.Canvas.MoveTo(Arect.Right, ARect.Top);
-      GS.Canvas.LineTo(Arect.Right, ARect.Bottom);
+        TheText := StrF00(TOBL.Getvalue('GL_MONTANTHTDEV'),V_PGI.OkDecV);
+        GS.Canvas.TextOut (Arect.Right-canvas.TextWidth(TheText+' ')-2,Arect.Top+1,TheText);
+        GS.Canvas.MoveTo(Arect.Right, ARect.Top);
+        GS.Canvas.LineTo(Arect.Right, ARect.Bottom);
+      end;
     end;
-  end;
   end;
 
   if (Arow >= GS.fixedRows) and ((ACol = SG_TEMPS)or(ACol = SG_TEMPSTOT) or ((fGestionListe<>nil) and (fGestionListe.ISCumulable(Acol)))) then
@@ -7887,9 +7890,9 @@ begin
     if TOBL = nil then Exit;
     if fGestionListe.ISCumulable(Acol) then
     begin
-    if (ACol = SG_TEMPSTOT) and (TOBL.GetValue('GL_TYPEARTICLE')='PRE') and (TOBL.getString('BNP_TYPERESSOURCE')='SAL') then exit;
-    if (pos(TOBL.GetValue('GL_TYPEARTICLE'),'ARP;ARV;OUV') = 0) and
-         (copy(TOBL.getString('GL_TYPELIGNE'),1,2) <> 'TP') then Canvas.FillRect(ARect);
+      if (ACol = SG_TEMPSTOT) and (TOBL.GetValue('GL_TYPEARTICLE')='PRE') and (TOBL.getString('BNP_TYPERESSOURCE')='SAL') then exit;
+      if (pos(TOBL.GetValue('GL_TYPEARTICLE'),'ARP;ARV;OUV') = 0) and
+           (copy(TOBL.getString('GL_TYPELIGNE'),1,2) <> 'TP') then Canvas.FillRect(ARect);
     end;
   end;
 
@@ -7928,10 +7931,10 @@ begin
     begin
       if (not fGestionListe.ISCumulable(ACol)) then
       begin
-      if isFinParagraphe (TOBL) then Canvas.FillRect(ARect);
-      if IsSousTotal (TOBL) then Canvas.FillRect(ARect);
+        if isFinParagraphe (TOBL) then Canvas.FillRect(ARect);
+        if IsSousTotal (TOBL) then Canvas.FillRect(ARect);
+      end;
     end;
-  end;
   end;
   (*
   if (Arow >= GS.fixedRows) and (ACol =SG_montantSit) then
@@ -7954,6 +7957,21 @@ begin
     PosX := ((Arect.left+Arect.Right  - Canvas.TextWidth('X')) div 2)+1;
 
     if TOBL.GetBoolean('GLC_GETCEDETAIL') then GS.Canvas.TextOut (posX,Arect.Top+1,'X');
+  end;
+  if (ARow >= GS.FixedRows) and (ACol= SG_MTTRANSFERT) then
+  begin
+    if TOBL = nil then Exit;
+    Canvas.FillRect(ARect);
+    if TOBL.GetDouble('TRANSFERED') > 0 then
+    begin
+      TheText := FloatToStr(TOBL.GetDouble('TRANSFERED'));
+    end else if TOBL.GetDouble('MTTRANSFERT') > 0 then
+    begin
+      TheText := FloatToStr(TOBL.GetDouble('MTTRANSFERT'));
+    end else exit;
+
+    PosX := Arect.Right-Canvas.TextWidth(TheText)-2;
+    GS.Canvas.TextOut (posX,Arect.Top+1,TheText);
   end;
 {$ENDIF}
   if Arow >= GS.fixedRows then

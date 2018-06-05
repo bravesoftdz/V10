@@ -2362,6 +2362,7 @@ begin
         if NomCol = 'POURCENTMARG'      then SG_POURMARG := icol;
         if NomCol = 'POURCENTMARQ'      then SG_POURMARQ := icol;
         if NomCol = 'TOTALTS'           then SG_TOTALTS := icol;
+        if NomCol = 'MTTRANSFERT'           then SG_MTTRANSFERT := icol;
       end;
     end;
     Inc(icol);
