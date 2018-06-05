@@ -227,8 +227,12 @@ Var Part      : String;
     NumMouv   : Double;
     TheRetour : TGncERROR;
     TOBC      : TOB;
-    RatioVa,RatioVente : double;
-    stprec,VenteAchat,TypeArticle,Select : string;
+    RatioVa   : Double;
+    RatioVente: double;
+    stprec    : String;
+    VenteAchat: String;
+    TypeArticle: String;
+    Select    : string;
     Indice,II : integer;
     TOBC1,TOBDC1,TOBDETCONSO : TOB;
     CoefPAPR,COEfPrPV : double;
@@ -539,11 +543,17 @@ Begin
 
       //FV1 : 23/08/2017 - FS#2648 - DELABOUDINIERE - Rendre les consos associées à un appel facturable
       if (TOBLigne.fieldExists('FACTURABLE')) then
-        TOBC.PutValue('BCO_FACTURABLE', TOBLigne.GetValue('FACTURABLE'))
+      begin
+        TOBC.PutValue('BCO_FACTURABLE', TOBLigne.GetValue('FACTURABLE'));
+        //FV1 - 04/06/2018 - FS#3105 - DELABOUDINIERE - Pas de quantité à facturer en saisie conso sur les ligne venant du TPI
+        if TOBC.GetValue('BCO_FACTURABLE')='A' then
+           TOBC.PutValue('BCO_QTEFACTUREE', TOBLigne.GetValue('GL_QTEFACT'))
+        else
+           TOBC.PutValue('BCO_QTEFACTUREE', '0.00');
+      end
       else
         TOBC.PutValue('BCO_FACTURABLE', 'N');
       //
-
       if Mode = TtcoLivraison then
       begin
         if (TOBLigne.fieldExists ('DPARECUPFROMRECEP')) and (TobLigne.GetValue('DPARECUPFROMRECEP') > 0) then
@@ -648,7 +658,7 @@ end;
 procedure TGestionConso.MajoldConso;
 var TOBC,TOBOC,TOBLC : TOB;
     LienPrec : double;
-    req : String;
+    //req : String;
     QQ: Tquery;
     indice,Indice2 : integer;
 begin
