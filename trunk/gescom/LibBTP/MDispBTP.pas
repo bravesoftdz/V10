@@ -2908,7 +2908,7 @@ end else
 begin
 	FMenuG.SetModules([145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,148,280,60],[24,77,21,74,72,121,124,41,77,99,127,73,9,110,45,69,99,34,78,49]) ;
 end;
-V_PGI.NbColModuleButtons:=2 ; V_PGI.NbRowModuleButtons:=9 ;
+V_PGI.NbColModuleButtons:=3 ; V_PGI.NbRowModuleButtons:=8 ;
 
 FMenuG.OnChangeModule:=AfterChangeModule ;
 

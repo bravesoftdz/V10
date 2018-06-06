@@ -801,6 +801,7 @@ begin
   TOBL.AddChampSupValeur('CODEFOURNISSEUR', '');
   TOBL.AddChampSupValeur('CODEARTICLE', '');
   TOBL.AddChampSupValeur('QTE', '0.00');
+  TOBL.AddChampSupValeur('QTEFACTURABLE', '0.00');
   TOBL.AddChampSupValeur('INTEGRE', 'X');
   //
   TOBL.AddChampSupValeur('ANALYSE', '');
@@ -1527,9 +1528,17 @@ begin
   if TOBGrille = nil then exit;
 
   if ChkConsoFact.checked then
-    TobGrille.Detail[Grille.row-1].PutValue('FACTURABLE', 'A')
+  Begin
+    TobGrille.Detail[Grille.row-1].PutValue('FACTURABLE', 'A');
+    //FV1 - 04/06/2018 - FS#3105 - DELABOUDINIERE - Pas de quantité à facturer en saisie conso sur les ligne venant du TPI
+    TobGrille.Detail[Grille.row-1].PutValue('QTEFACTURABLE', TobGrille.Detail[Grille.row-1].GetValue('QTE'));
+  end
   else
+  begin
     TobGrille.Detail[Grille.row-1].PutValue('FACTURABLE', 'N');
+    //FV1 - 04/06/2018 - FS#3105 - DELABOUDINIERE - Pas de quantité à facturer en saisie conso sur les ligne venant du TPI
+    TobGrille.Detail[Grille.row-1].PutValue('QTEFACTURABLE', '0.00');
+  end;
 
 end;
 
@@ -2442,12 +2451,21 @@ begin
   if TypeAffaire.Value = 'W' then
   Begin
     if ChkConsoFact.Checked then
-      TOBL.PutValue('FACTURABLE',   'A')
+    begin
+      TOBL.PutValue('FACTURABLE',   'A');
+      TOBL.PutValue('QTEFACTURABLE', Qte.text);
+    end
     else
-      TOBL.PutValue('FACTURABLE',   'N')
+    begin
+      TOBL.PutValue('FACTURABLE',   'N');
+      TOBL.PutValue('QTEFACTURABLE','0.00');
+    end;
   end
   else
+  begin
     TOBL.PutValue('FACTURABLE', 'N');
+    TOBL.PutValue('QTEFACTURABLE','0.00');
+  end;
 
 end;
 
@@ -2548,13 +2566,20 @@ begin
       if Affaire0.Text = 'W' then
       begin
         If GetParamSocSecur('SO_CONSOFACT', False) = True then
-          TOBL.PutValue('FACTURABLE', 'A')
+        Begin
+          TOBL.PutValue('FACTURABLE', 'A');
+          TOBL.PutValue('QTEFACTURABLE', Qte.text);
+        end
         else
-          TOBL.PutValue('FACTURABLE', 'N')
+        begin
+          TOBL.PutValue('FACTURABLE', 'N');
+          TOBL.PutValue('QTEFACTURABLE','0.00');
+        end;
       end
       else
       begin
-        TOBL.PutValue('FACTURABLE', 'N')
+        TOBL.PutValue('FACTURABLE', 'N');
+        TOBL.PutValue('QTEFACTURABLE','0.00');
       end;
     end;
     //
@@ -3368,6 +3393,7 @@ begin
   TOBL.PutVALUE('TENUESTOCK',     '-');
 
   TOBL.PutValue('FACTURABLE',     'N');
+  TOBL.PutValue('QTEFACTURABLE',  '0.00');
 
 end;
 
@@ -3857,6 +3883,7 @@ begin
   TobLigne.AddChampSupValeur('DPA',          0);
   TobLigne.AddChampSupValeur('PMAP',         0);
   TobLigne.AddChampSupValeur('FACTURABLE', 'N');
+  TobLigne.AddChampSupValeur('QTEFACTURABLE','0.00');
 
   TobLigne.AddChampSupValeur('DATELIVRAISON', idate1900);
   TobLigne.AddChampSupValeur('DEPOT',       '');
@@ -3919,6 +3946,8 @@ begin
     TobLigne.PutValue('DEPOT', Depot.text);
 
   TobLigne.PutValue('FACTURABLE',     TOBL.GetString('FACTURABLE'));
+
+  TOBLigne.PutValue('QTEFACTURABLE',  TOBL.GetString('QTEFACTURABLE'));
 
 end;
 

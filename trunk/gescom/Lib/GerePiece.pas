@@ -659,7 +659,7 @@ begin
                 TobLigne.PutValue('GL_SEMAINE', NumSemaine(TobLigne.GetValue('GL_DATEPIECE')));
                 ///
                 //FV1 : 23/08/2017 - FS#2648 - DELABOUDINIERE - Rendre les consos associées à un appel facturable
-                if TobData.Detail[i].FieldExists('FACTURABLE') then TobLigne.PutValue('FACTURABLE', TobData.Detail[i].GetString('FACTURABLE'));
+                if TobData.Detail[i].FieldExists('FACTURABLE')    then TobLigne.PutValue('FACTURABLE',  TobData.Detail[i].GetString('FACTURABLE'));
                 ///
                 //Si par malheur la tobArt est à nil ça plante grave !!!!!!
                 ///
