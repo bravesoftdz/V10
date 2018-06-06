@@ -143,12 +143,26 @@ uses Facture,(*Souche,*)dimension,UTomPiece, Traduc
      , BRGPDRESSOURCEMUL_TOF
      , BRGPDUTILISATMUL_TOF
      , BRGPDSUSPECTMUL_TOF
-     ;
+     , DB, Math;
 {$R *.DFM}
 
 var lesTagsToRemove : string;
     TypeFacDetail		: String;
 //    PresenceSpigao  : Boolean;
+
+function OptimizeAffichage (MenuDispo : string) : integer;
+var QQ : TQuery;
+    SQl : string;
+begin
+  Result := 1;
+  SQL := 'SELECT Count(*) FROM MENU WHERE MN_1=0 AND MN_2 IN ('+MenuDispo+') AND SUBSTRING(MN_ACCESGRP,'+InttoStr(V_PGI.FUserGrp)+',1)="0"';
+  QQ := OpenSql(SQL,true,1,'',true);
+  if not QQ.eof then
+  begin
+    Result := Ceil(QQ.fields[0].AsInteger / V_PGI.NbRowModuleButtons);
+  end;
+  Ferme(QQ);
+end;
 
 function InitLesTagsToRemoveFavoris(sParam : string) : string;
 begin
@@ -479,6 +493,7 @@ BEGIN
 	 15 : begin
    			end;
    16 : begin
+          V_PGI.NbColModuleButtons:= OptimizeAffichage('145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,148,280,60') ;
    (*
 {$IFNDEF EAGLCLIENT}
           Coderetour := MajStructure;
@@ -2908,7 +2923,8 @@ end else
 begin
 	FMenuG.SetModules([145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,148,280,60],[24,77,21,74,72,121,124,41,77,99,127,73,9,110,45,69,99,34,78,49]) ;
 end;
-V_PGI.NbColModuleButtons:=3 ; V_PGI.NbRowModuleButtons:=8 ;
+//V_PGI.FUserGrp
+V_PGI.NbColModuleButtons:=2 ; V_PGI.NbRowModuleButtons:=9 ;
 
 FMenuG.OnChangeModule:=AfterChangeModule ;
 
@@ -2965,7 +2981,6 @@ begin
 
 end;
 
-                             
 initialization
 Apalatys:='LSE';
 V_PGI.PGIContexte:=[ctxGescom,ctxAffaire,ctxBTP,ctxGRC];
