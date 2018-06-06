@@ -7177,8 +7177,14 @@ end;
 
 
 function OuvrageNonDifferencie (TOBPiece,TOBOuvrage : TOB) : boolean;
+var Cledoc : r_cledoc;
 begin
 	result :=  (TOBPiece.getValue('GP_UNIQUEBLO')=1) and (TOBOuvrage.detail.count > 0);
+  if not result then
+  begin
+    Cledoc := TOB2CleDoc(TOBPiece);
+    Result := ExisteSql ('SELECT 1 FROM LIGNEOUV WHERE '+WherePiece(Cledoc,ttdOuvrage,True)+' AND BLO_UNIQUEBLO=0');
+  end;
 end;
 
 procedure OuvrageDifferencie (TOBpiece,TOBOuvrage : TOB; TraiteAvancOuv : boolean; DEV : RDevise);
