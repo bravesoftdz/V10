@@ -648,6 +648,7 @@ begin
   if cledoc.NumLigne > 0 then result := result + inttostr(Cledoc.NumLigne) + ';'
   else Result := result + ';';
 end;
+
 Function Evaluedate ( St : String ) : TDateTime ;
 Var dd,mm,yy : Word ;
 BEGIN

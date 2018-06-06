@@ -2629,7 +2629,6 @@ begin
   //FV1 - 26/07/2016
   TOBG:=CreerTOBGeneral(GColl) ;
   {Erreur sur le collectif}
-  if TOBG=Nil then BEGIN Result:=rcPar ; LastMsg:=4 ; Exit ; END ;
   OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
   {Boucle sur les echéances}
   cpt:=0;
@@ -2639,6 +2638,7 @@ begin
     // Le règlement d'un article financier ne doit pas être traité.
     inc(cpt);
   	if (TOBH.GetString('GPE_FOURNISSEUR') = '') then continue;
+    if TOBG=Nil then BEGIN Result:=rcPar ; LastMsg:=4 ; Exit ; END ;
     TOBTTC:=TOB.Create('ECRITURE',TOBEcr,-1) ;
     PieceVersECR(MM,TOBPiece,TOBTiers,TOBTTC,False) ;
     {Tiers}
