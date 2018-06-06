@@ -965,14 +965,20 @@ begin
         // Modified by f.vautrain 09/11/2017 09:58:00 - FS#2777 - TREUIL - Gestion des libellés/descriptifs dans l'intégration des appels d'offre
         if (designation <> '') then
         begin
+          //FV1 : 15/02/2018 - FS#2908 - MOUTHON, SCETEC : Impossible de créer des paragraphes sur un devis venant d'un appel d'offre
           libtmp := StringReplace(designation,#$D#$A,'',[rfReplaceAll]);
           libtmp := StringReplace(libTmp,#$A,'',[rfReplaceAll]);
           TOBL.SetString('GL_LIBELLE',copy(libtmp,1,70));
+          //
           //Manque la gestion du paramètre société... Bordel de merde !!!!!
-          //FV1 : 15/02/2018 - FS#2908 - MOUTHON, SCETEC : Impossible de créer des paragraphes sur un devis venant d'un appel d'offre
           If getParamSocSecur('SO_BTDESCEQUALLIB', False) then
           Begin
             StringToRich(Descriptif, designation);
+            TOBL.PutValue('GL_BLOCNOTE', ExRichToString(Descriptif));
+          end
+          else
+          begin
+            StringToRich(Descriptif, TOBL.GetValue('GL_BLOCNOTE'));
             TOBL.PutValue('GL_BLOCNOTE', ExRichToString(Descriptif));
           end;
         end;

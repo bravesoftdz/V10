@@ -2967,7 +2967,9 @@ begin
 
       end;
 
-    TOBL.PutValue('GL_LIBELLE', LibA);
+    TOBL.PutValue('GL_LIBELLE',  LibA);
+    TOBL.PutValue('GL_BLOCNOTE', TOBA.GetValue('GA_BLOCNOTE'));
+
     //
     TOBL.putValue('BNP_TYPERESSOURCE',TOBA.GetValue('BNP_TYPERESSOURCE'));
     //
@@ -3053,25 +3055,25 @@ begin
       end else
       begin
         TOBL.SetString('GL_QUALIFHEURE','');
-        TOBL.SetDouble('GL_PERTE',           TOBA.GetDouble('GA_PERTEPROP'));
+        TOBL.SetDouble('GL_PERTE',    TOBA.GetDouble('GA_PERTEPROP'));
         TOBL.SetDouble('GL_RENDEMENT',0);
       end;
-      TOBL.SetDouble('GL_QTESTOCK',TOBL.GetDouble('GL_QTEFACT'));
-      TOBL.SetDouble('GL_QTERESTE',TOBL.GetDouble('GL_QTEFACT'));
+      TOBL.SetDouble('GL_QTESTOCK',   TOBL.GetDouble('GL_QTEFACT'));
+      TOBL.SetDouble('GL_QTERESTE',   TOBL.GetDouble('GL_QTEFACT'));
     end;
     TOBL.SetDouble('GL_QTEFACT',CalculeQteFact (TOBL));
-    TOBL.PutValue('GL_SURFACE', TOBA.GetValue('GA_SURFACE'));
-    TOBL.PutValue('GL_VOLUME', TOBA.GetValue('GA_VOLUME'));
-    TOBL.PutValue('GL_POIDSBRUT', TOBA.GetValue('GA_POIDSBRUT'));
-    TOBL.PutValue('GL_POIDSNET', TOBA.GetValue('GA_POIDSNET'));
-    TOBL.PutValue('GL_POIDSDOUA', TOBA.GetValue('GA_POIDSDOUA'));
-    TOBL.PutValue('GL_LINEAIRE', TOBA.GetValue('GA_LINEAIRE'));
-    TOBL.PutValue('GL_HEURE', TOBA.GetValue('GA_HEURE'));
-    TOBL.PutValue('GL_QUALIFQTESTO', TOBA.GetValue('GA_QUALIFUNITESTO'));
-    TOBL.PutValue('GL_COEFCONVQTE', TOBA.GetValue('GA_COEFCONVQTEACH'));
-    TOBL.PutValue('GL_COEFCONVQTEVTE', TOBA.GetValue('GA_COEFCONVQTEVTE'));
-    TOBL.PutValue('GL_QUALIFQTEVTE', TOBA.GetValue('GA_QUALIFUNITEVTE'));
-    TOBL.PutValue('GL_QUALIFQTEACH',    TOBA.GetValue('GA_QUALIFUNITEACH'));
+    TOBL.PutValue('GL_SURFACE',       TOBA.GetValue('GA_SURFACE'));
+    TOBL.PutValue('GL_VOLUME',        TOBA.GetValue('GA_VOLUME'));
+    TOBL.PutValue('GL_POIDSBRUT',     TOBA.GetValue('GA_POIDSBRUT'));
+    TOBL.PutValue('GL_POIDSNET',      TOBA.GetValue('GA_POIDSNET'));
+    TOBL.PutValue('GL_POIDSDOUA',     TOBA.GetValue('GA_POIDSDOUA'));
+    TOBL.PutValue('GL_LINEAIRE',      TOBA.GetValue('GA_LINEAIRE'));
+    TOBL.PutValue('GL_HEURE',         TOBA.GetValue('GA_HEURE'));
+    TOBL.PutValue('GL_QUALIFQTESTO',  TOBA.GetValue('GA_QUALIFUNITESTO'));
+    TOBL.PutValue('GL_COEFCONVQTE',   TOBA.GetValue('GA_COEFCONVQTEACH'));
+    TOBL.PutValue('GL_COEFCONVQTEVTE',TOBA.GetValue('GA_COEFCONVQTEVTE'));
+    TOBL.PutValue('GL_QUALIFQTEVTE',  TOBA.GetValue('GA_QUALIFUNITEVTE'));
+    TOBL.PutValue('GL_QUALIFQTEACH',  TOBA.GetValue('GA_QUALIFUNITEACH'));
     {Tables libres}
     for j := 1 to 9 do TOBL.PutValue('GL_LIBREART' + IntToStr(j), TOBA.GetValue('GA_LIBREART' + IntToStr(j)));
     TOBL.PutValue('GL_LIBREARTA', TOBA.GetValue('GA_LIBREARTA'));
