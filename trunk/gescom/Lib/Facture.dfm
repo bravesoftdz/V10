@@ -1,6 +1,6 @@
 object FFacture: TFFacture
-  Left = 305
-  Top = 130
+  Left = 461
+  Top = 132
   Width = 1118
   Height = 721
   HelpContext = 119000017
@@ -15,6 +15,7 @@ object FFacture: TFFacture
   Font.Style = []
   KeyPreview = True
   OldCreateOrder = True
+  Position = poDefault
   OnCanResize = FormCanResize
   OnClose = FormClose
   OnCloseQuery = FormCloseQuery
@@ -3177,6 +3178,8 @@ object FFacture: TFFacture
             Width = 28
             Height = 27
             Hint = 'Voir les totalisations documents'
+            Glyph.Data = {00000000}
+            GlyphMask.Data = {00000000}
             ImageIndex = 0
             Images = HimgTOT
             Opaque = False
@@ -3490,6 +3493,9 @@ object FFacture: TFFacture
       '\par '
       '\par '
       '\par '
+      '\par '
+      '\par '
+      '\par '
       '\par }')
   end
   object BZoomRessource: THBitBtn
@@ -3635,7 +3641,7 @@ object FFacture: TFFacture
     Left = 93
     Top = 188
     Width = 728
-    Height = 159
+    Height = 165
     BevelInner = bvRaised
     BevelOuter = bvLowered
     Caption = ' '
@@ -4256,8 +4262,8 @@ object FFacture: TFFacture
     end
   end
   object TDescriptif: TToolWindow97
-    Left = 544
-    Top = 210
+    Left = 704
+    Top = 282
     ClientHeight = 259
     ClientWidth = 315
     Caption = 'Descriptif d'#233'taill'#233
@@ -4293,6 +4299,9 @@ object FFacture: TFFacture
           '0\fnil Times New Roman;}}'
         '{\*\generator Riched20 6.3.9600}\viewkind4\uc1 '
         '\pard\f0\fs20 '
+        '\par '
+        '\par '
+        '\par '
         '\par '
         '\par '
         '\par '

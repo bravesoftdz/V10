@@ -1773,6 +1773,7 @@ begin
   end;
   SourisNormale;
 end;
+
 function RegroupePieces (ListePieces : TOB ;NewNat : string; LaDate:string='') : Boolean;
 var X : TFFacture;
 		PP: THPanel;
@@ -1892,10 +1893,10 @@ begin
 	X.StatutAffaire := 'AFF';
   SourisNormale;
   TRY
-  X.ShowModal;
-  result := X.ModeRetourFrs;
+    X.ShowModal;
+    result := X.ModeRetourFrs;
   FINALLY
-  X.Free;
+    X.Free;
   end;
 end;
 
@@ -4477,6 +4478,13 @@ end;
 
 procedure TFFacture.FormCreate(Sender: TObject);
 begin
+  (*
+  if GetParamSocSecur('SO_SAISIEPLEINECRAN', False) then
+  begin
+    TFFacture(self).WindowState := wsMaximize ;
+    THsystemMenu(HmTrad).Resize(self);
+  end;
+  *)
   LibereMemContratST;
   //
   AccesSousDetailOk := ExJaiLeDroitConcept(TConcept(bt512),False);
@@ -5891,6 +5899,7 @@ begin
     fAuditPerf.AfficheAudit;
   end;
   Width := Width +1;
+
   fApresCharge := true;
   //
   fGestionListe.AppliqueGrids;
@@ -5902,7 +5911,7 @@ begin
   fGestionListe.SetColsModifiable;
   fGestionListe.AjusteGridTotal;
   if not fGestionListe.IsExistCumul then PGT.Visible := false;
-{$IFDEF V10}                          
+{$IFDEF V10}
   if (VenteAchat <> 'VEN') then
   begin
     TBVOIRTOT.visible := false;
@@ -5946,8 +5955,10 @@ begin
   GS.Invalidate;
   //
   //FV1 : 14/09/2017 - FS#2699 - TEAM RESEAUX - prévoir paramètre pour décider taille fenêtre des pièces
-  if GetParamSocSecur('SO_SAISIEPLEINECRAN', False) then SendMessage(Self.Handle, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
-
+  if GetParamSocSecur('SO_SAISIEPLEINECRAN', False) then
+  begin
+    SendMessage(Self.Handle, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+  end;
 end;
 
 procedure TFFacture.NeRestePasSurDim(ARow : integer);
@@ -19449,11 +19460,17 @@ begin
   if (GP_TIERS.Enabled) then
   Begin
     if (VenteAchat = 'ACH') OR (VenteAchat = 'VEN') then
+    begin
+      GP_Tiers.Text := '';
+      LIBELLETIERS.caption := '';
+      if GP_TIERS.CanFocus then GP_TIERS.SetFocus;
+    end
+  end else
   begin
+    GP_TIERS.Enabled := true;
     GP_Tiers.Text := '';
     LIBELLETIERS.caption := '';
     if GP_TIERS.CanFocus then GP_TIERS.SetFocus;
-    end
   end;
 
   fPieceCoTrait.ReinitSaisie;
