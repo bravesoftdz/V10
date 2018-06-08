@@ -37,6 +37,7 @@ procedure GestionTsPOC(TOBPiece,OneTOB,TOBTSPOC : TOB);
 procedure ValideLesTOBTS ( TOBPiece,TOBTSPOC : TOB);
 function SetFactureReglePOC (TOBPiece : TOB) : boolean;
 procedure AppelMarcheST (CodeChantier,SousTrait,CodeMarche : string);
+procedure AppelIntegrationLaNetCie;
 
 implementation
 uses FactComm,UtilPGI,FactTOB,FactPiece,FactRG,FactUtil,ParamSOc,ENt1,AglInit,M3FP,cbpPath,LicUtil,UtilTOBPiece,UconnectBSV;
@@ -679,6 +680,17 @@ begin
   if TheIDZeDoc = '' then Exit;
   result :=  SetFactureRegleBSV (TheIDZeDoc);
 end;
+
+procedure AppelIntegrationLaNetCie;
+var DBName,ServerName : string;
+    TheLance : string;
+begin
+  DBName := V_PGI.DBName;
+  ServerName := GetServerName;
+  TheLance := IncludeTrailingBackslash(TcbpPath.GetCegid)+'Specif-POC\APP\REPRISEPOINTAGEOUVRIERS.exe /userLSE='+V_PGI.User+' /Serveur='+ServerName+' /BaseDeDonnees='+DBName;
+  FileExecAndWait (TheLance);
+end;
+
 
 Initialization
  TOBlesContratsST := TOB.create ('LES CONTRATS ST',nil,-1);

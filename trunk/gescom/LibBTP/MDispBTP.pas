@@ -1859,6 +1859,8 @@ Cegid,False,False)};
     147630 : AGLLanceFiche('BTP','BTTRSCONSO_MUL','','','') ;
     147640 : AGLLanceFiche('BTP','BETATPREPPAIE','','','') ;
     147650 : AGLLanceFiche('BTP','BTGENODANAL','','','') ;
+    147661 : AppelIntegrationLaNetCie;
+
     // -- VISUAL PROJETS
 //    147713 : AGLLanceFiche('BTP','BTVISUALP_MUL','GP_NATUREPIECEG=PBT;GP_VENTEACHAT=VEN;GP_VIVANTE=X','','MODIFICATION') ;
 
