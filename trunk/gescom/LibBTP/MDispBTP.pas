@@ -494,18 +494,7 @@ BEGIN
    			end;
    16 : begin
           V_PGI.NbColModuleButtons:= OptimizeAffichage('145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,148,280,60') ;
-   (*
-{$IFNDEF EAGLCLIENT}
-          Coderetour := MajStructure;
-          if CodeRetour <> 0 then
-          begin
-      			RetourForce:=True;
-            Fmenug.Quitter;
-            Exit;
-          end;
-   				TraiteChangementGamme;
-{$ENDIF}
-*)
+          //
    				stLesExclus := '';
    				LesTagsToRemove := LesTagsToRemove + ';' + stLesExclus;
           LesTagsToRemove      := InitLesTagsToRemoveFavoris('STANDARD');

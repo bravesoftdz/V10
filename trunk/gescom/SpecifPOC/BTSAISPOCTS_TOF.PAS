@@ -160,6 +160,7 @@ begin
   result := TOB.Create ('BLIGNETS',TOBDET,-1);
   result.AddChampSupValeur('NEW','X');
   result.SetInteger('BLT_NUMORDRE',TOBDET.GetInteger('BLE_NUMORDRE'));
+  result.SetInteger('BLT_UNIQUEBLO',TOBDET.GetInteger('BLE_UNIQUEBLO'));
   result.SetInteger('BLT_NUMDETAIL',LastDetail);
 end;
 

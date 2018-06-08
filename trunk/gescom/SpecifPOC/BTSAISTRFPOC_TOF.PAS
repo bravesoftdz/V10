@@ -37,7 +37,7 @@ Uses StdCtrls,
      AglInit ;
 
 const
-  TheChampsFrom = 'ECCC;ARTSAISIE;SOUSTRAITANT;CODEMARCHE;LIBELLE;QTE;UNITE;PA;QTEINIT;MONTANTINIT;MONTANT';
+  TheChampsFrom = 'ECCC;ARTSAISIE;SOUSTRAITANT;CODEMARCHE;LIBELLE;QTE;UNITE;PA;QTEINIT;MONTANTINIT;TOTALTS;DISPONIBLE;MONTANT;';
   TheChampsDest = 'ECCC;ARTSAISIE;SOUSTRAITANT;CODEMARCHE;LIBELLE;QTE;UNITE;PA;MONTANT';
 
 Type
@@ -107,7 +107,7 @@ Type
     procedure TraiteMontantFrom (ACol,Arow : Integer; var Cancel : boolean);
     procedure TraiteMarche (ACol,Arow : Integer; var Cancel : boolean);
     //
-    procedure CalculeLaLigne(TOBL : TOB; TypeGrid: TTypeGridSaisie);
+    procedure CalculeLaLigne(TOBL : TOB; TypeGrid: TTypeGridSaisie;FromQte : boolean=true);
     procedure AjouteLaLigne (TOBL : TOB; TypeGrid : TTypeGridSaisie; Montant : double; Sens : string ='+');
     procedure AffichelaLigne(TOBL: TOB; TypeGrid: TTypeGridSaisie;Ligne: integer);
     procedure GSElipsisClick(Sender: TObject);
@@ -286,7 +286,7 @@ end;
 
 procedure TOF_BTSAISTRFPOC.AddChampsSupSaisie(TT : TOB);
 var TOBL,TOBLOUV,TOBO  : TOB;
-    MontantInit,QTeInit,MtDejaTransf: double;
+    MontantInit,QTeInit,MtDejaTransf,TotalTS: double;
 begin
   MontantInit := 0;
   QTeInit := 0;
@@ -302,14 +302,26 @@ begin
         TOBLOUV := FindLigneDocFromDetail (TOBPiece,TOBL);
         if TOBLOUV <> nil then
         begin
-          MontantInit := arrondi(TOBO.GetDouble('BLO_MONTANTPA') * Abs(TOBLOUV.GetDouble('GL_QTEFACT')),TFFacture(XX).DEV.decimale);
-          QteInit := arrondi(MontantInit/TOBL.GetDouble('GL_DPA'),V_PGI.okdecQ);
+          if TT.getDouble('BT3_MTINIT')=0 then
+          begin
+            TT.SetDouble('BT3_MTINIT',arrondi(TOBO.GetDouble('BLO_MONTANTPA') * Abs(TOBLOUV.GetDouble('GL_QTEFACT')),TFFacture(XX).DEV.decimale));
+            TT.SetDouble('BT3_QTEINIT',arrondi(TT.GetDouble('BT3_MTINIT')/TOBL.GetDouble('GL_DPA'),V_PGI.okdecQ));
+          end;
+          TotalTS := TOBL.GetDouble('SUMTOTALTS');
+          MontantINit := TT.GetDouble('BT3_MTINIT');
+          QteInit :=  TT.GetDouble('BT3_QTEINIT');
         end;
       end;
     end else
     begin
-      MontantINit := TOBL.GetDouble('GL_MONTANTPA');
-      QteInit :=  TOBL.GetDouble('GL_QTEFACT');
+      TotalTS := TOBL.GetDouble('SUMTOTALTS');
+      if TT.getDouble('BT3_MTINIT')=0 then
+      begin
+        TT.SetDouble('BT3_MTINIT',TOBL.GetDouble('GL_MONTANTPA'));
+        TT.SetDouble('BT3_QTEINIT',TOBL.GetDouble('GL_QTEFACT'));
+      end;
+      MontantINit := TT.GetDouble('BT3_MTINIT');
+      QteInit :=  TT.GetDouble('BT3_QTEINIT');
     end;
   end;
   if not TT.FieldExists('ARTSAISIE') then TT.AddChampSupValeur('ARTSAISIE','') else TT.SetString('ARTSAISIE','');
@@ -320,6 +332,8 @@ begin
   if not TT.FieldExists('PA') then TT.AddChampSupValeur('PA',0) else TT.SetDouble('PA',0);
   if not TT.FieldExists('QTEINIT') then TT.AddChampSupValeur('QTEINIT ',0) else TT.SetDouble('QTEINIT',0);
   if not TT.FieldExists('MONTANTINIT') then TT.AddChampSupValeur('MONTANTINIT',0) else TT.SetDouble('MONTANTINIT',0);
+  if not TT.FieldExists('TOTALTS') then TT.AddChampSupValeur('TOTALTS',0) else TT.SetDouble('TOTALTS',0);
+  if not TT.FieldExists('DISPONIBLE') then TT.AddChampSupValeur('DISPONIBLE',0) else TT.SetDouble('DISPONIBLE',0);
   if not TT.FieldExists('MONTANT') then TT.AddChampSupValeur('MONTANT',0) else TT.SetDouble('MONTANT',0);
   if not TT.FieldExists('SOUSTRAITANT') then TT.AddChampSupValeur('SOUSTRAITANT','') else TT.SetString('SOUSTRAITANT','');
   if not TT.FieldExists('CODEMARCHE') then TT.AddChampSupValeur('CODEMARCHE','') else TT.SetString('CODEMARCHE','');
@@ -335,20 +349,26 @@ begin
       if ModeFonc = TmfCreation then
       begin
         TT.SetDouble('MONTANTINIT',MontantInit - TOBL.GetDouble('MTTRANSFERT'));
+        TT.SetDouble('TOTALTS',TotalTS);
         TT.SetDouble('QTEINIT',ARRONDI(TT.GetDouble('MONTANTINIT')/TT.GetDouble('PA'),V_PGI.OkDecQ));
-        TT.SetDouble('MONTANT',TT.GetDouble('MONTANTINIT'));
+        TT.SetDouble('DISPONIBLE',TT.GetDouble('MONTANTINIT')+TotalTS);
+        TT.SetDouble('MONTANT',TT.GetDouble('MONTANTINIT')+TotalTS);
         TT.SetDouble('QTE',ARRONDI(TT.GetDouble('MONTANT')/TT.GetDouble('PA'),V_PGI.OkDecQ));
       end else
       begin
         TT.SetDouble('MONTANTINIT',MontantInit - TOBL.GetDouble('MTTRANSFERT') +TT.GetDouble('BT3_MTTRANSFERT'));
+        TT.SetDouble('TOTALTS',TotalTS);
         TT.SetDouble('QTEINIT',ARRONDI(TT.GetDouble('MONTANTINIT')/TT.GetDouble('PA'),V_PGI.OkDecQ));
+        TT.SetDouble('DISPONIBLE',TT.GetDouble('MONTANTINIT')+TotalTS);
         TT.SetDouble('MONTANT',TT.GetDouble('BT3_MTTRANSFERT'));
-        TT.SetDouble('QTE',ARRONDI(TT.GetDouble('MONTANT')/TT.GetDouble('PA'),V_PGI.OkDecQ));
+        TT.SetDouble('QTE',TT.GetDouble('BT3_QTETRANSFERT'));
       end;
     end else
     begin
       TT.SetDouble('MONTANTINIT',MontantInit);
-      TT.SetDouble('MONTANT',MontantINit);
+      TT.SetDouble('TOTALTS',TotalTS);
+      TT.SetDouble('DISPONIBLE',MontantINit+TotalTS);
+      TT.SetDouble('MONTANT',MontantINit+TotalTS);
       TT.SetDouble('QTE',QteInit);
       TT.SetDouble('QTEINIT',QteINit);
     end;
@@ -370,6 +390,8 @@ begin
   if not TT.FieldExists('MONTANT') then TT.DelChampSup('MONTANT',true);
   if not TT.FieldExists('SOUSTRAITANT') then TT.DelChampSup('SOUSTRAITANT',true);
   if not TT.FieldExists('CODEMARCHE') then TT.DelChampSup('CODEMARCHE',true);
+  if not TT.FieldExists('TOTALTS') then TT.DelChampSup('TOTALTS',true);
+  if not TT.FieldExists('DISPONIBLE') then TT.DelChampSup('DISPONIBLE',true);
 end;
 
 procedure TOF_BTSAISTRFPOC.RenseigneEcran;
@@ -425,7 +447,7 @@ begin
 
   GS.VidePile(false);
   //
-  if TypeGrille = TTgsDest then GS.ColCount := 9 else GS.colCount := 11;
+  if TypeGrille = TTgsDest then GS.ColCount := 9 else GS.colCount := 13;
   //
   GS.Cells[0,0] := '';
   GS.ColWidths[0] := 15;
@@ -493,7 +515,7 @@ begin
     GS.ColLengths[8] := 12;
     GS.ColTypes [8] := 'R';
     GS.ColAligns[8] := taRightJustify;
-    GS.ColFormats[8] := FFM+';'+FFM+'; ;';
+    GS.ColFormats[8] := FFQ+';'+FFQ+'; ;';
     GS.ColEditables[8] := false ;
     //
     GS.Cells[9,0] := 'MT Initial';
@@ -504,14 +526,30 @@ begin
     GS.ColFormats[9] := FFM+';'+FFM+'; ;';
     GS.ColEditables[9] := false ;
     //
-    GS.Cells[10,0] := 'MT Transfert';
+    GS.Cells[10,0] := 'Travaux Sup.';
     GS.ColWidths[10] := WitdhSize(12);
     GS.ColLengths[10] := 12;
     GS.ColTypes [10] := 'R';
     GS.ColAligns[10] := taRightJustify;
     GS.ColFormats[10] := FFM+';'+FFM+'; ;';
-    GS.ColEditables[10] := true;
-    GSMONTANTF := 10;
+    GS.ColEditables[10] := false ;
+    //
+    GS.Cells[11,0] := 'Dispo.';
+    GS.ColWidths[11] := WitdhSize(12);
+    GS.ColLengths[11] := 12;
+    GS.ColTypes [11] := 'R';
+    GS.ColAligns[11] := taRightJustify;
+    GS.ColFormats[11] := FFM+';'+FFM+'; ;';
+    GS.ColEditables[11] := false ;
+    //
+    GS.Cells[12,0] := 'MT Transfert';
+    GS.ColWidths[12] := WitdhSize(12);
+    GS.ColLengths[12] := 12;
+    GS.ColTypes [12] := 'R';
+    GS.ColAligns[12] := taRightJustify;
+    GS.ColFormats[12] := FFM+';'+FFM+'; ;';
+    GS.ColEditables[12] := true;
+    GSMONTANTF := 12;
   end else
   begin
     GS.Cells[8,0] := 'MT Transféré';
@@ -857,7 +895,7 @@ begin
   if (not Cancel) then
   begin
     AjouteLaLigne (TOBL,TTgsFrom,OldMt,'-');
-    CalculeLaLigne(TOBL,TTgsFrom);
+    CalculeLaLigne(TOBL,TTgsFrom,(acol=GSQTE));
     AjouteLaLigne (TOBL,TTgsFrom,TOBL.GetDouble('MONTANT'));
   end;
   AffichelaLigne(TOBL,TTgsFrom,ARow);
@@ -979,18 +1017,18 @@ var TOBL: TOB;
 begin
   TOBL := TOBFROM.Detail[Arow-1];
   //
-  if Valeur(GSFROM.cells[Acol,Arow]) > TOBL.GetDouble('MONTANTINIT') then
+  if Valeur(GSFROM.cells[Acol,Arow]) > TOBL.GetDouble('DISPONIBLE') then
   begin
-    PGIInfo('Vous ne pouvez pas dépasser le montant initial');
+    PGIInfo('Vous ne pouvez pas dépasser le montant disponible');
     Cancel := True;
     Exit;
   end;
   TOBL.SetDouble('MONTANT',Valeur(GSFROM.cells[Acol,Arow]));
   if TOBL.GetDouble('PA') = 0 then TOBL.SetDouble('PA',1);
-  VAL := ARRONDI(TOBL.GetDouble('MONTANT')/TOBL.GetDouble('PA'),V_PGI.okdecP);
+  VAL := ARRONDI(TOBL.GetDouble('MONTANT')/TOBL.GetDouble('PA'),V_PGI.okdecP); if val > TOBL.GetDouble('QTEINIT') then Val := TOBL.GetDouble('QTEINIT');
   TOBL.SetDOuble('QTE',Val);
   //
-  CalculeLaLigne(TOBL,TTgsFrom);
+  CalculeLaLigne(TOBL,TTgsFrom,false);
 end;
 
 procedure TOF_BTSAISTRFPOC.TraitePu(ACol, Arow: Integer;var Cancel: boolean);
@@ -1048,11 +1086,12 @@ begin
   end;
 end;
 
-procedure TOF_BTSAISTRFPOC.CalculeLaLigne(TOBL: TOB; TypeGrid: TTypeGridSaisie);
+procedure TOF_BTSAISTRFPOC.CalculeLaLigne(TOBL: TOB; TypeGrid: TTypeGridSaisie; FromQte : boolean=true);
+var Mt : double;
 begin
   if TypeGrid = TTgsFrom then
   begin
-    TOBL.SetDouble('MONTANT',ARRONDI(TOBL.GetDouble('PA')*TOBL.GetDouble('QTE'),TFFacture(XX).DEV.decimale));
+    if FromQte then TOBL.SetDouble('MONTANT',ARRONDI(TOBL.GetDouble('PA')*TOBL.GetDouble('QTE'),TFFacture(XX).DEV.decimale));
   end else
   begin
     TOBL.SetDouble('MONTANT',ARRONDI(TOBL.GetDouble('PA')*TOBL.GetDouble('QTE'),TFFacture(XX).DEV.decimale));
@@ -1465,8 +1504,10 @@ begin
     TOBL.SetDouble('MTTRANSFERT',TOBL.GetDouble('MTTRANSFERT')+TOBT.GetDouble('MONTANT'));
     LigD := TOBL.GetIndex +1;
     //
+    TOBT.SetDouble('BT3_MTINIT',TOBT.GetDouble('MONTANTINIT'));
+    TOBT.SetDouble('BT3_QTEINIT',TOBT.GetDouble('QTEINIT'));
     TOBT.SetDouble('BT3_MTTRANSFERT',TOBT.GetDouble('MONTANT'));
-    TOBT.SetDouble('BT3_QTETRANSFERT',ARRONDI(TOBT.GetDouble('MONTANT')/TOBT.GetDouble('PA'),V_PGI.okdecQ));
+    TOBT.SetDouble('BT3_QTETRANSFERT',TOBT.GetDouble('QTE'));
     TOBT.SetInteger('BT3_UNIQUE',TOBTRFPOC.GetInteger('BT2_UNIQUE'));
     if TOBL.getString('GL_TYPELIGNE')='SD'  then
     begin
@@ -1481,7 +1522,6 @@ begin
           begin
             QteDejaTransf := Arrondi(TOBLigne.GetDouble('MTTRANSFERT')/TOBLigne.GetDouble('GL_DPA'),V_PGI.okdecQ);
           end;
-          TOBLigne.SetDouble('MTTRANSFERT',TOBLigne.GetDouble('MTTRANSFERT')+TOBT.GetDouble('BT3_MTTRANSFERT'));
           TOBO.SetDouble('MTTRANSFERT',TOBT.GetDouble('BT3_MTTRANSFERT'));
           TOBT.SetInteger('BT3_UNIQUEBLO',TOBO.GetInteger('BLO_UNIQUEBLO'));
           //
@@ -1492,8 +1532,10 @@ begin
           TOBOS:=TOB.Create('LIGNEOUV',TobO.Parent,TOBO.GetIndex + 1);
           InsertionChampSupOuv (TOBOS,false);
           TOBTT := TOB.Create ('BTRFDETAIL',TOBTRFPOC,-1);
+          TOBTT.dupliquer (TOBT,False,True);
           //
           TOBOS.Dupliquer(TOBO,False,true);
+          TOBOS.SetDouble('SUMTOTALTS',0);
           TOBPiece.putValue('GP_UNIQUEBLO',TOBPiece.getValue('GP_UNIQUEBLO')+1);
           TOBOS.putValue('BLO_UNIQUEBLO',TOBPiece.getValue('GP_UNIQUEBLO'));
           TOBOS.SetInteger('NUMTRANSFERT',TOBTRFPOC.GetInteger('BT2_UNIQUE'));
@@ -1501,11 +1543,19 @@ begin
           TOBOS.SetDouble('BLO_QTEFACT',ARRONDI(TOBT.GetDouble('BT3_QTETRANSFERT')/(TOBLigne.geTDouble('GL_QTEFACT')-QteDejaTransf),V_PGI.OkDecQ)*(-1));
           //
           TOBTT.setString('BT3_TYPELIGNETRF','001');
-          TOBTT.SetDouble('BT3_MTTRANSFERT',TOBT.GetDouble('BT3_MTTRANSFERT'));
-          TOBTT.SetDouble('MTTRANSFERT',TOBTT.GetDouble('BT3_MTTRANSFERT'));
+          TOBTT.SetDouble('BT3_MTTRANSFERT',TOBTT.GetDouble('BT3_MTTRANSFERT')*(-1));
+          TOBTT.SetDouble('BT3_QTETRANSFERT',TOBTT.GetDouble('BT3_QTETRANSFERT')*(-1));
           TOBTT.SetInteger('BT3_UNIQUE',TOBTRFPOC.GetInteger('BT2_UNIQUE'));
           TOBTT.SetInteger('BT3_UNIQUEBLO',TOBOS.GetInteger('BLO_UNIQUEBLO'));
           TOBTT.SetBoolean('BT3_CONTREP',true);
+          TOBTT.SetDouble('BT3_QTEINIT',0);
+          TOBTT.SetDouble('BT3_MTINIT',0);
+          TOBTT.SetDouble('MTTRANSFERT',TOBT.GetDouble('BT3_MTTRANSFERT'));
+          TOBTT.SetDouble('QTE',TOBTT.GetDouble('QTE')*(-1));
+          TOBTT.SetDouble('QTEINIT',0);
+          TOBTT.SetDouble('MONTANTINIT',0);
+          TOBTT.SetDouble('TOTALTS',0);
+          TOBTT.SetDouble('DISPONIBLE',0);
           //
           //
           CalculMontantHtDevLigOuv (TOBOS,TFFacture(XX).DEV);
@@ -1536,6 +1586,7 @@ begin
       TOBTT.data := TOBNL;
       //
       TOBNL.SetInteger('NUMTRANSFERT',TOBTRFPOC.GetInteger('BT2_UNIQUE'));
+      TOBNL.SetDouble('SUMTOTALTS',0);
       TOBNL.SetDouble('MTTRANSFERT',TOBT.GetDouble('BT3_MTTRANSFERT')*(-1));
       TOBNL.SetDouble('GL_QTEFACT',TOBT.GetDouble('QTE')*(-1));
       TOBNL.SetDouble('GL_QTERESTE',TOBNL.GetDouble('GL_QTEFACT'));
@@ -1628,6 +1679,7 @@ begin
       end;
     end;
     TOBNL.SetDouble('MTTRANSFERT',0);
+    TOBNL.SetDouble('TRANSFERED',0);
     TOBNL.SetString('GL_RECALCULER','X');
     DelChampsSupSaisie(TOBT);
   until II >= TOBDEST.detail.count ;

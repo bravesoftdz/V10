@@ -270,7 +270,7 @@ var TOBT,LastTOBL : TOB;
       //
       if (TOBL.GetString('GL_TYPELIGNE')='ART') then
       begin
-        if (Arrondi(TOBL.GetDouble('GL_MONTANTPA')-TOBL.GetDouble('MTTRANSFERT'),TFFActure(FF).DEV.Decimale)= 0) then
+        if (Arrondi(TOBL.GetDouble('GL_MONTANTPA')+ TOBL.GetDouble('SUMTOTALTS')-TOBL.GetDouble('MTTRANSFERT'),TFFActure(FF).DEV.Decimale)= 0) then
         begin
           PGIInfo('La ligne '+TOBL.GetString('GL_NUMLIGNE')+' est déjà transférée en totalité');
           Exit;
@@ -435,7 +435,7 @@ begin
     end;
     if MesMenuItem[II].Name = 'POPYTS' then
     begin
-      MesMenuItem[II].Enabled := (TOBL.GetString ('GL_TYPELIGNE')='ART');
+      MesMenuItem[II].Enabled := (TOBL.GetString ('GL_TYPELIGNE')='ART') or (TOBL.GetString ('GL_TYPELIGNE')='SD');
     end;
   end;
 end;

@@ -509,10 +509,11 @@ begin
   FileExecAndWait (TheLance);
 end;
 
-function CreTOBTS (TheNumOrdre : string; TOBTSPOC : TOB) : TOB;
+function CreTOBTS (TheNumOrdre : string; Uniqueblo : integer; TOBTSPOC : TOB) : TOB;
 begin
   result := TOB.Create('UNE LIGNE',TOBTSPOC,-1);
   result.AddChampSupValeur('NUMORDRE',TheNumOrdre);
+  result.AddChampSupValeur('UNIQUEBLO',Uniqueblo);
   result.AddChampSupValeur('TOTALTS',0);
   result.AddChampSupValeur('MODIFIED','-');
   result.AddChampSupValeur('DESIGNATION','');
@@ -583,6 +584,7 @@ var QQ : TQuery;
     TOBDET,TOBT,TOBE,TOBED,TOBEP,TOBDT : TOB;
     LastRef,TheRef : string;
     LastFather : TOB;
+    UniquebLo : Integer;
 begin
   if (Cledoc.NaturePiece <> 'BCE') or (VH_GC.BTCODESPECIF <> '001') then Exit;
   LastFather := nil;
@@ -599,10 +601,11 @@ begin
     repeat
       TOBED := TOBE.detail[0];
       TheRef := TOBED.GetString('BLE_NUMORDRE');
-      TOBEP := TOBTSPOC.findfirst(['NUMORDRE'],[TheRef],True);
+      UniquebLo := TOBED.GetInteger('BLE_UNIQUEBLO');
+      TOBEP := TOBTSPOC.findfirst(['NUMORDRE','UNIQUEBLO'],[TheRef,Uniqueblo],True);
       if TOBEP = nil then
       begin
-        TOBEP := CreTOBTS (TheRef,TOBTSPOC);
+        TOBEP := CreTOBTS (TheRef,Uniqueblo,TOBTSPOC);
       end;
       TOBED.ChangeParent(TOBEP,-1);
       TOBEP.SetDouble('TOTALTS',TOBEP.GetDouble('TOTALTS')+TOBED.GetDouble('BLE_MONTANT'));
@@ -617,7 +620,8 @@ begin
       repeat
         TOBT := TOBDET.detail[0];
         TheRef := TOBT.GetString('BLT_NUMORDRE');
-        TOBEP := TOBTSPOC.findfirst(['NUMORDRE'],[TheRef],True);
+        UniquebLo := TOBT.GetInteger('BLT_UNIQUEBLO');
+        TOBEP := TOBTSPOC.findfirst(['NUMORDRE','UNIQUEBLO'],[TheRef,UniquebLo],True);
         if TOBEP = nil then BEGIN TOBT.Free; Continue; end;  // pas de ligne associée ????
         TOBDT := TOBEP.FindFirst(['BLE_REFERENCETS'],[TOBT.GetString('BLT_REFERENCETS')],true);
         if TOBDT = nil then BEGIN TOBT.free; continue; end;// pas de ref ts associé ??
@@ -632,13 +636,24 @@ end;
 procedure GestionTsPOC(TOBPiece,OneTOB,TOBTSPOC : TOB);
 var TheTOBC : TOB;
     TheNumOrdre : String;
-    II : integer;
+    II,Uniqueblo : integer;
 begin
-  TheNumOrdre := OneTOB.GetString('GL_NUMORDRE');
-  TheTOBC := TOBTSPOC.findfirst(['NUMORDRE'],[TheNumordre],True);
-  if TheTOBC = nil then
+  if OneTOB.GetString('GL_TYPELIGNE')= 'ART' then
   begin
-    TheTOBC := CreTOBTS(TheNumOrdre,TOBTSPOC);
+    TheNumOrdre := OneTOB.GetString('GL_NUMORDRE');
+    TheTOBC := TOBTSPOC.findfirst(['NUMORDRE','UNIQUEBLO'],[TheNumordre,0],True);
+    if TheTOBC = nil then
+    begin
+      TheTOBC := CreTOBTS(TheNumOrdre,0,TOBTSPOC);
+    end;
+  end else 
+  begin
+    UniquebLO :=  OneTOB.GetInteger('UNIQUEBLO');
+    TheTOBC := TOBTSPOC.findfirst(['NUMORDRE','UNIQUEBLO'],['0',Uniqueblo],True);
+    if TheTOBC = nil then
+    begin
+      TheTOBC := CreTOBTS('0',UniquebLO,TOBTSPOC);
+    end;
   end;
   TheTOBC.SetString('DESIGNATION','Ligne '+OneTOB.GetString('GL_NUMLIGNE')+' : '+OneTOB.GetString('GL_CODEARTICLE')+copy(OneTOB.GetString('GL_LIBELLE'),1,35));
   TheTOBC.data := TOBPiece;
