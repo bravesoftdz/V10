@@ -7665,6 +7665,7 @@ var ARect,ZRect: TRect;
   ChangeColor : boolean;
   texte : THRichEditOLE;
   LastBrush, LastPen: Tcolor;
+  colformat : string;
 begin
   if csDestroying in ComponentState then Exit;
   if GS.RowHeights[ARow] <= 0 then Exit;
@@ -7972,13 +7973,14 @@ begin
   if (ARow >= GS.FixedRows) and (ACol= SG_MTTRANSFERT) then
   begin
     if TOBL = nil then Exit;
+    colformat := GS.ColFormats [SG_MTTRANSFERT];
     Canvas.FillRect(ARect);
-    if TOBL.GetDouble('TRANSFERED') > 0 then
+    if TOBL.GetDouble('TRANSFERED') <> 0 then
     begin
-      TheText := FloatToStr(TOBL.GetDouble('TRANSFERED'));
-    end else if TOBL.GetDouble('MTTRANSFERT') > 0 then
+      TheText := FormatFloat  (colformat,TOBL.GetDouble('TRANSFERED'));
+    end else if TOBL.GetDouble('MTTRANSFERT') <> 0 then
     begin
-      TheText := FloatToStr(TOBL.GetDouble('MTTRANSFERT'));
+      TheText := FormatFloat (colformat,TOBL.GetDouble('MTTRANSFERT'));
     end else exit;
 
     PosX := Arect.Right-Canvas.TextWidth(TheText)-2;
@@ -23623,6 +23625,7 @@ begin
       // -- POC --
       TOBL.PutValue('NUMTRANSFERT', TOBLoc.GetValue('NUMTRANSFERT'));
       TOBL.PutValue('MTTRANSFERT', TOBLoc.GetVAlue('MTTRANSFERT'));
+      TOBL.PutValue('SUMTOTALTS', TOBLoc.GetValue('SUMTOTALTS'));
       //
       if TOBTRFPOC <> nil then
       begin

@@ -145,6 +145,7 @@ var OneTOB,OneDetail : TOB;
 begin
   OneTOB := TOB.Create ('BLIGNEETS',nil,-1); OneTOB.AddChampSupValeur ('OK','-');
   OneTOB.SetInteger('BLE_NUMORDRE',TOBDet.GetInteger('NUMORDRE'));
+  OneTOB.SetInteger('BLE_UNIQUEBLO',TOBDet.GetInteger('UNIQUEBLO'));
   TheTOB := OneTOB;
   OneTOB.Data := TOBDet;
   TOBDet.Data := TOBPiece;

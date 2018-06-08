@@ -480,10 +480,32 @@ begin
                       'BT3_NUMERO=BLO_NUMERO AND '+
                       'BT3_INDICEG=BLO_INDICEG AND '+
                       'BT3_UNIQUEBLO=BLO_UNIQUEBLO'+
-                      ') AS MTTRANSFERT ';
+                      ') AS MTTRANSFERT, ';
+//
+    Result := Result + 'CASE WHEN EXISTS ('+
+                       'SELECT 1 FROM BTRFDETAIL WHERE '+
+                       'BT3_NATUREPIECEG=BLO_NATUREPIECEG AND BT3_SOUCHE=BLO_SOUCHE AND BT3_NUMERO=BLO_NUMERO AND BT3_INDICEG=BLO_INDICEG AND '+
+                       'BT3_UNIQUEBLO=BLO_UNIQUEBLO AND BT3_TYPELIGNETRF="001" AND BT3_CONTREP="-"'+
+                       ')'+
+                       'THEN BLO_MONTANTHTDEV '+
+                       'ELSE 0 '+
+                       'END AS TRANSFERED, ';
+//
+    Result := Result + 'CASE WHEN EXISTS ('+
+                       'SELECT 1 FROM BTRFDETAIL WHERE '+
+                       'BT3_NATUREPIECEG=BLO_NATUREPIECEG AND BT3_SOUCHE=BLO_SOUCHE AND BT3_NUMERO=BLO_NUMERO AND BT3_INDICEG=BLO_INDICEG AND '+
+                       'BT3_UNIQUEBLO=BLO_UNIQUEBLO AND BT3_TYPELIGNETRF="001" AND BT3_CONTREP="-"'+
+                       ')'+
+                       'THEN 0 '+
+                       'ELSE '+
+                        '(SELECT SUM(BLE_MONTANT) '+
+                        'FROM BLIGNEETS '+
+                        'WHERE '+
+                        'BLE_NATUREPIECEG=BLO_NATUREPIECEG AND BLE_SOUCHE=BLO_SOUCHE AND BLE_NUMERO=BLO_NUMERO AND BLE_INDICEG=BLO_INDICEG AND BLE_UNIQUEBLO=BLO_UNIQUEBLO)'+
+                       'END AS SUMTOTALTS ';
   end else
   begin
-    Result := Result +',0 AS NUMTRANSFERT,"" AS TYPETRANSFERT,0 AS MTTRANSFERT ';
+    Result := Result +',0 AS NUMTRANSFERT,"" AS TYPETRANSFERT,0 AS MTTRANSFERT,0 AS TRANSFERED,0 AS SUMTOTALTS  ';
   end;
   result := result + 'FROM LIGNEOUV O '+
             'LEFT JOIN NATUREPREST N ON BNP_NATUREPRES=(SELECT GA_NATUREPRES FROM ARTICLE WHERE GA_ARTICLE=O.BLO_ARTICLE) ';
@@ -569,16 +591,21 @@ begin
                        'ELSE 0 '+
                        'END AS TRANSFERED, ';
 //
-    Result := Result +
-                      '('+
-                'SELECT SUM(BLE_MONTANT) '+
-                'FROM BLIGNEETS '+
-                'WHERE '+
-                'BLE_NATUREPIECEG=GL_NATUREPIECEG AND BLE_SOUCHE=GL_SOUCHE AND BLE_NUMERO=GL_NUMERO AND BLE_INDICEG=GL_INDICEG AND BLE_NUMORDRE=GL_NUMORDRE'+
-              ') AS SUMTOTALTS ';
+    Result := Result + 'CASE WHEN EXISTS ('+
+                       'SELECT 1 FROM BTRFDETAIL WHERE '+
+                       'BT3_NATUREPIECEG=GL_NATUREPIECEG AND BT3_SOUCHE=GL_SOUCHE AND BT3_NUMERO=GL_NUMERO AND BT3_INDICEG=GL_INDICEG AND '+
+                       'BT3_NUMORDRE=GL_NUMORDRE AND BT3_UNIQUEBLO=0 AND BT3_TYPELIGNETRF="001" AND BT3_CONTREP="-"'+
+                       ')'+
+                       'THEN 0 '+
+                       'ELSE '+
+                        '(SELECT SUM(BLE_MONTANT) '+
+                        'FROM BLIGNEETS '+
+                        'WHERE '+
+                        'BLE_NATUREPIECEG=GL_NATUREPIECEG AND BLE_SOUCHE=GL_SOUCHE AND BLE_NUMERO=GL_NUMERO AND BLE_INDICEG=GL_INDICEG AND BLE_NUMORDRE=GL_NUMORDRE)'+
+                       'END AS SUMTOTALTS ';
   end else
   begin
-    Result := Result +',0 AS NUMTRANSFERT,"" AS TYPETRANSFERT,0 AS MTTRANSFERT, 0 AS SUMTOTALTS ';
+    Result := Result +',0 AS NUMTRANSFERT,"" AS TYPETRANSFERT,0 AS MTTRANSFERT, 0 AS TRANSFERED, 0 AS SUMTOTALTS ';
   end;
   if WithLigneCompl Then
   begin

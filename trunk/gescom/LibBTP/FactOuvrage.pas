@@ -4561,6 +4561,7 @@ begin
       // -- POC --
       TOBL1.PutValue('NUMTRANSFERT', TOBOUV.GetValue('NUMTRANSFERT'));
       TOBL1.PutValue('MTTRANSFERT', TOBOUV.GetValue('MTTRANSFERT'));
+      TOBL1.PutValue('SUMTOTALTS', TOBOUV.GetValue('SUMTOTALTS'));
       //
       if TOBTRFPOC <> nil then
       begin
