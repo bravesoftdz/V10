@@ -117,6 +117,7 @@ const
   SG_CODEMARCHE : integer = -1;
   SG_TOTALTS : integer = -1;
   SG_MTTRANSFERT : Integer = -1;
+  SG_PHASETRA : Integer = -1;
 
 implementation
 uses
@@ -754,6 +755,7 @@ begin
   SG_CODEMARCHE := -1;
   SG_TOTALTS := -1;
   SG_MTTRANSFERT := -1;
+  SG_PHASETRA := -1;
 {$ENDIF}
 end;
 

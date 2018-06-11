@@ -199,6 +199,7 @@ type R_Col = record
     SG_CODEMARCHE : Integer;
     SG_TOTALTS : Integer;
     SG_MTTRANSFERT : Integer;
+    SG_PHASETRA : Integer;
   end;
 
 const StColNameGSA = 'CB;LIBELLE;QTE;';
@@ -979,6 +980,8 @@ type
     function ElementsSuivantSupprimable(TOBLigne: TOB): Boolean;
     function ParagraphesSuivantSuprimable(TOBLigne: TOB): boolean;
     function BeforeInsert(Arow: Integer): boolean;
+    function TraitePhase (ACol,Arow : integer) : boolean;
+    procedure ZoomPhase (Acol,Arow : Integer);
   protected
     GereStatPiece, AvoirDejaInverse: boolean;
     GX, GY: Integer;
@@ -1574,7 +1577,8 @@ uses
 
   UconnectBSV,
   EdtREtat,
-  UspecifPOC
+  UspecifPOC,
+  SelectPhase
   ;
 
 
@@ -6698,6 +6702,7 @@ begin
   RCOL.SG_CODEMARCHE :=  SG_CODECOND ;
   RCOL.SG_TOTALTS := SG_TOTALTS;
   RCol.SG_MTTRANSFERT := SG_MTTRANSFERT;
+  RCOL.SG_PHASETRA := SG_PHASETRA;
 end;
 
 procedure TFFacture.RestoreColList;
@@ -6775,6 +6780,7 @@ begin
   SG_CODEMARCHE :=  RCOL.SG_CODEMARCHE ;
   SG_TOTALTS := RCOL.SG_TOTALTS;
   SG_MTTRANSFERT := RCol.SG_MTTRANSFERT;
+  SG_PHASETRA := RCOl.SG_PHASETRA;
 
 	MemoriseChampsSupLigneETL (cledoc.NaturePiece,true);
   MemoriseChampsSupLigneOUV (cledoc.NaturePiece);
@@ -7725,6 +7731,18 @@ begin
       	GS.Canvas.TextOut (Arect.left+1,Arect.Top +2,TOBL.GetValue('LIBELLEFOU'));
     end;
   end;
+  //
+  if (Acol = SG_PHASETRA) and (ARow >= GS.FixedRows) then
+  begin
+    Canvas.FillRect(ARect);
+    TheText := GetLibellePhase (TOBL.getValue('GL_AFFAIRE'),TOBL.getValue('BLP_PHASETRA'),true);
+    if TheText <> '' then
+    begin
+      GS.Canvas.Brush.Style := bsSolid;
+      GS.Canvas.TextOut (Arect.left+2,Arect.Top +2,TheText);
+    end;
+  end;
+  //
   if (Acol=SG_CODTVA1) and (Arow >= GS.fixedRows) then
   begin
   	// pour les ouvrages on fait apparaitre des *** à la place du code de taxe
@@ -8432,7 +8450,7 @@ begin
   GS.ElipsisButton := (GS.Col = SG_RefArt) or (GS.Col = SG_Aff) or (GS.Col = SG_Rep) or (GS.Col = SG_Dep) or
                       (GS.Col = SG_DateLiv) or (GS.Col = SG_DateProd) or (GS.Col = SG_Regrpe)  or
                       (GS.Col = SG_CIRCUIT) or (GS.col = Sg_Unit) or
-                      (GS.Col = SG_MATERIEL) or (GS.col = Sg_TYPEACTION) Or (GS.Col= SG_CODECOND);
+                      (GS.Col = SG_MATERIEL) or (GS.col = Sg_TYPEACTION) Or (GS.Col= SG_CODECOND) or (GS.col = SG_PHASETRA);
   // FIN MODIF CHR
   
   if ((CommentLigne) and (GS.Col = SG_Lib) and
@@ -8456,58 +8474,61 @@ begin
     if GS.Col = SG_Regrpe then GS.ElipsisHint := HTitres.Mess[28] else
     {$ENDIF}
     if ((GS.Col = SG_QF) or (GS.Col = SG_QS)) then
-  begin
-    TOBL := GetTOBLigne(TOBPiece, GS.row);
-    if TOBL <> nil then
     begin
-      if TOBL.GetValue('GL_CODECOND') <> '' then
+      TOBL := GetTOBLigne(TOBPiece, GS.row);
+      if TOBL <> nil then
       begin
-        GS.ElipsisButton := True;
-        GS.ElipsisHint := HTitres.Mess[8];
+        if TOBL.GetValue('GL_CODECOND') <> '' then
+        begin
+          GS.ElipsisButton := True;
+          GS.ElipsisHint := HTitres.Mess[8];
+        end;
+        if (TOBL.FieldExists('GL_INDICEFORMULE')) and (TOBL.GetValue('GL_INDICEFORMULE')>0) then
+        begin
+          GS.ElipsisButton:=True ;
+          GS.ElipsisHint:=TraduireMemoire('Formule Calcul Quantité') ;
+        end;
+        {$IFDEF AFFAIRE}
+        if (TOBL.FieldExists('GL_FORMULEVAR')) and (TOBL.GetValue('GL_FORMULEVAR')<>'') then
+          TraiteFormuleVar(GS.Row, 'MODIF'); //Affaire-Formule des variables
+        {$ENDIF}
       end;
-      if (TOBL.FieldExists('GL_INDICEFORMULE')) and (TOBL.GetValue('GL_INDICEFORMULE')>0) then
+      {$IFDEF BTP}
+      if (TheMetreDoc <> nil) then
       begin
-        GS.ElipsisButton:=True ;
-        GS.ElipsisHint:=TraduireMemoire('Formule Calcul Quantité') ;
-      end;
-      {$IFDEF AFFAIRE}
-      if (TOBL.FieldExists('GL_FORMULEVAR')) and (TOBL.GetValue('GL_FORMULEVAR')<>'') then
-        TraiteFormuleVar(GS.Row, 'MODIF'); //Affaire-Formule des variables
-      {$ENDIF}
-    end;
-    {$IFDEF BTP}
-    if (TheMetreDoc <> nil) then
-    begin
-      if TheMetreDoc.AutorisationMetre(CleDoc.NaturePiece) then
-      begin
-        //**** Nouvelle Version *****
-        if TheMetreDoc.OkExcel then
-        Begin
-          if (Tobl.GetValue('GL_TYPELIGNE')= 'SD') then
-          begin
-            GS.ElipsisButton := False;
-            GS.ElipsisHint := TraduireMemoire('');
+        if TheMetreDoc.AutorisationMetre(CleDoc.NaturePiece) then
+        begin
+          //**** Nouvelle Version *****
+          if TheMetreDoc.OkExcel then
+          Begin
+            if (Tobl.GetValue('GL_TYPELIGNE')= 'SD') then
+            begin
+              GS.ElipsisButton := False;
+              GS.ElipsisHint := TraduireMemoire('');
+            end
+            else
+            begin
+             GS.ElipsisButton := TheMetreDoc.OkMetre;
+             GS.ElipsisHint   := TraduireMemoire('Accès aux métrés Excel');
+            end;
           end
           else
-          begin
-           GS.ElipsisButton := TheMetreDoc.OkMetre;
-           GS.ElipsisHint   := TraduireMemoire('Accès aux métrés Excel');
+          Begin
+            GS.ElipsisButton  := True;
+            GS.ElipsisHint    := TraduireMemoire('Accès aux métrés Standards');
           end;
-        end
-        else
-        Begin
-          GS.ElipsisButton  := True;
-          GS.ElipsisHint    := TraduireMemoire('Accès aux métrés Standards');
         end;
+      end
+      else
+      begin
+        GS.ElipsisButton := false;
+        GS.ElipsisHint := TraduireMemoire('');
       end;
-    end
-    else
+      {$ENDIF}
+    end else if (GS.col = SG_PHASETRA) then
     begin
-      GS.ElipsisButton := false;
-      GS.ElipsisHint := TraduireMemoire('');
-    end;
-    {$ENDIF}
-  end;
+      GS.ElipsisHint := 'affecté à la phase';
+    end; 
 
   StCellCur := GS.Cells[GS.Col, GS.Row];
   BouttonVisible(GS.Row);
@@ -8637,6 +8658,7 @@ begin
     else if ACol = SG_MATERIEL then cancel := not ControleMateriel(ACol, ARow)
     else if ACol = SG_TYPEACTION then cancel := not ControleTypeAction(ACol, ARow)
     else if (ACol = SG_QTECOND) or (Acol = SG_COEFCOND) or (Acol = SG_CODECOND ) then cancel := not TraiteConditionnement(ACol, ARow)
+    else if (Acol = SG_PHASETRA) then cancel := not TraitePhase (ACol,Arow)
   ;
 
     TraiteLesDivers(ACol, ARow);
@@ -8729,6 +8751,7 @@ begin
   else if GS.Col = SG_Lib     then ZoomOuChoixLib(GS.Col, GS.Row)
   else if GS.Col = SG_CIRCUIT then GereElipsis(SG_CIRCUIT,frombord)
   else if GS.Col = SG_CODECOND then ZoomCondit(GS.col,GS.row)
+  else if GS.Col = SG_PHASETRA then ZoomPhase(GS.col,GS.row)
   else if ((GS.Col = SG_QF) or (GS.Col = SG_QS)) then
   begin
 
@@ -30182,6 +30205,33 @@ begin
     end;
   end;
   TOBSTP.free;
+end;
+
+function TFFacture.TraitePhase(ACol, Arow: integer): boolean;
+var TOBL : TOB;
+begin
+  TOBL := GetTOBLigne(TOBPiece, ARow);
+  if (TOBL.getValue('GL_AFFAIRE') = '') then exit;
+
+  result := (GetLibellePhase (TOBL.getValue('GL_AFFAIRE'),GS.cells[Acol,Arow],true) <> '');
+  if result then
+  begin
+    TOBL.SetString('BLP_PHASETRA',GS.cells[Acol,Arow]);
+  end;
+//
+end;
+
+procedure TFFacture.ZoomPhase(Acol, Arow: Integer);
+var Code : string;
+    TOBL : TOB;
+begin
+  TOBL := GetTOBLigne(TOBPiece, ARow);
+  if TOBL.getValue('GL_AFFAIRE') = '' then exit;
+
+  if SelectionPhase (TOBL.getValue('GL_AFFAIRE'),Code) then
+  begin
+  	 GS.Cells[Acol,Arow] := Code;
+  end;
 end;
 
 initialization

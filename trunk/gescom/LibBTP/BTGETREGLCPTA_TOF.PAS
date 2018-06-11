@@ -598,7 +598,13 @@ begin
       TOBACC.SetString('GAC_QUALIFPIECE',TOBRF.getstring('E_QUALIFPIECE'));
       TOBACC.SetString('GAC_AUXILIAIRE',TOBRF.getstring('E_AUXILIAIRE'));
       TOBACC.SetString('GAC_CPTADIFF','-');
-      TOBACC.PutValue('GAC_DATEECR',TOBRF.GetValue('E_DATECOMPTABLE'));
+      if VH_GC.BTCODESPECIF = '001' then
+      begin
+        TOBACC.PutValue('GAC_DATEECR',TOBRF.GetValue('E_DATECREATION'));
+      end else
+      begin
+        TOBACC.PutValue('GAC_DATEECR',TOBRF.GetValue('E_DATECOMPTABLE'));
+      end;
       TOBACC.PutValue('GAC_DATEECHEANCE',TOBRF.GetValue('E_DATEECHEANCE'));
     end;
   end;

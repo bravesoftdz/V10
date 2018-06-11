@@ -547,9 +547,9 @@ Begin
         TOBC.PutValue('BCO_FACTURABLE', TOBLigne.GetValue('FACTURABLE'));
         //FV1 - 04/06/2018 - FS#3105 - DELABOUDINIERE - Pas de quantité à facturer en saisie conso sur les ligne venant du TPI
         if TOBC.GetValue('BCO_FACTURABLE')='A' then
-           TOBC.PutValue('BCO_QTEFACTUREE', TOBLigne.GetValue('GL_QTEFACT'))
+           TOBC.SetDouble('BCO_QTEFACTUREE', TOBLigne.GetDouble('GL_QTEFACT'))
         else
-           TOBC.PutValue('BCO_QTEFACTUREE', '0.00');
+           TOBC.SetDouble('BCO_QTEFACTUREE', 0);
       end
       else
         TOBC.PutValue('BCO_FACTURABLE', 'N');

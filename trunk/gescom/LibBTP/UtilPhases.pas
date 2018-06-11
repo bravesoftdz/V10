@@ -67,7 +67,7 @@ procedure AnnulePhases(TOBPiece : TOB; GestionConsommation : TTraitConso = TTcoD
 function ISPieceGeneratricePhase (Naturepiece : string) : boolean;
 procedure ConstitueLaTOBTrieSurphase ( LaSource,ladestination: TOB );
 function GetLibellePhase (TOBL : TOB) : string; overload;
-function GetLibellePhase (Chantier,Phase : string) : string; overload;
+function GetLibellePhase (Chantier,Phase : string; BlancWhenNul : Boolean=false) : string; overload;
 function GetLibelleChantier (TOBL : Tob) : string;
 function ControlePiecePhases (TOBPiece : TOB; var MessageRet : string) : boolean;
 function IsExistPhases (Chantier : string) : boolean;
@@ -299,14 +299,30 @@ begin
   result := GetLibellePhase(TOBL.GetValue('BCO_AFFAIRE'),TOBL.GetValue('BCO_PHASETRA'));
 end;
 
-function GetLibellePhase (Chantier,Phase : string) : string;
+function GetLibellePhase (Chantier,Phase : string; BlancWhenNul : Boolean=false) : string;
 var QQ : TQuery;
     Sql : String;
 begin
-  result := traduireMemoire('Non définie');
+  if BlancWhenNul then Result := ''
+                  else result := traduireMemoire('Non définie');
   if Phase = '' then exit;
   Sql := 'SELECT BPC_LIBELLE FROM PHASESCHANTIER WHERE BPC_AFFAIRE="'+
           Chantier+'" AND BPC_PHASETRA="'+phase+'"';
+  QQ := OpenSql (SQL,true);
+  if not QQ.eof then
+  begin
+    result := QQ.findfield('BPC_LIBELLE').asString ;
+  end;
+  ferme (QQ);
+end;
+
+function GetLibellePhaseBlanc (Chantier,Phase : string) : string;
+var QQ : TQuery;
+    Sql : String;
+begin
+  result := '';
+  if (Phase = '') or (Chantier ='') then exit;
+  Sql := 'SELECT BPC_LIBELLE FROM PHASESCHANTIER WHERE BPC_AFFAIRE="'+Chantier+'" AND BPC_PHASETRA="'+phase+'"';
   QQ := OpenSql (SQL,true);
   if not QQ.eof then
   begin

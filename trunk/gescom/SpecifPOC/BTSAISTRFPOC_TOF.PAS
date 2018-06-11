@@ -1541,6 +1541,8 @@ begin
           TOBOS.SetInteger('NUMTRANSFERT',TOBTRFPOC.GetInteger('BT2_UNIQUE'));
           TOBOS.SetDouble('MTTRANSFERT',TOBT.GetDouble('BT3_MTTRANSFERT')*(-1));
           TOBOS.SetDouble('BLO_QTEFACT',ARRONDI(TOBT.GetDouble('BT3_QTETRANSFERT')/(TOBLigne.geTDouble('GL_QTEFACT')-QteDejaTransf),V_PGI.OkDecQ)*(-1));
+          TOBOS.SetDouble('BLO_PUHTDEV',ARRONDI(TOBT.GetDouble('BT3_MTTRANSFERT')/TOBOS.geTDouble('BLO_QTEFACT'),V_PGI.OkDecQ));
+          TOBOS.SetDouble('BLO_PUHT',TOBOS.GetDouble('BLO_PUHTDEV'));
           //
           TOBTT.setString('BT3_TYPELIGNETRF','001');
           TOBTT.SetDouble('BT3_MTTRANSFERT',TOBTT.GetDouble('BT3_MTTRANSFERT')*(-1));
@@ -1591,6 +1593,8 @@ begin
       TOBNL.SetDouble('GL_QTEFACT',TOBT.GetDouble('QTE')*(-1));
       TOBNL.SetDouble('GL_QTERESTE',TOBNL.GetDouble('GL_QTEFACT'));
       TOBNL.SetDouble('GL_QTESTOCK',TOBNL.GetDouble('GL_QTEFACT'));
+      TOBNL.SetDouble('GL_PUHTDEV',ARRONDI(TOBNL.GetDouble('MTTRANSFERT')/TOBNL.GetDouble('GL_QTEFACT'),V_PGI.OkDecP));
+      TOBNL.SetDouble('GL_PUHT',ARRONDI(TOBNL.GetDouble('MTTRANSFERT')/TOBNL.GetDouble('GL_QTEFACT'),V_PGI.OkDecP));
       TOBNL.SetString('GL_RECALCULER','X');
       if IsOuvrage(TOBL) then
       begin
