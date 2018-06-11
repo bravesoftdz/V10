@@ -2356,6 +2356,7 @@ begin
         if NomCol = 'GLC_COEFCOND'       then SG_COEFCOND := icol else
         if NomCol = 'GL_CODECOND'       then SG_CODECOND := icol else
         if NomCol = 'GL_CODEMARCHE'    then SG_CODEMARCHE := icol else
+        if NomCol = 'BLP_PHASETRA'    then SG_PHASETRA := icol else
         ;
       end else
       begin
