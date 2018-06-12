@@ -215,6 +215,7 @@ begin
              Application.ProcessMessages;
              Exit;
           end;
+          (*
           Ok1 := (BOB_IMPORT_PCL_STD('UTILS2009','Business',False)=1);
           if (Ok1) or (Ok2) then
           begin
@@ -224,7 +225,7 @@ begin
             FMenuG.Quitter;
 						Abort;
           end;
-          
+          *)
 {$ENDIF}
           DispatchAuto;   // Ajout CA - 05/10/2005
           VerifSuperviseur;

@@ -5781,7 +5781,7 @@ begin
   TOBDates.AddChampSupValeur('RETOUROK','-');
   TOBDates.AddChampSupValeur('DATFAC',iDate1900);
   TOBDates.AddChampSupValeur('DATESITUATION','-');
-  if (not ModeCloture) and ((ModeGeneration = 'AVA') or (ModeGeneration = 'DAC') and (RepriseAnteriorite))  then TOBDates.AddChampSupValeur('ANTERIORITE','X')
+  if (not ModeCloture) and ((ModeGeneration = 'AVA') or (ModeGeneration = 'DAC')) and (RepriseAnteriorite)  then TOBDates.AddChampSupValeur('ANTERIORITE','X')
                                                                                                             else TOBDates.AddChampSupValeur('ANTERIORITE','-');
   TOBDates.AddChampSupValeur('NUMSIT',0);
   TOBDates.AddChampSupValeur('TYPEDATE','Date de mise à jour');

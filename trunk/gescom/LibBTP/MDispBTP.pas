@@ -1389,6 +1389,12 @@ Cegid,False,False)};
               AglLanceFiche ('BTP','BDEPENSESPOC','','','ACTION=MODIFICATION') ;
               V_PGI.ZoomOle := false;
              END;
+    148824 : BEGIN
+              V_PGI.ZoomOle := true;
+              AglLanceFiche ('YY','YYIDENTBANCAIRE','','','ACTION=MODIFICATION') ;
+              V_PGI.ZoomOle := false;
+             END;
+
     // 74XXX : ParamTvaTpf(false) ;  TPF non gérée
     74153 : FicheModePaie_AGL('');
     74154 : FicheRegle_AGL ('',False,taModif);
