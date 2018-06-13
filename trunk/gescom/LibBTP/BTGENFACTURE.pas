@@ -660,14 +660,17 @@ begin
     end;
     if result then
     begin
-      if (VH_GC.BTCODESPECIF = '001') and (not RepriseAnteriorite)  then
+      if (VH_GC.BTCODESPECIF = '001') then
       begin
-        NumSituation := GetNextNumSituation(TOBfacture);
-        // ---- Constitue la situation 0 si elle n'existe pas -----
-        if NumSituation = -1 then
+        if (not RepriseAnteriorite) then
         begin
-          // on est en train de générer la première situation donc c'est bon
-          EnregistreAvancePOC (TOBFacture,TOBAffaire,TOBPorcs,TOBBases,DEV);
+          NumSituation := GetNextNumSituation(TOBfacture);
+          // ---- Constitue la situation 0 si elle n'existe pas -----
+          if NumSituation = -1 then
+          begin
+            // on est en train de générer la première situation donc c'est bon
+            EnregistreAvancePOC (TOBFacture,TOBAffaire,TOBPorcs,TOBBases,DEV);
+          end;
         end;
         // application de la retenue de garantie en provenance d ela fiche affaire
         AppliqueRGPOC (TOBfacture,TOBAffaire,TOBPorcs,TOBTiers,TOBPIECERG,DEV,NumSituation);

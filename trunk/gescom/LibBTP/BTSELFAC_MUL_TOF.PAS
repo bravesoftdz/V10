@@ -1064,7 +1064,7 @@ begin
   cledoc.NumeroPiece := StrToInt(READTOKENST(ZZ));
   cledoc.Indice := StrToInt(READTOKENST(ZZ));
 
-  SQL := 'SELECT 1 FROM LIGNEFAC WHERE '+WherePiece (cledoc,ttdLignefac,false);
+  SQL := 'SELECT 1 FROM LIGNEFAC WHERE '+WherePiece (cledoc,ttdLignefac,false) + ' AND BLF_MTCUMULEFACT <> 0';
   result :=  ExisteSQL(SQL); 
 end;
 

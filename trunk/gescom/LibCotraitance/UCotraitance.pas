@@ -4027,9 +4027,11 @@ begin
     TheTOB := TOBParam;
     TOBParam.Data := ftobPieceTrait;
     TOBpieceTrait.data := fTOBPieceInterv;
+    fTOBPieceInterv.Data := TOBpiece;
     AGLLanceFiche('BTP','BTSAISPAIMENTPOC','','',ActionToString(TFFActure(FF).TheAction));
     TheTOB := nil;
     TOBpieceTrait.data := nil;
+    fTOBPieceInterv.Data := nil;
     if TOBParam.getstring('MODIF')='X' then
     begin
       TFFActure(FF).RecalculeEcheances;

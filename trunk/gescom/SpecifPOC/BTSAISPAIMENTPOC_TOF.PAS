@@ -46,6 +46,7 @@ Type
     procedure OnClose                  ; override ;
     procedure OnCancel                 ; override ;
   private
+    TOBPiece : TOB;
     TOBSAISIE : TOB;
     TOBParam : TOB;
     TOBPieceTrait : TOb;
@@ -55,6 +56,8 @@ Type
     fColNames,Falignement,Ftitre,fLargeur : string;
     ColSaisie : Integer;
     DEV : Rdevise;
+    procedure BInsertClick (Sender : TObject);
+    procedure BDeleteClick (Sender : TObject);
     procedure BfermeClick (Sender : TObject);
     procedure DefiniGrid;
     procedure DefiniGrille(Grid: ThGrid; fColNames, Falignement, Ftitre,fLargeur: string);
@@ -64,12 +67,14 @@ Type
     procedure GSKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure ZoneSuivanteOuOk(Grille: THgrid; var ACol, ARow: integer; var Cancel: boolean);
     function ZoneAccessible(Grille: THgrid; var ACol,ARow: integer): boolean;
+    procedure AjouteLigne(TOBL: TOB; Sens: string='+');
+    procedure RaffraichitTotal;
   end ;
 
 function DemandeReglementSousTrait (TOBPiece,TOBTiers,TOBEches,TOBAcomptes,TObpieceTrait,TOBPieceRG,TOBSousTrait,TOBPorcs: TOB; MontantPaiement : double;  DEV : RDevise) : boolean;
 
 Implementation
-uses FactComm;
+uses FactComm,UCotraitance,UspecifPOC,BTStructChampSup;
 
 function DemandeReglementSousTrait (TOBPiece,TOBTiers,TOBEches,TOBAcomptes,TObpieceTrait,TOBPieceRG,TOBSousTrait,TOBPorcs: TOB; MontantPaiement : double;  DEV : RDevise) : boolean;
 var TOBParam : TOB;
@@ -121,34 +126,57 @@ begin
     exit;
   end;
   //
-  for II := 0 to TOBSAISIE.Detail.count -1 do
-  begin
-    TOBS := TOBSAISIE.detail[II];
+  II := 0;
+  repeat
+    TOBS := TOBSAISIE.detail[II]; 
     TOBL := TOBPieceTrait.FindFirst(['BPE_FOURNISSEUR'],[TOBS.GetString('BPE_FOURNISSEUR')],true);
-    if TOBL = nil then continue;
-    if TOBS.GetDouble('BPE_MONTANTREGL')<>TOBL.GetDouble('BPE_MONTANTREGL') then
+    if TOBL = nil then
     begin
-      TOBL.SetDouble('BPE_MONTANTREGL',TOBS.GetDouble('BPE_MONTANTREGL'));
-      TOBL.SetBoolean ('BPE_REGLSAISIE',true);
+      TOBS.changeParent (TOBPieceTrait,-1);
+      TOBS.SetBoolean ('BPE_REGLSAISIE',true);
       if TOBS.GetString('BPE_FOURNISSEUR') <> '' then
       begin
         TOBI := TOBSOUSTrait.FindFirst(['BPI_TIERSFOU'],[TOBS.GetString('BPE_FOURNISSEUR')],true);
         if TOBI <> nil then
         begin
-
           if TOBS.GetDouble('BPE_MONTANTREGL') <> 0 then
           begin
             TOBI.SetString('BPI_TYPEPAIE','001');
-            TOBL.SetString('TYPEPAIE','001');
+            TOBS.SetString('TYPEPAIE','001');
           end else
           begin
             TOBI.SetString('BPI_TYPEPAIE','002');
-            TOBL.SetString('TYPEPAIE','002');
+            TOBS.SetString('TYPEPAIE','002');
           end;
         end;
       end;
+    end else
+    begin
+      if TOBS.GetDouble('BPE_MONTANTREGL')<>TOBL.GetDouble('BPE_MONTANTREGL') then
+      begin
+        TOBL.SetDouble('BPE_MONTANTREGL',TOBS.GetDouble('BPE_MONTANTREGL'));
+        TOBL.SetBoolean ('BPE_REGLSAISIE',true);
+        if TOBS.GetString('BPE_FOURNISSEUR') <> '' then
+        begin
+          TOBI := TOBSOUSTrait.FindFirst(['BPI_TIERSFOU'],[TOBS.GetString('BPE_FOURNISSEUR')],true);
+          if TOBI <> nil then
+          begin
+
+            if TOBS.GetDouble('BPE_MONTANTREGL') <> 0 then
+            begin
+              TOBI.SetString('BPI_TYPEPAIE','001');
+              TOBL.SetString('TYPEPAIE','001');
+            end else
+            begin
+              TOBI.SetString('BPI_TYPEPAIE','002');
+              TOBL.SetString('TYPEPAIE','002');
+            end;
+          end;
+        end;
+      end;
+      Inc(II);
     end;
-  end;
+  until II >= TOBSAISIE.detail.count;
   TOBParam.SetString('MODIF','X');
 end ;
 
@@ -170,8 +198,10 @@ begin
   DEV.decimale := TOBParam.Getinteger('NBDEC');
   TOBPieceTrait := TOB(TOBParam.Data);
   TOBSOUSTRAIT := TOB(TOBPieceTrait.Data);
+  TOBPIece := TOB(TOBSOUSTRAIT.Data);
   TOBPieceTrait.Data := nil;
   TOBParam.Data := nil;
+  TOBSOUSTRAIT.data := nil;
   TOBSAISIE.Dupliquer(TOBPieceTrait,True,true);
   GS := THGrid(GetControl('GS'));
   THNumEdit(getCOntrol('NETAPAYER')).Value := Arrondi(TOBParam.GetDouble('NETAPAYER'),DEV.Decimale);
@@ -187,6 +217,8 @@ begin
   GS.OnCellEnter := GSCellEnter;
   GS.OnCellExit := GSCellExit;
   GS.OnKeyDown := GSKeyDown;
+  TToolbarButton97(GetControl('BInsert')).OnClick := BInsertClick;
+  TToolbarButton97(GetControl('BDelete')).OnClick := BDeleteClick;
   GSCellEnter(self,Acol,Arow,cancel);
 end ;
 
@@ -316,6 +348,28 @@ begin
   end;
 end;
 
+procedure TOF_BTSAISPAIMENTPOC.AjouteLigne(TOBL : TOB;SenS : string ='+');
+begin
+  if Sens = '+' then
+  begin
+    THNumEdit(getCOntrol('ENPAIEMENT')).Value := arrondi(THNumEdit(getCOntrol('ENPAIEMENT')).Value + TOBL.GetDouble('BPE_MONTANTREGL'),DEV.decimale);
+  end else
+  begin
+    THNumEdit(getCOntrol('ENPAIEMENT')).Value := arrondi(THNumEdit(getCOntrol('ENPAIEMENT')).Value - TOBL.GetDouble('BPE_MONTANTREGL'),DEV.decimale);
+  end;
+end;
+
+procedure TOF_BTSAISPAIMENTPOC.RaffraichitTotal;
+begin
+  if THNumEdit(getCOntrol('ENPAIEMENT')).Value <> THNumEdit(getCOntrol('NETAPAYER')).Value then
+  begin
+    THNumEdit(getCOntrol('ENPAIEMENT')).Font.Color := clred;
+  end else
+  begin
+    THNumEdit(getCOntrol('ENPAIEMENT')).Font.Color := clblack;
+  end;
+end;
+
 procedure TOF_BTSAISPAIMENTPOC.GSCellExit(Sender: TObject; var ACol,ARow: Integer; var Cancel: Boolean);
 var TOBL : TOB;
 begin
@@ -323,20 +377,12 @@ begin
   if Acol = ColSaisie then
   begin
     TOBL := TOBSAISIE.detail[Arow-1];
-
-    THNumEdit(getCOntrol('ENPAIEMENT')).Value := arrondi(THNumEdit(getCOntrol('ENPAIEMENT')).Value - TOBL.GetDouble('BPE_MONTANTREGL'),DEV.decimale);
+    AjouteLigne(TOBL,'-');
 
     TOBL.SetDouble('BPE_MONTANTREGL',VALEUR(GS.cells[Acol,Arow]));
-    
-    THNumEdit(getCOntrol('ENPAIEMENT')).Value := arrondi(THNumEdit(getCOntrol('ENPAIEMENT')).Value + TOBL.GetDouble('BPE_MONTANTREGL'),DEV.Decimale);
+    AjouteLigne(TOBL);
 
-    if THNumEdit(getCOntrol('ENPAIEMENT')).Value <> THNumEdit(getCOntrol('NETAPAYER')).Value then
-    begin
-      THNumEdit(getCOntrol('ENPAIEMENT')).Font.Color := clred;
-    end else
-    begin
-      THNumEdit(getCOntrol('ENPAIEMENT')).Font.Color := clblack;
-    end;
+    RaffraichitTotal;
     TOBL.PutLigneGrid(GS,ARow,False,False,fColNames);
     StCell := GS.cells[Acol,Arow];
   end;
@@ -444,6 +490,130 @@ procedure TOF_BTSAISPAIMENTPOC.BfermeClick(Sender: TObject);
 begin
   TOBParam.SetString('OKOK','-');
   Ecran.Close;
+end;
+
+procedure TOF_BTSAISPAIMENTPOC.BDeleteClick(Sender: TObject);
+var TOBL : TOB;
+    LastRow : integer;
+  Acol,Arow : Integer;
+  Cancel : Boolean;
+begin
+  Lastrow := GS.row;
+  TOBL := TOBSaisie.detail[GS.Row-1];
+  if (TOBL.GetString('BPE_FOURNISSEUR')='')  then
+  begin
+    PGIInfo('On ne peut pas retirer votre société du paiement');
+    Exit;
+  end;
+  if (TOBL.GetDouble('BPE_MONTANTFAC')<>0)  then
+  begin
+    PGIInfo('On ne peut pas retirer un sous traitant présent dans la facturation');
+    Exit;
+  end;
+	GS.CacheEdit;
+  GS.SynEnabled := false;
+  GS.OnCellEnter := nil;
+  GS.OnCellExit := nil;
+  AjouteLigne (TOBL,'-');
+  TOBSaisie.detail[GS.Row-1].Free;
+  ChargeLaGrille;
+  GS.Row := 1;
+  GS.Col := ColSaisie;
+  Acol := GS.col;
+  Arow := GS.row;
+  GS.SynEnabled := true;
+	GS.ShowEditor;
+  GS.OnCellEnter := GSCellEnter;
+  GS.OnCellExit := GSCellExit;
+  GSCellEnter(self,Acol,Arow,cancel);
+end;
+
+procedure TOF_BTSAISPAIMENTPOC.BInsertClick(Sender: TObject);
+
+  procedure AddSousTraitant(Fournisseur,CodeMarche : string);
+  var TT,TTE : TOB;
+  begin
+    TT := TOB.Create('PIECEINTERV',TOBSOUSTrait,-1);
+    AddChampsSupTraitCreat (TT);
+    AddChampsSupTrait (TT);
+    TT.putValue('BPI_NATUREPIECEG',TOBpiece.GetString('GP_NATUREPIECEG'));
+    TT.putValue('BPI_SOUCHE',TOBpiece.GetString('GP_SOUCHE'));
+    TT.putValue('BPI_NUMERO',TOBpiece.GetInteger('GP_NUMERO') );
+    TT.putValue('BPI_INDICEG',TOBpiece.GetInteger('GP_INDICEG'));
+    TT.SetInteger('BPI_ORDRE',TOBSOUSTrait.detail.count -1);
+    //
+    TT.putValue('BPI_TYPEINTERV','Y00');
+    TT.putValue('BPI_TYPEPAIE','001');
+    TT.putValue('BPI_DATECONTRAT',V_PGI.DateEntree);
+    TT.SetBoolean('BPI_AUTOLIQUID',true);
+    TT.SetString('BPI_FAMILLETAXE',GetInfoMarcheST(TOBpiece.GetString('GP_AFFAIRE'),Fournisseur,CodeMarche,'FAMILLETAXE1'));
+    TT.SetString('BPI_TIERSFOU',Fournisseur);
+    TT.SetString('BPI_CODEMARCHE',CodeMarche);
+    TT.SetDouble('NBUSED',1);
+    //
+    TTE := TOBSAISIE.FindFirst(['BPE_FOURNISSEUR'],[Fournisseur],true);
+    if TTE = nil then
+    begin
+      TTE := TOB.Create('PIECETRAIT',TOBSAISIE,-1);
+      AddlesChampsSupPieceTrait (TTE);
+
+      TTE.putValue('BPE_NATUREPIECEG',TOBpiece.GetString('GP_NATUREPIECEG'));
+      TTE.putValue('BPE_SOUCHE',TOBpiece.GetString('GP_SOUCHE'));
+      TTE.putValue('BPE_NUMERO',TOBpiece.GetInteger('GP_NUMERO') );
+      TTE.putValue('BPE_INDICEG',TOBpiece.GetInteger('GP_INDICEG'));
+      TTE.SetString('BPE_FOURNISSEUR',Fournisseur);
+      TTE.SetString ('LIBELLE',GetLibelleFou(Fournisseur));
+      TTE.SetString('BPE_AFFAIRE',TOBPiece.GetString('GP_AFFAIRE'));
+      TTE.SetString('BPE_TYPEINTERV',TT.GetString('BPI_TYPEINTERV'));
+    end;
+
+  end;
+
+  procedure  AjouteSousTraitantPOC(Fournisseur,CodeMarche : string);
+  var TT : TOB;
+  begin
+    TT := TOBSOUSTrait.FindFirst(['BPI_TYPEINTERV','BPI_TIERSFOU','BPI_CODEMARCHE'],['Y00',Fournisseur,CodeMarche],true);
+    if TT = nil then
+    begin
+      AddSousTraitant(Fournisseur,CodeMarche);
+    end else
+    begin
+      TT.SetDouble('NBUSED',TT.GetDouble('NBUSED')+1);
+    end;
+  end;
+
+var TOBParam : TOB;
+    CodeMarche,Fournisseur,ModePaie,Affaire : string;
+begin
+  Affaire := TOBpiece.GetValue('GP_AFFAIRE');
+  CodeMarche := '';
+  Fournisseur := '';
+  // Sélection du Sous traitant
+  TOBParam := TOB.Create ('LES PARAMS',nil,-1);
+  TOBParam.AddChampSupValeur ('ACTION','SELECTION');
+  TOBParam.AddChampSupValeur ('SOUSTRAIT','');
+  TOBParam.AddChampSupValeur ('CODEMARCHE','');
+  TOBParam.AddChampSupValeur ('AFFAIRE',Affaire);
+  TOBParam.Data := TObpieceTrait;
+  TObpieceTrait.Data := TOBSOUSTrait;
+  TheTOB := TOBParam;
+  Fournisseur := '';
+  ModePaie := '001';
+  TRY
+  	AGLLanceFiche('BTP','BTMARCHEST_MUL','BM1_AFFAIRE='+Affaire,'','');
+    // --
+    Fournisseur := TOBParam.GetValue('SOUSTRAIT');
+    CodeMarche := TOBParam.GetValue('CODEMARCHE');
+  FINALLY
+    TObpieceTrait.Data := nil;
+    TheTOB := nil;
+  	TOBParam.free;
+  end;
+  if (Fournisseur <> '' ) and (CodeMarche <> '') then
+  begin
+    AjouteSousTraitantPOC (Fournisseur,CodeMarche);
+    ChargeLaGrille;
+  end;
 end;
 
 Initialization
