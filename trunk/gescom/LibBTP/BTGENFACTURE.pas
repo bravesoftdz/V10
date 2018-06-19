@@ -1123,7 +1123,7 @@ begin
   CalculeMontantsDoc (TOBfacture,TOBOuvrage,false);
   ZeroMontantPorts(TOBPorcs);
   TOBVTECOLL.ClearDetail;
-  CalculFacture(nil, TOBFacture,TOBPieceTrait,TOBSousTrait,TOBOuvrage,TOBOuvragesP,TOBBases,TOBBasesL,TOBTiers,TOBArticles,TOBPorcs,TOBPieceRG,TOBBasesRG,TOBVTECOLL,DEV,false,tamodif,false,-1,True) ;
+  CalculFacture(TOBAffaire, TOBFacture,TOBPieceTrait,TOBSousTrait,TOBOuvrage,TOBOuvragesP,TOBBases,TOBBasesL,TOBTiers,TOBArticles,TOBPorcs,TOBPieceRG,TOBBasesRG,TOBVTECOLL,DEV,false,tamodif,false,-1,True) ;
   {Sous totaux de la piece}
   CalculeSousTotauxPiece(TOBFacture) ;
   //
