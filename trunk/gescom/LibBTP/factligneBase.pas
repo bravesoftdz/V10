@@ -264,6 +264,7 @@ begin
     TOBTa:=VH^.LaTOBTVA.FindFirst(['TV_TVAOUTPF','TV_REGIME','TV_CODETAUX'],['TX1',RegimeTaxe,FamilleTaxe],False) ;
     if TOBTa <> nil then result :=TOBTa.GetValue('TV_TAUXACH')
   end;
+  ferme(QQ);
 end;
 
 end.
