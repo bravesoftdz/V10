@@ -703,6 +703,8 @@ var ThePhase,TheTOBP,TheCUrr : TOB;
     II : Integer;
 begin
   Result := nil;
+  ThePhase := nil;
+  TheTOBP := nil;
   if TheTYpe = '000' then
   begin
     TheTOBP := TOBPP;
@@ -754,7 +756,7 @@ procedure TOF_BSAISIEAVANCPOC.ConstitueLesTOBS (TTS,TTD,TTL,TTOP : TOB);
   end;
 
   function AddNiv(TOBPere,TL : TOB) : TOB;
-  var TT,TOBZ : TOB;
+  var TOBZ : TOB;
       Niv : integer;
   begin
     TOBZ := TOBPere.detail[TOBPere.Detail.count-1];
@@ -2926,8 +2928,7 @@ procedure TOF_BSAISIEAVANCPOC.RecupereConsos;
   end;
 
   procedure AjouteLigneHP(TL : TOB);
-  var TF,TP : TOB;
-      Index : Integer;
+  var TF : TOB;
   begin
     TF := CreTOBLigne;
     TF.SetDateTime('DATEMVT',TL.GetDateTime('BCO_DATEMOUV'));
@@ -3135,7 +3136,6 @@ end;
 procedure TOF_BSAISIEAVANCPOC.CalculeAvancCorrigeST (TOBL : TOB);
 var PP : double;
 begin
-  PP := 0;
   if TOBL.GetDouble('BM8_POURCENTAVANC')<> 0 then
   begin
     PP := TOBL.GetDouble('BM8_POURCENTAVANC');
@@ -3286,44 +3286,122 @@ end;
 
 procedure TOF_BSAISIEAVANCPOC.CalculSousTraitance;
 
-  procedure GetBASTFAC(TL : TOB);
+  function TrouveLigneSt (TL : TOB) : TOB;
+  var II : integer;
+  begin
+    Result := nil;
+    for II := 0 to TOBST.detail.count -1 do
+    begin
+      if (TOBST.detail[II].GetString('BM8_CODEMARCHE') = TL.GetString('BM4_CODEMARCHE')) and (TOBST.detail[II].GetString('TYPELIGNE')='ART') then
+      begin
+        result := TOBST.detail[II];
+        break;
+      end;
+    end;
+  end;
+
+  procedure GetBASTFAC(TOBDF : TOB);
   var SQL : string;
       QQ : TQuery;
   begin
-    TL.SetDouble('DEPENSECUMUL',0);
-    SQL :='SELECT BM4_CODEMARCHE,BM4_NUMSITUATION,BM4_REFGESCOM,'+
+    SQL :='SELECT BM4_CODEMARCHE,BM4_NUMSITUATION,'+
           '(SELECT SUM(BM5_MTSITUATION) FROM BASTLIG WHERE BM5_AFFAIRE=BM4_AFFAIRE AND BM5_CODEMARCHE=BM4_CODEMARCHE AND BM5_TYPELBAST="001" AND BM5_TYPELIG="TOT" AND BM5_NUMSITUATION=BM4_NUMSITUATION AND BM5_PAIEMENTPOC=BM4_PAIEMENTPOC) AS MTSITUATION '+
           'FROM BASTENT '+
           'WHERE '+
-          'BM4_AFFAIRE="'+TL.GetString('BM8_AFFAIRE')+'" AND '+
-          'BM4_CODEMARCHE="'+TL.GetString('BM8_CODEMARCHE')+'" AND '+
-          'BM4_REFGESCOM <> ""';
+          'BM4_AFFAIRE="'+CodeAffaire+'" AND '+
+          'BM4_REFGESCOM <> "" '+
+          'ORDER BY BM4_CODEMARCHE';
     QQ := OpenSQL(SQL,True,-1,'',true);
     if not QQ.eof then
     begin
-      QQ.First;
-      repeat
-        TL.SetDouble('DEPENSECUMUL',TL.GetDouble('DEPENSECUMUL')+QQ.Fields[3].AsFloat);
-        QQ.Next;
-      until QQ.Eof;
+      TOBDF.LoadDetailDB('BASTLIG','','',QQ,false);
     end;
-    TL.SetDouble('BM8_MTCONSOMOIS',TL.getDouble('DEPENSECUMUL')-TL.GetDouble('BM8_MTCONSOPRE'));
     Ferme(QQ);
   end;
 
-var  II : integer;
-     TL : TOB;
-begin
-  for II := 0 to TOBST.detail.count -1 do
+  function CreeParagSTHorsPhase (TOBST : TOB) : TOB;
+  var TF : TOB;
   begin
-    TL := TOBST.detail[II];
-    if TL.GetString('TYPELIGNE')= 'ART' then
+    TF := CreTOBLigne;
+    TF.SetString('TYPELIGNE','DP1');
+    TF.SetInteger('NIVEAU',1);
+    TF.SetString('BM8_PHASETRA','');
+    TF.SetString('BM8_CODEMARCHE','');
+
+    TF.SetString('BM8_LIBELLE','SOUS TRAITANCE HORS PHASE');
+    TF.SetString('BM8_UNITE','');
+    TF.SetString('NEWONE','-');
+    TF.Changeparent(TOBST,-1);
+    //
+    TF := CreTOBLigne;
+    TF.SetString('TYPELIGNE','TP1');
+    TF.SetInteger('NIVEAU',1);
+    TF.SetString('BM8_PHASETRA','');
+    TF.SetString('BM8_CODEMARCHE','');
+
+    TF.SetString('BM8_LIBELLE','TOTAL SOUS TRAITANCE HORS PHASE');
+    TF.SetString('BM8_UNITE','');
+    TF.SetString('NEWONE','-');
+    TF.Changeparent(TOBST,-1);
+    Result := TF;
+  end;
+
+  function CreeLigneStHorsPhase (THP,TL : TOB) : TOB;
+  var TF : TOB;
+  begin
+    TF := CreTOBLigne;
+    TF.SetString('TYPELIGNE','ART');
+    TF.SetInteger('NIVEAU',2);
+    TF.SetString('BM8_PHASETRA','');
+    TF.SetString('BM8_CODEMARCHE',TL.GetString('BM4_CODEMARCHE'));
+
+    TF.SetString('BM8_LIBELLE','* Total des BAST comptabilisés *');
+    TF.SetString('BM8_UNITE','');
+    TF.SetString('NEWONE','-');
+    TF.Changeparent(TOBST,THP.GetIndex);
+    Result := TF;
+  end;
+
+var  II : integer;
+     TL,TOBDF,TST,THP : TOB;
+     lastMarche : string;
+begin
+  TOBDF := TOB.Create ('BATSLIG',nil,-1);
+  TRY
+    // préparation
+    for II := 0 to TOBST.detail.count -1 do
     begin
       XX.MoveK2000;
-      GetBASTFAC(TL);
+      TL := TOBST.detail[II];
+      TL.SetDouble('DEPENSECUMUL',0);
       GetDepensesEstimes (TL);
     end;
-  end;
+    //
+    TST := nil; THP := nil;
+    lastMarche := '';
+    GetBASTFAC(TOBDF);
+    for II := 0 to TOBDF.detail.count -1 do
+    begin
+      TL := TOBDF.detail[II];
+      XX.MoveK2000;
+      if TL.GetString('BM4_CODEMARCHE') <> lastMarche then
+      begin
+        TST := TrouveLigneSt (TL);
+        lastMarche := TL.GetString('BM4_CODEMARCHE');
+      end;
+      if TST = nil then
+      begin
+        if THP = nil then
+        begin
+          THP := CreeParagSTHorsPhase (TOBST);
+        end;
+        TST := CreeLigneStHorsPhase (THP,TL);
+      end;
+      if TST <> nil then TST.SetDouble('DEPENSECUMUL',TST.GetDouble('DEPENSECUMUL')+TL.GetDouble('MTSITUATION'));
+    end;
+  FINALLY
+    TOBDF.free;
+  END;
 end;
 
 procedure TOF_BSAISIEAVANCPOC.GridKeyDownFI(Sender: TObject; var Key: Word;Shift: TShiftState);
