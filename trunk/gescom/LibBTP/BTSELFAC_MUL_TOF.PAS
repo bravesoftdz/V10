@@ -449,11 +449,13 @@ begin
       TOBFacture.LoadDetailDBFromSQL ('BTMEMOFACTURE',Sql,false);
       TRY
         RefPieceSel := DevisPrinc;
+        (*
         if (Avancement) and (RepriseAnteriorite) and (ExisteFacturation(DevisPrinc))  then
         begin
           PgiInfo ('Saisie antériorité impossible. Des situations ont déjà été créés',ecran.Caption);
           exit;
         end;
+        *)
         if not Chargefacturation(TOBFacture) then
         begin
           PgiInfo ('Facturation impossible. La facturation à été cloturé',ecran.Caption);
