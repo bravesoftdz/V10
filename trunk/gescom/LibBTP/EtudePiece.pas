@@ -784,6 +784,7 @@ var TOBL          : TOB;
     pu            : String;
     montant       : string;
     Libtmp        : string;
+    LibReduit     : String;
     CodeArticle   : string;
     DocValorise   : boolean;
     LigVide       : Boolean;
@@ -968,19 +969,26 @@ begin
           //FV1 : 15/02/2018 - FS#2908 - MOUTHON, SCETEC : Impossible de créer des paragraphes sur un devis venant d'un appel d'offre
           libtmp := StringReplace(designation,#$D#$A,'',[rfReplaceAll]);
           libtmp := StringReplace(libTmp,#$A,'',[rfReplaceAll]);
-          TOBL.SetString('GL_LIBELLE',copy(libtmp,1,70));
-          //
+          LibReduit := copy(libtmp,1,70);
+          TOBL.SetString('GL_LIBELLE', LibReduit);
           //Manque la gestion du paramètre société... Bordel de merde !!!!!
-          If getParamSocSecur('SO_BTDESCEQUALLIB', False) then
-          Begin
+          if length(Libtmp) > 70 then
+          begin
             StringToRich(Descriptif, designation);
             TOBL.PutValue('GL_BLOCNOTE', ExRichToString(Descriptif));
           end
           else
           begin
-            StringToRich(Descriptif, TOBL.GetValue('GL_BLOCNOTE'));
-            TOBL.PutValue('GL_BLOCNOTE', ExRichToString(Descriptif));
-          end;
+            If getParamSocSecur('SO_BTDESCEQUALLIB', False) then
+              TOBL.PutValue('GL_BLOCNOTE', Libtmp)
+            Else
+              TOBL.PutValue('GL_BLOCNOTE', '');
+          end
+        end
+        else
+        begin
+          StringToRich(Descriptif, TOBL.GetValue('GL_BLOCNOTE'));
+          TOBL.PutValue('GL_BLOCNOTE', ExRichToString(Descriptif));
         end;
         //
         if (unite<>'') then
