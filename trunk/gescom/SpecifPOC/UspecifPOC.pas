@@ -333,8 +333,11 @@ begin
     //
     if (DebutRest = 0) and (FinREst = 0) then
     begin
-      PourcReel := PourcentAvanc;
+      (*
+      PourcReel := PourcentAvanc/100;
       RelAvance := (MtAvance * PourcReel);
+      *)
+      Exit;
     end else
     begin
       if (PourcentAvanc < DebutRest) then exit;
