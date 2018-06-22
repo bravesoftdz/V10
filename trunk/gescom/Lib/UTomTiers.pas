@@ -4237,14 +4237,14 @@ begin
   Enseigne := THEdit(GetControl('T_COLLECTIF'));
   ChaineAct.Parent:=Enseigne.Parent;
   ChaineAct.visible := False;
-  ChaineAct.Top := Enseigne.top;
+  ChaineAct.Top  := Enseigne.top;
   ChaineAct.Left := Enseigne.left+Enseigne.width;
   stWhere := 'G_COLLECTIF = "X"';
 {$IFNDEF EAGLCLIENT}
   ChaineAct.text :=  Getfield ('T_COLLECTIF') ;
 {$ENDIF}
 {$IFNDEF EAGLCLIENT}
-  if (LookupList(ChaineAct,'Collectif Tiers','GENERAUX','DISTINCT G_GENERAL','',stWhere,'',True,0,'',tlLocate )) then
+  if (LookupList(ChaineAct,'Collectif Tiers','GENERAUX','DISTINCT G_GENERAL, G_LIBELLE','',stWhere,'G_GENERAL',True,0,'',tlLocate )) then
 {$ELSE}
   if (LookupList(ChaineAct,'Collectif Tiers','GENERAUX','DISTINCT G_GENERAL','',stWhere,'',True,0,'',tlDefault )) then
 {$ENDIF}
