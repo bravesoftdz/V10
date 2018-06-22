@@ -1025,7 +1025,7 @@ begin
   end;
   TOBL.SetDouble('MONTANT',Valeur(GSFROM.cells[Acol,Arow]));
   if TOBL.GetDouble('PA') = 0 then TOBL.SetDouble('PA',1);
-  VAL := ARRONDI(TOBL.GetDouble('MONTANT')/TOBL.GetDouble('PA'),V_PGI.okdecP); if val > TOBL.GetDouble('QTEINIT') then Val := TOBL.GetDouble('QTEINIT');
+  VAL := ARRONDI(TOBL.GetDouble('MONTANT')/TOBL.GetDouble('PA'),V_PGI.okdecQ); if val > TOBL.GetDouble('QTEINIT') then Val := TOBL.GetDouble('QTEINIT');
   TOBL.SetDOuble('QTE',Val);
   //
   CalculeLaLigne(TOBL,TTgsFrom,false);
@@ -1683,7 +1683,7 @@ begin
       end;
     end;
     TOBNL.SetDouble('MTTRANSFERT',0);
-    TOBNL.SetDouble('TRANSFERED',0);
+    TOBNL.SetDouble('TRANSFERED',TOBT.GetDouble('MONTANT'));
     TOBNL.SetString('GL_RECALCULER','X');
     DelChampsSupSaisie(TOBT);
   until II >= TOBDEST.detail.count ;
