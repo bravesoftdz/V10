@@ -10196,8 +10196,11 @@ begin
   if (ExistCatalog) and (GetField('GA_FOURNPRINC')<> '') then
   begin
     UA        := TOBCatalog.GetString('GCA_QUALIFUNITEACH');
-    CoefUAUS  := TOBCatalog.GetValue('GCA_COEFCONVQTEACH');
-  end Else
+    CoefUAUS  := TOBCatalog.GetDouble('GCA_COEFCONVQTEACH');
+    PAUA      := TOBCatalog.GetDouble('GCA_DPA');
+    If PAUA = 0 THEN PAUA := TOBCatalog.GetDouble('GCA_PRIXBASE');
+  end
+  Else
   begin
     UA        := Getfield('GA_QUALIFUNITEACH');
     CoefUAUS  := Getfield('GA_COEFCONVQTEACH');
