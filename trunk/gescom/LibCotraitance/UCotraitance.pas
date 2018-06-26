@@ -1298,8 +1298,10 @@ var i, Numero, Indice: integer;
   okok : boolean;
 begin
   if TOBSSTrait = nil then Exit;
+
   if TOBSSTrait.Detail.Count = 0 then Exit;
-    i:=0;
+  {*
+  i:=0;
   repeat
     TOBP := TOBSSTrait.Detail[i];
     if TOBP.GetDouble('NBUSED') > 0 then TOBP.SetString('UTILISE','X');
@@ -1308,6 +1310,7 @@ begin
     	TOBP.free;
     end else inc(I);
   until i >= TOBSSTrait.Detail.Count;
+  *}
   //
   Nature := TOBPiece.GetValue('GP_NATUREPIECEG');
   Souche := TOBPiece.GetValue('GP_SOUCHE');
