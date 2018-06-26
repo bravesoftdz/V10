@@ -1805,18 +1805,19 @@ Var Req : String;
 begin
 
     //Ajout FV1 : charge information Table Tiers
-    Req :=  'SELECT T_TIERS, T_NATUREAUXI, T_LIBELLE AS NOMTIERS, T_ADRESSE1, T_ADRESSE2, T_ADRESSE3, T_CODEPOSTAL, T_VILLE ' +
+    Req :=  'SELECT T_TIERS, T_AUXILIAIRE, T_NATUREAUXI, T_LIBELLE AS NOMTIERS, T_ADRESSE1, T_ADRESSE2, T_ADRESSE3, T_CODEPOSTAL, T_VILLE ' +
             '  FROM TIERS '+
             ' WHERE T_TIERS="' + TOBTEMP.GetString('AFF_TIERS') + '" AND T_NATUREAUXI = "CLI"';
     QQ := OpenSQL(Req, True, -1, '', True);
     If Not QQ.eof then
     begin
-      TOBTEMP.AddChampSupValeur('NOMTIERS', QQ.Findfield('NOMTIERS').AsString);
-      TOBTEMP.AddChampSupValeur('ADRESSE1', QQ.Findfield('T_ADRESSE1').AsString);
-      TOBTEMP.AddChampSupValeur('ADRESSE2', QQ.Findfield('T_ADRESSE2').AsString);
-      TOBTEMP.AddChampSupValeur('ADRESSE3', QQ.Findfield('T_ADRESSE3').AsString);
-      TOBTEMP.AddChampSupValeur('CDPOSTAL', QQ.Findfield('T_CODEPOSTAL').AsString);
-      TOBTEMP.AddChampSupValeur('VILLE',    QQ.Findfield('T_VILLE').AsString);
+      TOBTEMP.AddChampSupValeur('AUXILIAIRE', QQ.Findfield('T_AUXILIAIRE').AsString);
+      TOBTEMP.AddChampSupValeur('NOMTIERS',   QQ.Findfield('NOMTIERS').AsString);
+      TOBTEMP.AddChampSupValeur('ADRESSE1',   QQ.Findfield('T_ADRESSE1').AsString);
+      TOBTEMP.AddChampSupValeur('ADRESSE2',   QQ.Findfield('T_ADRESSE2').AsString);
+      TOBTEMP.AddChampSupValeur('ADRESSE3',   QQ.Findfield('T_ADRESSE3').AsString);
+      TOBTEMP.AddChampSupValeur('CDPOSTAL',   QQ.Findfield('T_CODEPOSTAL').AsString);
+      TOBTEMP.AddChampSupValeur('VILLE',      QQ.Findfield('T_VILLE').AsString);
     end;
     ferme(QQ);
 
