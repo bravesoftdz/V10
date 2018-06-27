@@ -3015,19 +3015,37 @@ begin
   if Not QQ.Eof then
   begin
     TOBarticle.SelectDB('UN ARTICLE',QQ);
+    Ferme(QQ);
     ChargeTOBGRILLEwithTOBArticle(TobL, TOBArticle);
+    //On vérifie si l'article n'est pas associé à un catalogue fournisseur...
+    if TOBARTICLE.GetString('GA_FOURNPRINC') <> '' then
+    begin
+      StSQL := 'SELECT GCA_DPA, GCA_PRIXBASE, GCA_QUALIFUNITEACH, GCA_DATEREFERENCE, GCA_COEFCONVQTEACH FROM CATALOGU';
+      StSQL := StSQL + ' WHERE GCA_TIERS="' + TOBARTICLE.GetString('GA_FOURNPRINC') + '"';
+      StSQL := StSQL + '   AND GCA_ARTICLE="' + TOBARTICLE.GetValue('GA_ARTICLE') + '"';
+      QQ    := OpenSQL(StSQL, False);
+      if not QQ.eof then
+      begin
+        //on charge les informations du catalogue à la place de celles de l'article
+        TOBL.PutValue('CODEFOURNISSEUR', TOBARTICLE.GetString('GA_FOURNPRINC'));
+        if QQ.FindField('GCA_PRIXBASE').AsFloat <> 0 then TOBL.PutValue('PAUA', QQ.FindField('GCA_PRIXBASE').AsFloat);
+        If QQ.FindField('GCA_DPA').AsFloat <> 0 then TOBL.PutValue('DPA',  QQ.FindField('GCA_DPA').AsFloat);
+        TOBL.PutValue('QUALIFUNITEACH', QQ.FindField('GCA_QUALIFUNITEACH').AsString);
+      end;
+      Ferme(QQ);
+    end;
+    //
     RechercheInventaireArticle(TOBL);
     CodeArticle.text := TOBL.GetString('CODEARTICLE');
     Article.text     := TOBL.GetString('GA_ARTICLE');
   end
   else
   Begin
+    Ferme(QQ);
     TOBL.PutValue('ANOMALIEMAR', 'X');
     TOBL.PutValue('ERREUR', 'X');
     TOBL.PutValue('LIBANOMALIEMAR', 'Article Inexistant');
   end;
-    
-  Ferme(QQ);
 
   FreeAndNil(TOBarticle);
 
@@ -3121,6 +3139,14 @@ begin
   TOBL.PutVALUE('PAUA',           TobArticle.GetString('GA_PAUA'));
   TOBL.PutVALUE('DPA',            TobArticle.GetString('GA_DPA'));
   TOBL.PutVALUE('PMAP',           TobArticle.GetString('GA_PMAP'));
+
+  If TOBL.GetVALUE('PAUA') = 0 then
+  begin
+    If TOBL.GetString('TENUESTOCK')='X' then
+      TOBL.PutVALUE('PAUA', TobArticle.GetString('GA_PMAP'))
+    else
+      TOBL.PutVALUE('PAUA', TobArticle.GetString('GA_DPA'));
+  end;
 
   TOBL.PutVALUE('ART_FERME',      TobArticle.GetString('GA_FERME'));
 
@@ -3904,41 +3930,53 @@ begin
   TobLigne.PutValue('CODEARTICLE', TOBL.GetString('CODEARTICLE'));
   TobLigne.PutValue('ARTICLE',     TOBL.GetString('GA_ARTICLE'));
   TobLigne.PutValue('LIBELLE',     TOBL.GetString('LIB_ARTICLE'));
-
-  Qte := TOBL.GetDouble('QTE');
-  Pa  := TOBL.GetDouble('PAHT');
-
-  if STypeMvt = 'EA' then
-  Begin
-    if QTE > 0 then Qte := Qte * -1;
-  end
-  else if STypeMvt = 'SA' then
-  Begin
-    if Qte < 0 then Qte := Qte * -1;
-  end;
-
-  TobLigne.PutValue('QTEFACT',     Qte);
-  TobLigne.PutValue('QUALIFQTE',   TOBL.GetString('QUALIFUNITEACH'));
+  //
   TobLigne.PutValue('PUHTDEV',     TOBL.GetDouble('PAUA'));
   TobLigne.PutValue('PAHT',        TOBL.GetDouble('PAHT'));
   TobLigne.PutValue('DPA',         TOBL.GetDouble('DPA'));
   TobLigne.PutValue('PMAP',        TOBL.GetDouble('PMAP'));
   TobLigne.PutValue('DATELIVRAISON', idate1900);
+  //
+  Qte := TOBL.GetDouble('QTE');
+  Pa  := TOBL.GetDouble('PAHT');
 
-  if STypeMVT = 'CD' then
+  if STypeMvt = 'EA' then  //Retour Chantier
+  Begin
+    TobLigne.PutValue('QUALIFQTE',          TOBL.GetString('QUALIFUNITEVTE'));
+    if QTE > 0 then Qte := Qte * -1;
+  end
+  Else if STypeMVT = 'CD' then  //Cde Fournisseurs
   begin
     DateLiv := DateToStr(Now);
     TobLigne.PutValue('DATELIVRAISON',DateLiv);
+    TobLigne.PutValue('QUALIFQTE',   TOBL.GetString('QUALIFUNITEACH'));
   end
-  else if StypeMVT = 'BL' then
+  else if StypeMVT = 'BL' then  //Réception Fournisseurs
   begin
+    TobLigne.PutValue('QUALIFQTE',   TOBL.GetString('QUALIFUNITEACH'));
     RecupLignePiecePrecedente(TOBL, TobLigne);
   end
-  else if StypeMVT = 'SA' then
+  else if StypeMVT = 'ED' then  //Entrées Exceptionnemlles
+  Begin
+    TobLigne.PutValue('QUALIFQTE',          TOBL.GetString('QUALIFUNITESTO'));
+  end
+  else if StypeMVT = 'SD' then  //Sorties Exceptionnelles
+  Begin
+    TobLigne.PutValue('QUALIFQTE',          TOBL.GetString('QUALIFUNITESTO'));
+  end
+  else if StypeMVT = 'BT' then  //Livraison chantier
+  Begin
+    TobLigne.PutValue('QUALIFQTE',          TOBL.GetString('QUALIFUNITEVTE'));
+  end
+  else if StypeMVT = 'SA' then  //Livraison chantier
   begin
     TobLigne.PutValue('PIECEPRECEDENTE',    TOBL.GetValue('PIECEPRECEDENTE'));
     TobLigne.PutValue('GL_PIECEPRECEDENTE', TOBL.GetValue('PIECEPRECEDENTE'));
+    TobLigne.PutValue('QUALIFQTE',          TOBL.GetString('QUALIFUNITEVTE'));
+    if Qte < 0 then Qte := Qte * -1;
   end;
+
+  TobLigne.PutValue('QTEFACT',     Qte);
 
   if Depot.text = '' then
     TobLigne.PutValue('DEPOT', GetParamSocSecur('SO_GCDEPOTDEFAUT', '', False))
@@ -3947,7 +3985,7 @@ begin
 
   TobLigne.PutValue('FACTURABLE',     TOBL.GetString('FACTURABLE'));
 
-  TOBLigne.PutValue('QTEFACTURABLE',  TOBL.GetString('QTEFACTURABLE'));
+  TOBLigne.PutValue('QTEFACTURABLE',  Qte);
 
 end;
 
