@@ -313,8 +313,8 @@ begin
   TOBssTrait.putValue('BPI_TYPEINTERV','Y00');
   TOBssTrait.putValue('BPI_TYPEPAIE','002');
   TOBssTrait.putValue('BPI_DATECONTRAT',V_PGI.DateEntree);
-  TOBssTrait.SetBoolean('BPI_AUTOLIQUID',true);
   TOBssTrait.SetString('BPI_FAMILLETAXE',GetParamSocSecur('SO_BTTAXESOUSTRAIT','TN'));
+  TOBssTrait.SetBoolean('BPI_AUTOLIQUID',true);
 end;
 
 Procedure TOF_BTPIECEINTERV.Charge_InfoBQE(TOBssTrait,TOBBQE : TOB);

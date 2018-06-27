@@ -55,12 +55,6 @@ begin
     if TheParamTva.TOBSSTrait <> nil then
     begin
       TOBI := TheParamTva.TOBSSTrait.FindFirst(['BPI_TIERSFOU'],[Sstraitant],true);
-      (* ----------
-      if TOBI <> nil then
-      begin
-        if TOBI.GetValue('BPI_DATECONTRAT') >= StrToDate('01/01/2014') then Result := True;
-      end;
-      ----------- *)
       result := TOBI.GetBoolean('BPI_AUTOLIQUID');
     end;
   end;

@@ -3133,8 +3133,8 @@ begin
   TT.putValue('BPI_TYPEINTERV','Y00');
   TT.putValue('BPI_TYPEPAIE','001');
   TT.putValue('BPI_DATECONTRAT',V_PGI.DateEntree);
-  TT.SetBoolean('BPI_AUTOLIQUID',true);
   TT.SetString('BPI_FAMILLETAXE',GetInfoMarcheST(fTOBpiece.GetString('GP_AFFAIRE'),Fournisseur,CodeMarche,'FAMILLETAXE1'));
+  TT.SetBoolean('BPI_AUTOLIQUID',(Pos(TT.GetString('BPI_FAMILLETAXE'),GetParamSocSecur('SO_CODETVALIQUIDST',''))>0));
   TT.SetString('BPI_TIERSFOU',Fournisseur);
   TT.SetString('BPI_CODEMARCHE',CodeMarche);
   TT.SetDouble('NBUSED',1);

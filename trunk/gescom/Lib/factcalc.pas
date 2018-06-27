@@ -370,10 +370,6 @@ END ;
   // -- Partie Sous traitance
   if NatureTravail = 2 then
   begin
-    (*
-    if IsAutoLiquidationTvaST  (Fournisseur) then TauxSt := 0
-    													 						   else TauxST := GetTauxTaxeST(Fournisseur,GetparamSocSecur('SO_BTTAXESOUSTRAIT','TN'));
-    *)
     TauxST := GetTauxTaxeST(Fournisseur,GetTvaST(Fournisseur));
     BaseAch := baseAch + MontantbaseAch;
     MontantTaxeAch:=Arrondi(CalculeMontantTaxe(BaseAch,TauxST,'',TOBL),NbDec);
@@ -2431,10 +2427,6 @@ begin
     //
     if TOBB.GetValue('GPB_TYPEINTERV') = 'Y00' then
     begin
-      (*
-			if IsAutoLiquidationTvaST (TOBB.GetValue('GPB_FOURN')) then TaxeSt := 0
-                                  													 else TaxeST := GetTauxTaxeST(TOBB.GetValue('GPB_FOURN'),GetparamSocSecur('SO_BTTAXESOUSTRAIT','TN'));
-      *)
       TaxeSt := GetTauxTaxeST(TOBB.GetValue('GPB_FOURN'),GetTvaST(TOBB.GetValue('GPB_FOURN')));
 
     	ValeurCalc:=Arrondi(CalculeMontantTaxe(TOBB.GetValue('GPB_BASEACHAT'),TaxeST,'',nil),DEV.Decimale);
