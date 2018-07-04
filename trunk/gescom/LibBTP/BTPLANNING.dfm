@@ -29,7 +29,7 @@ object MonPlanning: TMonPlanning
     Top = 64
     Width = 289
     Height = 201
-    Date = 36791.611087349530000000
+    Date = 36791.455511585650000000
     TabOrder = 0
   end
   object PageOnglet: TPageControl
@@ -225,11 +225,11 @@ object MonPlanning: TMonPlanning
         Width = 31
         Height = 27
         Hint = 'L'#233'gende '
+        Caption = 'Affichage de la l'#233'gende'
         AllowAllUp = True
         Anchors = [akTop, akRight]
         GroupIndex = 1
         DisplayMode = dmGlyphOnly
-        Caption = 'Affichage de la l'#233'gende'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clBlack
         Font.Height = -12
@@ -411,11 +411,11 @@ object MonPlanning: TMonPlanning
         Width = 30
         Height = 27
         Hint = 'Cr'#233'ation d'#39'un Appel'
+        Caption = 'Cr'#233'ation d'#39'un Appel'
         AllowAllUp = True
         Anchors = [akTop, akRight]
         GroupIndex = 1
         DisplayMode = dmGlyphOnly
-        Caption = 'Cr'#233'ation d'#39'un Appel'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clBlack
         Font.Height = -12
@@ -835,11 +835,11 @@ object MonPlanning: TMonPlanning
         Top = 5
         Width = 30
         Height = 27
+        Caption = 'ChargeItems;'
         AllowAllUp = True
         Anchors = [akTop, akRight]
         GroupIndex = 1
         DisplayMode = dmGlyphOnly
-        Caption = 'ChargeItems;'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clBlack
         Font.Height = -12
@@ -1159,8 +1159,9 @@ object MonPlanning: TMonPlanning
       ObjectMenuPrefix = '&Object'
       LinesRTF.Strings = (
         '{\rtf1\ansi\deff0\nouicompat{\fonttbl{\f0\fnil Arial;}}'
-        '{\*\generator Riched20 10.0.14393}\viewkind4\uc1 '
+        '{\*\generator Riched20 6.3.9600}\viewkind4\uc1 '
         '\pard\f0\fs16\lang1036 DESCRIPTIF'
+        '\par '
         '\par '
         '\par '
         '\par '

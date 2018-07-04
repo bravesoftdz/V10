@@ -195,6 +195,7 @@ type
     Ok_TpsReel	  : Boolean;
     Ok_ModifItem  : Boolean;
     TousPossible  : boolean;
+    OK_GereSAV    : Boolean;
 
     DessineGAppel : AffGrille;
 
@@ -861,8 +862,10 @@ begin
   Begin
      //On ne prends que les type de ressource associés à des ressources qui ne sont pas fermées
      Result := 'SELECT DISTINCT BTR_LIBELLE AS LIBELLE, BTR_TYPRES AS CODEONGLET FROM BTTYPERES ';
-     Result := Result + 'LEFT JOIN RESSOURCE ON BTR_TYPRES=ARS_CHAINEORDO ';
+     Result := Result + 'LEFT JOIN RESSOURCE  ON BTR_TYPRES=ARS_CHAINEORDO ';
+     If OK_GereSAV then Result := Result + 'LEFT JOIN BRESSOURCE ON BRS_RESSOURCE=ARS_RESSOURCE ';
      Result := Result + 'WHERE BTR_GEREPLANNING="X" AND ARS_CHAINEORDO <> "" AND ARS_FERME = "-"';
+     If OK_GereSAV then Result := Result + ' AND BRS_GERESAV="X"';
   end
   else if TypePlanning = 'PTA' then //Planning par type d'Action
   Begin
@@ -873,15 +876,18 @@ begin
   begin
      Result := 'SELECT DISTINCT CC_LIBELLE AS LIBELLE, ARS_TYPERESSOURCE AS CODEONGLET FROM CHOIXCOD ';
      Result := Result + 'LEFT JOIN RESSOURCE ON ARS_TYPERESSOURCE=CC_CODE ';
+     If OK_GereSAV then Result := Result + 'LEFT JOIN BRESSOURCE ON BRS_RESSOURCE=ARS_RESSOURCE ';
      Result := Result + 'WHERE ARS_TYPERESSOURCE <> "" AND ARS_FERME = "-"';
+     If OK_GereSAV then Result := Result + ' AND BRS_GERESAV="X"';
   end
   else if TypePlanning = 'PFO' then   //Planning par Fonction Ressource
   begin
     Result := 'SELECT DISTINCT AFO_LIBELLE AS LIBELLE, BFO_FONCTION AS CODEONGLET FROM FONCTION ';
-    Result := Result + 'LEFT JOIN BFONCTION ON AFO_FONCTION=BFO_FONCTION  ';
-    Result := Result + 'LEFT JOIN RESSOURCE ON AFO_FONCTION=ARS_FONCTION1 ';
+    Result := Result + 'LEFT JOIN BFONCTION  ON AFO_FONCTION=BFO_FONCTION  ';
+    Result := Result + 'LEFT JOIN RESSOURCE  ON AFO_FONCTION=ARS_FONCTION1 ';
     Result := Result + 'LEFT JOIN BRESSOURCE ON BFO_FONCTION=ARS_FONCTION1 ';
     Result := Result + 'WHERE BFO_GEREPLANNING = "X"';
+    If OK_GereSAV then Result := Result + ' AND BRS_GERESAV="X"';
     if Fonction <> '' then
       Result := Result + ' AND BFO_FONCTION="' + Fonction + '"';
   end
@@ -3021,7 +3027,8 @@ Procedure TMonPlanning.GererPlanningIntervention;
 begin
 
   TypeAction          := GetParamSoc('SO_TYPEACTION');
-  Ok_TpsReel          := GetParamSoc('SO_GesTempsReel');
+  Ok_TpsReel          := GetParamSocSecur('SO_GesTempsReel', False);
+  OK_GereSAV          := GetParamSocSecur('SO_AFFINTSAV', False);
 
   BCREAPPEL.Hint      := 'Création d''un Appel';
 
@@ -3053,6 +3060,7 @@ begin
 
   TypeAction          := '';
   Ok_TpsReel          := False;
+  OK_GereSAV          := False;
 
   BCREAPPEL.Hint      := 'Création d''un événement Parc/Matériel';
   BAffAppel1.Hint     := 'Liste des événements à réaliser';
@@ -3079,6 +3087,7 @@ begin
 
   TypeAction          := '';
   Ok_TpsReel          := False;
+  OK_GereSAV          := False;
 
   BCREAPPEL.Hint      := 'Création d''un événement Chantier';
   BAffAppel2.Hint     := 'Liste des Chantiers à Affecter';
