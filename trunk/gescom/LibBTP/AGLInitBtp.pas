@@ -1813,6 +1813,16 @@ begin
 end;
 
 procedure TAcceptationDocument.ValideLaPieceAcompte;
+
+  procedure  VireAnalytique(TOBPiece : TOB);
+  var II : Integer;
+  begin
+    for II := 0 to TOBPiece.detail.count -1 do
+    begin
+      TOBPiece.Detail[II].ClearDetail;
+    end;
+  end;
+
 var NowFutur : TDateTime;
     XX : TFPatience;
     TOBAffaire : TOB;
@@ -1852,6 +1862,7 @@ begin
     end;
     //
     if V_PGI.IOError = OeOk then ValideLesAcomptes (TOBPiece,TOBAcomptes);
+    VireAnalytique(TOBPiece);
     if V_PGI.IOError = OEOk then if not TOBPiece.UpdateDb (false) then V_PGI.IOError := OEUnknown;
     if (V_PGI.IOError = OEOk) and (TOBAcomptes.detail.count > 0) then if not MajMontantAcompte(TOBPiece,TOBAcomptes) then V_PGI.IOError := OEUnknown;
     if (V_PGI.IOError = OEOk) and (TOBPieceTrait.detail.count > 0) then ValideLesPieceTrait (TOBPiece,TOBAffaire,TOBPieceTrait,TOBSSTrait,DEV);
