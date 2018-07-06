@@ -705,6 +705,10 @@ begin
     begin
       InitChampsUniqueBAST;
     end;
+    if VersionBaseDest < '998.ZZZZ5' then
+    begin
+      ExecuteSQL('UPDATE BTFACTST SET BM3_NUMANTER=0,BM3_HORSCOMPTA="-" WHERE BM3_NUMANTER IS NULL');
+    end;
   end else if NomTable = 'TXCPTTVA' then
   begin
     if VersionBaseDest < '998.ZZZL' then
