@@ -75,7 +75,7 @@ Type
 
 
 Implementation
-uses FactUtil;
+uses FactUtil,FactCpta;
 
 procedure TOF_BTREGLPIECE_MUL.OnNew ;
 begin
@@ -202,45 +202,58 @@ end;
 
 
 procedure TOF_BTREGLPIECE_MUL.SaisieReglementsPiece(Cledoc : R_Cledoc; Tiers : String);
+
+  function ControlePieceOK (XX : TAcceptationDocument) : boolean;
+  begin
+    Result := PieceModifiableCptaPourRegl (XX.TOBPiece);
+  end;
+
 var XX : TAcceptationDocument;
 		Xp,XD : double;
 begin
 
   XX := TAcceptationDocument.create;
-
-  XX.Fgestion := TmgIntervenant;
-
-  if TypeReglt= 'COTRAITANCE' then
-    XX.Fgestion := TmgCotraitance
-  else if TypeReglt='SOUSTRAITANCE' then
-    XX.Fgestion := TmgSousTraitance
-  else if TypeReglt='INTERVENANT' then
+  TRY
     XX.Fgestion := TmgIntervenant;
 
-  XX.ReglePiece := False;
+    if TypeReglt= 'COTRAITANCE' then
+      XX.Fgestion := TmgCotraitance
+    else if TypeReglt='SOUSTRAITANCE' then
+      XX.Fgestion := TmgSousTraitance
+    else if TypeReglt='INTERVENANT' then
+      XX.Fgestion := TmgIntervenant;
 
-  XX.naturePiece := CleDoc.NaturePiece;
-  XX.Souche := CleDoc.Souche;
-  XX.numero := CleDoc.NumeroPiece;
-  XX.Indice := CleDoc.Indice;
-  XX.Tiers := Tiers;
-  //
-  XX.ChargeLesTobs;
-  GetSommeReglement (XX.TOBAcomptes ,Xp,XD,'',true);
-  if (copy(TForm(ecran).Name,1,17) = 'BTREGLCOTRAIT_MUL') and (XD <> 0) then
-  begin
-  	PGIError('IMPOSSIBLE : Des règlements ont déjà été saisis sur ce document');
-  end else
-  begin
+    XX.ReglePiece := False;
+
+    XX.naturePiece := CleDoc.NaturePiece;
+    XX.Souche := CleDoc.Souche;
+    XX.numero := CleDoc.NumeroPiece;
+    XX.Indice := CleDoc.Indice;
+    XX.Tiers := Tiers;
     //
-    if TForm(ecran).Name = 'BTREGLPIECE_MUL' then
-      XX.ReglePiece := True
-    else if TForm(ecran).Name = 'BTREGLCOTRAIT_MUL' then
-      XX.ReglePiece := False;
-    //
-    XX.GereReglements;
+    XX.ChargeLesTobs;
+    if not ControlePieceOK (XX) then
+    begin
+      Exit;
+    end;
+
+    GetSommeReglement (XX.TOBAcomptes ,Xp,XD,'',true);
+    if (copy(TForm(ecran).Name,1,17) = 'BTREGLCOTRAIT_MUL') and (XD <> 0) then
+    begin
+      PGIError('IMPOSSIBLE : Des règlements ont déjà été saisis sur ce document');
+    end else
+    begin
+      //
+      if TForm(ecran).Name = 'BTREGLPIECE_MUL' then
+        XX.ReglePiece := True
+      else if TForm(ecran).Name = 'BTREGLCOTRAIT_MUL' then
+        XX.ReglePiece := False;
+      //
+      XX.GereReglements;
+    end;
+  FINALLY
+    XX.free;
   end;
-  XX.free;
 end;
 
 procedure TOF_BTREGLPIECE_MUL.ControleChamp(Champ, Valeur: String);

@@ -130,10 +130,11 @@ var
   GestAffiche   : AffGrille;
 
   TobParametres : Tob;
-  TobIcone	: Tob;
+  TobIcone	  : Tob;
 
-  Cadencement: string;
-  CtrlCal    : Boolean;
+  Cadencement : string;
+  CtrlCal     : Boolean;
+
 
 implementation
 
@@ -2579,7 +2580,8 @@ begin
 end;
 
 Function ChargeColonnePLA(TypRes : String; var P: THPlanningBTP) : String;
-Var ZoneREs : String;
+Var ZoneREs     : String;
+    OK_GereSAV  : Boolean;
 begin
 
   ZoneRes := ChargeStrByTablette('BLI', 'CC_LIBRE');
@@ -2587,14 +2589,25 @@ begin
 
   //chargement de l'état de la ressource (Type d'action)
   if Pos(P.TypePlanning, 'PTA;PRA') > 0 then
-    Result := 'SELECT "CHANTIER" AS ORIGINEITEM, '
+  Begin
+    Result      := 'SELECT "CHANTIER" AS ORIGINEITEM, ';
+    //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+    if P.TypePlanning = 'PTA' then OK_GereSAV  := GetParamSocSecur('SO_AFFINTSAV', False) Else OK_GereSAV  := False;
+  end
   else
-    Result := 'SELECT "INTERV" AS ORIGINEITEM, ';
+  begin
+    Result      := 'SELECT "INTERV" AS ORIGINEITEM, ';
+    //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+    OK_GereSAV  := GetParamSocSecur('SO_AFFINTSAV', False);
+  end;
 
   //gestion de la jointure si planning sur sous famille ressource
   if TypRes = 'X' then
   Begin
     Result := Result + ZoneRes + ',BTR_LIBELLE FROM RESSOURCE ';
+    //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+    If OK_GereSAV then Result := Result + ' LEFT JOIN BRESSOURCE ON ARS_RESSOURCE=BRS_RESSOURCE ';
+
     Result := Result + ' LEFT JOIN BTTYPERES ON ARS_CHAINEORDO=BTR_TYPRES';
 
     //Gestion du libellé de la ressource
@@ -2612,6 +2625,8 @@ begin
   else
   begin
     Result := Result + ZoneRes + ' FROM RESSOURCE ';
+    //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+    If OK_GereSAV then Result := Result + ' LEFT JOIN BRESSOURCE ON ARS_RESSOURCE=BRS_RESSOURCE ';
     //Gestion du libellé du Sous-type Ressource
     if pos('BTR_LIBELLE',ZoneRes) > 0 Then Result := Result + ' LEFT JOIN BTTYPERES ON ARS_CHAINEORDO=BTR_TYPRES ';
     //Gestion du libellé de la Fonction Ressource
@@ -2634,6 +2649,8 @@ begin
   Else
     Result := Result + ' AND ARS_TYPERESSOURCE in ("INT", "SAL", "LOC", "ST", "MAT")';
 
+  //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+  If OK_GereSAV then Result := Result + ' AND BRS_GERESAV="X"';
 
 end;
 
@@ -2686,7 +2703,11 @@ end;
 Function ChargeColonnePSF(TypRes : String; var P: THPlanningBTP) : String;
 Var ZoneRes   : String;
     Condition : string;
+    OK_GereSAV: Boolean;
 begin
+
+  //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+  OK_GereSAV  := GetParamSocSecur('SO_AFFINTSAV', False);
 
   ZoneRes := ChargeStrByTablette('BLI', 'CC_LIBRE');
   ZoneRes := ZoneRes + ', ARS_STANDCALEN, ARS_CALENSPECIF';
@@ -2696,6 +2717,8 @@ begin
     Result := 'SELECT "INTERV" AS ORIGINEITEM, ';
     Result := Result + ZoneRes + ',BTR_LIBELLE ';
     Result := Result + '  FROM RESSOURCE LEFT JOIN BTTYPERES ON ARS_CHAINEORDO=BTR_TYPRES';
+    //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+    if Ok_GereSAV then Result := Result + ' LEFT JOIN BRESSOURCE ON ARS_RESSOURCE=BRS_RESSOURCE ';
     //Gestion du libellé de la ressource
     if pos('AFO_LIBELLE',ZoneRes) > 0 then
     Begin
@@ -2710,6 +2733,8 @@ begin
   begin
     Result := 'SELECT "INTERV" AS ORIGINEITEM, ';
     Result := Result + ZoneRes + ' FROM RESSOURCE ';
+    //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+    if Ok_GereSAV then Result := Result + ' LEFT JOIN BRESSOURCE ON ARS_RESSOURCE=BRS_RESSOURCE ';
     //Gestion du Libellé de la fonction de la ressource
     if pos('AFO_LIBELLE',ZoneRes) > 0 then
     Begin
@@ -2727,14 +2752,21 @@ begin
 
   Condition := LectLibCol('CO', 'BMP', p.TypePlanning,'CO_LIBRE') + '="' + P.CodeOnglet + '" ';
   Result := Result + ' AND ' + Condition;
+  //
+  //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+  if Ok_GereSAV then Result := Result + ' AND BRS_GERESAV="X" ';
 
 end;
 
 Function ChargeColonnePTR(TypRes : String; var P: THPlanningBTP) : String;
-Var ZoneRes   : String;
-    Condition : string;
+Var ZoneRes     : String;
+    Condition   : string;
     SsTypeRessource : string;
+    OK_GereSAV  : Boolean;
 begin
+
+  //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+  OK_GereSAV  := GetParamSocSecur('SO_AFFINTSAV', False);
 
   SsTypeRessource := TobParametres.GetValue('HPP_PLANNINGTYPETD');
 
@@ -2747,6 +2779,10 @@ begin
   if SsTypeRessource='X' then Result := Result + ', BTR_LIBELLE';
 
   Result := Result + '  FROM RESSOURCE ';
+
+  //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+  If OK_GereSAV then Result := Result + ' LEFT JOIN BRESSOURCE ON ARS_RESSOURCE=BRS_RESSOURCE ';
+
   Result := Result + '  LEFT JOIN CHOIXCOD  ON ARS_TYPERESSOURCE=CC_CODE';
 
   if pos('AFO_LIBELLE',ZoneRes) > 0 then
@@ -2767,6 +2803,9 @@ begin
 
   Condition := LectLibCol('CO', 'BMP', p.TypePlanning,'CO_LIBRE') + '="' + P.CodeOnglet + '"';
   Result := Result + ' AND ' + Condition;
+
+  //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+  If OK_GereSAV then Result := Result + ' AND BRS_GERESAV="X"';
 
 end;
 

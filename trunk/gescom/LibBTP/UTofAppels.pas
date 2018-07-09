@@ -88,7 +88,7 @@ Type
     procedure LoadDevisArealiser;
     procedure BvoirDevisClick(Sender: Tobject);
     procedure RecupInfosClient;
-    function MAjAffectation: Boolean;
+    function  MAjAffectation: Boolean;
     procedure ModificationModele(var OkEtat, BApercu: boolean; var Modele: string; var NbCopies: integer; EditDirect: boolean;LibelleAff: string);
   public
     procedure OnNew                    ; override ;
@@ -234,6 +234,7 @@ Type
     CtiCCA 			   : Boolean;
     AppelPlan		   : Boolean;
     Ok_Ctrlchantier: Boolean;
+    Ok_GereSAV     : Boolean;
 
     NoAdresse     : Integer;
     NbPiece       : integer;
@@ -1243,6 +1244,9 @@ begin
 
   Ok_Ctrlchantier := GetParamSocSecur('SO_CTRLCHANTIER', False);
 
+  //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+  Ok_GereSAV := GetParamSocSecur('SO_AFFINTSAV', False);
+
   //Déclarations et procédures des zones ecran
   Client := THEdit(GetControl('AFF_TIERS'));
   Client.OnExit := ClientExit;
@@ -1303,7 +1307,6 @@ begin
   TypeAffaire :=THEdit(GetControl('BTY_TYPEAFFAIRE'));
   TypeAffaire.OnChange := TypeAffaireExit;
   TypeAffaire.OnElipsisClick := AppelTypeAffaire;
-
 
   Contrat3 :=THEdit(GetControl('AFF_CONTRAT3'));
   Contrat3.OnExit := ContratExit;
@@ -3591,13 +3594,28 @@ End;
 
 procedure TOF_APPEL.AppelResponsable(sender: Tobject);
 Var StWhere     : String;
+    StArgument  : string;
 begin
 
-  StWhere := '';
-  StWhere := ' (ARS_TYPERESSOURCE="SAL" OR ARS_TYPERESSOURCE="ST" OR ARS_TYPERESSOURCE="INT") AND ARS_FERME="-" ';
+  StWhere    := '';
+  StArgument := '';
+
+  if Trim(Responsable.Text) <> '' then
+  Begin
+    StArgument := 'ARS_RESSOURCE=' + Trim(Responsable.text);
+    //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+    If Ok_GereSAV then StArgument := StArgument + ';GERESAV=X';
+  end
+  else
+  begin
+    //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+    If Ok_GereSAV then StArgument := 'GERESAV=X';
+  end;         
 
   //FV1 : 20/11/2015 - FS#1732 - ESPACS : Ne pas afficher les ressources fermées dans fiche Appel
-  DispatchRecherche(Responsable, 3, stwhere,'ARS_RESSOURCE=' + Trim(Responsable.text), '');
+  StWhere := ' AND (ARS_TYPERESSOURCE="SAL" OR ARS_TYPERESSOURCE="ST" OR ARS_TYPERESSOURCE="INT") AND ARS_FERME="-" ';
+
+  DispatchRecherche(Responsable, 3, stwhere, StArgument, '');
 
   //Responsable.Plus := Req;
   //LookupCombo(Responsable);
@@ -3632,8 +3650,15 @@ Var TobRessource : TOB;
 Begin
 
   Req := '';
-  Req := 'SELECT * FROM RESSOURCE ';
+
+  //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+  Req := 'SELECT * FROM RESSOURCE LEFT JOIN BRESSOURCE ON ARS_RESSOURCE=BRS_RESSOURCE ';
   Req := Req + 'WHERE ARS_RESSOURCE ="' + GetControlText('AFF_RESPONSABLE') + '"';
+
+  if Ok_GereSAV then
+  begin
+    Req := Req + '  AND BRS_GERESAV ="X"';
+  end;
 
   TobRessource := Tob.Create('LesRessources',Nil, -1);
   TobRessource.LoadDetailDBFromSQL('RESSOURCE',req,false);
@@ -3653,8 +3678,13 @@ Var TobRessource : TOB;
 Begin
 
   Req := '';
-  Req := 'SELECT ARS_RESSOURCE, ARS_LIBELLE, ARS_LIBELLE2 FROM RESSOURCE ';
+  Req := 'SELECT ARS_RESSOURCE, ARS_LIBELLE, ARS_LIBELLE2 FROM RESSOURCE LEFT JOIN BRESSOURCE ON ARS_RESSOURCE=BRS_RESSOURCE ';
   Req := Req + 'WHERE ARS_UTILASSOCIE ="' + Utilisateur + '"';
+
+  if Ok_GereSAV then
+  begin
+    Req := Req + '  AND BRS_GERESAV ="X"';
+  end;
 
   TobRessource := Tob.Create('LesRessources',Nil, -1);
   TobRessource.LoadDetailDBFromSQL('RESSOURCE',req,false);

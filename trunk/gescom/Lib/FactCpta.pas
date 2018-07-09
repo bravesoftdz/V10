@@ -91,6 +91,7 @@ Procedure GCCreerPiecePayeur ( TOBECR,TOBTiers : TOB ) ;
 Function  EnregistreReglSSTrait ( TOBPiece,TOBClient,TOBFournisseur : TOB ; LeAcc : T_GCAcompte ; Quiet : boolean = false ) : TOB ;
 Procedure DetruitLesCompta ( TOBlistPiece : TOB ; DateSupp : TdateTime; Var OldEcr,OldStk : RMVT;ForModif : boolean=false ) ;
 Function TraiteFamilleAffaire ( CodeAffaire:string;  TobAffaire : TOB) : string;
+function PieceModifiableCptaPourRegl (TOBPiece : TOB) : Boolean;
 
 implementation
 Uses FactVariante,FactOuvrage,UCoTraitance,FactTimbres
@@ -7050,6 +7051,91 @@ if VenteAchat='VEN' then
       END ;
    END ;
 END;
+
+function PieceModifiableCptaPourRegl (TOBPiece : TOB) : Boolean;
+var MM : RMVT;
+		Q : Tquery;
+    TOBECR : TOB;
+    Indice : integer;
+    NbAcomptes : Integer;
+    Sql : string;
+    Okok : boolean;
+    DateClo : TDateTime;
+begin
+  result := true;
+  NbAcomptes := 0;
+  Sql := 'SELECT COUNT(*) AS NBR FROM ACOMPTES WHERE '+
+  				'GAC_NATUREPIECEG="'+TOBPiece.getString('GP_NATUREPIECEG')+'" AND '+
+          'GAC_SOUCHE="'+TOBPiece.getString('GP_SOUCHE')+'" AND '+
+          'GAC_NUMERO='+InttOStr(TOBPiece.getInteger('GP_NUMERO'))+' AND '+
+          'GAC_INDICEG='+InttOStr(TOBPiece.getInteger('GP_INDICEG'));
+  Q := OpenSQL(Sql,True,1,'',true);
+  if not Q.Eof then
+  begin
+    NbAcomptes := Q.Fields[0].asInteger;
+  end;
+  ferme (Q);
+  TOBEcr := TOB.Create ('LES ECRITURES',nil,-1);
+  TRY
+    //
+    if GetInfoParPiece(TOBPiece.GetValue('GP_NATUREPIECEG'),'GPP_TYPEPASSCPTA') = 'AUC' then Exit;
+    //
+    if isExerciceClo (TOBPiece.GetValue('GP_DATEPIECE')) then
+    begin
+      PGIInfo(TraduireMemoire('Cette pièce est sur un exercice clôturé en comptabilité.'),'ATTENTION');
+      Result := False;
+      Exit;
+    end;
+
+    // Contrôle Journal période cloturée
+    if GetInfoParPiece(TOBPiece.GetValue('GP_NATUREPIECEG'),'GPP_JOURNALCPTA') <> '' then
+    begin
+      Q := OpenSql ('SELECT CCJ_PERIODCLOTURE FROM CLOTPERJOU WHERE CCJ_JOURNAL="'+
+          GetInfoParPiece(TOBPiece.GetValue('GP_NATUREPIECEG'),'GPP_JOURNALCPTA')+'" AND CCJ_ENTITY=0',true,1,'',true);
+      if not Q.Eof then
+      begin
+        DateClo := FINDEMOIS(Q.fields[0].AsDateTime);
+        if TOBPiece.GetValue('GP_DATEPIECE') <= DateClo then
+        begin
+          PGIInfo(TraduireMemoire('Cette pièce est sur une période clôturée en comptabilité.'),'ATTENTION');
+          Result := False;
+        end;
+      end;
+      ferme (Q);
+    end;
+    if not Result then Exit;
+
+    // Contrôle période cloturée
+    if (Result) and (TOBPiece.GetValue('GP_DATEPIECE')<= GetParamSocSecur('SO_DATECLOTUREPER',iDate1900)) then
+    begin
+      PGIInfo(TraduireMemoire('Cette pièce est sur une période clôturée en comptabilité.'),'ATTENTION');
+      Result := False;
+      Exit;
+    end;
+    //
+    if TOBPiece.GetValue('GP_REFCOMPTABLE') = '' then Exit;
+    // contrôle lettrage
+    MM := DecodeRefGCComptable (TOBPiece.GetValue('GP_REFCOMPTABLE'));
+    Q:=OpenSQL('SELECT E_LETTRAGE,E_VALIDE,E_EXPORTE FROM ECRITURE WHERE '+WhereEcriture(tsGene,MM,False),True,-1, '', True) ;
+    okok := not Q.Eof;
+    if (result) and (okok) then
+    begin
+      TOBECR.loadDetailDb ('ECRITURE','','',Q,false);
+      for Indice := 0 to TOBECR.detail.count -1 do
+      begin
+        if (TOBECR.Detail[Indice].getValue('E_EXPORTE')='X') and (not GetParamSocSecur('SO_SO_BTAUTOREXPORT',false)) then
+        begin
+          result := false;
+          PGIInfo(TraduireMemoire('Cette pièce a été exportée (COMSX).'),'ATTENTION');
+          break;
+        end;
+      end;
+    end;
+    Ferme (Q);
+  FINALLY
+  	TOBECR.free;
+  END;
+end;
 
 function VerifEcriturePieceModifiable (TOBPiece : TOB) : boolean;
 var MM : RMVT;

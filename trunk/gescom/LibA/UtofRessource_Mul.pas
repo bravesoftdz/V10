@@ -31,13 +31,14 @@ Type
         // grc
         Function RameneListeRessources : String;
      private
-        StFiltre : string ;
-        BtInsert : TToolbarbutton97;
+        StFiltre      : string ;
+        BtInsert      : TToolbarbutton97;
         TypeMultiRess	: THMultiValComboBox;
         Fonction      : THValComboBox;
         TypeRessource : THValComboBox;
-        Fliste 	 : THDbGrid;
+        Fliste 	      : THDbGrid;
         Action				: String;
+        GereSav       : TCheckBox;
         procedure AfterShow;
     {$IFDEF BTP}
         procedure ConstituePlusTypeRessource(TheTypes: string);
@@ -115,6 +116,13 @@ end;
      if assigned(GetControl ('CREAAUT')) then TMenuItem(GetControl ('CREAAUT')).onclick := CreateAutre;
   End;
 
+  GereSav := TCheckBox(Ecran.FindComponent('BRS_GERESAV'));
+  if Assigned(GereSav) then
+  begin
+   GereSav.Visible := False;
+   GereSav.State   := cbGrayed;
+  end;
+
   if Ecran.Name = 'BTRESSRECH_MUL' then
   Begin
 	   TypeMultiRess := THMultiValComBoBox(Ecran.FindComponent('ARS_TYPERESSOURCE'));
@@ -124,7 +132,8 @@ end;
         BtInsert.DropDownAlways := true;
         BtInsert.Width := 35;
      end;
-  end else
+  end
+  else
   Begin
   	 TypeRessource := THValComBoBox(Ecran.FindComponent('ARS_TYPERESSOURCE'));
 
@@ -147,31 +156,35 @@ end;
     if Critere<>'' then
         BEGIN
         X:=pos(':',Critere);
-        if (x=0 ) or ( copy(Critere,1,6) = 'FILTRE') then  X:=pos('=',Critere);
+        if (x=0 ) or (copy(Critere,1,6) = 'FILTRE') then  X:=pos('=',Critere);
         if x<>0 then
-           begin
-           Champ:=copy(Critere,1,X-1);
-           Valeur:=Copy (Critere,X+1,length(Critere)-X);
-           end;
-        if Champ = 'ARS_RESSOURCE'    then
-            begin
-            SetControlText('ARS_RESSOURCE',Valeur);
-            end ;
-        if Champ = 'FILTRE'    then
-            StFiltre:=Valeur;
-        if Champ = 'ACTION' Then
-           Action := Valeur;
+        begin
+          Champ :=copy(Critere,1,X-1);
+          Valeur:=Copy(Critere,X+1,length(Critere)-X);
+        end;
+        if Champ = 'ARS_RESSOURCE'  then SetControlText('ARS_RESSOURCE',  Valeur);
+        if Champ = 'FILTRE'         then StFiltre := Valeur;
+        if Champ = 'ACTION'         Then Action   := Valeur;
+        If Champ = 'GERESAV'        then
+        begin
+          if Assigned(GereSav) then
+          begin
+            GereSav.Visible := True;
+            GereSav.Checked := True;
+          end;
+        end;
+
 {$IFDEF BTP}
         // constitue le + du type de ressource pour n'afficher que les type de ressource désiré
         // passage d'un certain nombre de valeur séparateur "," et exclusion '-'
         if trim(Champ) = 'ARS_FONCTION1' then
-           begin
+        begin
           if Fonction <> nil then Fonction.Value := Trim(Valeur);
         end;
         if trim(Champ) = 'TYPERESSOURCE' then
         begin
            ConstituePlusTypeRessource(valeur);
-           end;
+        end;
 {$ENDIF}
         END;
      Critere:=(Trim(ReadTokenSt(stArgument)));
@@ -395,7 +408,10 @@ end ;
 Procedure AFLanceFiche_Mul_Ressource;
 begin
 {$IFDEF BTP}
-AGLLanceFiche('BTP','BTRESSOURCE_Mul','','','');
+If GetParamSocSecur('SO_AFFINTSAV', False) then
+  AGLLanceFiche('BTP','BTRESSOURCE_Mul','','','GERESAV=X')
+else
+  AGLLanceFiche('BTP','BTRESSOURCE_Mul','','','');
 {$ELSE}
 AGLLanceFiche('AFF','RESSOURCE_Mul','','','');
 {$ENDIF}

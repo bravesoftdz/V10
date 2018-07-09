@@ -28,6 +28,8 @@ Uses StdCtrls,
      HCtrls,
      HEnt1,
      HMsgBox,
+     Paramsoc,
+     AGLInitGC,
      UTOF ;
 
 Type
@@ -44,6 +46,9 @@ Type
   private
 
     Responsable : THEdit;
+    Ressource   : THEdit;
+
+    Ok_GereSAV  : Boolean;
 
     procedure AfficheResponsable(TobRessource: tob);
     procedure LectureResponsable;
@@ -69,12 +74,12 @@ procedure TOF_AFFECTATION.OnUpdate ;
 begin
   Inherited ;
 
-  if GetControlText('ARS_RESSOURCE') <> '' then
-     Begin
-	   LaTob.PutValue('RETOUR','X');
-	   LaTob.PutValue('RESSOURCE',GetControlText('ARS_RESSOURCE'));
-     exit;
-     end;
+  if Ressource.text <> '' then
+  Begin
+    LaTob.PutValue('RETOUR','X');
+	  LaTob.PutValue('RESSOURCE',Ressource.text);
+    exit;
+  end;
 
 end ;
 
@@ -87,11 +92,15 @@ procedure TOF_AFFECTATION.OnArgument (S : String ) ;
 begin
   Inherited ;
 
-  Responsable :=THEdit(GetControl('AFF_RESPONSABLE'));
+  Responsable := THEdit(GetControl('AFF_RESPONSABLE'));
   Responsable.OnElipsisClick := AppelResponsable;
 
+  Ressource   := THEdit(GetControl('ARS_RESSOURCE'));
 
-  SetControlText('ARS_RESSOURCE','');
+  //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+  Ok_GereSAV := GetParamSocSecur('SO_AFFINTSAV', False);
+
+  Ressource.text := '';
 
 end ;
 
@@ -111,23 +120,37 @@ begin
 end ;
 
 procedure TOF_AFFECTATION.AppelResponsable(sender: Tobject);
-Var Req        : String;
+Var StWhere     : String;
+    StArgument  : string;
 begin
 
- 	Req := '';
-  Req := ' ARS_TYPERESSOURCE="SAL" OR ARS_TYPERESSOURCE="ST"';
+  StWhere    := '';
+  StArgument := '';
 
-  SetControlProperty('AFF_RESPONSABLE', 'Plus', req);
+  if Trim(Ressource.Text) <> '' then
+  Begin
+    StArgument := 'ARS_RESSOURCE=' + Trim(Ressource.text);
+    //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+    If Ok_GereSAV then StArgument := StArgument + ';GERESAV=X';
+  end
+  else
+  begin
+    //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+    If Ok_GereSAV then StArgument := 'GERESAV=X';
+  end;
 
-  LookupCombo(Responsable);
+  //FV1 : 20/11/2015 - FS#1732 - ESPACS : Ne pas afficher les ressources fermées dans fiche Appel
+  StWhere := ' AND (ARS_TYPERESSOURCE="SAL" OR ARS_TYPERESSOURCE="ST" OR ARS_TYPERESSOURCE="INT") AND ARS_FERME="-" ';
 
-  if getcontroltext('AFF_RESPONSABLE')='' then exit;
+  DispatchRecherche(Ressource, 3, stwhere, StArgument, '');
 
-  SetControlText('ARS_RESSOURCE', GetControlText('AFF_RESPONSABLE'));
-  SetControlText('AFF_RESPONSABLE', '');
-
-  //Lecture des Ressources sélectionné et affichage des informations
-  LectureResponsable;
+  if Ressource.Text = '' then
+  begin
+    Responsable.text  := '';
+    Ressource.text    := '';
+  end
+  else
+    LectureResponsable; //Lecture des Ressources sélectionné et affichage des informations
 
 end;
 
@@ -137,8 +160,15 @@ Var TobRessource : TOB;
 Begin
 
   Req := '';
-  Req := 'SELECT * FROM RESSOURCE ';
-  Req := Req + 'WHERE ARS_RESSOURCE ="' + GetControlText('ARS_RESSOURCE') + '"';
+
+  //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
+  Req := 'SELECT * FROM RESSOURCE LEFT JOIN BRESSOURCE ON ARS_RESSOURCE=BRS_RESSOURCE ';
+  Req := Req + 'WHERE ARS_RESSOURCE ="' + Ressource.Text + '"';
+
+  if Ok_GereSAV then
+  begin
+    Req := Req + '  AND BRS_GERESAV ="X"';
+  end;
 
   TobRessource := Tob.Create('LesRessources',Nil, -1);
   TobRessource.LoadDetailDBFromSQL('RESSOURCE',req,false);
@@ -155,7 +185,7 @@ begin
 
 	Nom := TobRessource.Detail[0].GetValue('ARS_LIBELLE') + ' ' + TobRessource.Detail[0].GetValue('ARS_LIBELLE2');
 
-	SetControlText('AFF_RESPONSABLE',Nom);
+	Responsable.text := Nom;
 
 end;
 
