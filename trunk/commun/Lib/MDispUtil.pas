@@ -41,6 +41,8 @@ uses windows, HEnt1, MenuOLG, sysutils, Messages, HMsgBox, {$IFNDEF VER150}Class
   {MajHalleyUtil,} ubob, {YYBUNDLE_TOF, uMultiDossier, TomProfilUser,BackupRestore_TOF,traduc,AccesPortail_TOF, MajEnRafale}
   {,UtomEtabliss,}ChangeVersions,BobGestion,URegenVues
 //  ,UFicheImportExport
+  , EntGC
+  , BTRECUPHISTOACHAT_TOF
 {$IFDEF INTERNAT}
   , TOMIdentificationBAncaire
 {$ENDIF}
@@ -358,6 +360,13 @@ begin
       end;
       AGLLanceFiche('BTP','BTSELFAC_MUL','AFF_ETATAFFAIRE=ACP','','MODIFICATION;STATUT=AFF;ANTERIORITE') ;
     END;
+    279421 : begin
+               if not V_PGI.Superviseur then
+                 PgiInfo ('Vous n''avez pas les droits nécessaires pour effectuer cette opération')
+               else
+                 BTLanceFiche_POCRecupHistoAchat('BTP', 'POCRECUPHISTOACH', '', '', '');
+             end;
+
     // ----
   else HShowMessage('2;?caption?;' + TraduireMemoire('Fonction non disponible : ') + ';W;O;O;O;', TitreHalley, IntToStr(Num));
   end;
@@ -416,6 +425,8 @@ begin
     FMenuG.RemoveItem(3131);
     FMenuG.RemoveItem(3132);
   end;
+  if VH_GC.BTCODESPECIF <> '001' then
+    FMenuG.RemoveItem(279421);
 end;
 
 

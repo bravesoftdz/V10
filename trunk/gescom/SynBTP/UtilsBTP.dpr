@@ -1108,7 +1108,12 @@ uses
   BRGPDCONTACTMUL_TOF in '..\..\RGPD\BRGPDCONTACTMUL_TOF.pas',
   BRGPDUtils in '..\..\RGPD\BRGPDUtils.pas',
   BTVENTILCOLL_TOF in '..\LibBTP\BTVENTILCOLL_TOF.PAS',
-  BTVENTILCOLLMUL_TOF in '..\LibBTP\BTVENTILCOLLMUL_TOF.PAS';
+  BTVENTILCOLLMUL_TOF in '..\LibBTP\BTVENTILCOLLMUL_TOF.PAS',
+  BTRECUPHISTOACHAT_TOF in '..\SpecifPOC\BTRECUPHISTOACHAT_TOF.pas',
+  CommonTools in '..\..\commun\Lib\CommonTools.pas',
+  UConnectWSConst in '..\..\CONNECTWS\UConnectWSConst.pas',
+  Zip in '..\..\commun\Lib\Zip.pas',
+  ZipDlls in '..\..\commun\Lib\ZipDlls.pas';
 
 //
 
