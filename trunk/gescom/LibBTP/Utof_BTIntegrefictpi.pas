@@ -4194,11 +4194,11 @@ begin
 
   Repeat
     if ToblValide = nil then Exit;
-    TOBLValide.PutValue('PIECEGENEREE', RechDom('GCNATUREPIECEG', TObPiece.GetString('GP_NATUREPIECEG'), False) + ' N° ' + IntToStr(TobPiece.GetValue('GP_NUMERO')) + ' du ' + DateToStr(TobPiece.GetValue('GP_DATEPIECE')));
-  if TobPiece.GetString('TYPEMVT')='SA' then
-    TOBLValide := TobValide.FindNext(['TYPEMVT','CLIENT','CODEAFFAIRE','DATEMVT'],[TobPiece.GetString('TYPEMVT'),TobPiece.GetString('TIERS'),TobPiece.GetString('AFFAIRE'),TobPiece.GetString('DATEPIECE')], False)
-  else
-    TOBLValide := TobValide.FindNext(['TYPEMVT','CODEFOURNISSEUR','CODEAFFAIRE','DATEMVT'],[TobPiece.GetString('TYPEMVT'),TobPiece.GetString('TIERS'),TobPiece.GetString('AFFAIRE'),TobPiece.GetString('DATEPIECE')], False);
+    If TOBLValide.GetString('PIECEGENEREE') = '' then TOBLValide.PutValue('PIECEGENEREE', RechDom('GCNATUREPIECEG', TObPiece.GetString('GP_NATUREPIECEG'), False) + ' N° ' + IntToStr(TobPiece.GetValue('GP_NUMERO')) + ' du ' + DateToStr(TobPiece.GetValue('GP_DATEPIECE')));
+    if (TobPiece.GetString('TYPEMVT')= 'SA') or (TobPiece.GetString('TYPEMVT')='EA') then
+      TOBLValide := TobValide.FindNext(['TYPEMVT','CLIENT','CODEAFFAIRE','DATEMVT'],[TobPiece.GetString('TYPEMVT'),TobPiece.GetString('TIERS'),TobPiece.GetString('AFFAIRE'),TobPiece.GetString('DATEPIECE')], False)
+    else
+      TOBLValide := TobValide.FindNext(['TYPEMVT','CODEFOURNISSEUR','CODEAFFAIRE','DATEMVT'],[TobPiece.GetString('TYPEMVT'),TobPiece.GetString('TIERS'),TobPiece.GetString('AFFAIRE'),TobPiece.GetString('DATEPIECE')], False);
   until TOBLValide = nil;
 
 end;

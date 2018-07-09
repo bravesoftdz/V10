@@ -576,7 +576,7 @@ begin
         CodeAffaire   := TobData.GetValue('AFFAIRE');
         Etablissement := TobData.GetValue('ETABLISSEMENT');
         Domaine       := TobData.GetValue('DOMAINE');
-        Commercial := '';
+        Commercial    := '';
         if TOBData.FieldExists ('APPORTEUR') then Commercial := TOBData.GetString ('APPORTEUR');
         CodeTiersFac  := CodeTiers;
         if TOBData.FieldExists('TIERSFAC') then CodeTiersFac  := TOBData.getString('TIERSFAC'); // difference entre CF et Devis
