@@ -557,7 +557,11 @@ uses
   BRGPDMUL_TOF in '..\..\RGPD\BRGPDMUL_TOF.pas',
   BRGPDVALIDTRT_TOF in '..\..\RGPD\BRGPDVALIDTRT_TOF.pas',
   BRGPDUtils in '..\..\RGPD\BRGPDUtils.pas',
-  BRGPDCONTACTMUL_TOF in '..\..\RGPD\BRGPDCONTACTMUL_TOF.pas';
+  BRGPDCONTACTMUL_TOF in '..\..\RGPD\BRGPDCONTACTMUL_TOF.pas',
+  CommonTools in '..\..\commun\Lib\CommonTools.pas',
+  UConnectWSConst in '..\..\CONNECTWS\UConnectWSConst.pas',
+  Zip in '..\..\commun\Lib\Zip.pas',
+  ZipDlls in '..\..\commun\Lib\ZipDlls.pas';
 
 {$R *.RES}
 
