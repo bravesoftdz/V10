@@ -84,6 +84,7 @@ Type
         SH_SIMULATION   : TCheckBox ;
         //FV1 - 23/11/2015 : FS#1688 - SERVAIS : Pb en paramétrage de compteur mensuel.
         BS0_NUMMOISPIECE : TCheckBox;
+        SH_SOUCHEEXO     : TCheckBox;
         TOBSOUCHEB : TOB;
         TobCptMensuel : Tob;
         Ok_MoisPiece  : boolean;
@@ -126,19 +127,24 @@ Type
         procedure OnEnterCpt(Sender: TObject);
         //FV1 - 23/11/2015 : FS#1688 - SERVAIS : Pb en paramétrage de compteur mensuel.
         procedure NumMoisPieceOnClick(Sender: TObject);
+        procedure SouchExo_OnClick(Sender : TObject);
         procedure GEREGBCPTMensuel;
         procedure UpdateCptMensuel;
         procedure OnChangeCpt(Sender: TObject);
     		procedure DefinieEvtMensuel (etat : Boolean);
         procedure LoadSoucheBTP(Entity: integer; TypeSouche,CodeSouche: string);
         procedure SetEvents(Etat: boolean);
-    procedure AffichageEcr;
+        procedure AffichageEcr;
     end;
 
 //================================================================================
 // Implementation
 //================================================================================
 Implementation
+
+uses
+  UtilGC
+  ;
 
 //==================================================
 // Definition des variable
@@ -446,9 +452,6 @@ procedure TOM_SOUCHE.OnLoadRecord;
     Result := GetInfoParamPiece (SouchePiece);
   end;
 
-Var StSQL             : string;
-    Year,Month,Day : Word;
-    QQ : TQuery;
 begin
   Inherited;
   SetEvents (false);
@@ -568,6 +571,7 @@ begin
     
     //FV1 - 23/11/2015 : FS#1688 - SERVAIS : Pb en paramétrage de compteur mensuel.
     BS0_NUMMOISPIECE := TCheckBox(GetControl('BS0_NUMMOISPIECE',true));
+    SH_SOUCHEEXO     := TCheckBox(GetControl('SH_SOUCHEEXO',true));
 
     // EVT CheckBox
     SH_ANALYTIQUE.OnExit := ClickCheckBox ;
@@ -674,18 +678,15 @@ begin
   end;
 
   // FV - 09/11/2012 - Gestion des compteur Mensuel
-  //SetControlProperty('GB_CPTMENSUEL','Visible', False);
   THPanel(GetControl('PP3')).visible := false;
   THPanel(GetControl('PP2')).visible := true;
-
   // CA - 17/06/2004 - Ne pas autoriser la création de codes souche en minuscule
   SetControlProperty('SH_SOUCHE','CharCase',ecUpperCase);
-
   // 15107 - Journal uniquement de nature OD
   SetControlProperty('SH_JOURNAL','DATATYPE','TTJALOD');
-
   //
   TobCptMensuel := Tob.create('BCPTMENSUEL', nil, -1);
+  SH_SOUCHEEXO.OnClick := SouchExo_OnClick;
 
 end;
 
@@ -1025,9 +1026,12 @@ begin
 end;
 
 procedure TOM_SOUCHE.AffichageEcr;
-Var Year, Month, Day : Word;
-begin
-  if BS0_NUMMOISPIECE.checked then
+Var
+  Year, Month, Day : Word;
+  PanelP2 : THPanel;
+  PanelP3 : THPanel;
+
+  procedure MonthManagement;
   begin
     Ok_MoisPiece := True;
     // Chargement de l'année de la date du jour
@@ -1035,17 +1039,43 @@ begin
     CPTANNEE.Text  := IntToStr(Year);
     CPTANNEE.Value := Year;
     // FV - 09/11/2012 - Gestion des compteur Mensuel - visu du groupe Compteur mensuel
-    THPanel(GetControl('PP3')).visible := true;
-    THPanel(GetControl('PP2')).visible := false;
+    PanelP3.visible := true;  // Num mensuel
+    PanelP2.visible := false; // Num par exo
     // chargement de la tob de traitement par table compteur Mensuel
     GereGBCptMensuel;
-  end else
+  end;
+
+  procedure ExoManagement;
   begin
     Ok_MoisPiece := False;
     // FV - 09/11/2012 - Gestion des compteur Mensuel
-    // SetControlProperty('GB_CPTMENSUEL','Visible', False);
-    THPanel(GetControl('PP3')).visible := false;
-    THPanel(GetControl('PP2')).visible := true;
+    PanelP3.visible := false;
+    PanelP2.visible := true;
+
+  end;
+
+begin
+  SH_SOUCHEEXO.Enabled := True;
+  PanelP2              := THPanel(GetControl('PP2'));
+  PanelP3              := THPanel(GetControl('PP3'));
+  if not GereNumMensuelCptAnnuel then
+  begin
+    if BS0_NUMMOISPIECE.checked then
+    begin
+      SH_SOUCHEEXO.Checked := False;
+      SH_SOUCHEEXO.Enabled := False;
+      MonthManagement;
+    end else
+      ExoManagement;
+  end else
+  begin
+    if (BS0_NUMMOISPIECE.checked) and (not SH_SOUCHEEXO.Checked) then
+      MonthManagement
+//    else if    ((BS0_NUMMOISPIECE.checked) and (SH_SOUCHEEXO.Checked))
+//            or ((not BS0_NUMMOISPIECE.checked) and (SH_SOUCHEEXO.Checked))
+//    then
+    else
+      ExoManagement;
   end;
 end;
 
@@ -1071,21 +1101,14 @@ begin
   begin
     DS.Edit;
     SetField('SH_LIBELLE',GetField('SH_LIBELLE'));
-    {
-    SetControlEnabled('bValider',true);
-    SetControlEnabled('bRechercher',false);
-    SetControlEnabled('bFirst',false);
-    SetControlEnabled('bPrev',false);
-    SetControlEnabled('bNext',false);
-    SetControlEnabled('bLast',false);
-    SetControlEnabled('bDefaire',true);
-    SetControlEnabled('bInsert',false);
-    SetControlEnabled('bDelete',false);
-    SetControlEnabled('bDupliquer',false);
-    }
   end;
 end;
 
+procedure TOM_SOUCHE.SouchExo_OnClick(Sender : TObject);
+begin
+  AffichageEcr;
+end;
+               
 procedure TOM_SOUCHE.OnExitCpt(Sender: TObject);
 begin
 

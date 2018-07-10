@@ -63,6 +63,7 @@ procedure GCTestDepotOblig;
 function MAJJnalEvent(TypeEvt, Etat, Libelle, BlocNote : string; FileName: string ='') : integer;
 function TransformeLesInToOr(stIn : string) : string;
 function GereCommercial : boolean;
+function GereNumMensuelCptAnnuel : boolean;
 procedure TraiteParametresSurTForm(FF : TForm; LesChamps : string=''; AffecteFiltre : boolean=false);
 function NbOccurenceString(Chaine, Occurence : string) : integer;
 Procedure RTCreerProspectPourClient ;
@@ -1977,6 +1978,11 @@ end;
 function GereCommercial : boolean;
 begin
   Result := GetParamSocSecur ('SO_GERECOMMERCIAL',False);
+end;
+
+function GereNumMensuelCptAnnuel : boolean;
+begin
+  Result := GetParamSocSecur('SO_NUMMENSUELCPTANNUEL', False);
 end;
 
 {***********A.G.L.***********************************************

@@ -13,7 +13,13 @@ Procedure NumeroteLignesGC (GS: THGrid; TOBPiece: TOB; ForceRenum: Boolean = Fal
 procedure EvaluerMaxNumOrdre(TOBPiece: TOB);
 procedure MiseAJourGrid(GS: THGrid; TOBPiece: TOB; CodeArticle: string; Qte: Double; ARow: Integer);
 function  SupDimAZero(GS: THGrid; CodeArticle: string; TOBDim, TOBPiece: TOB; ARow: Integer): Integer;
-function  GetSoucheG(NaturePieceG, Etablissement, Domaine: String3): String3;
+
+function GetSoucheG(NaturePieceG, Etablissement, Domaine: String3): String3;
+
+function GetCptMensuel(Souche : string; DateDoc : TDateTime) : integer;
+function GetCptMensuelComplet(DateDoc : TDateTime; CptValue, CptLength : integer) : integer;
+function GetCptAnnuel(Souche : string) : integer;
+
 function  GetNumSoucheG(SoucheG: String3; ODate : TdateTime): integer;
 procedure IncNumSoucheG(SoucheG: String3; ODate : TdateTime);
 function  HistoPiece(TobPiece_O: Tob): Boolean;
@@ -36,9 +42,11 @@ procedure StockeInfoTypeLigne (TOBL : TOB; ValLoc : T_Valeurs);
 implementation
 
 uses
-  FactTarifs,
-  FactUtil,
-  UtilTOBPiece
+  FactTarifs
+  , FactUtil
+  , UtilTOBPiece
+  , UtilGC
+  , CommonTools
   ;
 procedure EcrireMaxNumordre(TOBPiece: TOB; MaxNumOrdre: integer);
 begin
@@ -258,42 +266,111 @@ begin
   TOBX.free;
 end;
 
+function GetCptMensuel(Souche : string; DateDoc : TDateTime) : integer;
+var
+  Year  : word;
+  Month : word;
+  Day   : word;
+  Sql   : string;
+  Qry   : TQuery;
+begin
+  DecodeDate(DateDoc, Year, Month, Day);
+  Sql := 'SELECT BCM_COMPTEUR'
+       + ' FROM BCPTMENSUEL'
+       + ' WHERE BCM_NATUREPIECEG = "' + Souche + '" '
+       + '   AND BCM_ANNEE        = ' + IntToStr(Year)
+       + '   AND BCM_MOIS         = ' + IntToStr(Month);
+  if not ExisteSQL(Sql) then
+    AddCptMensuel(Souche, Year, Month);
+  Qry := OpenSQL(Sql, True, 1, '', True);
+  try
+    Result := Tools.iif(not Qry.EOF, Qry.Fields[0].AsInteger, 0);
+  finally
+    Ferme(Qry);
+  end;
+end;
+
+function GetCptMensuelComplet(DateDoc : TDateTime; CptValue, CptLength : integer) : integer;
+var
+  Year   : word;
+  Month  : word;
+  Day    : word;
+  stNum  : string;
+begin
+  DecodeDate(DateDoc, Year, Month, Day);
+  stNum := copy(IntToStr(Year), 3, 2)
+         + StringOfChar('0', 2 - Length(IntToStr(Month)))
+         + IntToStr(Month)
+         + StringOfChar('0', CptLength - Length(IntToStr(CptValue)))
+         + IntToStr(CptValue);
+  Result := StrToInt(stNum);
+end;
+
+function GetCptAnnuel(Souche : string) : integer;
+var
+  Sql : string;
+  Qry : TQuery;
+begin
+  Sql := 'SELECT SH_NUMDEPART'
+       + ' FROM SOUCHE'
+       + ' WHERE SH_TYPE   = "GES"'
+       + '   AND SH_SOUCHE = "' + Souche + '"';
+  Qry := OpenSQL(Sql, True,-1, '', True);
+  try
+    Result := Tools.iif(not Qry.EOF, Qry.Fields[0].AsInteger, 0)
+  finally
+    Ferme(Qry);
+  end;
+end;
 
 function GetNumSoucheG(SoucheG: String3; ODate : TdateTime): integer;
-var Q: TQuery;
-		Year,Month,Day : word;
-    req ,cpt : string;
+var
+  CptAnnuel  : boolean;
+  CptMensuel : boolean;
+
+  function GetCptMen : integer;
+  var
+    Num : integer;
+  begin
+    Num    := GetCptMensuel(SoucheG, ODate);
+    Result := GetCptMensuelComplet(ODate, Num, 4);
+  end;
+
+  function GetCptMenExo : integer;
+  var
+    Num : integer;
+  begin
+    Num    := GetCptAnnuel(SoucheG);
+    Result := GetCptMensuelComplet(ODate, Num, 5);
+    end;
 
 begin
   Result := 0;
-  if SoucheG = '' then Exit;
-  //FV1 - 23/11/2015 : FS#1688 - SERVAIS : Pb en paramétrage de compteur mensuel.
-  //if GetInfoParPiece(SoucheG, 'GPP_NUMMOISPIECE') = 'X' then
-  if GetInfoParSouche(SoucheG, 'BS0_NUMMOISPIECE') = 'X' then
+  if SoucheG <> '' then
   begin
-  	decodedate(ODate, Year, Month, Day);
-  	req := 'SELECT BCM_COMPTEUR FROM BCPTMENSUEL WHERE  BCM_NATUREPIECEG="' + SoucheG + '" '+
-    			 'AND BCM_ANNEE=' + IntToStr(Year) + ' AND '+
-           'BCM_MOIS=' + IntToStr(Month);
-    if not ExisteSQL(Req) then
+    CptMensuel := (GetInfoParSouche(SoucheG, 'BS0_NUMMOISPIECE') = 'X');
+    if not GereNumMensuelCptAnnuel then // Pas de combinaison entre les compteurs
     begin
-      AddCptMensuel (SoucheG,Year,Month);
+      if CptMensuel then
+        Result := GetCptMen
+      else
+        Result := GetCptAnnuel(SoucheG);
+    end else
+    begin
+      CptAnnuel := (GetInfoParSouche(SoucheG, 'SH_SOUCHEEXO')  = 'X');
+      if (CptMensuel) and (not CptAnnuel) then  // Compteur mensuel uniquement
+        Result := GetCptMen
+      else if (CptMensuel) and (CptAnnuel) then // 2 Compteurs
+        Result := GetCptMenExo
+      else                               // Compteur exo dans tout les autres cas
+        Result := GetCptAnnuel(SoucheG);
     end;
-    Q := OpenSQL(Req,True,1,'',true);
-    if not Q.EOF then Result := Q.Fields[0].AsInteger;
-    Cpt  := copy(IntToStr(Year),3,2) + StringOfChar('0', 2 - Length(IntToStr(Month))) + IntToStr(Month) + StringOfChar('0', 4 - Length(IntToStr(Result))) + IntToStr(Result);   //N° = 4 de Long
-    Result    := StrToInt(cpt);
-  	Ferme(Q);
-  end else
-  begin
-    Q := OpenSQL('SELECT SH_NUMDEPART FROM SOUCHE WHERE SH_TYPE="GES" AND SH_SOUCHE="' + SoucheG + '"', True,-1, '', True);
-    if not Q.EOF then Result := Q.Fields[0].AsInteger;
-  	Ferme(Q);
   end;
 end;
 
 function GetNumPieceG(NaturePieceG, Etablissement, Domaine: String3; ODate : TdateTime): integer;
-var SoucheG: String3;
+var
+  SoucheG: String3;
 begin
   Result := 0;
   SoucheG := GetSoucheG(NaturePieceG, Etablissement, Domaine);
@@ -335,75 +412,70 @@ begin
     Result := False;
 end;
 
-function SetNumberAttribution(Nature,SoucheG: string; DatePiece : TDateTime; NbPiece: integer): Integer;
-var QQ      : TQuery;
-  NumDef    : Longint;
-  Nb, ii    : integer;
-  Okok      : boolean;
-  //FV1 : Intégration Numérotation mensuelle
-  Month     : word;
-  Year      : word;
-  Day       : word;
-  NumPiece  : String;
-  ok_Cpt    : Boolean;
-//  NbCar     : Integer;
-  StSQL     : String;
+function SetNumberAttribution(Nature, SoucheG: string; DatePiece : TDateTime; NbPiece: integer): Integer;
+var
+  NumDef     : Longint;
+  NewNum     : Longint;
+  Okok       : boolean;
+  CptAnnuel  : boolean;
+  CptMensuel : boolean;
+  Month      : word;
+  Year       : word;
+  Day        : word;
+  StSQL      : String;
 begin
   Result := 0;
-
-  if SoucheG = '' then Exit;
-
-  if NbPiece <= 0 then NbPiece := 1;
-
-  decodedate(DatePiece, Year, Month, Day);
-  //FV1 - 23/11/2015 : FS#1688 - SERVAIS : Pb en paramétrage de compteur mensuel.
-  //if GetInfoParPiece(Nature, 'GPP_NUMMOISPIECE') = 'X' then Ok_Cpt := True else Ok_Cpt := False;
-  if GetInfoParSouche(SoucheG, 'BS0_NUMMOISPIECE') = 'X' then Ok_Cpt := True else Ok_Cpt := False;
-
-  ii := 0;
-  repeat
-    NumDef := -1;
-    inc(ii);
-    if Ok_Cpt then
+  if SoucheG <> '' then
+  begin
+    CptMensuel  := (GetInfoParSouche(SoucheG, 'BS0_NUMMOISPIECE') = 'X');
+    CptAnnuel  := (GetInfoParSouche(SoucheG, 'SH_SOUCHEEXO')  = 'X');
+    NbPiece := Tools.iif(NbPiece <= 0, 1, NbPiece);
+    if not GereNumMensuelCptAnnuel then // Pas de combinaison entre les compteurs
     begin
-      StSQL := 'SELECT BCM_COMPTEUR FROM BCPTMENSUEL WHERE  BCM_NATUREPIECEG="' + SoucheG + '" '+
-             'AND BCM_ANNEE=' + IntToStr(Year) + ' AND '+
-             'BCM_MOIS=' + IntToStr(Month);
-      if not ExisteSQL(StSQL) then
-      begin
-        AddCptMensuel (SoucheG,Year,Month);
-      end;
-      StSQL := 'SELECT BCM_COMPTEUR FROM BCPTMENSUEL WHERE BCM_NATUREPIECEG="' + SoucheG + '" AND BCM_ANNEE=' + IntToStr(Year) + ' AND BCM_MOIS=' + IntToStr(Month)
+      if CptMensuel then
+        NumDef := GetCptMensuel(SoucheG, DatePiece)
+      else
+        NumDef := GetCptAnnuel(SoucheG);
     end else
     begin
-      StSQL := 'SELECT SH_NUMDEPART FROM SOUCHE WHERE SH_TYPE="GES" AND SH_SOUCHE="' + SoucheG + '"';
+      if (CptMensuel) and (not CptAnnuel) then      // Compteur mensuel uniquement
+        NumDef := GetCptMensuel(SoucheG, DatePiece)
+      else                                          // Compteur exo dans tout les autres cas
+        NumDef := GetCptAnnuel(SoucheG);
     end;
-    QQ := OpenSQL(StSQL, True,-1, '', True);
-    if not QQ.EOF then NumDef := QQ.Fields[0].AsInteger;
-    Ferme(QQ);
-    if NumDef <= 0 then exit;
-    if Ok_Cpt then
-      StSQL := 'UPDATE BCPTMENSUEL SET BCM_COMPTEUR=' + IntToStr(NumDef + NbPiece) + ' WHERE  BCM_NATUREPIECEG="' + SoucheG + '" AND BCM_ANNEE=' + IntToStr(Year) + ' AND BCM_MOIS=' + IntToStr(Month) + ' AND BCM_COMPTEUR=' + IntToStr(NumDef)
-    else
-      StSQL := 'UPDATE SOUCHE SET SH_NUMDEPART=' + IntToStr(NumDef + NbPiece) + ' WHERE SH_TYPE="GES" AND SH_SOUCHE="' + SoucheG + '" AND SH_NUMDEPART=' + IntToStr(NumDef);
-    Nb := ExecuteSQL(StSQL);
-    Okok := (Nb = 1);
-  until ((Okok) or (ii > 20));
-  if not Okok then
-  begin
-    PgiError('Erreur Attribution de numéro de pièce');
-    V_PGI.IoError := oeUnknown;
-    Exit;
+    if NumDef > 0 then
+    begin
+      NewNum := NumDef + NbPiece;
+      DecodeDate(DatePiece, Year, Month, Day);
+      if (CptMensuel) and (not CptAnnuel) then
+        StSQL := 'UPDATE BCPTMENSUEL'
+               + ' SET BCM_COMPTEUR = ' + IntToStr(NewNum)
+               + ' WHERE BCM_NATUREPIECEG = "' + SoucheG + '"'
+               + '   AND BCM_ANNEE        =  ' + IntToStr(Year)
+               + '   AND BCM_MOIS         =  ' + IntToStr(Month)
+               + '   AND BCM_COMPTEUR     =  ' + IntToStr(NumDef)
+      else
+        StSQL := 'UPDATE SOUCHE'
+               + ' SET SH_NUMDEPART = ' + IntToStr(NewNum)
+               + ' WHERE SH_TYPE      = "GES"'
+               + '   AND SH_SOUCHE    = "' + SoucheG + '"'
+               + '   AND SH_NUMDEPART =  ' + IntToStr(NumDef);
+      Okok := (ExecuteSQL(StSQL) = 1);
+      if not Okok then
+      begin
+        PgiError('Erreur Attribution de numéro de pièce');
+        V_PGI.IoError := oeUnknown;
+      end else
+      begin
+        if (CptMensuel) and (not CptAnnuel) then
+          Result := GetCptMensuelComplet(DatePiece, NewNum, 4)
+        else if (CptMensuel) and (CptAnnuel) then
+          Result := GetCptMensuelComplet(DatePiece, NewNum, 5)
+        else
+          Result := NumDef;
+      end;
+    end;
   end;
-
-  if Ok_Cpt then
-  begin
-    Numpiece  := copy(IntToStr(Year),3,2) + StringOfChar('0', 2 - Length(IntToStr(Month))) + IntToStr(Month) + StringOfChar('0', 4 - Length(IntToStr(NumDef))) + IntToStr(NumDef);   //N° = 4 de Long
-    Result    := StrToInt(Numpiece);
-  end
-  else
-    Result := NumDef;
-
 end;
 
 function SetDefinitiveNumber(TOBPiece, TOBBases, TOBBasesL,TOBEches, TOBNomenclature, TOBAcomptes, TOBPieceRG, TOBBasesRG, TobLigneTarif: TOB; NumDef: integer): boolean;
@@ -660,7 +732,6 @@ begin
 end;
 
 procedure StockeInfoTypeLigne (TOBL : TOB; ValLoc : T_Valeurs);
-var QTe : double;
 begin
   TOBL.PutValue('GLC_MTMOPA',ValLoc[23]);
   TOBL.PutValue('GLC_MTMOPR',ValLoc[24]);

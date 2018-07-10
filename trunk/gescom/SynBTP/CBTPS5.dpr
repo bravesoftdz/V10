@@ -1112,7 +1112,8 @@ uses
   BRGPDUtils in '..\..\RGPD\BRGPDUtils.pas',
   BTVENTILCOLL_TOF in '..\LibBTP\BTVENTILCOLL_TOF.PAS',
   BTVENTILCOLLMUL_TOF in '..\LibBTP\BTVENTILCOLLMUL_TOF.PAS',
-  UTreatComponents in '..\LibBTP\UTreatComponents.pas';
+  UTreatComponents in '..\LibBTP\UTreatComponents.pas',
+  UConnectWSConst in '..\..\CONNECTWS\UConnectWSConst.pas';
 
 //
 

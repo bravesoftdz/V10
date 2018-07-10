@@ -2599,18 +2599,16 @@ begin
   end else Result := VH_GC.TOBArtEcart;
 end;
 
-function GetInfoParSouche ( SoucheG,Champ : String ) : Variant ;
-var StSQL : String;
-    QQ    : TQuery;
+function GetInfoParSouche(SoucheG, Champ : String) : Variant ;
+var
+  StSQL : String;
+  QQ    : TQuery;
 begin
-  result:='' ;
+  Result := '';
   if Champ = 'BS0_NUMMOISPIECE' then
-  begin
-    StSQL := 'SELECT ' + champ + ' FROM BSOUCHE WHERE BS0_TYPE="GES" AND BS0_SOUCHE="' + SoucheG + '"';
-  end else
-  begin
-  StSQL := 'SELECT ' + champ + ' FROM SOUCHE WHERE SH_TYPE="GES" AND SH_SOUCHE="' + SoucheG + '"';
-  end;
+    StSQL := 'SELECT ' + champ + ' FROM BSOUCHE WHERE BS0_TYPE="GES" AND BS0_SOUCHE="' + SoucheG + '"'
+  else
+    StSQL := 'SELECT ' + champ + ' FROM SOUCHE WHERE SH_TYPE="GES" AND SH_SOUCHE="' + SoucheG + '"';
   QQ    := OpenSQL(StSQl, False);
   if not QQ.eof then
   begin
@@ -2619,7 +2617,6 @@ begin
     else
       result := QQ.Findfield(Champ).AsVariant;
   end;
-
 end;
 
 end.

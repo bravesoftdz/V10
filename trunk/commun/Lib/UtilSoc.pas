@@ -113,6 +113,7 @@ procedure MajTabletteGcTypeFourn( CC : TControl );
 procedure MajParamCdeMarche( CC : TControl);
 procedure MajClassificationTMDR(CC : TControl); // CCMX-CEGID TMDR Dev N°4722
 Function VerifModeleWord ( CC : TControl ) : boolean;
+procedure VerifParamNumMensuelCptAnnuel(CC : TControl);
 procedure VerifGestYplanningGRC ( CC : TControl );
 {$ENDIF EAGLSERVER}
 {$ifdef AFFAIRE}
@@ -6581,42 +6582,41 @@ Function ChargePageSoc ( CC : TControl ) : boolean ;
 Var FF : TForm ;
     Password : String;
 BEGIN
-
-CacheFonctionS3S5(CC) ;
-GRCMasqueOptionsProjet(CC);
-ShowParamSoc(CC) ;
-BlocageDevise(CC) ;
-BlocageECC(CC) ;
-InitDivers(CC) ;
-CacheFonctionBTP(CC) ;
-MasquePourGescom(CC) ;
-ChargeFourchettes(CC,True) ;
-FF:=GetLaForm(CC) ;
-{$IFDEF GPAOLIGHT}
-	InitParamSocGPAO(FF);
-{$ENDIF GPAOLIGHT}
-if ExisteNam('SO_DEVISEPRINC',FF)   // ajout JCF
-   then DevisePrinc:=THValComboBox(GetFromNam('SO_DEVISEPRINC',FF)).value
-   else DevisePrinc:='';
-CacheFonctionsESP(CC,FF) ;
-{$ifdef AFFAIRE}
-CacheFctGIGA(CC);
-{$endif}
-{$IFDEF SAV}
-CacheFonctionsSAV(CC, FF);
-{$ENDIF SAV}
-GereParamSocPieceOrigine(FF);
-{$IFNDEF GPAO}
-CacheFonctionsNonGP(CC, FF);
-{$ENDIF GPAO}
-{$IFDEF TRESO}
-GereParamTreso(FF); {JP 04/11/04}
-{$ENDIF}
-{$IFDEF COMPTA}
-GereCompta(FF); //SG6 07/12/2004
-{$ENDIF}
-GereAnaParamAff(CC);
-{$IFDEF GESCOM}
+  CacheFonctionS3S5(CC) ;
+  GRCMasqueOptionsProjet(CC);
+  ShowParamSoc(CC) ;
+  BlocageDevise(CC) ;
+  BlocageECC(CC) ;
+  InitDivers(CC) ;
+  CacheFonctionBTP(CC) ;
+  MasquePourGescom(CC) ;
+  ChargeFourchettes(CC,True) ;
+  FF:=GetLaForm(CC) ;
+  {$IFDEF GPAOLIGHT}
+    InitParamSocGPAO(FF);
+  {$ENDIF GPAOLIGHT}
+  if ExisteNam('SO_DEVISEPRINC',FF)   // ajout JCF
+     then DevisePrinc:=THValComboBox(GetFromNam('SO_DEVISEPRINC',FF)).value
+     else DevisePrinc:='';
+  CacheFonctionsESP(CC,FF) ;
+  {$ifdef AFFAIRE}
+  CacheFctGIGA(CC);
+  {$endif}
+  {$IFDEF SAV}
+  CacheFonctionsSAV(CC, FF);
+  {$ENDIF SAV}
+  GereParamSocPieceOrigine(FF);
+  {$IFNDEF GPAO}
+  CacheFonctionsNonGP(CC, FF);
+  {$ENDIF GPAO}
+  {$IFDEF TRESO}
+  GereParamTreso(FF); {JP 04/11/04}
+  {$ENDIF}
+  {$IFDEF COMPTA}
+  GereCompta(FF); //SG6 07/12/2004
+  {$ENDIF}
+  GereAnaParamAff(CC);
+  {$IFDEF GESCOM}
   CdeOuvCacheFonctions(FF);
   // DEBUT CCMX-CEGID FQ N° GC14064 Prestation CAB visible seulement pour GESCOM
   If ExisteNam('LSCO_GRCAB',FF) Then SetVisi('LSCO_GRCAB', FF);
@@ -6644,81 +6644,80 @@ GereAnaParamAff(CC);
     end;
   end;       
 
-GereTypeTVAIntraComm(CC);
-GereContremarque(CC);
-GereFarFae(CC);
-GereElimineLigne0(CC);
-{$IFDEF GCGC}
-GereDevisePiece(CC);
-SetPlusUniteParDefaut(CC);
-SetGCGestUniteModeState(CC);
-SetGereEnseigne(CC);        // gere les enseignes
-//GP_BUG810_TP WPLANLIVR_20071008
-SetWPlanLivr(CC);           { Cache le paramétrage par utilisateur }
-{$ENDIF}
-{$IFDEF NETEXPERT}
-InitComptaRevision (CC) ;
-{$ENDIF}
-{$IFDEF CRM}
-CacheFonctionsCRM(CC, FF);
-{$ENDIF CRM}
-if ExisteNam('SO_TARIFSENREGFLUX',FF) then
-begin
-  ThMultiValComboBox(GetFromNam('SO_TARIFSENREGFLUX', FF)).Complete := True;
-  ThMultiValComboBox(GetFromNam('SO_TARIFSENREGFLUX', FF)).Aucun    := True;
-end;
-if ExisteNam('SO_TARIFSRECHTRANSFO',FF) then
-begin
-  ThMultiValComboBox(GetFromNam('SO_TARIFSRECHTRANSFO', FF)).Complete := True;
-  ThMultiValComboBox(GetFromNam('SO_TARIFSRECHTRANSFO', FF)).Aucun    := True;
-end;
-if ExisteNam('SO_CDEMARCHEAPPELACH',FF) then
-begin
-  ThMultiValComboBox(GetFromNam('SO_CDEMARCHEAPPELACH', FF)).Complete := True;
-  ThMultiValComboBox(GetFromNam('SO_CDEMARCHEAPPELACH', FF)).Aucun    := False;
-end;
-if ExisteNam('SO_MESTYPEOPER',FF) then
-  ThMultiValComboBox(GetFromNam('SO_MESTYPEOPER', FF)).Complete := True;
-if ExisteNam('SO_MESSUIVIOP',FF) then
-  ThMultiValComboBox(GetFromNam('SO_MESSUIVIOP', FF)).Complete := True;
-if ExisteNam('SO_CDEMARCHEAPPELVTE',FF) then
-begin
-  ThMultiValComboBox(GetFromNam('SO_CDEMARCHEAPPELVTE', FF)).Complete := True;
-  ThMultiValComboBox(GetFromNam('SO_CDEMARCHEAPPELVTE', FF)).Aucun    := False;
-end;
-if ExisteNam('SO_PDRTYPEPDRGA',FF) then
-begin
-  THValComboBox(GetFromNam('SO_PDRTYPEPDRGA', FF)).Plus := 'WRT_NATUREPDR="'+THValComboBox(GetFromNam('SO_PDRNATUREPDRGA', FF)).Value+'"';
-end;
-{$IFDEF STK}
-{ Indicteurs de stock }
-if ExisteNam('SO_STKPERIODETAUXR',FF) then
-begin
-  RefL:=THValComboBox(GetFromNam('SO_STKPERIODETAUXR',FF)) ;
-  RefL.Items.Insert(0, TraduireMemoire('<<Aucun>>'));
-  RefL.Values.Insert(0, '');
-end;
-{$ENDIF STK}
-{$IFDEF GCGC}
-If (ExisteNam('SO_MODULEPGISIDE',FF)) and (not VH_GC.ECSeria) then
-  SetInvi('SO_MODULEPGISIDE',FF);
-{$ENDIF GCGC}
+  GereTypeTVAIntraComm(CC);
+  GereContremarque(CC);
+  GereFarFae(CC);
+  GereElimineLigne0(CC);
+  {$IFDEF GCGC}
+  GereDevisePiece(CC);
+  SetPlusUniteParDefaut(CC);
+  SetGCGestUniteModeState(CC);
+  SetGereEnseigne(CC);        // gere les enseignes
+  //GP_BUG810_TP WPLANLIVR_20071008
+  SetWPlanLivr(CC);           { Cache le paramétrage par utilisateur }
+  {$ENDIF}
+  {$IFDEF NETEXPERT}
+  InitComptaRevision (CC) ;
+  {$ENDIF}
+  {$IFDEF CRM}
+  CacheFonctionsCRM(CC, FF);
+  {$ENDIF CRM}
+  if ExisteNam('SO_TARIFSENREGFLUX',FF) then
+  begin
+    ThMultiValComboBox(GetFromNam('SO_TARIFSENREGFLUX', FF)).Complete := True;
+    ThMultiValComboBox(GetFromNam('SO_TARIFSENREGFLUX', FF)).Aucun    := True;
+  end;
+  if ExisteNam('SO_TARIFSRECHTRANSFO',FF) then
+  begin
+    ThMultiValComboBox(GetFromNam('SO_TARIFSRECHTRANSFO', FF)).Complete := True;
+    ThMultiValComboBox(GetFromNam('SO_TARIFSRECHTRANSFO', FF)).Aucun    := True;
+  end;
+  if ExisteNam('SO_CDEMARCHEAPPELACH',FF) then
+  begin
+    ThMultiValComboBox(GetFromNam('SO_CDEMARCHEAPPELACH', FF)).Complete := True;
+    ThMultiValComboBox(GetFromNam('SO_CDEMARCHEAPPELACH', FF)).Aucun    := False;
+  end;
+  if ExisteNam('SO_MESTYPEOPER',FF) then
+    ThMultiValComboBox(GetFromNam('SO_MESTYPEOPER', FF)).Complete := True;
+  if ExisteNam('SO_MESSUIVIOP',FF) then
+    ThMultiValComboBox(GetFromNam('SO_MESSUIVIOP', FF)).Complete := True;
+  if ExisteNam('SO_CDEMARCHEAPPELVTE',FF) then
+  begin
+    ThMultiValComboBox(GetFromNam('SO_CDEMARCHEAPPELVTE', FF)).Complete := True;
+    ThMultiValComboBox(GetFromNam('SO_CDEMARCHEAPPELVTE', FF)).Aucun    := False;
+  end;
+  if ExisteNam('SO_PDRTYPEPDRGA',FF) then
+  begin
+    THValComboBox(GetFromNam('SO_PDRTYPEPDRGA', FF)).Plus := 'WRT_NATUREPDR="'+THValComboBox(GetFromNam('SO_PDRNATUREPDRGA', FF)).Value+'"';
+  end;
+  {$IFDEF STK}
+  { Indicteurs de stock }
+  if ExisteNam('SO_STKPERIODETAUXR',FF) then
+  begin
+    RefL:=THValComboBox(GetFromNam('SO_STKPERIODETAUXR',FF)) ;
+    RefL.Items.Insert(0, TraduireMemoire('<<Aucun>>'));
+    RefL.Values.Insert(0, '');
+  end;
+  {$ENDIF STK}
+  {$IFDEF GCGC}
+  If (ExisteNam('SO_MODULEPGISIDE',FF)) and (not VH_GC.ECSeria) then
+    SetInvi('SO_MODULEPGISIDE',FF);
+  {$ENDIF GCGC}
 
-  //C.B 15/05/2007
-  planningIntegre(FF);
-if ExisteNam('SO_SOLDEPIECEPREC',FF)  then
-    GereSoldePiecePrec(TControl(GetFromNam('SO_SOLDEPIECEPREC',FF)));
-// GC_20071016_GM_GC15422_DEBUT
-if ExisteNam('SO_NATURECTRLCLOTURE',FF) then
-begin
-  ThMultiValComboBox(GetFromNam('SO_NATURECTRLCLOTURE', FF)).Complete := false;
-  ThMultiValComboBox(GetFromNam('SO_NATURECTRLCLOTURE', FF)).Aucun    := True
-end;
-// GC_20071016_GM_GC15422_FIN
-{ GC_JTR_GC15601_Début }
-GereMdpMargeMini(CC);
-{ GC_JTR_GC15601_Fin }
-Result:=True ;
+    //C.B 15/05/2007
+    planningIntegre(FF);
+  if ExisteNam('SO_SOLDEPIECEPREC',FF)  then
+      GereSoldePiecePrec(TControl(GetFromNam('SO_SOLDEPIECEPREC',FF)));
+  // GC_20071016_GM_GC15422_DEBUT
+  if ExisteNam('SO_NATURECTRLCLOTURE',FF) then
+  begin
+    ThMultiValComboBox(GetFromNam('SO_NATURECTRLCLOTURE', FF)).Complete := false;
+    ThMultiValComboBox(GetFromNam('SO_NATURECTRLCLOTURE', FF)).Aucun    := True
+  end;
+  // GC_20071016_GM_GC15422_FIN
+  GereMdpMargeMini(CC);
+  VerifParamNumMensuelCptAnnuel(CC); // Test si SO_NUMENSUELCPTANNUEL décoché et paramétrage actif dans les souches
+  Result:=True ;
 END ;
 {$ENDIF EAGLSERVER}
 
@@ -8100,10 +8099,6 @@ BEGIN
     if Not VerifPGIIMMO(CC) then Exit ;
   {$ENDIF PGIIMMO}
   ModifDevPrinc(CC);
-  //§{$IFDEF GCGC}
-  //if Not VerifExisteCptsGC(CC) then Exit ;
-  //GCChangeGestUniteMode(CC);
-  //{$ENDIF GCGC}
   {$IFDEF AFFAIRE}
   if Not VerifAFDAtes(CC) then Exit ;
   if Not VerifAFApprec(CC) then Exit ;
@@ -8128,7 +8123,7 @@ BEGIN
     else
       Exit;
   {$ENDIF ACCESCBN}
-{$IFDEF ACCESSCM}
+  {$IFDEF ACCESSCM}
   if not VerifParamGeneraux(CC) then Exit;
   if not VerifParamCalendHoraire(CC) then Exit;
   if not VerifImportExportGPAO(CC) then Exit;
@@ -8142,35 +8137,35 @@ BEGIN
   if not VerifParamSysteme(CC) then Exit;
   if not VerifGestionDesZones(CC) then Exit;
   if not VerifProfilGroupage(CC) then Exit;
-{$ENDIF ACCESSCM}
+  {$ENDIF ACCESSCM}
 
-  if Not VerifAfActivite(CC) then Exit ;   //mcd 12/09/2006
+  if Not VerifAfActivite(CC) then Exit ;   
 //PCH 11-2005 Personnalisation paramsoc
-{$IFDEF GIGI}
-  if Not VerifAfPerso(CC) then Exit ;
-{$ENDIF GIGI}
-                            
-{$IFNDEF EAGLSERVER}
+  {$IFDEF GIGI}
+    if Not VerifAfPerso(CC) then Exit ;
+  {$ENDIF GIGI}
+
+  {$IFNDEF EAGLSERVER}
   // BDU - 30/01/07 - Contrôle des heures d'affichage des plages
   ControleHeure('SO_AFHEUREDEBUTJOUR', TForm(CC.Owner));
   ControleHeure('SO_AFHEUREFINJOUR', TForm(CC.Owner));
   ControleHeure('SO_AFPMFIN', TForm(CC.Owner));
-{$ENDIF EAGLSERVER}
+  {$ENDIF EAGLSERVER}
 
-GereAnaParamAff(CC);
-GereTypeTVAIntraComm(CC);
-GereContremarque(CC);
-GereFarFae(CC, true);
-GereDevisePiece(CC);
-{$IFNDEF EAGLSERVER}
-GereElimineLigne0(CC);
-{$ENDIF EAGLSERVER}
-{ GC_JTR_GC15601_Début }
-GereMdpMargeMini(CC);
-{ GC_JTR_GC15601_Fin }
-{$IFDEF CHR}
-HRVerifZones(CC);
-{$ENDIF CHR}
+  GereAnaParamAff(CC);
+  GereTypeTVAIntraComm(CC);
+  GereContremarque(CC);
+  GereFarFae(CC, true);
+  GereDevisePiece(CC);
+  {$IFNDEF EAGLSERVER}
+  GereElimineLigne0(CC);
+  {$ENDIF EAGLSERVER}
+  { GC_JTR_GC15601_Début }
+  GereMdpMargeMini(CC);
+  { GC_JTR_GC15601_Fin }
+  {$IFDEF CHR}
+  HRVerifZones(CC);
+  {$ENDIF CHR}
   {$IFDEF TRESO}
   if not VerifTreso(GetLaForm(CC)) then Exit; {JP 04/11/04}
   {$ENDIF TRESO}
@@ -9252,6 +9247,29 @@ begin
     Result:=False;
     Exit;
     end;
+  end;
+end;
+{$ENDIF EAGLSERVER}
+
+{$IFNDEF EAGLSERVER}
+procedure VerifParamNumMensuelCptAnnuel(CC : TControl);
+Var
+  FF      : TForm ;
+  ParamMA : THCheckBox;
+  Sql     : string;
+begin
+  FF      := GetLaForm(CC);
+  ParamMA := THCheckBox(GetFromNam('SO_NUMMENSUELCPTANNUEL', FF));
+  if assigned(ParamMA) then
+  begin
+    Sql := 'SELECT 1'
+         + ' FROM SOUCHE'
+         + ' JOIN BSOUCHE ON BS0_ENTITY = SH_ENTITY AND BS0_TYPE = SH_TYPE AND BS0_SOUCHE = SH_SOUCHE AND BS0_NUMMOISPIECE = "X"'
+         + ' WHERE SH_SOUCHEEXO = "X"'; 
+    if (GetParamSocSecur('SO_NUMMENSUELCPTANNUEL', False)) and (ExisteSql(Sql)) then
+      ParamMA.Enabled := False
+    else
+      ParamMA.Enabled := True;
   end;
 end;
 {$ENDIF EAGLSERVER}
