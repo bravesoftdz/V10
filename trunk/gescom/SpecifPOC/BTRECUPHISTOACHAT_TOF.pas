@@ -64,6 +64,7 @@ uses
   , Ent1
   , ed_Tools
   , FormsName
+  , DateUtils
   ;
 
 function BTLanceFiche_POCRecupHistoAchat(Nat, Cod : String ; Range,Lequel,Argument : string) : string;
@@ -158,8 +159,10 @@ var
   PathFileName         : string;              
   NewPathFileName      : string;              
   ValDate              : TDateTime;
+  StartDate            : TDateTime;
+  EndDate              : TDateTime;
   ValUPrice            : double;
-  ValQty               : integer;
+  ValQty               : double;
   LinesQty             : integer;
   Cpt                  : integer;   
   LinesCpt             : integer;
@@ -202,7 +205,7 @@ const
     begin
       Sql := 'SELECT T_TIERS, YTC_TEXTELIBRE1'
            + ' FROM TIERS'
-           + ' JOIN TIERSCOMPL ON YTC_TIERS = T_TIERS'
+           + ' LEFT JOIN TIERSCOMPL ON YTC_TIERS = T_TIERS'
            + ' WHERE T_TIERS = "' + ThirdCode + '"';
       Qry := OpenSQL(Sql, True);
       try
@@ -224,7 +227,7 @@ const
       end;
     end else
     begin
-      if Tobt.GetSTring('FIELD1') = WSCDS_EmptyValue then // YTC_TEXTELIBRE1 est vide
+      if (Tobt.GetSTring('FIELD1') = WSCDS_EmptyValue) or (Tobt.GetSTring('FIELD1') = '') then // YTC_TEXTELIBRE1 est vide
         Result := 2
       else if TobT.GetBoolean('FINDIT') then              // Le tiers existe
         Result := 0
@@ -360,7 +363,11 @@ const
   var
     ItemCode : string;
   begin
-    Result := IsThirdExist(ValThird);    // 1 : Tiers inexistant, 2 : Pas d'article par défaut dans le tiers
+    Result := 0;
+    if ValThird = '' then // Le tiers est vide
+      Result := 7;
+    if Result = 0 then
+      Result := IsThirdExist(ValThird);    // 1 : Tiers inexistant, 2 : Pas d'article par défaut dans le tiers
     if Result = 0 then
     begin
       if not IsCaseExist(ValAff3) then   // 3 : Affaire inexistante
@@ -442,7 +449,7 @@ const
     ValFLevel2 := GetExcelText(CurrentTab, LinesCpt, cnFLevel2);          // GL_FAMILLENIV2
     ValTemp    := GetExcelText(CurrentTab, LinesCpt, cnQty);              // GL_QTEFACT
     ValTemp    := Tools.iif(ValTemp = '', '1', ValTemp);
-    ValQty     := StrToInt(ValTemp);
+    ValQty     := StrToFloat(ValTemp);
     ValTemp    := GetExcelText(CurrentTab, LinesCpt, cnDate);             // xx_DATEPIECE
     ValTemp    := Tools.iif(ValTemp = '', DateToStr(IDate1900), ValTemp);
     ValDate    := StrToDate(ValTemp);
@@ -472,97 +479,100 @@ const
   end;
 
 begin
+  StartDate := Now;
   Result    := True;
-    TslReport := TStringList.Create;
+  TslReport := TStringList.Create;
+  try
+    TobCache := TOB.Create('_CACHEAFF', nil, -1);
     try
-      TobCache := TOB.Create('_CACHEAFF', nil, -1);
+      TobGP := TOB.Create('_DATA', nil, -1);
       try
-        TobGP := TOB.Create('_DATA', nil, -1);
+        AddGPSuppFields;
+        OpenExcel(True, WinExcel, NewInst);
+        DocQty := 0;
         try
-          AddGPSuppFields;
-          OpenExcel(True, WinExcel, NewInst);
-          DocQty := 0;
+          LastDocNumber        := '';
+          LastDocNumberOnError := '';
+          Cpt                  := 0;
+          LinesQty             := 0;
+          LinesCpt             := 6;
+          WorkTab              := OpenWorkBook(FicImport.Text, WinExcel);
+          CurrentTab           := SelectSheet(WorkTab, TabName);
+          InitMoveProgressForm(nil, 'Ouverture du fichier en cours.', Ecran.Caption, LinesQty, False, True);
           try
-            LastDocNumber        := '';
-            LastDocNumberOnError := '';
-            Cpt                  := 0;
-            LinesQty             := 0;
-            LinesCpt             := 6;
-            WorkTab              := OpenWorkBook(FicImport.Text, WinExcel);
-            CurrentTab           := SelectSheet(WorkTab, TabName);
-            InitMoveProgressForm(nil, 'Ouverture du fichier en cours.', Ecran.Caption, LinesQty, False, True);
-            try
-              while GetExcelText(CurrentTab, LinesCpt, cnIntRef) <> '' do
+            while GetExcelText(CurrentTab, LinesCpt, cnIntRef) <> '' do
+            begin
+              inc(LinesQty); // Nbre de ligne total
+              if LastDocNumber <> GetExcelText(CurrentTab, LinesCpt, cnIntRef) then // Nbre de pièce total
               begin
-                inc(LinesQty); // Nbre de ligne total
-                if LastDocNumber <> GetExcelText(CurrentTab, LinesCpt, cnIntRef) then // Nbre de pièce total
-                begin
-                  inc(DocQty);
-                  LastDocNumber := GetExcelText(CurrentTab, LinesCpt, cnIntRef);
-                end;
-                inc(LinesCpt);
+                inc(DocQty);
+                LastDocNumber := GetExcelText(CurrentTab, LinesCpt, cnIntRef);
               end;
-            finally
-              LinesCpt := 6;
-              FiniMoveProgressForm;
-            end;
-            InitMoveProgressForm(nil, 'Traitement en cours.', Ecran.Caption, LinesQty, False, True);
-            try
-              while GetExcelText(CurrentTab, LinesCpt, cnIntRef) <> '' do
-              begin
-                inc(Cpt);
-                MoveCurProgressForm(Format('%s/%s', [IntToStr(Cpt), IntToStr(LinesQty)]));
-                SetTempValues;
-                NumError := IsLineValuesOk;
-                if (NumError = 0) and (ValIntRef <> LastDocNumberOnError) then
-                begin
-                  if ValIntRef <> LastDocNumber then
-                    AddDoc
-                  else
-                    AddLine;
-                end else
-                begin
-                  if ValIntRef <> LastDocNumber then // La ligne en erreur est peut être différente de la pièce précédente
-                    AddDoc;
-                  LastDocNumberOnError := ValIntRef;
-                  EmptyTobGP;
-                  Msg := Format('Pièce %s non intégrée.', [LastDocNumberOnError]);
-                  case NumError of
-                    0 : TslReport.Add(Msg);
-                    1 : TslReport.Add(Format('%s Le tiers %s n''existe pas.'                      , [Msg, ValThird]));
-                    2 : TslReport.Add(Format('%s Le tiers %s n''a pas d''article générique.'      , [Msg, ValThird]));
-                    3 : TslReport.Add(Format('%s Le numéro de chantier %s est inexistant.'        , [Msg, ValAff3]));
-                    4 : TslReport.Add(Format('%s L''article générique du tiers %s est inexistant.', [Msg, ValThird]));
-                    5 : TslReport.Add(Format('%s La date de pièce %s n''est pas valide.'          , [Msg, DateToStr(ValDate)]));
-                    6 : TslReport.Add(Format('%s La famille %s est inexistante.'                  , [Msg, ValFLevel2]));
-                  end;
-                end;
-                inc(LinesCpt);
-              end;
-              AddDoc;
-            finally
-              FiniMoveProgressForm;
+              inc(LinesCpt);
             end;
           finally
-            ExcelClose(WinExcel);
-            PathFileName    := FicImport.Text;
-            NewPathFileName := ExtractFilePath(PathFileName) + 'IntégréLe_' + FormatDateTime('yyymmdd_hhmm', Now) + '_' + ExtractFileName(PathFileName);
-            RenameFile(PathFileName, NewPathFileName);
-            MAJJnalEvent('RDD', 'OK', Ecran.Caption, Format('Depuis le fichier %s%sRenommé en %s%sNombre de pièces : %s%s%s%s'
-                                                            , [PathFileName, #13#10, NewPathFileName, #13#10, IntToStr(DocQty), #13#10, #13#10, TslReport.Text]));
-            PGIBox('Traitement teminé.');
-            FicImport.Text := '';
-            TForm(Ecran).ModalResult := 0;
+            LinesCpt := 6;
+            FiniMoveProgressForm;
+          end;
+          InitMoveProgressForm(nil, 'Traitement en cours.', Ecran.Caption, LinesQty, False, True);
+          try
+            while GetExcelText(CurrentTab, LinesCpt, cnIntRef) <> '' do
+            begin
+              inc(Cpt);
+              MoveCurProgressForm(Format('%s/%s', [IntToStr(Cpt), IntToStr(LinesQty)]));
+              SetTempValues;
+              NumError := IsLineValuesOk;
+              if (NumError = 0) and (ValIntRef <> LastDocNumberOnError) then
+              begin
+                if ValIntRef <> LastDocNumber then
+                  AddDoc
+                else
+                  AddLine;
+              end else
+              begin
+                if ValIntRef <> LastDocNumber then // La ligne en erreur est peut être différente de la pièce précédente
+                  AddDoc;
+                LastDocNumberOnError := ValIntRef;
+                EmptyTobGP;
+                Msg := Format('Pièce %s non intégrée.', [LastDocNumberOnError]);
+                case NumError of
+                  0 : TslReport.Add(Msg);
+                  1 : TslReport.Add(Format('%s Le tiers %s n''existe pas.'                      , [Msg, ValThird]));
+                  2 : TslReport.Add(Format('%s Le tiers %s n''a pas d''article générique.'      , [Msg, ValThird]));
+                  3 : TslReport.Add(Format('%s Le numéro de chantier %s est inexistant.'        , [Msg, ValAff3]));
+                  4 : TslReport.Add(Format('%s L''article générique du tiers %s est inexistant.', [Msg, ValThird]));
+                  5 : TslReport.Add(Format('%s La date de pièce %s n''est pas valide.'          , [Msg, DateToStr(ValDate)]));
+                  6 : TslReport.Add(Format('%s La famille %s est inexistante.'                  , [Msg, ValFLevel2]));
+                  7 : TslReport.Add(Format('%s Le tiers est vide.'                              , [Msg, ValThird]));
+                end;
+              end;
+              inc(LinesCpt);
+            end;
+            AddDoc;
+          finally
+            FiniMoveProgressForm;
           end;
         finally
-          FreeAndNil(TobGP);
+          ExcelClose(WinExcel);
+          PathFileName    := FicImport.Text;
+          NewPathFileName := ExtractFilePath(PathFileName) + 'IntégréLe_' + FormatDateTime('yyymmdd_hhmm', Now) + '_' + ExtractFileName(PathFileName);
+          RenameFile(PathFileName, NewPathFileName);
+          EndDate := Now;
+          MAJJnalEvent('RDD', 'OK', Ecran.Caption, Format('Début du traitement : %s%sFin du traitement : %s%sDepuis le fichier %s%sRenommé en %s%sNombre de pièces : %s%s%s%s'
+                                                          , [DatetimeToStr(StartDate), #13#10, DatetimeToStr(EndDate), #13#10, PathFileName, #13#10, NewPathFileName, #13#10, IntToStr(DocQty), #13#10, #13#10, TslReport.Text]));
+          PGIBox('Traitement teminé.');
+          FicImport.Text := '';
+          TForm(Ecran).ModalResult := 0;
         end;
       finally
-        FreeAndNil(TobCache);
+        FreeAndNil(TobGP);
       end;
     finally
-      FreeAndNil(TslReport);
+      FreeAndNil(TobCache);
     end;
+  finally
+    FreeAndNil(TslReport);
+  end;
 end;
 
 Initialization
