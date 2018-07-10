@@ -1113,8 +1113,10 @@ uses
   BTVENTILCOLL_TOF in '..\LibBTP\BTVENTILCOLL_TOF.PAS',
   BTVENTILCOLLMUL_TOF in '..\LibBTP\BTVENTILCOLLMUL_TOF.PAS',
   UTreatComponents in '..\LibBTP\UTreatComponents.pas',
-  UConnectWSConst in '..\..\CONNECTWS\UConnectWSConst.pas';
-
+  UConnectWSConst in '..\..\CONNECTWS\UConnectWSConst.pas',
+  UBimetre in '..\BIM\UBimetre.pas',
+  BTBIMIMPORT_TOF in '..\BIM\BTBIMIMPORT_TOF.PAS',
+  BTBIMSELAFF_TOF in '..\BIM\BTBIMSELAFF_TOF.PAS';
 //
 
 // FIN NEW

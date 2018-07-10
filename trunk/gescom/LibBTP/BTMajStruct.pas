@@ -2846,6 +2846,11 @@ begin
     ConstitueTableSoucheBTP;
   end;
 
+  if VersionBaseDest < '998.ZZZZ6' then
+  begin
+    ExecuteSQL('DELETE FROM MENU WHERE MN_1=281');
+  end;
+
   ExecuteSQL('UPDATE MENU SET MN_VERSIONDEV="-" WHERE MN_VERSIONDEV="X"');
 end;
 

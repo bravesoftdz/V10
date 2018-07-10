@@ -2144,6 +2144,19 @@ Cegid,False,False)};
     {  Référentiel }
     280061 : BLanceFiche_RGPDReferentiel('BTP', frm_RGPDRepository , '', '', OpenForm.SetWindowCaption(-280060, Num)); // Référentiel
     // --
+    // --- BIM METRE ---
+    281110 : BEGIN
+               V_Pgi.ZoomOle := True ;
+               AGLLanceFiche ('BTP','BTBIMIMPORT','','','');
+               V_Pgi.ZoomOle := false ;
+               retourforce := True;
+             END;
+    281210 : BEGIN
+               V_Pgi.ZoomOle := True ;
+               AGLLanceFiche ('BTP','BTBIMEXPORT','','','');
+               V_Pgi.ZoomOle := false ;
+               retourforce := True;
+             END;
     else HShowMessage('2;?caption?;'+TraduireMemoire('Fonction non disponible : ')+';W;O;O;O;',TitreHalley,IntToStr(Num)) ;
      end ;
 END ;
@@ -2918,7 +2931,7 @@ begin
 	FMenuG.SetModules([145,325,327,283,146,150,147,92,284,304,323,149,160,320,148,60],[24,77,21,74,121,124,41,77,127,73,9,110,69,99,59,34,49]) ;
 end else
 begin
-	FMenuG.SetModules([145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,148,280,60],[24,77,21,74,72,121,124,41,77,99,127,73,9,110,45,69,99,34,78,49]) ;
+	FMenuG.SetModules([145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,281,148,280,60],[24,77,21,74,72,121,124,41,77,99,127,73,9,110,45,69,99,89,34,78,49]) ;
 end;
 //V_PGI.FUserGrp
 V_PGI.NbColModuleButtons:=2 ; V_PGI.NbRowModuleButtons:=9 ;
