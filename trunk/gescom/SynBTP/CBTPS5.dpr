@@ -1113,7 +1113,8 @@ uses
   BTVENTILCOLL_TOF in '..\LibBTP\BTVENTILCOLL_TOF.PAS',
   BTVENTILCOLLMUL_TOF in '..\LibBTP\BTVENTILCOLLMUL_TOF.PAS',
   UTreatComponents in '..\LibBTP\UTreatComponents.pas',
-  UConnectWSConst in '..\..\CONNECTWS\UConnectWSConst.pas';
+  UConnectWSConst in '..\..\CONNECTWS\UConnectWSConst.pas',
+  CommonTools in '..\..\commun\Lib\CommonTools.pas';
 
 //
 

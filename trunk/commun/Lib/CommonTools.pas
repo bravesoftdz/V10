@@ -90,6 +90,7 @@ type
     class function CompressFile(FullPath : string) : string;
     class procedure FileCut(FullPath : string; MaxSizeBytes : integer; TSLResult : TStringList; KeepOriginFile : boolean=True);
     class function GetKoFromMo(Mo : integer) : integer;
+    class function IsRecordableDocument(SearchValue : string; IsDocType : boolean{$IF defined(APPSRV)}; ServerName, DBName : string{$IFEND !APPSRV}) : boolean;
     {$IF not defined(APPSRV)}
     class procedure TobToTStringList(TobOrig : TOB; TSlResult : TStringList; Level : Integer=1);
     {$IFEND !APPSRV}
@@ -110,6 +111,7 @@ uses
   {$IF not defined(APPSRV)}
   , hCtrls
   , hEnt1
+  , EntGC
   {$IFEND !APPSRV}
   ;
 
@@ -990,6 +992,70 @@ end;
 class function Tools.GetKoFromMo(Mo : integer) : Integer;
 begin
   Result := Mo * 1048576;
+end;
+
+class function Tools.IsRecordableDocument(SearchValue : string; IsDocType : boolean{$IF defined(APPSRV)}; ServerName, DBName : string{$IFEND !APPSRV}) : boolean;
+
+  function GetSep : string;
+  begin
+    {$IF defined(APPSRV)}
+    Result := '''';
+    {$ELSE !APPSRV}
+    Result := '"';
+    {$IFEND !APPSRV}
+  end;
+
+  function GetSql(Prefix : string) : string;
+  begin
+    Result := Format('SELECT %s_TYPEECRCPTA FROM %s WHERE %s = %s%s%s AND %s_TYPEECRCPTA <> %s%s AND %s_TYPEECRCPTA <> %sRIE%s'
+                     , [Prefix
+                        , Tools.iif(Prefix = 'GPC', 'PARPIECECOMPL', 'PARPIECE')
+                        , Prefix + Tools.iif(IsDocType, '_NATUREPIECEG', '_SOUCHE')
+                        , GetSep
+                        , SearchValue
+                        , GetSep
+                        , Prefix
+                        , GetSep
+                        , GetSep
+                        , Prefix
+                        , GetSep
+                        , GetSep
+                       ]);
+  end;
+
+  function GetAccType(Prefix : string) : boolean;
+  {$IF defined(APPSRV)}
+  var
+    lAdoQry  : AdoQry;
+  {$IFEND !APPSRV}
+  begin
+    {$IF defined(APPSRV)}
+    lAdoQry := AdoQry.Create;
+    try
+      lAdoQry.TSLResult.Clear;
+      lAdoQry.RecordCount := 0;
+      lAdoQry.ServerName  := ServerName;
+      lAdoQry.DBName      := DBName;
+      lAdoQry.FieldsList  := Prefix + '_TYPEECRCPTA';
+      lAdoQry.Request     := GetSql(Prefix);
+      lAdoQry.SingleTableSelect;
+      Result := (lAdoQry.RecordCount > 0);
+    finally
+      lAdoQry.Free;
+    end;
+    {$ELSE !APPSRV}
+    Result := ExisteSql(GetSql(Prefix));
+    {$IFEND !APPSRV}
+  end;
+
+begin
+  if SearchValue <> '' then
+  begin
+    Result := GetAccType('GPC');
+    if not Result then
+      Result := GetAccType('GPP');
+  end else
+    Result := False;
 end;
 
 end.
