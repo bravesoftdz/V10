@@ -27,6 +27,7 @@ function  FindTOBArtRow(TOBPiece, TOBArticles: TOB; ARow: integer): TOB;
 function  FindTOBCataRow(TOBPiece, TOBCatalogu: TOB; ARow: integer): TOB;
 function  FindTOBArtSais(TOBArticles: TOB; RefSais: string): TOB;
 function  FindTOBCataSais(TOBCatalogu: TOB; RefCata, RefFour: string): TOB;
+function  findTobArt (Article : string; TOBARticles : TOB) : TOB;
 function  ArticleAutorise(TOBPiece, TOBArticles: TOB; NaturePiece: string; ARow: integer): boolean;
 Function  ArticleEnStock (TOBPiece, TOBArticles: TOB; NaturePiece: string; ARow: integer) : boolean;
 function  ISLigneGerableCC(TOBPiece, TOBArticles: TOB; GereLot, GereSerie: boolean; Arow: integer): boolean;
@@ -130,6 +131,29 @@ begin
   if (Trim(RefCata) = '') or (Trim(RefFour) = '') then Exit;
   Result := TOBCatalogu.FindFirst(['GCA_REFERENCE', 'GCA_TIERS'], [RefCata, RefFour], False);
 end;
+
+function findTobArt (Article : string; TOBARticles : TOB) : TOB;
+var TOBA : TOB;
+    QQ : Tquery;
+begin
+  result := nil;
+  TOBA := TOBArticles.FindFirst (['GA_ARTICLE'],[Article],true);
+  if TOBA = nil then
+  begin
+    QQ := OpenSql ('SELECT A.*,AC.*,N.BNP_TYPERESSOURCE FROM ARTICLE A '+
+    							 'LEFT JOIN NATUREPREST N ON N.BNP_NATUREPRES=A.GA_NATUREPRES '+
+    							 'LEFT JOIN ARTICLECOMPL AC ON AC.GA2_ARTICLE=A.GA_ARTICLE WHERE A.GA_ARTICLE="'+Article+'"',true,-1, '', True);
+    if not QQ.eof then
+    begin
+      TOBA := TOB.create ('ARTICLE',TOBArticles,-1);
+      TOBA.SelectDB ('',QQ);
+      InitChampsSupArticle (TOBA);
+      result := TOBA;
+    end;
+    ferme (QQ);
+  end else result := TOBA;
+end;
+
 
 function FindTOBArtSais(TOBArticles: TOB; RefSais: string): TOB;
 var TOBArt: TOB;

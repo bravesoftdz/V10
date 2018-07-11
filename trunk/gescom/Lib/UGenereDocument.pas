@@ -85,6 +85,7 @@ type
     procedure ConstituePieceFromBast(TOBBAST : TOB; DateFac : TDateTime);
     procedure ChargeTiers(NatureAuxi, Tiers: string);
     function ChargeTOBA(RefUnique, stDepot: string): TOB;
+
   public
     constructor create; overload;
     destructor destroy; override;
@@ -1420,7 +1421,7 @@ begin
     TOBPiece.Dupliquer(TT,false,true);
     TOBPiece.SetDouble('GP_ESCOMPTE',0); // afin d'éviter de récupérer le taux d'escompte de la fiche fournisseur
     TOBPiece.SetDateTime('GP_DATEPIECE',DateFac);
-    TOBPiece.SetDateTime('GP_DATECREATION',TOBBAST.GetDateTime('BM4_DATEVALID'));
+    TOBPiece.SetDateTime('GP_DATECREATION',V_PGI.DateEntree);
     TOBPiece.SetString('GP_REFEXTERNE',TOBBAST.GetString('BM3_NUMERODOC'));
     // Gestion pour la reprise d'antériorité
     TOBPiece.SetString('GP_HORSCOMPTA',TOBBAST.GetString('BM4_HORSCOMPTA'));
