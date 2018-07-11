@@ -786,6 +786,7 @@ var Q       : Tquery;
 		Indice  : integer;
     Sql     : string;
     where   : string;
+    TT : TOB;
 begin
 
   Sql := 'SELECT *,'+
@@ -803,7 +804,12 @@ begin
 
   for Indice := 0 to TOBSSTRAIT.detail.count -1 do
   begin
-  	AddChampsSupTrait (TOBSSTRAIT.detail[Indice]);
+    TT := TOBSSTRAIT.detail[Indice];
+    if VH_GC.BTCODESPECIF = '001' then
+    begin
+      TT.SetBoolean('BPI_AUTOLIQUID',(Pos(TT.GetString('BPI_FAMILLETAXE'),GetParamSocSecur('SO_CODETVALIQUIDST',''))>0));
+    end;
+  	AddChampsSupTrait (TT);
   end;
   Ferme(Q);
 end;
