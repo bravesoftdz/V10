@@ -3169,6 +3169,7 @@ var Fournisseur,ModePaie,CodeMarche : string;
 		Indice,IndiceIni : integer;
     TOBParam,TOBL : TOB;
     Acol,Arow : integer;
+    First : boolean;
 begin
   fDEv := TFFacture(FF).DEV;
   fTOBligneArecalc.ClearDetail;
@@ -3176,10 +3177,16 @@ begin
 	if GS.nbSelected = 0 then BEGIN PGiInfo('Aucune ligne sélectionnée');exit; END;
   Arow := GS.row;
   Acol := GS.col;
+  First := true;
   for Indice := 0 to GS.RowCount -1 do
   begin
     if GS.IsSelected(Indice) then
     begin
+      if FIrst then
+      begin
+        Arow := Indice;
+        FIrst := false;
+      end;
       TOBL := TOBpiece.detail[Indice-1];
     end;
   end;
@@ -3245,7 +3252,7 @@ begin
 
   end;
 	TFFacture(FF).AnnuleSelection;
-  TFFacture(FF).GoToLigne(Acol,Arow); 
+  TFFacture(FF).GoToLigne(Arow,Acol); 
 end;
 
 procedure TPieceCotrait.Setpopup(WithCotrait, WithSousTrait: boolean);
