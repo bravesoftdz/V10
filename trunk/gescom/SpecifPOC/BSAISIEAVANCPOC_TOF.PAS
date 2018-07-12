@@ -226,7 +226,8 @@ Type
     procedure CalcQteCumul(TOBL: TOB);
     procedure CalculePURAD (TOBL : TOB);
     procedure ReajusteRegion(Arect: Trect);
-    function FindLigne(TheType, CurrentPhase, CodeAnal, CodeMarche: string): TOB;
+    function FindLigne(TheType, CurrentPhase, CodeAnal, CodeMarche: string; NumOrdre : integer): TOB;
+    function FindLigneAVC(TheType, CurrentPhase, CodeAnal, CodeMarche: string): TOB;
     function FindEmplacementLigne(TheType, CurrentPhase: string): TOB;
     procedure CalculSousTraitance;
     procedure CalculeAvancCorrigeST(TOBL: TOB);
@@ -657,14 +658,23 @@ begin
 end;
 
 
-
-function TOF_BSAISIEAVANCPOC.FindLigne (TheType,CurrentPhase,CodeAnal,CodeMarche : string) : TOB;
+function TOF_BSAISIEAVANCPOC.FindLigneAVC(TheType, CurrentPhase, CodeAnal, CodeMarche: string): TOB;
 begin
   Result := nil;
   if TheType = '000' then Result := TOBPP.FindFirst(['BM8_PHASETRA','BM8_FAMILLENIV2'],[CurrentPhase,CodeAnal],true)
   else if TheType = '001' then Result := TOBMOI.FindFirst(['BM8_PHASETRA','BM8_FAMILLENIV2'],[CurrentPhase,CodeAnal],true)
   else if TheType = '002' then Result := TOBFI.FindFirst(['BM8_PHASETRA','BM8_FAMILLENIV2'],[CurrentPhase,CodeAnal],true)
   else if TheType = '003' then Result := TOBST.FindFirst(['BM8_PHASETRA','BM8_CODEMARCHE'],[CurrentPhase,CodeMarche],true);
+end;
+
+
+function TOF_BSAISIEAVANCPOC.FindLigne (TheType,CurrentPhase,CodeAnal,CodeMarche : string; NumOrdre : integer) : TOB;
+begin
+  Result := nil;
+  if TheType = '000' then Result := TOBPP.FindFirst(['BM8_PHASETRA','BM8_FAMILLENIV2'],[CurrentPhase,CodeAnal],true)
+  else if TheType = '001' then Result := TOBMOI.FindFirst(['BM8_PHASETRA','BM8_FAMILLENIV2'],[CurrentPhase,CodeAnal],true)
+  else if TheType = '002' then Result := TOBFI.FindFirst(['BM8_PHASETRA','BM8_FAMILLENIV2'],[CurrentPhase,CodeAnal],true)
+  else if TheType = '003' then Result := TOBST.FindFirst(['BM8_PHASETRA','BM8_NUMORDRE'],[CurrentPhase,NumOrdre],true);
 end;
 
 function TOF_BSAISIEAVANCPOC.FindLigneConso (TheType,CurrentPhase,CodeAnal,CodeMarche : string) : TOB;
@@ -807,8 +817,13 @@ procedure TOF_BSAISIEAVANCPOC.ConstitueLesTOBS (TTS,TTD,TTL,TTOP : TOB);
       Index : Integer;
   begin
 
-    if TheType <> '003' then TF := FindLigne(TheType,CurrentPhase,TL.GetString('GL_FAMILLENIV2'),'')
-                        else TF := FindLigne(TheType,CurrentPhase,'',TL.GetString('GL_CODEMARCHE'));
+    if TheType <> '003' then
+    begin
+      TF := FindLigne(TheType,CurrentPhase,TL.GetString('GL_FAMILLENIV2'),'',0)
+    end else
+    begin
+      TF := FindLigne(TheType,CurrentPhase,'','',TL.GetInteger('GL_NUMORDRE'));
+    end;
     //
     if (TF = nil) then
     begin
@@ -819,6 +834,10 @@ procedure TOF_BSAISIEAVANCPOC.ConstitueLesTOBS (TTS,TTD,TTL,TTOP : TOB);
                                                         else TF.SetInteger('NIVEAU',NiveauImbric);
       TF.SetString('BM8_PHASETRA',CurrentPhase);
       TF.SetString('BM8_CODEMARCHE',TL.GetString('GL_CODEMARCHE'));
+      if (TL.GetString('GL_CODEMARCHE')='') and (TheType='003') then
+      begin
+        TF.SetInteger('BM8_NUMORDRE',TL.GetInteger('GL_NUMORDRE'));
+      end;
 
       if (not IsParagraphe(TL)) and (not IsOuvrage(TL)) and (TheType <>'003') then TF.SetString('BM8_FAMILLENIV2',TL.GetString('GL_FAMILLENIV2'));
 
@@ -861,8 +880,8 @@ procedure TOF_BSAISIEAVANCPOC.ConstitueLesTOBS (TTS,TTD,TTL,TTOP : TOB);
       Index : Integer;
       QteReajuste,MtReajuste : double;
   begin
-    if TheType <> '003' then TF := FindLigne(TheType,CurrentPhase,TD.GetString('BOP_FAMILLENIV2'),TL.GetString('GL_CODEMARCHE'))
-                        else TF := FindLigne(TheType,CurrentPhase,'',TL.GetString('GL_CODEMARCHE'));
+    if TheType <> '003' then TF := FindLigne(TheType,CurrentPhase,TD.GetString('BOP_FAMILLENIV2'),TL.GetString('GL_CODEMARCHE'),0)
+                        else TF := FindLigne(TheType,CurrentPhase,'',TL.GetString('GL_CODEMARCHE'),0);
     if (TF = nil) then
     begin
       TF := CreTOBLigne;
@@ -1003,8 +1022,8 @@ begin
   begin
     TL := TTD.detail[II];
     TheType := FindTypeAV(TL);
-    if TheType <> '003' then TD := FindLigne (TheType,TL.GetString('BM8_PHASETRA'),TL.GetString('BM8_FAMILLENIV2'),TL.GetString('BM8_CODEMARCHE'))
-                        else TD := FindLigne (TheType,TL.GetString('BM8_PHASETRA'),'',TL.GetString('BM8_CODEMARCHE'));
+    if TheType <> '003' then TD := FindLigneAVC (TheType,TL.GetString('BM8_PHASETRA'),TL.GetString('BM8_FAMILLENIV2'),TL.GetString('BM8_CODEMARCHE'))
+                        else TD := FindLigneAVC (TheType,TL.GetString('BM8_PHASETRA'),'',TL.GetString('BM8_CODEMARCHE'));
     if TD <> nil then
     begin
       TD.SetDouble('BM8_MTPREC',TL.GetDouble('BM8_MTPREC'));
@@ -3204,8 +3223,14 @@ begin
     XX.MoveK2000;
     if TOBL.GetString('TYPELIGNE') <> 'ART' then continue;
     //
-    if TOBL.GetDouble('DEPENSEESTIME') <> 0 then TOBL.SetDouble('POURCENTCALC', ARRONDI(TOBL.GetDouble('DEPENSECUMUL') /TOBL.GetDouble('DEPENSEESTIME')*100,2))
-                                            else TOBL.SetDouble('POURCENTCALC', 100);
+    if TOBL.GetString('BM8_CODEMARCHE') <> '' then
+    begin
+      if TOBL.GetDouble('DEPENSEESTIME') <> 0 then TOBL.SetDouble('POURCENTCALC', ARRONDI(TOBL.GetDouble('DEPENSECUMUL') /TOBL.GetDouble('DEPENSEESTIME')*100,2))
+                                              else TOBL.SetDouble('POURCENTCALC', 100);
+    end else
+    begin
+       TOBL.SetDouble('POURCENTCALC', 0);
+    end;
     if TOBL.GetDouble('BM8_QTEMARCHE') <> 0 then TOBL.SetDouble('PU',ARRONDI(TOBL.GetDouble('BM8_MTMARCHE')/TOBL.GetDouble('BM8_QTEMARCHE'),V_PGI.OkDecP));
     TOBL.SetDouble('ECARTDEPENSE',TOBL.GetDouble('BM8_MTCONSOMOIS'));
     CalculeAvancCorrigeST (TOBL);
