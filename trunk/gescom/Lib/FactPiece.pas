@@ -349,7 +349,7 @@ begin
   if SoucheG <> '' then
   begin
     CptMensuel := (GetInfoParSouche(SoucheG, 'BS0_NUMMOISPIECE') = 'X');
-    if not GereNumMensuelCptAnnuel then // Pas de combinaison entre les compteurs
+    if not GereNumMensuelCptAnnuel(SoucheG, False) then // Pas de combinaison entre les compteurs
     begin
       if CptMensuel then
         Result := GetCptMen
@@ -427,10 +427,10 @@ begin
   Result := 0;
   if SoucheG <> '' then
   begin
-    CptMensuel  := (GetInfoParSouche(SoucheG, 'BS0_NUMMOISPIECE') = 'X');
+    CptMensuel := (GetInfoParSouche(SoucheG, 'BS0_NUMMOISPIECE') = 'X');
     CptAnnuel  := (GetInfoParSouche(SoucheG, 'SH_SOUCHEEXO')  = 'X');
     NbPiece := Tools.iif(NbPiece <= 0, 1, NbPiece);
-    if not GereNumMensuelCptAnnuel then // Pas de combinaison entre les compteurs
+    if not GereNumMensuelCptAnnuel(Nature, True) then // Pas de combinaison entre les compteurs
     begin
       if CptMensuel then
         NumDef := GetCptMensuel(SoucheG, DatePiece)
