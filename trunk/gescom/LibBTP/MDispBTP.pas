@@ -493,7 +493,7 @@ BEGIN
 	 15 : begin
    			end;
    16 : begin
-          V_PGI.NbColModuleButtons:= OptimizeAffichage('145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,148,280,60') ;
+          V_PGI.NbColModuleButtons:= OptimizeAffichage('145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,281,148,280,60') ;
           //
    				stLesExclus := '';
    				LesTagsToRemove := LesTagsToRemove + ';' + stLesExclus;
