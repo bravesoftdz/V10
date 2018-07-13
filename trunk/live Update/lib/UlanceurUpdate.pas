@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs,UMainUpdate, CoolTrayIcon;
+  Dialogs,UMainUpdate;
 
 type
   TForm3 = class(TForm)

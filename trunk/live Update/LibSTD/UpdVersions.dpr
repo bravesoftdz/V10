@@ -13,8 +13,8 @@ uses
   USystemInfo in '..\lib\USystemInfo.pas',
   UlanceurUpdate in '..\lib\UlanceurUpdate.pas' {Form3},
   ZPatience in '..\lib\ZPatience.pas' {FPatience},
-  CoolTrayIcon in '..\lib\CoolTrayIcon.pas',
-  SimpleTimer in '..\lib\SimpleTimer.pas';
+  SimpleTimer in '..\lib\SimpleTimer.pas',
+  CoolTrayIcon in '..\lib\CoolTrayIcon.pas';
 
 {$R *.res}
 

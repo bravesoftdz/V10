@@ -91,10 +91,10 @@ ImageBase=4194304
 ExeDescription=CoolTrayIcon and Friends
 [Directories]
 OutputDir=
-UnitOutputDir=C:\V9\trunk\live Update\dcu
-PackageDLLOutputDir=C:\V9\trunk\live Update\bin
+UnitOutputDir=C:\V10\trunk\live Update\dcu
+PackageDLLOutputDir=C:\V10\trunk\live Update\bin
 PackageDCPOutputDir=
-SearchPath=C:\V9\trunk\live Update\lib
+SearchPath=C:\V10\trunk\live Update\lib
 Packages=vcl;rtl;vclx;indy;vclie;xmlrtl;inetdbbde;inet;inetdbxpress;dbrtl;soaprtl;dsnap;VclSmp;dbexpress;vcldb;dbxcds;inetdb;bdertl;vcldbx;ibxpress;visualclx;visualdbclx;vclactnband;vclshlctrls;IntrawebDB_50_70;Intraweb_50_70;Rave50CLX;Rave50VCL;dclOfficeXP
 Conditionals=
 DebugSourceDirs=
@@ -134,17 +134,20 @@ Comments=
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
-Count=3
-Item0=C:\V9\trunk\live Update\lib
-Item1=C:\V8\trunk\live Update\lib
-Item2=C:\SVN2008\trunk\live Update\lib
+Count=4
+Item0=C:\V10\trunk\live Update\lib
+Item1=C:\V9\trunk\live Update\lib
+Item2=C:\V8\trunk\live Update\lib
+Item3=C:\SVN2008\trunk\live Update\lib
 [HistoryLists\hlUnitOutputDirectory]
-Count=3
-Item0=C:\V9\trunk\live Update\dcu
-Item1=C:\V8\trunk\live Update\dcu
-Item2=C:\SVN2008\trunk\live Update\dcu
+Count=4
+Item0=C:\V10\trunk\live Update\dcu
+Item1=C:\V9\trunk\live Update\dcu
+Item2=C:\V8\trunk\live Update\dcu
+Item3=C:\SVN2008\trunk\live Update\dcu
 [HistoryLists\hlBPLOutput]
-Count=3
-Item0=C:\V9\trunk\live Update\bin
-Item1=C:\V8\trunk\live Update\bin
-Item2=C:\SVN2008\trunk\live Update\bin
+Count=4
+Item0=C:\V10\trunk\live Update\bin
+Item1=C:\V9\trunk\live Update\bin
+Item2=C:\V8\trunk\live Update\bin
+Item3=C:\SVN2008\trunk\live Update\bin

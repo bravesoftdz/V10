@@ -5,7 +5,8 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, ComCtrls, StdCtrls, URegistry, Registry,UCommonFuncs,Uconstantes,UEncryptage,Ulog,UsystemInfo,ShellAPI,
-  CoolTrayIcon;
+  CoolTrayIcon
+  ;
 
 type
 
@@ -260,6 +261,7 @@ begin
         ServerFile := IncludeTrailingBackslash(From)+TheName;
         TempFile := IncludeTrailingBackslash(ToTemp)+TheName;
         DestFile := IncludeTrailingBackslash(ToDest)+TheName;
+        //
         ShellExecAndWait('c:\windows\system32\xcopy', '"'+ServerFile+'"  "'+TempFile+'" /C/Y',SW_HIDE);
         ShellExecAndWait('c:\windows\system32\xcopy', '"'+Tempfile+'"  "'+DestFile+'" /C/Y',SW_HIDE);
         //

@@ -3492,7 +3492,7 @@ begin
   until II >= TOBFI.detail.Count;
   II := 0;
   repeat
-    if TOBST.detail[II].GetString('TYPELIGNE')='ART' then TOBST.detail[II].ChangeParent(TTD,-1) else inc(II);
+    if (TOBST.detail[II].GetString('TYPELIGNE')='ART') and (TOBST.detail[II].GetString('BM8_CODEMARCHE')<>'') then TOBST.detail[II].ChangeParent(TTD,-1) else inc(II);
   until II >= TOBST.detail.Count;
   //
   TTD.SetAllmodifie(true);
