@@ -99,6 +99,8 @@ var
   Lequel: string;
   T: TOB;
   Trouve: Boolean;
+  Req   : string;
+  QQ    : TQuery;
 begin
   inherited;
   Lequel := TFsaisieList(ecran).FLequel;
@@ -136,6 +138,14 @@ begin
     //mcd 14/03/2006 saisie systématique info mailing SetControlVisible('C_PUBLIPOSTAGE',False);
     SetControlVisible('C_SERVICECODE', False);
     SetControlVisible('C_FONCTIONCODEE', False);
+    //On Récupère l'adrese mail de la fiche tiers si nous sommes sur un particulier...
+    Req := 'SELECT T_EMAIL FROM TIERS WHERE T_AUXILIAIRE = "' + CodeAuxi + '" AND T_NATUREAUXI="' + type_tiers + '" AND T_PARTICULIER = "X"';
+    QQ := OpenSQL(Req, False);
+    if not QQ.EOF then
+    begin
+      SetControlText('C_RVA', QQ.Findfield('T_EMAIL').AsString);
+    end;
+    Ferme(QQ);
   end;
   if Action = 'CREATION' then //GPAO appel contacts depuis fiche adresse (tablette YYCONTACTIERS)
     Binsert.Click;
