@@ -2569,17 +2569,20 @@ begin
         Begin
           TOBL.PutValue('FACTURABLE', 'A');
           TOBL.PutValue('QTEFACTURABLE', Qte.text);
+          ChkConsoFact.Checked := True;
         end
         else
         begin
           TOBL.PutValue('FACTURABLE', 'N');
           TOBL.PutValue('QTEFACTURABLE','0.00');
+          ChkConsoFact.Checked := False;
         end;
       end
       else
       begin
         TOBL.PutValue('FACTURABLE', 'N');
         TOBL.PutValue('QTEFACTURABLE','0.00');
+        ChkConsoFact.Checked := False;
       end;
     end;
     //
@@ -2690,19 +2693,26 @@ begin
   CAB_Affaire.Visible     := True;
   Aff_QualifCAB.Visible   := True;
 
-  if (Typeaffaire.Value = 'W') then
-    PAffaire.Caption := 'Appel/Intervention'
-  else if (Typeaffaire.Value = 'A') then
-    PAffaire.Caption := 'Chantier'
-  else  if (Typeaffaire.Value = 'I') then
-    PAffaire.Caption := 'Contrat'
-  Else
-    PAffaire.Caption := 'Chantiers';
-
   //TOBL.PutValue('CODEAFFAIRE', Affaire.text);
   //FV1 : 23/08/2017 - FS#2648 - DELABOUDINIERE - Rendre les consos associées à un appel facturable
   ChkConsoFact.visible := False;
+  ChkConsoFact.Checked := False;
   //
+
+  if (Typeaffaire.Value = 'W') then
+  begin
+    PAffaire.Caption  := 'Appel/Intervention';
+     //FV1 : 23/08/2017 - FS#2648 - DELABOUDINIERE - Rendre les consos associées à un appel facturable
+    ChkConsoFact.visible := True;
+    If GetParamSocSecur('SO_CONSOFACT', False) = True then ChkConsoFact.Checked := True;
+  end
+  else if (Typeaffaire.Value = 'A') then
+    PAffaire.Caption  := 'Chantier'
+  else  if (Typeaffaire.Value = 'I') then
+    PAffaire.Caption  := 'Contrat'
+  Else
+    PAffaire.Caption  := 'Chantiers';
+
   if TOBL.GetString('TYPEMVT') = 'SA' then
   begin
     NUMBesoin.text       := TOBL.GetString('NUMBESOIN');
@@ -3240,10 +3250,10 @@ begin
   end;
 
   //FV1 : 23/08/2017 - FS#2648 - DELABOUDINIERE - Rendre les consos associées à un appel facturable
-  If TypeAffaire.Value = 'W' then
-  begin
-    ChkConsoFact.visible := True;
-  end;
+  //If TypeAffaire.Value = 'W' then
+  //begin
+  //  ChkConsoFact.visible := True;
+  //end;
 
   if TOBL.GetString('FACTURABLE') = 'A' then
     ChkConsoFact.Checked := True
