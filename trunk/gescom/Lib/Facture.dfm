@@ -3501,6 +3501,8 @@ object FFacture: TFFacture
       '\par '
       '\par '
       '\par '
+      '\par '
+      '\par '
       '\par }')
   end
   object BZoomRessource: THBitBtn
@@ -3646,7 +3648,7 @@ object FFacture: TFFacture
     Left = 93
     Top = 188
     Width = 728
-    Height = 165
+    Height = 170
     BevelInner = bvRaised
     BevelOuter = bvLowered
     Caption = ' '
@@ -3905,6 +3907,14 @@ object FFacture: TFFacture
       Visible = False
       GlobalIndexImage = 'Z0080_S24G1'
     end
+    object LDESCAFFAIRE: TLabel
+      Left = 5
+      Top = 141
+      Width = 80
+      Height = 13
+      Caption = 'Descriptif affaire'
+      Visible = False
+    end
     object GP_REFEXTERNE__: TEdit
       Left = 314
       Top = 70
@@ -3966,7 +3976,7 @@ object FFacture: TFFacture
       Height = 21
       Style = csDropDownList
       ItemHeight = 13
-      TabOrder = 23
+      TabOrder = 24
       OnChange = GP_DEVISEChange
       TagDispatch = 0
       DataType = 'TTDEVISE'
@@ -3976,7 +3986,7 @@ object FFacture: TFFacture
       Top = 48
       Width = 71
       Height = 21
-      TabOrder = 12
+      TabOrder = 14
       OnExit = GP_REPRESENTANTExit
       TagDispatch = 0
       ElipsisButton = True
@@ -3996,7 +4006,7 @@ object FFacture: TFFacture
       Font.Name = 'MS Sans Serif'
       Font.Style = [fsBold]
       ParentFont = False
-      TabOrder = 20
+      TabOrder = 21
       BackGroundEffect = bdFond
       ColorShadow = clWindowText
       ColorStart = clBtnFace
@@ -4018,7 +4028,7 @@ object FFacture: TFFacture
       Font.Name = 'MS Sans Serif'
       Font.Style = [fsBold]
       ParentFont = False
-      TabOrder = 21
+      TabOrder = 22
       BackGroundEffect = bdFond
       ColorShadow = clWindowText
       ColorStart = clBtnFace
@@ -4032,7 +4042,7 @@ object FFacture: TFFacture
       Height = 21
       Style = csDropDownList
       ItemHeight = 13
-      TabOrder = 9
+      TabOrder = 11
       OnChange = GP_ETABLISSEMENTChange
       TagDispatch = 0
       DataType = 'TTETABLISSEMENT'
@@ -4050,7 +4060,7 @@ object FFacture: TFFacture
       Font.Style = []
       ItemHeight = 13
       ParentFont = False
-      TabOrder = 13
+      TabOrder = 15
       OnChange = GP_DEPOTChange
       OnExit = GP_DEPOT__Exit
       TagDispatch = 0
@@ -4102,7 +4112,7 @@ object FFacture: TFFacture
       Font.Name = 'MS Sans Serif'
       Font.Style = []
       ParentFont = False
-      TabOrder = 19
+      TabOrder = 20
       Visible = False
       TagDispatch = 0
     end
@@ -4121,7 +4131,7 @@ object FFacture: TFFacture
       Font.Name = 'MS Sans Serif'
       Font.Style = [fsBold]
       ParentFont = False
-      TabOrder = 24
+      TabOrder = 25
       BackGroundEffect = bdFond
       ColorShadow = clWindowText
       ColorStart = clBtnFace
@@ -4145,7 +4155,7 @@ object FFacture: TFFacture
       Height = 21
       TabStop = False
       CharCase = ecUpperCase
-      TabOrder = 18
+      TabOrder = 19
       Visible = False
       TagDispatch = 0
     end
@@ -4155,7 +4165,7 @@ object FFacture: TFFacture
       Width = 137
       Height = 21
       Enabled = False
-      TabOrder = 10
+      TabOrder = 12
       Visible = False
     end
     object GP_DOMAINE__: THValComboBox
@@ -4165,7 +4175,7 @@ object FFacture: TFFacture
       Height = 21
       Style = csDropDownList
       ItemHeight = 13
-      TabOrder = 14
+      TabOrder = 16
       OnExit = GP_DOMAINE__Exit
       TagDispatch = 0
       Vide = True
@@ -4196,8 +4206,8 @@ object FFacture: TFFacture
       ControlerDate = True
     end
     object LIBELLEAFFAIRE: THPanel
-      Left = 7
-      Top = 138
+      Left = 16
+      Top = 140
       Width = 682
       Height = 16
       Alignment = taLeftJustify
@@ -4210,7 +4220,7 @@ object FFacture: TFFacture
       Font.Name = 'MS Sans Serif'
       Font.Style = [fsBold]
       ParentFont = False
-      TabOrder = 22
+      TabOrder = 23
       BackGroundEffect = bdFond
       ColorShadow = clWindowText
       ColorStart = clBtnFace
@@ -4224,7 +4234,7 @@ object FFacture: TFFacture
       Height = 21
       Hint = 'Ressource achat'
       Color = clWhite
-      TabOrder = 11
+      TabOrder = 13
       OnExit = GP_RESSOURCEExit
       TagDispatch = 0
       ElipsisButton = True
@@ -4235,7 +4245,7 @@ object FFacture: TFFacture
       Top = 70
       Width = 147
       Height = 21
-      TabOrder = 16
+      TabOrder = 17
       Visible = False
       OnExit = GP_CODEMATERIELExit
       TagDispatch = 0
@@ -4247,7 +4257,7 @@ object FFacture: TFFacture
       Top = 94
       Width = 147
       Height = 21
-      TabOrder = 17
+      TabOrder = 18
       Visible = False
       OnExit = GP_BTETATExit
       TagDispatch = 0
@@ -4260,10 +4270,18 @@ object FFacture: TFFacture
       Width = 175
       Height = 21
       Enabled = False
-      TabOrder = 15
+      TabOrder = 9
       Visible = False
       OnExit = ATTACHEMENTExit
       TagDispatch = 0
+    end
+    object TDESCAFFAIRE: TEdit
+      Left = 88
+      Top = 138
+      Width = 400
+      Height = 21
+      TabOrder = 10
+      Visible = False
     end
   end
   object TDescriptif: TToolWindow97
@@ -4304,6 +4322,8 @@ object FFacture: TFFacture
           '0\fnil Times New Roman;}}'
         '{\*\generator Riched20 6.3.9600}\viewkind4\uc1 '
         '\pard\f0\fs20 '
+        '\par '
+        '\par '
         '\par '
         '\par '
         '\par '

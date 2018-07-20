@@ -551,6 +551,8 @@ type
     BGED: TToolbarButton97;
     PAIESTPOC: TMenuItem;
     BToolPhases: TToolbarButton97;
+    TDESCAFFAIRE: TEdit;
+    LDESCAFFAIRE: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -1578,6 +1580,7 @@ uses
   UconnectBSV,
   EdtREtat,
   UspecifPOC,
+  UspecifVerdon,
   SelectPhase
   ;
 
@@ -5962,6 +5965,33 @@ begin
   if GetParamSocSecur('SO_SAISIEPLEINECRAN', False) then
   begin
     SendMessage(Self.Handle, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+  end;
+
+  if VH_GC.BTCODESPECIF = '002' then
+  begin
+    // Pas d'accès a l'affaire
+    // en création postionnement de l'affaire par le numéro du devis
+    // en modif pas d'acces au code affaire
+    //
+    if (NewDoc.NaturePiece = 'DBT') then
+    begin
+      BRazAffaire.Visible := false;
+      BRechAffaire.visible := false;
+      GP_AFFAIRE1.Enabled := false;
+      GP_AFFAIRE2.Enabled := false;
+      GP_AFFAIRE3.Enabled := false;
+      GP_AVENANT.Enabled := false;
+      GP_AFFAIRE1.OnExit := nil;
+      GP_AFFAIRE2.OnExit := nil;
+      GP_AFFAIRE3.OnExit := nil;
+      GP_AVENANT.OnExit := nil;
+      if Action= taCreat then
+      begin
+        LDESCAFFAIRE.Visible := True;
+        TDESCAFFAIRE.Visible := True;
+        LIBELLEAFFAIRE.Visible := false;
+      end;
+    end;
   end;
 end;
 
@@ -20504,6 +20534,12 @@ var OldEcr, OldStk: RMVT;
   OkREXEl : boolean;
   EcritFacturable : boolean;
 begin
+  // ----
+  if (VH_GC.BTCODESPECIF = '002') and (TOBPiece.getString('GP_NATUREPIECEG')='DBT') and (Action=TaCreat) then
+  begin
+    ConstitueAffaireVerdon(Self);
+  end;
+  // ---
   EcritFacturable := false;
   if (action=taModif) and (not IsDejaFacture) and (InDossierfac) and (TOBPiece.getString('GP_NATUREPIECEG')='DBT') then EcritFacturable := true;
   if fmodeAudit then fAuditPerf.Debut('Validation document');
@@ -21624,7 +21660,6 @@ begin
   if not ErreurSiZero (TOBpiece) then exit;
   // CORRECTIONS : FQ 11904
   if not VerrouilleValidation (TOBPiece.getValue('GP_NATUREPIECEG'), TOBPiece.getValue('GP_SOUCHE') + ';' + IntToSTr(TOBPiece.getValue('GP_NUMERO'))) then exit;
-  // ---
   // Enregistrement de la saisie
   BValider.Enabled := False;
   ValideEnCours := True;
@@ -21765,6 +21800,17 @@ begin
   begin
     GS.setFocus;
   end;
+
+  if (VH_GC.BTCODESPECIF = '002') and (TOBPiece.getString('GP_NATUREPIECEG')='DBT') and (Action=taCreat) then
+  begin
+    if TDESCAFFAIRE.Text = '' then
+    begin
+      PGIBox('Merci de renseigner le descriptif de l''affaire', 'Saisie Document vente');
+      TDESCAFFAIRE.SetFocus;
+      Exit;
+    end;
+  end;
+
   if fmodeAudit then fAuditPerf.Debut('-------------- CLICK VALIDE ---------------');
 
   if StatutAffaire = 'I' then
@@ -21843,7 +21889,7 @@ begin
     TraitementReajustement;
   end else
   begin
-	ClickValideAndStayHere (Self,TOBPiece, TOBNomenclature, TobOuvrage,TOBTiers, TOBAffaire,TOBLigneRg);
+  	ClickValideAndStayHere (Self,TOBPiece, TOBNomenclature, TobOuvrage,TOBTiers, TOBAffaire,TOBLigneRg);
    //Mise à jour de l'échéance facturé si une modification à eu lieu
    if TobAffaire.getvalue('AFF_AFFAIRE0')='I' Then
       Begin

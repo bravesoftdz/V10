@@ -302,116 +302,118 @@ end;
 
 Procedure PrepaAcceptationDevis(Codessaff, AffaireRef, naturepiece, souche:string; numero, indice:integer; Tiers:string; TOBAff :TOB;DemandeAcompte : boolean; AnnulAcceptation : boolean);
 var
-TOBTiers,TOBPiece:TOB;
-Sql,etatprec:string;
-QQ,Q1 : TQuery ;
-RefPiece,REq : string;
-CleDocAffaire : R_CLEDOC;
+  TOBTiers,TOBPiece:TOB;
+  Sql,etatprec:string;
+  QQ,Q1 : TQuery ;
+  RefPiece,REq : string;
+  CleDocAffaire : R_CLEDOC;
 Begin
-	if not AnnulAcceptation then
+  if not AnnulAcceptation then
   begin
     if (Copy(Codessaff,16,2) <> '00') then
-      begin
+    begin
       // si avenant, contrôle que le devis initial est accepté
       QQ:=OpenSQL('SELECT AFF_ETATAFFAIRE FROM AFFAIRE WHERE AFF_AFFAIRE="'+Copy(Codessaff,1,15)+'00"',TRUE,-1,'',true) ;
       if Not QQ.EOF then
-        begin
+      begin
         if (QQ.Fields[0].AsString <> 'ACP') AND (QQ.Fields[0].AsString <> 'TER') then
-          begin
+        begin
           PGIInfoAF ('Acceptation de l''avenant impossible car le devis initial n''est pas accepté.','Acceptation de devis');
           Ferme(QQ) ;
           exit;
-          end;
         end;
-     Ferme(QQ) ;
-     end;
-     if DemandeAcompte then
-        BEGIN
-        if not DemandeAcompteOk (NaturePiece,Souche,Tiers,Numero,Indice) then
-           begin
-           PGIInfoAF ('Acceptation impossible : Pas d''acompte défini.','Acceptation de devis');
-           Exit;
-           end;
-        END;
-     // Ajout contrôle si un devis accepté par affaire selon paramètre société
-     if (GetParamSocSecur('SO_BTUNDEVISPARAFFAIRE',False)) and
-        (SelectPieceAffaire(AffaireRef, 'AFF', CleDocAffaire, True) > 0) then
-     begin
-        PgiInfo(TraduireMemoire('Saisie impossible, un devis a déjà été accepté pour cette affaire.'));
+      end;
+      Ferme(QQ) ;
+    end;
+    if DemandeAcompte then
+    BEGIN
+      if not DemandeAcompteOk (NaturePiece,Souche,Tiers,Numero,Indice) then
+      begin
+        PGIInfoAF ('Acceptation impossible : Pas d''acompte défini.','Acceptation de devis');
         Exit;
-     end;
-  //   Modif brl 24/03 :
-  //   if not PositionnePieceMorteVivante (naturepiece,souche,numero,indice,'-',etatprec) then exit;
-     TOBTiers := TOB.create ('TIERS',nil,-1);
-     QQ := opensql('SELECT * FROM TIERS WHERE T_TIERS="'+Tiers+'"',true,-1,'',true);
-     TOBTIers.selectdb ('',QQ);
-     ferme (QQ);
-     if (TobTiers.GetValue('T_NATUREAUXI')='PRO') then
-     begin
-  //   if GetInfoParPiece(naturepiece,'GPP_PROCLI') = 'X' then
-         begin
-         // transformer le tiers de PRO en CLI
-         TobTiers.putValue('T_NATUREAUXI','CLI');
-         TOBTiers.SetAllModifie (true);
-         TOBTiers.UpdateDB;
-         end;
-     end;
-     TOBTiers.Free;
+      end;
+    END;
+    // Ajout contrôle si un devis accepté par affaire selon paramètre société
+    if (GetParamSocSecur('SO_BTUNDEVISPARAFFAIRE',False)) and
+       (SelectPieceAffaire(AffaireRef, 'AFF', CleDocAffaire, True) > 0) then
+    begin
+      PgiInfo(TraduireMemoire('Saisie impossible, un devis a déjà été accepté pour cette affaire.'));
+      Exit;
+    end;
+    //   Modif brl 24/03 :
+    //   if not PositionnePieceMorteVivante (naturepiece,souche,numero,indice,'-',etatprec) then exit;
+    TOBTiers := TOB.create ('TIERS',nil,-1);
+    QQ := opensql('SELECT * FROM TIERS WHERE T_TIERS="'+Tiers+'"',true,-1,'',true);
+    TOBTIers.selectdb ('',QQ);
+    ferme (QQ);
+    if (TobTiers.GetValue('T_NATUREAUXI')='PRO') then
+    begin
+      //   if GetInfoParPiece(naturepiece,'GPP_PROCLI') = 'X' then
+      begin
+        // transformer le tiers de PRO en CLI
+        TobTiers.putValue('T_NATUREAUXI','CLI');
+        TOBTiers.SetAllModifie (true);
+        TOBTiers.UpdateDB;
+      end;
+    end;
+    TOBTiers.Free;
 
-     // Lecture de l'affaire
-     TOBAff.InitValeurs ;
-     TOBAff.SelectDB('"'+Codessaff+'"',Nil) ;
-     // Modif sur la fiche affaire du devis accepté
-     TOBAff.PutValue('AFF_ETATAFFAIRE', 'ACP');
-     TOBAff.PutValue('AFF_DATESIGNE', NowH);
+    // Lecture de l'affaire
+    TOBAff.InitValeurs ;
+    TOBAff.SelectDB('"'+Codessaff+'"',Nil) ;
+    // Modif sur la fiche affaire du devis accepté
+    TOBAff.PutValue('AFF_ETATAFFAIRE', 'ACP');
+    TOBAff.PutValue('AFF_DATESIGNE', NowH);
 
-     TOBAff.UpdateDB(false);
-
-     //maj fiche affaire reference
-     Sql := 'UPDATE AFFAIRE SET AFF_ETATAFFAIRE = "ACP" WHERE AFF_AFFAIRE='+'"'+AffaireRef+'"';
-     ExecuteSQL(Sql);
+    TOBAff.UpdateDB(false);
+    if VH_GC.BTCODESPECIF <> '002' then // Pour VERDON Cette option est désactivée
+    begin
+      //maj fiche affaire reference
+      Sql := 'UPDATE AFFAIRE SET AFF_ETATAFFAIRE = "ACP" WHERE AFF_AFFAIRE="'+AffaireRef+'"';
+      ExecuteSQL(Sql);
+    end;
   end else
   begin
-   TOBPiece := TOB.Create ('PIECE',nil,-1);
-   QQ := OpenSql ('SELECT * FROM PIECE WHERE GP_NATUREPIECEG="'+naturepiece+'" AND GP_SOUCHE="'+souche+'" AND '+
-   								'GP_NUMERO='+InttoStr(numero)+' AND GP_INDICEG='+IntToStr(indice),true,-1,'',true);
-   if not QQ.eof then
-   begin
-   	TOBPiece.selectDb ('',QQ);
-    RefPiece := EncodeRefPiece (TOBPiece,0,false);
-    RefPiece := Copy(RefPiece,1,length(RefPiece)-1); // pour enlever le ; de fin
-    Req := 'SELECT DISTINCT GL_NUMERO FROM LIGNE WHERE GL_NATUREPIECEG IN ("FBT","FBP","DAC","ABT") AND GL_PIECEPRECEDENTE LIKE "'+
-           RefPiece+'%"';
-    Q1 := OpenSql (Req,True,-1,'',true);
-    if not Q1.eof then
+    TOBPiece := TOB.Create ('PIECE',nil,-1);
+    QQ := OpenSql ('SELECT * FROM PIECE WHERE GP_NATUREPIECEG="'+naturepiece+'" AND GP_SOUCHE="'+souche+'" AND '+
+                   'GP_NUMERO='+InttoStr(numero)+' AND GP_INDICEG='+IntToStr(indice),true,-1,'',true);
+    if not QQ.eof then
     begin
-      TOBPiece.free;
-      ferme (Q1);
-      ferme(QQ);
-      PgiBox (TraduireMemoire('Impossible : Une Facture existe'),'Annulation de l''acceptation de devis');
-      exit;
+      TOBPiece.selectDb ('',QQ);
+      RefPiece := EncodeRefPiece (TOBPiece,0,false);
+      RefPiece := Copy(RefPiece,1,length(RefPiece)-1); // pour enlever le ; de fin
+      Req := 'SELECT DISTINCT GL_NUMERO FROM LIGNE WHERE GL_NATUREPIECEG IN ("FBT","FBP","DAC","ABT") AND GL_PIECEPRECEDENTE LIKE "'+
+      RefPiece+'%"';
+      Q1 := OpenSql (Req,True,-1,'',true);
+      if not Q1.eof then
+      begin
+        TOBPiece.free;
+        ferme (Q1);
+        ferme(QQ);
+        PgiBox (TraduireMemoire('Impossible : Une Facture existe'),'Annulation de l''acceptation de devis');
+        exit;
+      end else
+      begin
+        ferme (Q1);
+      end;
     end else
     begin
-    	ferme (Q1);
+      TOBPiece.free;
     end;
-   end else
-   begin
-   	TOBPiece.free;
-   end;
-   ferme(QQ);
+    ferme(QQ);
 
-   TOBAff.InitValeurs ;
-   TOBAff.SelectDB('"'+Codessaff+'"',Nil) ;
-   if TOBAff.GetValue('AFF_PREPARE')='X' then
-   begin
-   	PGIInfoAF ('Impossible : Document déjà transformé','Annulation de l''acceptation de devis');
-    Exit;
-   end;
-   // Modif sur la fiche affaire du devis accepté
-   TOBAff.PutValue('AFF_ETATAFFAIRE', 'ENC');
-   TOBAff.PutValue('AFF_DATESIGNE', iDate1900 );
+    TOBAff.InitValeurs ;
+    TOBAff.SelectDB('"'+Codessaff+'"',Nil) ;
+    if TOBAff.GetValue('AFF_PREPARE')='X' then
+    begin
+      PGIInfoAF ('Impossible : Document déjà transformé','Annulation de l''acceptation de devis');
+      Exit;
+    end;
+    // Modif sur la fiche affaire du devis accepté
+    TOBAff.PutValue('AFF_ETATAFFAIRE', 'ENC');
+    TOBAff.PutValue('AFF_DATESIGNE', iDate1900 );
 
-   TOBAff.UpdateDB(false);
+    TOBAff.UpdateDB(false);
 
   end;
 End;
