@@ -7622,14 +7622,17 @@ end;
 
 function TFFacture.FormateZoneDivers(St: string; ACol: Longint): string;
 var ColName, Typ, StC: string;
+    NbDec : Integer;
 begin
+  NbDec := fGestionListe.TheListe.Items[Acol].NbDec;
+  //
   Result := St;
   StC := St;
   ColName := IdentCols[ACol].ColName;
   if ColName = '' then Exit;
   Typ := IdentCols[ACol].ColTyp;
   if (Typ = 'INTEGER') or (Typ = 'SMALLINT') then StC := InttoStr(ValeurI(St)) else
-    if (Typ = 'DOUBLE') or (Typ = 'RATE') or (Typ = 'EXTENDED') then StC := StrF00(Valeur(St), V_PGI.OkDecV) else
+    if (Typ = 'DOUBLE') or (Typ = 'RATE') or (Typ = 'EXTENDED') then StC := StrF00(Valeur(St),nbdec) else
     if Typ = 'DATE' then
   begin
     if St <> '' then if not IsValidDate(St) then StC := GP_DATEPIECE.Text;
@@ -7646,21 +7649,23 @@ end;
 
 procedure TFFacture.FormateZoneSaisie(ACol, ARow: Longint);
 var St, StC: string;
+  NbDec : Integer;
 begin
   St := GS.Cells[ACol, ARow];
   StC := St;
+  NbDec := fGestionListe.TheListe.Items[Acol].NbDec;
   if ((ACol = SG_RefArt) or (Acol=SG_REFTiers) or (ACol = SG_Rep) or (ACol = SG_Dep)  or (Acol = SG_CIRCUIT) ) then
     StC := uppercase(Trim(St)) else
 //    if (ACol = SG_Px) or (ACol = SG_PxNet) then StC := StrF00(Valeur(St), DEV.Decimale) else // Modif MODE 31/07/2002
-  if (ACol = SG_Px) or (ACol = SG_PxNet) or (Acol = SG_PxAch) then StC := StrF00(Valeur(St), V_PGI.OkDecP) else
-  if ACol = SG_Rem then StC := StrF00(Valeur(St), ADecimP) else
-  if (ACol = SG_POURMARG) or (ACol = SG_POURMARQ) then StC := StrF00(Valeur(St), 2) else
+  if (ACol = SG_Px) or (ACol = SG_PxNet) or (Acol = SG_PxAch) then StC := StrF00(Valeur(St), NbDec) else
+  if ACol = SG_Rem then StC := StrF00(Valeur(St), NbDec) else
+  if (ACol = SG_POURMARG) or (ACol = SG_POURMARQ) then StC := StrF00(Valeur(St), NbDec) else
   if ((ACol = SG_QF) or (ACol = SG_QS) or (ACol = SG_QA) or (Acol = SG_QTESAIS) or
-  		(ACol = SG_QTEPREVUE) or (ACol = SG_DEJAFACT) or
+      (ACol = SG_QTEPREVUE) or (ACol = SG_DEJAFACT) or
       (Acol = SG_TEMPS) or (Acol = SG_TEMPSTOT) or
       (ACol = SG_QTESITUATION) or (Acol = SG_COEFMARG) ) then //MODIFBTP
   begin
-    StC := StrF00(Valeur(St), V_PGI.OkDecQ);
+    StC := StrF00(Valeur(St), nbdec);
   end else
   if (ACol = SG_Aff) then {Affaire}
   begin
