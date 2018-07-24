@@ -1121,7 +1121,8 @@ uses
   CommonTools in '..\..\commun\Lib\CommonTools.pas',
   UBimetre in '..\BIM\UBimetre.pas',
   BTBIMIMPORT_TOF in '..\BIM\BTBIMIMPORT_TOF.PAS',
-  BTBIMSELAFF_TOF in '..\BIM\BTBIMSELAFF_TOF.PAS';
+  BTBIMSELAFF_TOF in '..\BIM\BTBIMSELAFF_TOF.PAS',
+  USpecifVerdon in '..\Verdon\USpecifVerdon.pas';
 
 //
 // FIN NEW
