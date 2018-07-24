@@ -39,6 +39,7 @@ Uses StdCtrls,
      galPatience,
      Windows
      ;
+ 
 const
    stLigPP  = 'IND;TYPELIGNE;BM8_PHASETRA;BM8_FAMILLENIV2;BM8_LIBELLE;BM8_QTEMARCHE;BM8_UNITE;BM8_POURCENTAVANC;BM8_QTECUMUL;SUMQTECONSO;BM8_RADQTE;QTEPROJETE'; // production propre
    stLigMOI = 'IND;TYPELIGNE;BM8_PHASETRA;BM8_FAMILLENIV2;BM8_LIBELLE;BM8_QTEMARCHE;BM8_UNITE;BM8_RADQTE;SUMQTECONSO;BM8_POURCENTAVANC;'; // Main d'oeuvre indirecte
@@ -3292,6 +3293,7 @@ var SQL : string;
     QQ : TQuery;
 begin
   TL.SetDouble('DEPENSEESTIME',0);
+  if (TL.GetString('BM8_AFFAIRE')='') or (TL.GetString('BM8_CODEMARCHE')='') then exit; 
   SQL :='SELECT SUM(BM1_MONTANT) '+
         'FROM BTMARCHESTDET '+
         'WHERE '+
