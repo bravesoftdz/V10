@@ -1113,7 +1113,8 @@ uses
   CommonTools in '..\..\commun\Lib\CommonTools.pas',
   UConnectWSConst in '..\..\CONNECTWS\UConnectWSConst.pas',
   Zip in '..\..\commun\Lib\Zip.pas',
-  ZipDlls in '..\..\commun\Lib\ZipDlls.pas';
+  ZipDlls in '..\..\commun\Lib\ZipDlls.pas',
+  USpecifVerdon in '..\Verdon\USpecifVerdon.pas';
 
 //
 
