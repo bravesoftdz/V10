@@ -87,6 +87,7 @@ type
       property IsExistCumul : boolean read fIsExistCumul;
       property Activate : boolean read fActivated write fActivated;
       property RecadreAuto : boolean read fRecadreAuto write SetCadreAuto;
+      property TheListe : TListChps read fListChamps;
       procedure AppliqueGrids;
       function SetListe (CodeListe : string) : boolean;
       procedure SetNomChamps (ListeSaisie : string);

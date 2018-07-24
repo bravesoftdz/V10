@@ -576,13 +576,22 @@ begin
   FileName      := Copy(FileName,1, Length(FileName)-4);
 
   FichierHisto  := ControleRepertoire(GetParamSocSecur('SO_REPARCHFIC', '', False));
-  FichierHisto  := FichierHisto + '\lsecab_' + StDate + '_' + StTime + '.Arc';
 
+  If not DirectoryExists(FichierHisto) then
+  begin
+    if PGIAsk('Archivage impossible le répertoire ' + FichierHisto + ' n''existe pas. Voulez-vous en sélectionner un ?', 'Erreur Répertoire Archivage')=Mryes then
+    begin
+      if not SelectDirectory(FichierHisto,[sdAllowCreate,sdPerformCreate,sdPrompt],0) then Exit;
+    end
+    else Exit;
+  end;
+
+  FichierHisto  := FichierHisto + '\lsecab_' + StDate + '_' + StTime + '.Arc';
   if FileExists(FichierHisto) then
   begin
     if FichierHisto = '' then
     begin
-      if PGIAsk('Archivage impossible le répertoire d''Archivage n''existe pas. Voulez-vous en sélectionner un ?', 'Erreur Répertoire Archivage')=Mryes then
+      if PGIAsk('Archivage impossible le répertoire ' + FichierHisto + ' n''existe pas. Voulez-vous en sélectionner un ?', 'Erreur Répertoire Archivage')=Mryes then
       begin
         if not SelectDirectory(FichierHisto,[sdAllowCreate,sdPerformCreate,sdPrompt],0) then Exit;
       end
@@ -2569,17 +2578,20 @@ begin
         Begin
           TOBL.PutValue('FACTURABLE', 'A');
           TOBL.PutValue('QTEFACTURABLE', Qte.text);
+          ChkConsoFact.Checked := True;
         end
         else
         begin
           TOBL.PutValue('FACTURABLE', 'N');
           TOBL.PutValue('QTEFACTURABLE','0.00');
+          ChkConsoFact.Checked := False;
         end;
       end
       else
       begin
         TOBL.PutValue('FACTURABLE', 'N');
         TOBL.PutValue('QTEFACTURABLE','0.00');
+        ChkConsoFact.Checked := False;
       end;
     end;
     //
@@ -2690,19 +2702,26 @@ begin
   CAB_Affaire.Visible     := True;
   Aff_QualifCAB.Visible   := True;
 
-  if (Typeaffaire.Value = 'W') then
-    PAffaire.Caption := 'Appel/Intervention'
-  else if (Typeaffaire.Value = 'A') then
-    PAffaire.Caption := 'Chantier'
-  else  if (Typeaffaire.Value = 'I') then
-    PAffaire.Caption := 'Contrat'
-  Else
-    PAffaire.Caption := 'Chantiers';
-
   //TOBL.PutValue('CODEAFFAIRE', Affaire.text);
   //FV1 : 23/08/2017 - FS#2648 - DELABOUDINIERE - Rendre les consos associées à un appel facturable
   ChkConsoFact.visible := False;
+  ChkConsoFact.Checked := False;
   //
+
+  if (Typeaffaire.Value = 'W') then
+  begin
+    PAffaire.Caption  := 'Appel/Intervention';
+     //FV1 : 23/08/2017 - FS#2648 - DELABOUDINIERE - Rendre les consos associées à un appel facturable
+    ChkConsoFact.visible := True;
+    If GetParamSocSecur('SO_CONSOFACT', False) = True then ChkConsoFact.Checked := True;
+  end
+  else if (Typeaffaire.Value = 'A') then
+    PAffaire.Caption  := 'Chantier'
+  else  if (Typeaffaire.Value = 'I') then
+    PAffaire.Caption  := 'Contrat'
+  Else
+    PAffaire.Caption  := 'Chantiers';
+
   if TOBL.GetString('TYPEMVT') = 'SA' then
   begin
     NUMBesoin.text       := TOBL.GetString('NUMBESOIN');
@@ -3240,10 +3259,10 @@ begin
   end;
 
   //FV1 : 23/08/2017 - FS#2648 - DELABOUDINIERE - Rendre les consos associées à un appel facturable
-  If TypeAffaire.Value = 'W' then
-  begin
-    ChkConsoFact.visible := True;
-  end;
+  //If TypeAffaire.Value = 'W' then
+  //begin
+  //  ChkConsoFact.visible := True;
+  //end;
 
   if TOBL.GetString('FACTURABLE') = 'A' then
     ChkConsoFact.Checked := True
@@ -3838,12 +3857,15 @@ begin
     //
   end;
 
-  if TobPiece.detail.count <> 0 then
+  If TOBPiece.GetValue('NATUREPIECEG') <> '' then
   begin
-    if CreatePieceFromTob(TOBPiece, nil, nil,nil) then
-      MajTobValide
-    else
-      MajTobRejet(TOBL, 'PIE', 'Erreur en création de la pièce : ' + RechDom('GPP',TOBL.GetValue('GP_NATUREPIECEG'),False) + '-' + IntToStr(TOBL.GetValue('GP_NUMERO')));
+    if TobPiece.detail.count <> 0 then
+    begin
+      if CreatePieceFromTob(TOBPiece, nil, nil,nil) then
+        MajTobValide
+      else
+        MajTobRejet(TOBL, 'PIE', 'Erreur en création de la pièce : ' + RechDom('GPP',TOBL.GetValue('GP_NATUREPIECEG'),False) + '-' + IntToStr(TOBL.GetValue('GP_NUMERO')));
+    end;
   end;
   //
   FreeAndNil(TobTempo);
@@ -4030,12 +4052,15 @@ end;
 Procedure TOF_INTEGREFICTPI.GestionRuptureTypeMvt(TOBL : TOB; AncienTypeMvt: String; Var LigToDel : Integer);
 begin
 
-  if (AncienTypeMvt <> '') then
-  Begin
-    if CreatePieceFromTob(TOBPiece, nil, nil,nil) then
-      MajTobValide
-    else
-      MajTobRejet(TOBL, 'PIE', 'Erreur en création de la pièce : ' + RechDom('GPP',TOBL.GetValue('GP_NATUREPIECEG'),False) + '-' + IntToStr(TOBL.GetValue('GP_NUMERO')));
+  If TOBPiece.GetValue('NATUREPIECEG') <> '' then
+  begin
+    if (AncienTypeMvt <> '') then
+    Begin
+      if CreatePieceFromTob(TOBPiece, nil, nil,nil) then
+        MajTobValide
+      else
+        MajTobRejet(TOBL, 'PIE', 'Erreur en création de la pièce : ' + RechDom('GPP',TOBL.GetValue('GP_NATUREPIECEG'),False) + '-' + IntToStr(TOBL.GetValue('GP_NUMERO')));
+    end;
   end;
 
   ReinitialiseTobPiece;
@@ -4060,14 +4085,17 @@ end;
 Procedure TOF_INTEGREFICTPI.GestionRuptureFournisseur(TOBL : TOB; AncienFrs : String);
 begin
 
-  If AncienFrs <> ''     then
+  If TOBPiece.GetValue('NATUREPIECEG') <> '' then
   begin
-    if CreatePieceFromTob(TOBPiece, nil, nil,nil) then
-      MajTobValide
-    else
-      MajTobRejet(TOBL, 'PIE', 'Erreur en création de la pièce : ' + RechDom('GPP',TOBL.GetValue('GP_NATUREPIECEG'),False) + '-' + IntToStr(TOBL.GetValue('GP_NUMERO')));
+    If AncienFrs <> ''     then
+    begin
+      if CreatePieceFromTob(TOBPiece, nil, nil,nil) then
+        MajTobValide
+      else
+        MajTobRejet(TOBL, 'PIE', 'Erreur en création de la pièce : ' + RechDom('GPP',TOBL.GetValue('GP_NATUREPIECEG'),False) + '-' + IntToStr(TOBL.GetValue('GP_NUMERO')));
+    end;
   end;
-
+  
   ReinitialiseTobPiece;
 
   if Not GenerationDeLaPiece(TOBL, TOBL.GetString('TYPEMVT')) then Exit;
@@ -4077,14 +4105,17 @@ end;
 Procedure TOF_INTEGREFICTPI.GestionRuptureChantier(TOBL : TOB; AncienAff : String);
 begin
 
-  If AncienAff <> ''     then
+  If TOBPiece.GetValue('NATUREPIECEG') <> '' then
   begin
-    if CreatePieceFromTob(TOBPiece, nil, nil,nil) then
-      MajTobValide
-    else
-      MajTobRejet(TOBL, 'PIE', 'Erreur en création de la pièce : ' + RechDom('GPP',TOBL.GetValue('GP_NATUREPIECEG'),False) + '-' + IntToStr(TOBL.GetValue('GP_NUMERO')));
+    If AncienAff <> ''     then
+    begin
+      if CreatePieceFromTob(TOBPiece, nil, nil,nil) then
+        MajTobValide
+      else
+        MajTobRejet(TOBL, 'PIE', 'Erreur en création de la pièce : ' + RechDom('GPP',TOBL.GetValue('GP_NATUREPIECEG'),False) + '-' + IntToStr(TOBL.GetValue('GP_NUMERO')));
+    end;
   end;
-
+  
   ReinitialiseTobPiece;
 
   if Not GenerationDeLaPiece(TOBL, TOBL.GetString('TYPEMVT')) then Exit;
@@ -4095,12 +4126,15 @@ end;
 Procedure TOF_INTEGREFICTPI.GestionRuptureDate(TOBL : TOB; AncienDateMvt : TDateTime);
 begin
 
-  If AncienDateMvt <> idate1900 then
+  If TOBPiece.GetValue('NATUREPIECEG') <> '' then
   begin
-    if CreatePieceFromTob(TOBPiece, nil, nil,nil) then
-      MajTobValide
-    else
-      MajTobRejet(TOBL, 'PIE', 'Erreur en création de la pièce : ' + RechDom('GPP',TOBL.GetValue('GP_NATUREPIECEG'),False) + '-' + IntToStr(TOBL.GetValue('GP_NUMERO')));
+    If AncienDateMvt <> idate1900 then
+    begin
+      if CreatePieceFromTob(TOBPiece, nil, nil,nil) then
+        MajTobValide
+      else
+        MajTobRejet(TOBL, 'PIE', 'Erreur en création de la pièce : ' + RechDom('GPP',TOBL.GetValue('GP_NATUREPIECEG'),False) + '-' + IntToStr(TOBL.GetValue('GP_NUMERO')));
+    end;
   end;
 
   ReinitialiseTobPiece;
@@ -4849,6 +4883,8 @@ begin
     QteS  := 0;
     //
     TOBL    := TobTempo.detail[Ind];
+    //On ne fait pas le traitement si la ligne ne doit pas être intégrée.
+    If TOBL.GetValue('INTEGRE') = '-' then Continue;
     TypeMvt := TOBL.GetValue('TYPEMVT');
     //On ne traitera que les pièce de type sortie
     if (TypeMvt <> 'SA') AND (TypeMvt <> 'SD') then continue;
@@ -4877,10 +4913,10 @@ begin
       end;
       Ferme(QQ);
     end;
-    if TOBL.GetString('INTEGRE') = 'X' then
-    begin
+    //if TOBL.GetString('INTEGRE') = 'X' then
+    //begin
       Qte := TOBLSTK.GetValue('NEWSTOCK');
-      If  Pos(TypeMVT, 'EA;ED;CD') > 0 then QteE := TOBL.GetValue('QTE');
+      If  Pos(TypeMVT, 'EA;ED;BL') > 0 then QteE := TOBL.GetValue('QTE');
       If  Pos(TypeMVT, 'SA;SD')    > 0 then QteS := TOBL.GetValue('QTE');
       //Calcul du Nouveau Stock Physique
       Qte := (Qte + QteE) - QteS;
@@ -4888,7 +4924,7 @@ begin
       TOBLSTK.PutValue('QTEENTREE',  TOBLSTK.GetValue('QTEENTREE') + QteE);
       TOBLSTK.PutValue('QTESORTIE',  TOBLSTK.GetValue('QTESORTIE') + QteS);
       TOBLSTK.PutValue('NEWSTOCK', Qte);
-    end;
+    //end;
   end;
 
 end;
@@ -4929,11 +4965,14 @@ begin
           TOBLTmp := TobTempo.FindFirst(['GA_ARTICLE', 'DEPOT'],[TOBL.GetValue('GA_ARTICLE'),TOBL.GetValue('DEPOT')], False);
           while TOBLTmp <> nil do
           begin
-            TOBLTmp.PutVALUE('INTEGRE', '-');
-            TOBLTmp.PutValue('ANOMALIE', 'STOCK');
-            GestionAnomalie(TOBLTmp);
-            Grille.Row := TOBLTMP.GetValue('NOLIG');
-            Grille.InvalidateRow(Grille.Row);
+            If  Pos(TOBL.GetValue('TYPEMVT'), 'SA;SD') > 0 then
+            Begin
+              TOBLTmp.PutVALUE('INTEGRE', '-');
+              TOBLTmp.PutValue('ANOMALIE', 'STOCK');
+              GestionAnomalie(TOBLTmp);
+              Grille.Row := TOBLTMP.GetValue('NOLIG');
+              Grille.InvalidateRow(Grille.Row);
+            end;
             TOBLTMP := TobTempo.FindNext(['GA_ARTICLE', 'DEPOT'],[TOBL.GetValue('GA_ARTICLE'),TOBL.GetValue('DEPOT')], False);
           end;
         end;

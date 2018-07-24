@@ -551,6 +551,8 @@ type
     BGED: TToolbarButton97;
     PAIESTPOC: TMenuItem;
     BToolPhases: TToolbarButton97;
+    TDESCAFFAIRE: TEdit;
+    LDESCAFFAIRE: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -1578,6 +1580,7 @@ uses
   UconnectBSV,
   EdtREtat,
   UspecifPOC,
+  UspecifVerdon,
   SelectPhase
   ;
 
@@ -5963,6 +5966,33 @@ begin
   begin
     SendMessage(Self.Handle, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
   end;
+
+  if VH_GC.BTCODESPECIF = '002' then
+  begin
+    // Pas d'accès a l'affaire
+    // en création postionnement de l'affaire par le numéro du devis
+    // en modif pas d'acces au code affaire
+    //
+    if (NewDoc.NaturePiece = 'DBT') then
+    begin
+      BRazAffaire.Visible := false;
+      BRechAffaire.visible := false;
+      GP_AFFAIRE1.Enabled := false;
+      GP_AFFAIRE2.Enabled := false;
+      GP_AFFAIRE3.Enabled := false;
+      GP_AVENANT.Enabled := false;
+      GP_AFFAIRE1.OnExit := nil;
+      GP_AFFAIRE2.OnExit := nil;
+      GP_AFFAIRE3.OnExit := nil;
+      GP_AVENANT.OnExit := nil;
+      if Action= taCreat then
+      begin
+        LDESCAFFAIRE.Visible := True;
+        TDESCAFFAIRE.Visible := True;
+        LIBELLEAFFAIRE.Visible := false;
+      end;
+    end;
+  end;
 end;
 
 procedure TFFacture.NeRestePasSurDim(ARow : integer);
@@ -7592,14 +7622,17 @@ end;
 
 function TFFacture.FormateZoneDivers(St: string; ACol: Longint): string;
 var ColName, Typ, StC: string;
+    NbDec : Integer;
 begin
+  NbDec := fGestionListe.TheListe.Items[Acol].NbDec;
+  //
   Result := St;
   StC := St;
   ColName := IdentCols[ACol].ColName;
   if ColName = '' then Exit;
   Typ := IdentCols[ACol].ColTyp;
   if (Typ = 'INTEGER') or (Typ = 'SMALLINT') then StC := InttoStr(ValeurI(St)) else
-    if (Typ = 'DOUBLE') or (Typ = 'RATE') or (Typ = 'EXTENDED') then StC := StrF00(Valeur(St), V_PGI.OkDecV) else
+    if (Typ = 'DOUBLE') or (Typ = 'RATE') or (Typ = 'EXTENDED') then StC := StrF00(Valeur(St),nbdec) else
     if Typ = 'DATE' then
   begin
     if St <> '' then if not IsValidDate(St) then StC := GP_DATEPIECE.Text;
@@ -7616,21 +7649,23 @@ end;
 
 procedure TFFacture.FormateZoneSaisie(ACol, ARow: Longint);
 var St, StC: string;
+  NbDec : Integer;
 begin
   St := GS.Cells[ACol, ARow];
   StC := St;
+  NbDec := fGestionListe.TheListe.Items[Acol].NbDec;
   if ((ACol = SG_RefArt) or (Acol=SG_REFTiers) or (ACol = SG_Rep) or (ACol = SG_Dep)  or (Acol = SG_CIRCUIT) ) then
     StC := uppercase(Trim(St)) else
 //    if (ACol = SG_Px) or (ACol = SG_PxNet) then StC := StrF00(Valeur(St), DEV.Decimale) else // Modif MODE 31/07/2002
-  if (ACol = SG_Px) or (ACol = SG_PxNet) or (Acol = SG_PxAch) then StC := StrF00(Valeur(St), V_PGI.OkDecP) else
-  if ACol = SG_Rem then StC := StrF00(Valeur(St), ADecimP) else
-  if (ACol = SG_POURMARG) or (ACol = SG_POURMARQ) then StC := StrF00(Valeur(St), 2) else
+  if (ACol = SG_Px) or (ACol = SG_PxNet) or (Acol = SG_PxAch) then StC := StrF00(Valeur(St), NbDec) else
+  if ACol = SG_Rem then StC := StrF00(Valeur(St), NbDec) else
+  if (ACol = SG_POURMARG) or (ACol = SG_POURMARQ) then StC := StrF00(Valeur(St), NbDec) else
   if ((ACol = SG_QF) or (ACol = SG_QS) or (ACol = SG_QA) or (Acol = SG_QTESAIS) or
-  		(ACol = SG_QTEPREVUE) or (ACol = SG_DEJAFACT) or
+      (ACol = SG_QTEPREVUE) or (ACol = SG_DEJAFACT) or
       (Acol = SG_TEMPS) or (Acol = SG_TEMPSTOT) or
       (ACol = SG_QTESITUATION) or (Acol = SG_COEFMARG) ) then //MODIFBTP
   begin
-    StC := StrF00(Valeur(St), V_PGI.OkDecQ);
+    StC := StrF00(Valeur(St), nbdec);
   end else
   if (ACol = SG_Aff) then {Affaire}
   begin
@@ -20506,6 +20541,12 @@ var OldEcr, OldStk: RMVT;
   OkREXEl : boolean;
   EcritFacturable : boolean;
 begin
+  // ----
+  if (VH_GC.BTCODESPECIF = '002') and (TOBPiece.getString('GP_NATUREPIECEG')='DBT') and (Action=TaCreat) then
+  begin
+    ConstitueAffaireVerdon(Self);
+  end;
+  // ---
   EcritFacturable := false;
   if (action=taModif) and (not IsDejaFacture) and (InDossierfac) and (TOBPiece.getString('GP_NATUREPIECEG')='DBT') then EcritFacturable := true;
   if fmodeAudit then fAuditPerf.Debut('Validation document');
@@ -21626,7 +21667,6 @@ begin
   if not ErreurSiZero (TOBpiece) then exit;
   // CORRECTIONS : FQ 11904
   if not VerrouilleValidation (TOBPiece.getValue('GP_NATUREPIECEG'), TOBPiece.getValue('GP_SOUCHE') + ';' + IntToSTr(TOBPiece.getValue('GP_NUMERO'))) then exit;
-  // ---
   // Enregistrement de la saisie
   BValider.Enabled := False;
   ValideEnCours := True;
@@ -21767,6 +21807,17 @@ begin
   begin
     GS.setFocus;
   end;
+
+  if (VH_GC.BTCODESPECIF = '002') and (TOBPiece.getString('GP_NATUREPIECEG')='DBT') and (Action=taCreat) then
+  begin
+    if TDESCAFFAIRE.Text = '' then
+    begin
+      PGIBox('Merci de renseigner le descriptif de l''affaire', 'Saisie Document vente');
+      TDESCAFFAIRE.SetFocus;
+      Exit;
+    end;
+  end;
+
   if fmodeAudit then fAuditPerf.Debut('-------------- CLICK VALIDE ---------------');
 
   if StatutAffaire = 'I' then
@@ -21845,7 +21896,7 @@ begin
     TraitementReajustement;
   end else
   begin
-	ClickValideAndStayHere (Self,TOBPiece, TOBNomenclature, TobOuvrage,TOBTiers, TOBAffaire,TOBLigneRg);
+  	ClickValideAndStayHere (Self,TOBPiece, TOBNomenclature, TobOuvrage,TOBTiers, TOBAffaire,TOBLigneRg);
    //Mise à jour de l'échéance facturé si une modification à eu lieu
    if TobAffaire.getvalue('AFF_AFFAIRE0')='I' Then
       Begin

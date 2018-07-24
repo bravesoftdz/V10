@@ -1,8 +1,8 @@
 object FFacture: TFFacture
-  Left = 2
-  Top = 2
-  Width = 798
-  Height = 558
+  Left = 527
+  Top = 136
+  Width = 1118
+  Height = 721
   HelpContext = 119000017
   ActiveControl = GP_DATEPIECE
   BorderIcons = [biSystemMenu, biMaximize]
@@ -38,7 +38,7 @@ object FFacture: TFFacture
   object PEntete: THPanel
     Left = 0
     Top = 0
-    Width = 782
+    Width = 1102
     Height = 125
     Align = alTop
     FullRepaint = False
@@ -1201,8 +1201,8 @@ object FFacture: TFFacture
   end
   object PPiedTot: TPanel
     Left = 0
-    Top = 373
-    Width = 782
+    Top = 536
+    Width = 1102
     Height = 24
     Align = alBottom
     BevelOuter = bvNone
@@ -1210,7 +1210,7 @@ object FFacture: TFFacture
     object PGTG: TPanel
       Left = 0
       Top = -56
-      Width = 782
+      Width = 1102
       Height = 80
       Align = alBottom
       BevelOuter = bvNone
@@ -1218,7 +1218,7 @@ object FFacture: TFFacture
       object GTG: THGrid
         Left = 0
         Top = 0
-        Width = 782
+        Width = 1102
         Height = 80
         Align = alClient
         ColCount = 9
@@ -1244,7 +1244,7 @@ object FFacture: TFFacture
     object PGT: TPanel
       Left = 0
       Top = 0
-      Width = 782
+      Width = 1102
       Height = 21
       Align = alTop
       BevelOuter = bvNone
@@ -1252,7 +1252,7 @@ object FFacture: TFFacture
       object GT: THGrid
         Left = 0
         Top = 0
-        Width = 782
+        Width = 1102
         Height = 22
         Align = alTop
         DefaultRowHeight = 18
@@ -1337,8 +1337,8 @@ object FFacture: TFFacture
   end
   object PGlobPied: THPanel
     Left = 0
-    Top = 397
-    Width = 782
+    Top = 560
+    Width = 1102
     Height = 122
     Align = alBottom
     BevelOuter = bvNone
@@ -1352,7 +1352,7 @@ object FFacture: TFFacture
     object PPied: THPanel
       Left = 0
       Top = 0
-      Width = 782
+      Width = 1102
       Height = 87
       Align = alTop
       BevelOuter = bvNone
@@ -1366,7 +1366,7 @@ object FFacture: TFFacture
       TextEffect = tenone
       AutoResize = True
       DesignSize = (
-        782
+        1102
         87)
       object HGP_ESCOMPTE: THLabel
         Left = 222
@@ -1447,7 +1447,7 @@ object FFacture: TFFacture
         Visible = False
       end
       object BLanceCalc: TToolbarButton97
-        Left = 384
+        Left = 704
         Top = 2
         Width = 405
         Height = 101
@@ -2533,7 +2533,7 @@ object FFacture: TFFacture
     object PButtons: TPanel
       Left = 0
       Top = 86
-      Width = 782
+      Width = 1102
       Height = 36
       Align = alBottom
       BevelOuter = bvNone
@@ -2541,7 +2541,7 @@ object FFacture: TFFacture
       object DockBottom: TDock97
         Left = 0
         Top = 5
-        Width = 782
+        Width = 1102
         Height = 31
         BackgroundTransparent = True
         Position = dpBottom
@@ -3178,6 +3178,8 @@ object FFacture: TFFacture
             Width = 28
             Height = 27
             Hint = 'Voir les totalisations documents'
+            Glyph.Data = {00000000}
+            GlyphMask.Data = {00000000}
             ImageIndex = 0
             Images = HimgTOT
             Opaque = False
@@ -3500,6 +3502,8 @@ object FFacture: TFFacture
       '\par '
       '\par '
       '\par '
+      '\par '
+      '\par '
       '\par }')
   end
   object BZoomRessource: THBitBtn
@@ -3522,8 +3526,8 @@ object FFacture: TFFacture
   object PGS: TPanel
     Left = 0
     Top = 125
-    Width = 782
-    Height = 248
+    Width = 1102
+    Height = 411
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 2
@@ -3532,8 +3536,8 @@ object FFacture: TFFacture
       Tag = 1
       Left = 0
       Top = 0
-      Width = 782
-      Height = 248
+      Width = 1102
+      Height = 411
       Align = alClient
       BorderStyle = bsNone
       ColCount = 8
@@ -3645,7 +3649,7 @@ object FFacture: TFFacture
     Left = 93
     Top = 188
     Width = 728
-    Height = 165
+    Height = 170
     BevelInner = bvRaised
     BevelOuter = bvLowered
     Caption = ' '
@@ -3904,6 +3908,14 @@ object FFacture: TFFacture
       Visible = False
       GlobalIndexImage = 'Z0080_S24G1'
     end
+    object LDESCAFFAIRE: TLabel
+      Left = 5
+      Top = 141
+      Width = 76
+      Height = 13
+      Caption = 'Descriptif affaire'
+      Visible = False
+    end
     object GP_REFEXTERNE__: TEdit
       Left = 314
       Top = 70
@@ -3965,7 +3977,7 @@ object FFacture: TFFacture
       Height = 21
       Style = csDropDownList
       ItemHeight = 13
-      TabOrder = 23
+      TabOrder = 24
       OnChange = GP_DEVISEChange
       TagDispatch = 0
       DataType = 'TTDEVISE'
@@ -3975,7 +3987,7 @@ object FFacture: TFFacture
       Top = 48
       Width = 71
       Height = 21
-      TabOrder = 12
+      TabOrder = 14
       OnExit = GP_REPRESENTANTExit
       TagDispatch = 0
       ElipsisButton = True
@@ -3995,7 +4007,7 @@ object FFacture: TFFacture
       Font.Name = 'MS Sans Serif'
       Font.Style = [fsBold]
       ParentFont = False
-      TabOrder = 20
+      TabOrder = 21
       BackGroundEffect = bdFond
       ColorShadow = clWindowText
       ColorStart = clBtnFace
@@ -4017,7 +4029,7 @@ object FFacture: TFFacture
       Font.Name = 'MS Sans Serif'
       Font.Style = [fsBold]
       ParentFont = False
-      TabOrder = 21
+      TabOrder = 22
       BackGroundEffect = bdFond
       ColorShadow = clWindowText
       ColorStart = clBtnFace
@@ -4031,7 +4043,7 @@ object FFacture: TFFacture
       Height = 21
       Style = csDropDownList
       ItemHeight = 13
-      TabOrder = 9
+      TabOrder = 11
       OnChange = GP_ETABLISSEMENTChange
       TagDispatch = 0
       DataType = 'TTETABLISSEMENT'
@@ -4049,7 +4061,7 @@ object FFacture: TFFacture
       Font.Style = []
       ItemHeight = 13
       ParentFont = False
-      TabOrder = 13
+      TabOrder = 15
       OnChange = GP_DEPOTChange
       OnExit = GP_DEPOT__Exit
       TagDispatch = 0
@@ -4101,7 +4113,7 @@ object FFacture: TFFacture
       Font.Name = 'MS Sans Serif'
       Font.Style = []
       ParentFont = False
-      TabOrder = 19
+      TabOrder = 20
       Visible = False
       TagDispatch = 0
     end
@@ -4120,7 +4132,7 @@ object FFacture: TFFacture
       Font.Name = 'MS Sans Serif'
       Font.Style = [fsBold]
       ParentFont = False
-      TabOrder = 24
+      TabOrder = 25
       BackGroundEffect = bdFond
       ColorShadow = clWindowText
       ColorStart = clBtnFace
@@ -4144,7 +4156,7 @@ object FFacture: TFFacture
       Height = 21
       TabStop = False
       CharCase = ecUpperCase
-      TabOrder = 18
+      TabOrder = 19
       Visible = False
       TagDispatch = 0
     end
@@ -4154,7 +4166,7 @@ object FFacture: TFFacture
       Width = 137
       Height = 21
       Enabled = False
-      TabOrder = 10
+      TabOrder = 12
       Visible = False
     end
     object GP_DOMAINE__: THValComboBox
@@ -4164,7 +4176,7 @@ object FFacture: TFFacture
       Height = 21
       Style = csDropDownList
       ItemHeight = 13
-      TabOrder = 14
+      TabOrder = 16
       OnExit = GP_DOMAINE__Exit
       TagDispatch = 0
       Vide = True
@@ -4195,8 +4207,8 @@ object FFacture: TFFacture
       ControlerDate = True
     end
     object LIBELLEAFFAIRE: THPanel
-      Left = 7
-      Top = 138
+      Left = 16
+      Top = 140
       Width = 682
       Height = 16
       Alignment = taLeftJustify
@@ -4209,7 +4221,7 @@ object FFacture: TFFacture
       Font.Name = 'MS Sans Serif'
       Font.Style = [fsBold]
       ParentFont = False
-      TabOrder = 22
+      TabOrder = 23
       BackGroundEffect = bdFond
       ColorShadow = clWindowText
       ColorStart = clBtnFace
@@ -4223,7 +4235,7 @@ object FFacture: TFFacture
       Height = 21
       Hint = 'Ressource achat'
       Color = clWhite
-      TabOrder = 11
+      TabOrder = 13
       OnExit = GP_RESSOURCEExit
       TagDispatch = 0
       ElipsisButton = True
@@ -4234,7 +4246,7 @@ object FFacture: TFFacture
       Top = 70
       Width = 147
       Height = 21
-      TabOrder = 16
+      TabOrder = 17
       Visible = False
       OnExit = GP_CODEMATERIELExit
       TagDispatch = 0
@@ -4246,7 +4258,7 @@ object FFacture: TFFacture
       Top = 94
       Width = 147
       Height = 21
-      TabOrder = 17
+      TabOrder = 18
       Visible = False
       OnExit = GP_BTETATExit
       TagDispatch = 0
@@ -4259,10 +4271,18 @@ object FFacture: TFFacture
       Width = 175
       Height = 21
       Enabled = False
-      TabOrder = 15
+      TabOrder = 9
       Visible = False
       OnExit = ATTACHEMENTExit
       TagDispatch = 0
+    end
+    object TDESCAFFAIRE: TEdit
+      Left = 88
+      Top = 138
+      Width = 400
+      Height = 21
+      TabOrder = 10
+      Visible = False
     end
   end
   object TDescriptif: TToolWindow97
@@ -4303,6 +4323,8 @@ object FFacture: TFFacture
           '0\fnil Times New Roman;}}'
         '{\*\generator Riched20 6.3.9600}\viewkind4\uc1 '
         '\pard\f0\fs20 '
+        '\par '
+        '\par '
         '\par '
         '\par '
         '\par '
