@@ -2432,7 +2432,7 @@ begin
 end;
 
 procedure TMajStructBTP.TraiteChangementMenu(TheListRef: TOB);
-var NumeroMenu : string;
+var NumeroMenu,InfoMenu,NumMenu : string;
     TheMenusRef,TheMenusDest,TheMenusSpecif : TOB;
     TheMenuRef,TheMenuDest : TOB;
     indice : integer;
@@ -2444,7 +2444,10 @@ begin
   NumeroMenu := TheLIstRef.GetValue ('BTV_NOMELT');
   if TheListRef.GetValue ('BTV_FORCE') = 'X' Then
   begin
-    ExecuteSQL('DELETE FROM MENU WHERE MN_1="'+READTOKENST(NumeroMenu)+'"');
+    InfoMenu := NumeroMenu;
+    NumMenu := READTOKENST(InfoMenu);
+    ExecuteSQL('DELETE FROM MENU WHERE MN_1='+NumMenu);
+    ExecuteSQL('DELETE FROM MENU WHERE MN_2='+NumMenu+' AND MN_1=0');
   end;
 	XX.Titre.Caption := 'Mise à jour des Menus';
   XX.Titre.visible := true;
