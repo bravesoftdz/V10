@@ -205,7 +205,7 @@ const
     begin
       Sql := 'SELECT T_TIERS, YTC_TEXTELIBRE1'
            + ' FROM TIERS'
-           + ' LEFT JOIN TIERSCOMPL ON YTC_TIERS = T_TIERS'
+           + ' JOIN TIERSCOMPL ON YTC_TIERS = T_TIERS'
            + ' WHERE T_TIERS = "' + ThirdCode + '"';
       Qry := OpenSQL(Sql, True);
       try
@@ -537,13 +537,13 @@ begin
                 Msg := Format('Pièce %s non intégrée.', [LastDocNumberOnError]);
                 case NumError of
                   0 : TslReport.Add(Msg);
-                  1 : TslReport.Add(Format('%s Le tiers %s n''existe pas.'                      , [Msg, ValThird]));
-                  2 : TslReport.Add(Format('%s Le tiers %s n''a pas d''article générique.'      , [Msg, ValThird]));
-                  3 : TslReport.Add(Format('%s Le numéro de chantier %s est inexistant.'        , [Msg, ValAff3]));
-                  4 : TslReport.Add(Format('%s L''article générique du tiers %s est inexistant.', [Msg, ValThird]));
-                  5 : TslReport.Add(Format('%s La date de pièce %s n''est pas valide.'          , [Msg, DateToStr(ValDate)]));
-                  6 : TslReport.Add(Format('%s La famille %s est inexistante.'                  , [Msg, ValFLevel2]));
-                  7 : TslReport.Add(Format('%s Le tiers est vide.'                              , [Msg, ValThird]));
+                  1 : TslReport.Add(Format('%s Le tiers ou les données complémentaires de %s n''existe pas.', [Msg, ValThird]));
+                  2 : TslReport.Add(Format('%s Le tiers %s n''a pas d''article générique.'                  , [Msg, ValThird]));
+                  3 : TslReport.Add(Format('%s Le numéro de chantier %s est inexistant.'                    , [Msg, ValAff3]));
+                  4 : TslReport.Add(Format('%s L''article générique du tiers %s est inexistant.'            , [Msg, ValThird]));
+                  5 : TslReport.Add(Format('%s La date de pièce %s n''est pas valide.'                      , [Msg, DateToStr(ValDate)]));
+                  6 : TslReport.Add(Format('%s La famille %s est inexistante.'                              , [Msg, ValFLevel2]));
+                  7 : TslReport.Add(Format('%s Le tiers est vide.'                                          , [Msg, ValThird]));
                 end;
               end;
               inc(LinesCpt);
