@@ -802,14 +802,14 @@ begin
     begin
       if (TOBPorcs.Detail[i].GetValue('GPT_FRAISREPARTIS') = 'X') then continue;
       if (TOBPorcs.Detail[i].Getboolean('GPT_RETENUEDIVERSE')) then continue;
-    if EnHt then
-    begin
+      if EnHt then
+      begin
         Result := Result + TOBPorcs.Detail[i].GetValue('GPT_TOTALHTDEV');
-    end else
-    begin
+      end else
+      begin
         Result := Result + TOBPorcs.Detail[i].GetValue('GPT_TOTALTTCDEV');
+      end;
     end;
-  end;
   end;
   Result := Arrondi(Result, 6);
 end;
@@ -1172,14 +1172,14 @@ if TOBRG.GetValue('PRG_TAUXRG') <> 0 then
    if not TOBRG.getBoolean('PRG_MTMANUEL') then
    begin
    // Element HT
-     //XPorcHt := CalculPort (True,TOBPorcs);
+//     XPorcHt := CalculPort (True,TOBPorcs);
      //
-   ValInterm := arrondi ((TOBPIece.getValue('GP_TOTALHTDEV') - XporcHt)*(TauxRg /100),DEV.decimale);
-   TOBRG.putvalue('PRG_MTHTRGDEV',ValInterm);
+     ValInterm := arrondi ((TOBPIece.getValue('GP_TOTALHTDEV') - XporcHt)*(TauxRg /100),DEV.decimale);
+     TOBRG.putvalue('PRG_MTHTRGDEV',ValInterm);
    // Element TTC
-   XPorcTTC := CalculPort (False,TOBPorcs);
-   ValInterm := arrondi ((TOBPIece.getValue('GP_TOTALTTCDEV') - XPorcTTC)*(TauxRg /100),DEV.decimale);
-   TOBRG.putvalue('PRG_MTTTCRGDEV',ValInterm);
+//     XPorcTTC := CalculPort (False,TOBPorcs);
+     ValInterm := arrondi ((TOBPIece.getValue('GP_TOTALTTCDEV') - XPorcTTC)*(TauxRg /100),DEV.decimale);
+     TOBRG.putvalue('PRG_MTTTCRGDEV',ValInterm);
      //
    end;
    IndiceRg := TOBRG.GetValue('INDICERG');
