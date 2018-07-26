@@ -547,7 +547,8 @@ var
   Autoliquidation : boolean;
   Commercial : string;
   // ----------------------------------------
-
+  Cpt : integer;
+  FieldName : string;
 begin
   Result := False;
   Autoliquidation := false;
@@ -642,13 +643,11 @@ begin
 
                 if not TobData.Detail[i].FieldExists('CODEARTICLE') then TobLigne.PutValue('GL_CODEARTICLE', TobData.Detail[i].GetValue('CODEARTICLE'))
                                                                     else TobLigne.PutValue('GL_CODEARTICLE', copy(TobLigne.GetValue('GL_ARTICLE'),1,18));
-
                 if TobData.Detail[i].FieldExists('REFARTSAISIE') then TobLigne.PutValue('GL_REFARTSAISIE', TobData.Detail[i].GetValue('REFARTSAISIE'))
                                                                  else TobLigne.PutValue('GL_REFARTSAISIE', TobLigne.GetValue('GL_CODEARTICLE'));
                 { Quantités }
                 if TobData.Detail[i].FieldExists('QTEFACT') then TobLigne.PutValue('GL_QTEFACT', TobData.Detail[i].GetValue('QTEFACT'))
                                                             else TobLigne.PutValue('GL_QTEFACT', 1);
-
                 if not TobData.Detail[i].FieldExists('LIVDIRECTE') then TobLigne.PutValue('GL_IDENTIFIANTWOL', -1);
                 if not TobData.FieldExists('QTESTOCK') then TobLigne.PutValue('GL_QTESTOCK', TobLigne.GetValue('GL_QTEFACT'));
                 if not TobData.FieldExists('QTERESTE') then TobLigne.PutValue('GL_QTERESTE', TobLigne.GetValue('GL_QTESTOCK'));
@@ -673,6 +672,13 @@ begin
                   PreAffecteLigne(V.TobPiece, TobLigne, V.TobLigneTarif, TobArt, V.TobTiers, V.TobTarif, V.TobConds, V.TobAffaire, nil, nil, i + 1, V.Dev, TobLigne.GetValue('GL_QTEFACT'),True, false)
                 else
                   PreAffecteLigne(V.TobPiece, TobLigne, V.TobLigneTarif, TobArt, V.TobTiers, V.TobTarif, V.TobConds, V.TobAffaire, nil, nil, i + 1, V.Dev, TobLigne.GetValue('GL_QTEFACT'),True);
+                { Traite famille article si existent }
+                for Cpt := 1 to 3 do
+                begin
+                  FieldName := 'FAMILLENIV' + IntToStr(Cpt);
+                  if TobData.Detail[i].FieldExists(FieldName) then
+                    TobLigne.SetString('GL_' + FieldName, TobData.Detail[i].GetString(FieldName));
+                end;
                 //
                 TraiteLesOuvrages(nil,V.TOBPiece, V.TOBArticles, V.TOBOuvrage,nil,TobMetres,TobLigne.GetIndex+1, False, V.DEV, true);
 

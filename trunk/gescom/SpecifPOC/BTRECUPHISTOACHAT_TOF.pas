@@ -516,6 +516,7 @@ begin
           end;
           InitMoveProgressForm(nil, 'Traitement en cours.', Ecran.Caption, LinesQty, False, True);
           try
+            LastDocNumber := '';
             while GetExcelText(CurrentTab, LinesCpt, cnIntRef) <> '' do
             begin
               inc(Cpt);
