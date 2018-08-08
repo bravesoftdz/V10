@@ -479,8 +479,16 @@ const
 
 Implementation
 
-uses ctiAlerte,factcomm,LicUtil,BTSIGNATURE_TOF,Menus, UdateUtils,
-  DateUtils;
+uses
+  ctiAlerte
+  , factcomm
+  , LicUtil
+  , BTSIGNATURE_TOF
+  , Menus
+  , UdateUtils
+  , DateUtils
+  , CommonTools
+  ;
 
 procedure TOF_APPEL.OnNew;
 Var StNotel,CodeAppel : string;
@@ -3611,15 +3619,10 @@ begin
     //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
     If Ok_GereSAV then StArgument := 'GERESAV=X';
   end;         
-
+  StArgument := Format('%s%sRESTRTYPERESSOURCE=INT|SAL', [StArgument, Tools.iif(StArgument <> '', ';', '')]);
   //FV1 : 20/11/2015 - FS#1732 - ESPACS : Ne pas afficher les ressources fermées dans fiche Appel
   StWhere := ' AND (ARS_TYPERESSOURCE="SAL" OR ARS_TYPERESSOURCE="ST" OR ARS_TYPERESSOURCE="INT") AND ARS_FERME="-" ';
-
   DispatchRecherche(Responsable, 3, stwhere, StArgument, '');
-
-  //Responsable.Plus := Req;
-  //LookupCombo(Responsable);
-
   if Responsable.Text = '' then
     SetControltext('TAFF_RESPONSABLE','')
   else

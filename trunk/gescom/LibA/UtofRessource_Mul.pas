@@ -185,6 +185,11 @@ end;
         begin
            ConstituePlusTypeRessource(valeur);
         end;
+        if (Champ = 'DEFAULTTYPERESSOURCE') or (Champ = 'RESTRTYPERESSOURCE') then
+        begin
+          TypeMultiRess.Text    := StringReplace(Valeur, '|', ';', [rfReplaceAll]);
+          TypeMultiRess.Enabled := (Champ <> 'RESTRTYPERESSOURCE');
+        end;
 {$ENDIF}
         END;
      Critere:=(Trim(ReadTokenSt(stArgument)));

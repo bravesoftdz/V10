@@ -163,6 +163,7 @@ uses  UtilRessource,
       CalcOLEGenericBTP,
       PiecesRecalculs,
       AffEcheanceUtil
+      , CommonTools
       ;
 
 
@@ -1633,10 +1634,13 @@ end;
 
 
 procedure TOF_AFFAIRE_MUL.BRechResponsable(Sender: TObject);
-Var Lib1, Lib2 : String;
+Var
+  FromAppel : boolean;
+  Lib1      : string;
+  Lib2      : String;
 begin
-
-  GetRessourceRecherche(TResponsable,'ARS_TYPERESSOURCE="SAL"', '', '');
+  FromAppel := (Ecran.name = 'BTMULAPPELS');
+  GetRessourceRecherche(TResponsable, Tools.iif(not FromAppel, 'ARS_TYPERESSOURCE=SAL', ''), Tools.iif(FromAppel, 'DEFAULTTYPERESSOURCE=INT|SAL', ''), '');
 
   if LibResponsable = nil then Exit;
 
