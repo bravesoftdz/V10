@@ -2146,16 +2146,28 @@ Cegid,False,False)};
     // --
     // --- BIM METRE ---
     281110 : BEGIN
-               V_Pgi.ZoomOle := True ;
-               AGLLanceFiche ('BTP','BTBIMIMPORT','','','');
-               V_Pgi.ZoomOle := false ;
-               retourforce := True;
+               if (VH_GC.BTSeriaAO = TRUE) or (V_PGI.VersionDemo = True) then
+               begin
+                 V_Pgi.ZoomOle := True ;
+                 AGLLanceFiche ('BTP','BTBIMIMPORT','','','');
+                 V_Pgi.ZoomOle := false ;
+                 retourforce := True;
+               end else
+               begin
+             		 PgiBox('Ce module n''est pas sérialisé. Il ne peut être utilisé.','Récupération des Appels d''Offres');
+               end;
              END;
     281210 : BEGIN
-               V_Pgi.ZoomOle := True ;
-               AGLLanceFiche ('BTP','BTBIMEXPORT','','','');
-               V_Pgi.ZoomOle := false ;
-               retourforce := True;
+               if (VH_GC.BTSeriaAO = TRUE) or (V_PGI.VersionDemo = True) then
+               begin
+                 V_Pgi.ZoomOle := True ;
+                 AGLLanceFiche ('BTP','BTBIMEXPORT','','','');
+                 V_Pgi.ZoomOle := false ;
+                 retourforce := True;
+               end else
+               begin
+             		 PgiBox('Ce module n''est pas sérialisé. Il ne peut être utilisé.','Récupération des Appels d''Offres');
+               end;
              END;
     else HShowMessage('2;?caption?;'+TraduireMemoire('Fonction non disponible : ')+';W;O;O;O;',TitreHalley,IntToStr(Num)) ;
      end ;
