@@ -72,6 +72,7 @@ Procedure RTAlimTelephonContact ;
 function IntervertirNomChampsXX ( FF:Tform; sChampSansIndice:string; iDebut, iFin:integer; RendInvisible:boolean=false) : integer;
 Function ChangeLibre2 ( NomChamp : string ; FF : Tform ) : boolean;
 Function RTTypeProduitCRM : string;
+function EstSpecifPOC : boolean;
 
 Type T_SupArt = Class
                    // DCA - FQ MODE 10815 - Ajout du statut
@@ -2269,7 +2270,10 @@ if GetParamSocSecur ('SO_COMFI',False) = True then Result := 'COMFI';
 {$ENDIF COMFI}
 end;
 
-
+function EstSpecifPOC : boolean;
+begin
+  Result := (VH_GC.BTCODESPECIF = '001');
+end;
 
 Initialization
 RegisterAglProc('MajChampsLibresArticle',True,4,AGLMajChampsLibresArticle) ;

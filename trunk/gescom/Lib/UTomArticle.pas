@@ -339,6 +339,8 @@ type
     {$ENDIF}
     procedure SelFourn (Sender : Tobject);
     procedure SelCatalog (Sender : Tobject);
+    procedure GA_FAMILLENIV1_OnChange(Sender : Tobject);
+    procedure GA_FAMILLENIV2_OnChange(Sender : Tobject);
 
   public
     //           SauveParamGrille : string[1];
@@ -552,7 +554,8 @@ uses
   UTilFonctionCalcul,
   UtilFichiers,
   SaisUtil
-  ,UFonctionsCBP, Types;
+  ,UFonctionsCBP, Types
+  ;
 
 var ReferArtFourn: string; // Référence article chez le fournisseur
 
@@ -1768,7 +1771,12 @@ begin
     ThEdit(GetControl('GA_CODEARTICLE')).Enabled := False
   Else
     ThEdit(GetControl('GA_CODEARTICLE')).Enabled := true;
-
+  if EstSpecifPOC then
+  begin
+    THDBValComboBox(GetControl('GA_FAMILLENIV1')).OnChange  := GA_FAMILLENIV1_OnChange;
+    THDBValComboBox(GetControl('GA_FAMILLENIV2')).OnChange  := GA_FAMILLENIV2_OnChange;
+    THDBValComboBox(GetControl('GA_COMPTAARTICLE')).Enabled := False;
+  end
 end;
 
 Procedure TOM_Article.GestionFicheNormale;
@@ -3350,21 +3358,28 @@ begin
     if Getfield('GA_FAMILLENIV1') = '' then
     begin
       Setfield('GA_FAMILLENIV2', '');
+      if EstSpecifPOC then
+        SetField('GA_COMPTAARTICLE', '');
       Setfield('GA_FAMILLENIV3', '');
       SetControlEnabled('GA_FAMILLENIV2', false);
       SetControlEnabled('GA_FAMILLENIV3', false);
-    end
-    else SetControlEnabled('GA_FAMILLENIV2', true);
+    end else
+      SetControlEnabled('GA_FAMILLENIV2', true);
   end
-  else if (NomChamps = 'GA_FAMILLENIV2') and (GetParamSoc('SO_GCFAMHIERARCHIQUE') = True) then
+  else if (NomChamps = 'GA_FAMILLENIV2') then
   begin
-    if Getfield('GA_FAMILLENIV2') = '' then
+//    if EstSpecifPOC then
+//      SetField('GA_COMPTAARTICLE', GetField('GA_FAMILLENIV2'));
+    if GetParamSocSecur('SO_GCFAMHIERARCHIQUE', False) then
     begin
-      Setfield('GA_FAMILLENIV3', '');
-      SetControlEnabled('GA_FAMILLENIV3', false);
-    end
-    else
-      SetControlEnabled('GA_FAMILLENIV3', true);
+      if Getfield('GA_FAMILLENIV2') = '' then
+      begin
+        Setfield('GA_FAMILLENIV3', '');
+        SetControlEnabled('GA_FAMILLENIV3', false);
+      end
+      else
+        SetControlEnabled('GA_FAMILLENIV3', true);
+    end;
   end;
 
   {$IFDEF GPAO}
@@ -3560,15 +3575,15 @@ begin
 end;
 
 procedure TOM_Article.OnUpdateRecord;
-var QQ: TQuery;
+var
+  QQ: TQuery;
   Nbr, iItem, NbrMax: integer;
   SQL, NomChamp, ValeurNomChamp: string;
   PrixUnique, ArtDimModifie: Boolean;
-  CodeArt, {ArtError,} NumChrono, NewCodeCAB, ArtSpecif, TypeCAB: string;
+  CodeArt, NumChrono, NewCodeCAB, ArtSpecif, TypeCAB: string;
   ArtDim, TobArtCompl: TOB;
   OngletDimension: TTAbSheet;
   PanelDimension: TPanel;
-//  Err: Boolean; 
   st: string;
   pv, ht, tx: double;
   // Modif BTP
@@ -3589,6 +3604,39 @@ var QQ: TQuery;
   stArticle, stChronoArt, stSql: string;
   bOkChrono: boolean;
   iRecupChrono: integer;
+
+  procedure CoherenceFamilles;
+  var
+    Prefixe : string;
+    Sql     : string;
+    Qry     : TQuery;
+  begin
+  	if (copy(GetField('GA_TYPEARTICLE'), 1, 2) = 'PA') then
+      Prefixe := 'BP'
+    else if (GetField('GA_TYPEARTICLE') = 'OUV') then
+      Prefixe := 'BO'
+    else
+      Prefixe := 'FN';
+    Sql := 'SELECT * FROM CHOIXCOD WHERE CC_TYPE = "' + Prefixe + '3" AND CC_CODE = "' + GetField('GA_FAMILLENIV3') + '" AND CC_LIBRE LIKE "%' + GetField('GA_FAMILLENIV1') + GetField('GA_FAMILLENIV2') + '%"';
+    Qry  := OpenSql(Sql, True);
+    try
+      if Qry.Eof then SetField('GA_FAMILLENIV3', '');
+    finally
+      Ferme(Qry);
+    end;
+    Sql := 'SELECT * FROM CHOIXCOD WHERE CC_TYPE = "' + Prefixe + '2" AND CC_CODE = "' + GetField('GA_FAMILLENIV2') + '" AND CC_LIBRE LIKE "%' + GetField('GA_FAMILLENIV1') + '%"';
+    Qry  := OpenSql(Sql, True);
+    try
+      if Qry.Eof then
+      begin
+        SetField('GA_FAMILLENIV2', '');
+        if EstSpecifPOC then
+          SetField('GA_COMPTAARTICLE', '');
+      end;
+    finally
+      Ferme(Qry);
+    end;
+  end;
 
 begin
 
@@ -4380,49 +4428,7 @@ begin
   // Contrôle cohérence des familles hiérarchiques
   // Correction FQ;032;12594
   if  (IsMasterOnShare('GCFAMILLENIV1') and GetParamSoc('SO_GCFAMHIERARCHIQUE')) then
-  // --
-//  if GetParamSoc('SO_GCFAMHIERARCHIQUE') = True then
-  begin
-  	if (copy(GetField('GA_TYPEARTICLE'),1,2)='PA') then
-    begin
-      St := 'SELECT * FROM CHOIXCOD WHERE CC_TYPE = "BP3" AND CC_CODE = "' + getfield('GA_FAMILLENIV3') + '" AND CC_LIBRE like "%' + getfield('GA_FAMILLENIV1') +
-        getfield('GA_FAMILLENIV2') + '%"';
-      QQ := OpenSql(St, True);
-      if QQ.Eof then SetField('GA_FAMILLENIV3', '');
-      Ferme(QQ);
-      St := 'SELECT * FROM CHOIXCOD WHERE CC_TYPE = "BP2" AND CC_CODE = "' + getfield('GA_FAMILLENIV2') + '" AND CC_LIBRE like "%' + getfield('GA_FAMILLENIV1') +
-        '%"';
-      QQ := OpenSql(St, True);
-      if QQ.Eof then SetField('GA_FAMILLENIV2', '');
-      Ferme(QQ);
-    end else
-  	if (GetField('GA_TYPEARTICLE')='OUV') then
-    begin
-      St := 'SELECT * FROM CHOIXCOD WHERE CC_TYPE = "BO3" AND CC_CODE = "' + getfield('GA_FAMILLENIV3') + '" AND CC_LIBRE like "%' + getfield('GA_FAMILLENIV1') +
-        getfield('GA_FAMILLENIV2') + '%"';
-      QQ := OpenSql(St, True);
-      if QQ.Eof then SetField('GA_FAMILLENIV3', '');
-      Ferme(QQ);
-      St := 'SELECT * FROM CHOIXCOD WHERE CC_TYPE = "BO2" AND CC_CODE = "' + getfield('GA_FAMILLENIV2') + '" AND CC_LIBRE like "%' + getfield('GA_FAMILLENIV1') +
-        '%"';
-      QQ := OpenSql(St, True);
-      if QQ.Eof then SetField('GA_FAMILLENIV2', '');
-      Ferme(QQ);
-    end else
-    begin
-      St := 'SELECT * FROM CHOIXCOD WHERE CC_TYPE = "FN3" AND CC_CODE = "' + getfield('GA_FAMILLENIV3') + '" AND CC_LIBRE like "%' + getfield('GA_FAMILLENIV1') +
-        getfield('GA_FAMILLENIV2') + '%"';
-      QQ := OpenSql(St, True);
-      if QQ.Eof then SetField('GA_FAMILLENIV3', '');
-      Ferme(QQ);
-      St := 'SELECT * FROM CHOIXCOD WHERE CC_TYPE = "FN2" AND CC_CODE = "' + getfield('GA_FAMILLENIV2') + '" AND CC_LIBRE like "%' + getfield('GA_FAMILLENIV1') +
-        '%"';
-      QQ := OpenSql(St, True);
-      if QQ.Eof then SetField('GA_FAMILLENIV2', '');
-      Ferme(QQ);
-    end;
-  end;
-
+    CoherenceFamilles;
   if ArtSpecif = 'FicheModePre' then exit;
 
 {$IFDEF BTP}
@@ -4569,39 +4575,22 @@ var NomChamp: string;
 begin
   result := false;
   NomChamp := '';
-  if VH_GC.GCIfDefCEGID then  // en attendant le parametrage des champs obligatoires c'est en dur
+  {$IFNDEF CCS3}
+  TypeArticle := GetField('GA_TYPEARTICLE');
+  //  BBI correction fiche 10360
+  if TypeArticle = 'NOM' then
+    TypeArticle := TypeArticle + GetField('GA_TYPENOMENC');
+  //  BBI fin correction fiche 10360
+  NomChamp := VerifierChampsObligatoires(Ecran, TypeArticle);
+  if NomChamp <> '' then
   begin
-    if ((GetField('GA_COMPTAARTICLE') = '') and ((GetField('GA_TYPEARTICLE') <> 'NOM') or (GetField('GA_TYPENOMENC') <> 'MAC'))) then
-      NomChamp := 'GA_COMPTAARTICLE'
-    else if (GetField('GA_FAMILLETAXE1') = '') then NomChamp := 'GA_FAMILLETAXE1'
-      ;
-    if NomChamp <> '' then
-    begin
-      SetFocusControl(NomChamp);
-      LastError := 33;
-      LastErrorMsg := TexteMessage[LastError] + champToLibelle(NomChamp);
-      result := True;
-    end;
-  end
-  else
-  begin
-    {$IFNDEF CCS3}
-    TypeArticle := GetField('GA_TYPEARTICLE');
-    //  BBI correction fiche 10360
-    if TypeArticle = 'NOM' then
-      TypeArticle := TypeArticle + GetField('GA_TYPENOMENC');
-    //  BBI fin correction fiche 10360
-    NomChamp := VerifierChampsObligatoires(Ecran, TypeArticle);
-    if NomChamp <> '' then
-    begin
-      NomChamp := ReadTokenSt(NomChamp);
-      SetFocusControl(NomChamp);
-      LastError := 52;
-      LastErrorMsg := TexteMessage[LastError] + champToLibelle(NomChamp);
-      result := True;
-    end;
-    {$ENDIF}
+    NomChamp := ReadTokenSt(NomChamp);
+    SetFocusControl(NomChamp);
+    LastError := 52;
+    LastErrorMsg := TexteMessage[LastError] + champToLibelle(NomChamp);
+    result := True;
   end;
+  {$ENDIF}
 end;
 {$ENDIF}
 
@@ -6041,39 +6030,6 @@ begin
 		CodeSousTarif.Plus := 'AND BSF_FAMILLETARIF="'+GetField('GA_TARIFARTICLE')+'"';
   end;
   {$ENDIF}
-
-//uniquement en line
-{*
-	if TToolBarButton97(GetControl('BPOPCOMPLEMENT')) <> nil then TToolBarButton97(GetControl('BPOPCOMPLEMENT')).visible := false;
-	if TToolBarButton97(GetControl('BPOPMENU')) <> nil then TToolBarButton97(GetControl('BPOPMENU')).visible := false;
-  if TToolBarButton97(GetControl('BPARAMNATURE')) <> nil then TToolBarButton97(GetControl('BPARAMNATURE')).visible := false;
-  if TToolBarButton97(GetControl('BACTUPRIX')) <> nil then TToolBarButton97(GetControl('BACTUPRIX')).visible := false;
-  if TToolBarButton97(GetControl('BNOMENC')) <> nil then TToolBarButton97(GetControl('BNOMENC')).visible := false;
-
-	SetControlvisible('GB_PROFIL', False);
-	SetControlvisible('GA_ESCOMPTABLE', False);
-	SetControlvisible('GA_REMISEPIED', False);
-	SetControlvisible('GA_COMMISSIONNABLE', False);
-
-  if (GetparamsocSecur('SO_GCDESACTIVECOMPTA','X') = True) then
-  	begin
-    SetControlVisible('GA_COMPTAARTICLE', False);
-    SetControlVisible('TGA_COMPTAARTICLE', False);
-  end;
-
-	if (copy(ecran.name, 1, 13) = 'BTARTPOURCENT') or (copy(ecran.name, 1, 9) = 'BTARTPARC') then
-  	begin
-		SetControlvisible('TGA_LIBCOMPL', False);
-		SetControlvisible('SELTYPEART', False);
-  	end
-  else
-  	begin
-  	TTabSheet(ecran.FindComponent('P_CARACTERISTIQUE')).TabVisible := false;
-  	TTabSheet(ecran.FindComponent('P_DIVERS')).TabVisible := false;
-  	TTabSheet(ecran.FindComponent('P_DIMENSION')).TabVisible := false;
-  	TTabSheet(ecran.FindComponent('P_TARIF')).TabVisible := false;
-		end;
-*}
 end;
 
 {***********A.G.L.***********************************************
@@ -6338,7 +6294,10 @@ begin
       SetField('GA_FAMILLENIV3', GetParamsoc('SO_GCPRFAMNIV3'));
       SetField('GA_FAMILLETAXE1', GetParamsoc('SO_GCPRFAMTAXE1'));
       SetField('GA_FAMILLETAXE2', GetParamsoc('SO_GCPRFAMTAXE2'));
-      SetField('GA_COMPTAARTICLE', GetParamsoc('SO_GCPRCOMPTAART'));
+      if not EstSpecifPOC then
+        SetField('GA_COMPTAARTICLE', GetParamsoc('SO_GCPRCOMPTAART'))
+      else
+        SetField('GA_COMPTAARTICLE', GetField('GA_FAMILLENIV2'));
       SetField('GA_TENUESTOCK', CheckToString(GetParamsoc('SO_GCPRTENUESTOCK')));
       SetField('GA_ESCOMPTABLE', CheckToString(GetParamsoc('SO_GCPRESCOMPTE')));
       SetField('GA_LOT', CheckToString(GetParamsoc('SO_GCPRLOT')));
@@ -6812,7 +6771,10 @@ begin
       if AppliqueProfil then
       begin
         if not (DS.State in [dsInsert, dsEdit]) then DS.edit; // pour passer DS.state en mode dsEdit
-        SetField('GA_COMPTAARTICLE',QQ.Findfield('GPF_COMPTAARTICLE').AsString);
+        if not EstSpecifPOC then
+          SetField('GA_COMPTAARTICLE',QQ.Findfield('GPF_COMPTAARTICLE').AsString)
+        else
+          SetField('GA_COMPTAARTICLE', GetField('GA_FAMILLENIV2'));
         SetField('GA_TENUESTOCK', QQ.Findfield('GPF_TENUESTOCK').AsString);
         {$IFDEF CCS3}
         SetField('GA_LOT', '-');
@@ -6832,6 +6794,8 @@ begin
         begin
           SetField('GA_FAMILLENIV1', QQ.Findfield('GPF_FAMILLENIV1').AsString);
           SetField('GA_FAMILLENIV2', QQ.Findfield('GPF_FAMILLENIV2').AsString);
+          if EstSpecifPOC then
+            SetField('GA_COMPTAARTICLE', GetField('GA_FAMILLENIV2'));
           SetField('GA_FAMILLENIV3', QQ.Findfield('GPF_FAMILLENIV3').AsString);
         end;
         SetField('GA_CALCPRIXHT', QQ.Findfield('GPF_CALCPRIXHT').AsString);
@@ -6969,7 +6933,10 @@ begin
         '', '') = mrOk)) then
       begin
         if not (DS.State in [dsInsert, dsEdit]) then DS.edit; // pour passer DS.state en mode dsEdit
-        SetField('GA_COMPTAARTICLE', QQ.Findfield('GPF_COMPTAARTICLE').AsString);
+        if not EstSpecifPOC then
+          SetField('GA_COMPTAARTICLE', QQ.Findfield('GPF_COMPTAARTICLE').AsString)
+        else
+          SetField('GA_COMPTAARTICLE', GetField('GA_FAMILLENIV2'));
         SetField('GA_TENUESTOCK', QQ.Findfield('GPF_TENUESTOCK').AsString);
         {$IFDEF CCS3}
         SetField('GA_LOT', '-');
@@ -6984,13 +6951,11 @@ begin
         SetField('GA_ESCOMPTABLE', QQ.Findfield('GPF_ESCOMPTABLE').AsString);
         SetField('GA_FAMILLETAXE1', QQ.Findfield('GPF_CODETAXE').AsString); //AC fiche bug 343
         SetField('GA_COMMISSIONNABLE', QQ.Findfield('GPF_COMMISSIONNABL').AsString);
-        // mise à jour des champs famille si lorsque l'on vient du mul
-(*        if ProfilMul then
-        begin *) // Correction suite a fiche de transmission
-          SetField('GA_FAMILLENIV1', QQ.Findfield('GPF_FAMILLENIV1').AsString);
-          SetField('GA_FAMILLENIV2', QQ.Findfield('GPF_FAMILLENIV2').AsString);
-          SetField('GA_FAMILLENIV3', QQ.Findfield('GPF_FAMILLENIV3').AsString);
-(*        end; *)
+        SetField('GA_FAMILLENIV1', QQ.Findfield('GPF_FAMILLENIV1').AsString);
+        SetField('GA_FAMILLENIV2', QQ.Findfield('GPF_FAMILLENIV2').AsString);
+        if EstSpecifPOC then
+          SetField('GA_COMPTAARTICLE', GetField('GA_FAMILLENIV2'));
+        SetField('GA_FAMILLENIV3', QQ.Findfield('GPF_FAMILLENIV3').AsString);
         SetField('GA_CALCPRIXHT', QQ.Findfield('GPF_CALCPRIXHT').AsString);
         SetField('GA_CALCPRIXTTC', QQ.Findfield('GPF_CALCPRIXTTC').AsString);
         if QQ.FindField('GPF_COEFCALCHT').AsString = '' then SetField('GA_COEFCALCHT', '0')
@@ -7027,7 +6992,10 @@ begin
       begin
         THLabel(GetControl('TGA_LIBNATURE')).caption := QQ.findfield('BNP_LIBELLE').AsString;
         Setfield('GA_FAMILLETAXE1', QQ.findfield('BNP_CODETAXE').AsString);
-        Setfield('GA_COMPTAARTICLE', QQ.findfield('BNP_COMPTAARTICLE').AsString);
+        if not EstSpecifPOC then
+          Setfield('GA_COMPTAARTICLE', QQ.findfield('BNP_COMPTAARTICLE').AsString)
+        else
+          SetField('GA_COMPTAARTICLE', GetField('GA_FAMILLENIV2'));
         Setfield('GA_COMMISSIONNABLE', QQ.findfield('BNP_COMMISSIONNABL').AsString);
         Setfield('GA_ESCOMPTABLE', QQ.findfield('BNP_ESCOMPTABLE').AsString);
         Setfield('GA_REMISELIGNE', QQ.findfield('BNP_REMISELIGNE').AsString);
@@ -10365,6 +10333,27 @@ end;
 procedure TOM_Article.SelCatalog(Sender: Tobject);
 begin
   LookUpFournisseur;
+end;
+
+procedure TOM_Article.GA_FAMILLENIV1_OnChange(Sender : Tobject);
+begin
+  if (EstSpecifPOC) and (GetParamSocSecur('SO_GCFAMHIERARCHIQUE', False)) then
+  begin
+    Setfield('GA_FAMILLENIV2', '');
+    SetField('GA_COMPTAARTICLE', '');
+    Setfield('GA_FAMILLENIV3', '');
+    if Getfield('GA_FAMILLENIV1') = '' then
+    begin
+      SetControlEnabled('GA_FAMILLENIV2', false);
+      SetControlEnabled('GA_FAMILLENIV3', false);
+    end
+  end;
+end;
+
+procedure TOM_Article.GA_FAMILLENIV2_OnChange(Sender : Tobject);
+begin
+  if EstSpecifPOC then
+    SetField('GA_COMPTAARTICLE', THDBValComboBox(GetControl('GA_FAMILLENIV2')).Value);
 end;
 
 procedure TOM_Article.SelFourn(Sender: Tobject);
