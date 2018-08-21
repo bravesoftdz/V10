@@ -1567,7 +1567,7 @@ begin
   if ExecuteSQL(SQL) < 0 then BEGIN V_PGI.Ioerror := OeSaisie; Exit; END;
   RefA := EncodeRefPresqueCPGescom(TOBPiece);
   ExecuteSQL('DELETE FROM VENTANA WHERE YVA_TABLEANA="GL" AND YVA_IDENTIFIANT LIKE "' + RefA + '"');
-
+  ExecuteSQL ('DELETE FROM PIEDCOLLECTIF WHERE '+  WherePiece(CleDoc, ttdVteColl, False));
 end;
 
 procedure TRecalculPiece.EcritSituation;
