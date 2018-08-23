@@ -1910,8 +1910,13 @@ begin
     flargeur := '2;2;13;3;8;19;9;5;9;12;9;9;9;9;12;12;12;12;';
     Falignement := 'G.0O X--;G.0O X--;G.0O X--;G.0  ---;G.0  ---;G.0  ---;D.3  -X-;C.0  ---;D.3  -X-;D.2  -X-;D.3  -X-;D.3  -X-;D.2  -X-;D.2  -X-;D.2  -X-;D.2  -X-;D.2  -X-;D.2  -X-';
     FTitre := 'N°; ;Marché;Type;Référence;Désignation;Qté Marché;Unité;P.U;Mt Marché;Qte déjà fact.;Qte Cum. fact.;% Avancement;Qte Sit.;Montant cumulé;MT Déjà fact;Montant sit.;Montant Prod.;';
-    NC := '0;0;0;0;0;1;0;0;0;0;0;0;1;1;0;0;1;1;'; //definition des zones saisissable ou non
-
+    if VH_GC.BTCODESPECIF = '001' then
+    begin
+      NC := '0;0;0;0;0;1;0;0;0;0;0;0;1;1;1;0;1;1;'; //definition des zones saisissable ou non
+    end else
+    begin
+      NC := '0;0;0;0;0;1;0;0;0;0;0;0;1;1;0;0;1;1;'; //definition des zones saisissable ou non
+    end;
     NbCols := 18; // Nombre de colonnes dans la saisie
   end else
   begin
@@ -2833,6 +2838,7 @@ procedure TOF_BTSAISIEAVANC.GSCellExit(Sender: TObject; var ACol,ARow: Integer; 
 var TOBL : TOB;
 		TypeLigne : string;
     savcol,savrow : integer;
+    MtSituation : Double;
 begin
   if Action = taConsult then Exit;
   SavCol := GS.col;
@@ -2925,27 +2931,27 @@ begin
           end;
         end else
         begin
-        if ChangePourcentOk (Arow,Valeur(GS.cells[Acol,Arow])) then
-        begin
-          CumuleLigne(TOBL,'-');
-          TOBL.putValue('BLF_POURCENTAVANC',Valeur(GS.cells[Acol,Arow]));
-          ChangePourcentAvanc (TOBL,fCurrentOnglet,Cancel);
-          CumuleLigne(TOBL);
-          AfficheLaLigne (fCurrentOnglet.GS,fCurrentOnglet.TOBlignes,Arow);
-          CalculeLesSousTotaux;
-          GS.Invalidate;
-          if fCurrentOnglet <> FOngletGlobal then
+          if ChangePourcentOk (Arow,Valeur(GS.cells[Acol,Arow])) then
           begin
-          	AppliqueAvancGeneral (TOBL,Valeur(GS.cells[Acol,Arow]));
+            CumuleLigne(TOBL,'-');
+            TOBL.putValue('BLF_POURCENTAVANC',Valeur(GS.cells[Acol,Arow]));
+            ChangePourcentAvanc (TOBL,fCurrentOnglet,Cancel);
+            CumuleLigne(TOBL);
+            AfficheLaLigne (fCurrentOnglet.GS,fCurrentOnglet.TOBlignes,Arow);
+            CalculeLesSousTotaux;
+            GS.Invalidate;
+            if fCurrentOnglet <> FOngletGlobal then
+            begin
+              AppliqueAvancGeneral (TOBL,Valeur(GS.cells[Acol,Arow]));
+            end else
+            begin
+              AppliqueAvancFournisseur (TOBL,Valeur(GS.cells[Acol,Arow]));
+            end;
           end else
           begin
-          	AppliqueAvancFournisseur (TOBL,Valeur(GS.cells[Acol,Arow]));
+            GS.cells [Acol,Arow] := stprev;
+            AfficheLaLigne (fCurrentOnglet.GS,fCurrentOnglet.TOBlignes,Arow);
           end;
-        end else
-        begin
-          GS.cells [Acol,Arow] := stprev;
-          AfficheLaLigne (fCurrentOnglet.GS,fCurrentOnglet.TOBlignes,Arow);
-        end;
         end;
       end else
       begin
@@ -2961,26 +2967,62 @@ begin
       	  GS.cells [Acol,Arow] := stprev;
         end else
         begin
-        if ChangeMTSituationok (Arow,Valeur(GS.cells[Acol,Arow])) then
-        begin
-          CumuleLigne(TOBL,'-');
-            ChangeMTSituationAvanc (Valeur(GS.cells[Acol,Arow]),TOBL,fCurrentOnglet,Cancel);
-          CumuleLigne(TOBL);
-          AfficheLaLigne (fCurrentOnglet.GS,fCurrentOnglet.TOBlignes,Arow);
-          CalculeLesSousTotaux;
-          GS.Invalidate;
-          if fCurrentOnglet <> FOngletGlobal then
+          if ChangeMTSituationok (Arow,Valeur(GS.cells[Acol,Arow])) then
           begin
-          	AppliqueMtGeneral (TOBL,Valeur(GS.cells[Acol,Arow]));
+            CumuleLigne(TOBL,'-');
+            ChangeMTSituationAvanc (Valeur(GS.cells[Acol,Arow]),TOBL,fCurrentOnglet,Cancel);
+            CumuleLigne(TOBL);
+            AfficheLaLigne (fCurrentOnglet.GS,fCurrentOnglet.TOBlignes,Arow);
+            CalculeLesSousTotaux;
+            GS.Invalidate;
+            if fCurrentOnglet <> FOngletGlobal then
+            begin
+              AppliqueMtGeneral (TOBL,Valeur(GS.cells[Acol,Arow]));
+            end else
+            begin
+              AppliqueMtFournisseur (TOBL,Valeur(GS.cells[Acol,Arow]));
+            end;
           end else
           begin
-          	AppliqueMtFournisseur (TOBL,Valeur(GS.cells[Acol,Arow]));
+            GS.cells [Acol,Arow] := stprev;
+            AfficheLaLigne (fCurrentOnglet.GS,fCurrentOnglet.TOBlignes,Arow);
           end;
+        end;
+      end else
+      begin
+      	GS.cells [Acol,Arow] := stprev;
+      end;
+    end else if ACol = MTCUMULEFACT  then
+    begin
+      MtSituation := Valeur(GS.cells[Acol,Arow]) - VALEUR(StPrev);
+      if pos(TypeLigne,'ART;SD;OUP')>0 then
+      begin
+        if ReajusteDossier then
+        begin
+          //
+      	  GS.cells [Acol,Arow] := stprev;
         end else
         begin
-          GS.cells [Acol,Arow] := stprev;
-          AfficheLaLigne (fCurrentOnglet.GS,fCurrentOnglet.TOBlignes,Arow);
-        end;
+          if ChangeMTSituationok (Arow,MtSituation) then
+          begin
+            CumuleLigne(TOBL,'-');
+            ChangeMTSituationAvanc (MtSituation,TOBL,fCurrentOnglet,Cancel);
+            CumuleLigne(TOBL);
+            AfficheLaLigne (fCurrentOnglet.GS,fCurrentOnglet.TOBlignes,Arow);
+            CalculeLesSousTotaux;
+            GS.Invalidate;
+            if fCurrentOnglet <> FOngletGlobal then
+            begin
+              AppliqueMtGeneral (TOBL,MtSituation);
+            end else
+            begin
+              AppliqueMtFournisseur (TOBL,MtSituation);
+            end;
+          end else
+          begin
+            GS.cells [Acol,Arow] := stprev;
+            AfficheLaLigne (fCurrentOnglet.GS,fCurrentOnglet.TOBlignes,Arow);
+          end;
         end;
       end else
       begin
@@ -2994,8 +3036,8 @@ begin
         begin
           //
       	  GS.cells [Acol,Arow] := stprev;
-    end else
-    begin
+        end else
+        begin
           TOBL.putValue('BLF_MTPRODUCTION',Valeur(GS.cells[Acol,Arow]));
           AfficheLaLigne (fCurrentOnglet.GS,fCurrentOnglet.TOBlignes,Arow);
           CalculeLesSousTotaux;
