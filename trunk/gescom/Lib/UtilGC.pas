@@ -1984,7 +1984,7 @@ end;
 
 function GereNumMensuelCptAnnuel(SearchValue : string; IsDocType : boolean) : boolean;
 begin
-  Result := (GetParamSocSecur('SO_NUMMENSUELCPTANNUEL', False) and (Tools.IsRecordableDocument(SearchValue, IsDocType)));
+  Result := (Tools.IsRecordableDocument(SearchValue, IsDocType));
 end;
 
 {***********A.G.L.***********************************************

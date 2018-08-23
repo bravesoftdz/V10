@@ -600,8 +600,8 @@ inherited ;
 
   if stNatureAuxi = 'FOU' then
      begin
-    if Assigned(GetControl('BT1_CODEBARRE'))       Then CodeBarre      := THEdit(GetControl('BT1_CODEBARRE'));
-    if Assigned(GetControl('BT1_QUALIFCODEB')) Then TypeCodeBarre  := THValComboBox(GetControl('BT1_QUALIFCODEB'));
+    if Assigned(GetControl('BT1_CODEBARRE'))     Then CodeBarre      := THEdit(GetControl('BT1_CODEBARRE'));
+    if Assigned(GetControl('BT1_QUALIFCODEB'))   Then TypeCodeBarre  := THValComboBox(GetControl('BT1_QUALIFCODEB'));
     if Assigned(GetControl('BCODEBARRE'))        Then BCodeBarre     := TToolbarButton97(GetControl('BCODEBARRE'));
     //
     SetControlProperty('T_FACTURE','DataType',   'TZTFOURN');
@@ -612,7 +612,7 @@ inherited ;
     BCodeBarre.OnClick    := BCODEBARREOnclick;
     //
     CodeBarre.Visible     := False;
-    TypeCodeBarre.Visible := False;
+    if Assigned(TypeCodeBarre) then TypeCodeBarre.Visible := False;
     //BCodeBarre.Visible    := False;
     SetControlVisible('TT_CODEBARRE',   False);
 
@@ -4782,7 +4782,7 @@ begin
   if not QQ.Eof then
   begin
     ThEdit(Getcontrol('BT1_CODEBARRE')).Text :=  QQ.FindField('BCB_CODEBARRE').AsString;
-    SetControlText ('BT1_QUALIFCODEB', QQ.FindField('BCB_QUALIFCODEBARRE').AsString);
+    if Assigned(TypeCodeBarre) then TypeCodeBarre.Text := QQ.FindField('BCB_QUALIFCODEBARRE').AsString;
     if not (DS.State in [dsInsert, dsEdit]) then DS.edit;
  end;
 
