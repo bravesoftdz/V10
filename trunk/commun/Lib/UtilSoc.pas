@@ -113,7 +113,6 @@ procedure MajTabletteGcTypeFourn( CC : TControl );
 procedure MajParamCdeMarche( CC : TControl);
 procedure MajClassificationTMDR(CC : TControl); // CCMX-CEGID TMDR Dev N°4722
 Function VerifModeleWord ( CC : TControl ) : boolean;
-procedure VerifParamNumMensuelCptAnnuel(CC : TControl);
 procedure VerifGestYplanningGRC ( CC : TControl );
 {$ENDIF EAGLSERVER}
 {$ifdef AFFAIRE}
@@ -6716,7 +6715,6 @@ BEGIN
   end;
   // GC_20071016_GM_GC15422_FIN
   GereMdpMargeMini(CC);
-  VerifParamNumMensuelCptAnnuel(CC); // Test si SO_NUMENSUELCPTANNUEL décoché et paramétrage actif dans les souches
   Result:=True ;
 END ;
 {$ENDIF EAGLSERVER}
@@ -9248,20 +9246,6 @@ begin
     Exit;
     end;
   end;
-end;
-{$ENDIF EAGLSERVER}
-
-{$IFNDEF EAGLSERVER}
-procedure VerifParamNumMensuelCptAnnuel(CC : TControl);
-Var
-  FF      : TForm ;
-  ParamMA : THCheckBox;
-  Sql     : string;
-begin
-  FF      := GetLaForm(CC);
-  ParamMA := THCheckBox(GetFromNam('SO_SO_NUMMENSUELCPTANNUEL', FF));
-  if assigned(ParamMA) then
-    ParamMA.Visible := False;
 end;
 {$ENDIF EAGLSERVER}
 
