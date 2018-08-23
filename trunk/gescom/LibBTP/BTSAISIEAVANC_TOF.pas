@@ -2038,7 +2038,21 @@ begin
     LeTItre := readTokenSt(Ftitre);
     LeNC := readTokenSt(NC);
     inc(colonne);
-    //
+    if VH_GC.BTCODESPECIF = '001' then    //
+    begin
+      VOIRQTE.Checked := false;
+      GS.ColLengths [MTMARCHE] := LNMTMARCHE;
+      GS.ColWidths[MTMARCHE] := LNMTMARCHE*GS.Canvas.TextWidth('W');
+      GS.ColLengths [QTEMARCHE] := -1;
+      GS.ColLengths [QTECUMULFACT] := -1; GS.ColEditables  [QTECUMULFACT] := false;
+      GS.ColLengths [QTEDEJAFACT] := -1;
+      GS.ColLengths [QTESITUATION] := -1;
+      //
+      GS.ColWidths[QTEMARCHE] := 0;
+      GS.ColWidths[QTECUMULFACT] := 0;
+      GS.ColWidths[QTEDEJAFACT] := 0;
+      GS.ColWidths[QTESITUATION] := 0;
+    end;
   until lelement = '';
   if not ModifSousDetail then
   begin
