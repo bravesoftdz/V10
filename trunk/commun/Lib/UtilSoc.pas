@@ -9259,18 +9259,9 @@ Var
   Sql     : string;
 begin
   FF      := GetLaForm(CC);
-  ParamMA := THCheckBox(GetFromNam('SO_NUMMENSUELCPTANNUEL', FF));
+  ParamMA := THCheckBox(GetFromNam('SO_SO_NUMMENSUELCPTANNUEL', FF));
   if assigned(ParamMA) then
-  begin
-    Sql := 'SELECT 1'
-         + ' FROM SOUCHE'
-         + ' JOIN BSOUCHE ON BS0_ENTITY = SH_ENTITY AND BS0_TYPE = SH_TYPE AND BS0_SOUCHE = SH_SOUCHE AND BS0_NUMMOISPIECE = "X"'
-         + ' WHERE SH_SOUCHEEXO = "X"'; 
-    if (GetParamSocSecur('SO_NUMMENSUELCPTANNUEL', False)) and (ExisteSql(Sql)) then
-      ParamMA.Enabled := False
-    else
-      ParamMA.Enabled := True;
-  end;
+    ParamMA.Visible := False;
 end;
 {$ENDIF EAGLSERVER}
 
