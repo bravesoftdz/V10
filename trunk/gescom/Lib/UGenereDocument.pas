@@ -99,7 +99,7 @@ type
 
 implementation
 uses FactTOB,ParamSoc,UtilPGI,FactAdresse,FactCalc,FactUtil,FactComm,UtilTOBpiece,StockUtil,FactPiece,FactOuvrage,FactCpta,BTGENODANAL_TOF,
-  TypInfo,ENt1,FactRG,UCumulCollectifs,FactArticle;
+  TypInfo,ENt1,FactRG,UCumulCollectifs,FactArticle,USpecifPoc;
 { TGenerePiece }
 
 
@@ -1210,7 +1210,7 @@ procedure TGenerePiece.ConstituePieceFromBast(TOBBAST: TOB; DateFac : TDateTime)
     result := Taux;
   end;
 
-  function  AjouteLigneArticle (TOBPiece,TLBAST,TParam : TOB ; var NbTrait : Integer ; Sens : string='+') : boolean;
+  function  AjouteLigneArticle (TOBPiece,TLBAST,TParam : TOB ; var NbTrait : Integer ; PhaseTravaux : string =''; Sens : string='+') : boolean;
   var TOBL : TOB;
       TOBA : TOB;
       SQL : String;
@@ -1264,7 +1264,11 @@ procedure TGenerePiece.ConstituePieceFromBast(TOBBAST: TOB; DateFac : TDateTime)
     TOBL.SetString('GL_TYPEDIM', 'NOR');
     TOBL.PutValue('GL_FAMILLETAXE1', TOBBAST.GetValue('BM4_FAMILLETAXE1'));
     TOBL.PutValue('GL_FAMILLENIV2', TOBBAST.GetValue('BM4_FAMILLENIV2'));
-    TOBL.SetInteger('GL_IDENTIFIANTWOL', -1); // ajout LS pour génération des livraison chantier 
+    TOBL.SetInteger('GL_IDENTIFIANTWOL', -1); // ajout LS pour génération des livraison chantier
+    if PhaseTravaux <> '' then
+    begin
+      TOBL.SetString('BLP_PHASETRA', PhaseTravaux);
+    end;
   end;
 
   function  AjouteLignePort (TOBPiece,TOBPorcs,TLBAST,TParam : TOB ; var NbTrait : Integer) : boolean;
@@ -1407,7 +1411,9 @@ var TT,TB,TOBPARAM,TP : TOB;
     QQ : TQuery;
     cledoc : R_CLEDOC;
     II,NbTrait : Integer;
+    PhaseTravaux : string;
 begin
+  PhaseTravaux := FindPhasePoc(TOBBAST.GetString ('BM4_AFFAIRE'),TOBBAST.GetString ('BM4_FOURNISSEUR'),TOBBAST.GetString ('BM4_CODEMARCHE'));
   TOBPARAM := TOB.Create('LES PARAMS',nil,-1);
   fResult.ErrorResult := oeUnknown;
   fResult.LibError := 'Paramétrage du BAST non correct';
@@ -1446,7 +1452,7 @@ begin
         //
         if TP.GetString('BM6_TYPEERP')='ART' then
         begin
-          if not AjouteLigneArticle (TOBPiece,TB,TP,NbTrait) then break;
+          if not AjouteLigneArticle (TOBPiece,TB,TP,NbTrait,PhaseTravaux) then break;
         end else if (Pos (TP.GetString('BM6_TYPEERP'),'RG;CAU')>0) then
         begin
             if not AjouteLigneRG (TOBPiece,TOBPieceRG,TB,TP,NbTrait) then break;

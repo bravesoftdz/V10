@@ -38,6 +38,8 @@ procedure ValideLesTOBTS ( TOBPiece,TOBTSPOC : TOB);
 function SetFactureReglePOC (TOBPiece : TOB) : boolean;
 procedure AppelMarcheST (CodeChantier,SousTrait,CodeMarche : string);
 procedure AppelIntegrationLaNetCie;
+function FindPhasePoc(Affaire,Fournisseur,CodeMarche : string) : string;
+
 
 implementation
 uses FactComm,UtilPGI,FactTOB,FactPiece,FactRG,FactUtil,ParamSOc,ENt1,AglInit,M3FP,cbpPath,LicUtil,UtilTOBPiece,UconnectBSV;
@@ -693,6 +695,32 @@ begin
   TheLance := IncludeTrailingBackslash(TcbpPath.GetCegid)+'Specif-POC\APP\REPRISEPOINTAGEOUVRIERS.exe /userLSE='+V_PGI.User+' /Serveur='+ServerName+' /BaseDeDonnees='+DBName;
   FileExecAndWait (TheLance);
 end;
+
+function FindPhasePoc(Affaire,Fournisseur,CodeMarche : string) : string;
+var QQ : TQuery;
+    SQL : string;
+begin
+  Result := '';
+  SQL := 'SELECT BLP_PHASETRA FROM LIGNE '+
+         'LEFT JOIN LIGNEPHASES ON '+
+         'GL_NATUREPIECEG=BLP_NATUREPIECEG AND '+
+         'GL_SOUCHE=BLP_SOUCHE AND '+
+         'GL_NUMERO=BLP_NUMERO AND '+
+         'GL_NUMORDRE=BLP_NUMORDRE '+
+         'WHERE '+
+         'GL_NATUREPIECEG="BCE" AND '+
+         'GL_NUMERO=(SELECT ##TOP 1## GP_NUMERO FROM PIECE WHERE GP_NATUREPIECEG="BCE" AND GP_AFFAIRE="'+Affaire+'") AND '+
+         'GL_AFFAIRE="'+Affaire+'" AND '+
+         'GL_CODEMARCHE="'+CodeMarche+'" AND '+
+         'GL_FOURNISSEUR="'+Fournisseur+'"';
+  QQ := OpenSQL(SQL,True,1,'',true);
+  if not QQ.eof then
+  begin
+    result:= QQ.fields[0].AsString;
+  end;
+  Ferme(QQ);
+end;
+
 
 
 Initialization
