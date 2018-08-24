@@ -581,6 +581,11 @@ begin
     Libelle:= 'N° transfert';
     TypeInfo := 'VARCHAR(6)';
     Taille := 6;
+  end else if NomChamps = 'TOTLIGNEBCE' then
+  begin
+    Libelle:= 'Montant Total';
+    TypeInfo := 'DOUBLE';
+    Taille := 12;
   end else if NomChamps = 'MTTRANSFERT' then
   begin
     Libelle:= 'Mt Transfert';

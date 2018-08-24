@@ -455,7 +455,7 @@ begin
   UneListe := LISTCHPS;
   if VH_GC.BTCODESPECIF = '001' then
   begin
-    UneListe := UneListe + ';SUMTOTALTS|N;MTTRANSFERT|N;NUMTRANSFERT|N;'; // ajout colonne total des avenants sur ligne pour POC
+    UneListe := UneListe + ';SUMTOTALTS|N;MTTRANSFERT|N;NUMTRANSFERT|N;TOTLIGNEBCE|N'; // ajout colonne total des avenants sur ligne pour POC
   end;
   repeat
     UnRecord := READTOKENST(UneListe);

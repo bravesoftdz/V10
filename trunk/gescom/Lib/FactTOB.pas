@@ -118,6 +118,7 @@ const
   SG_TOTALTS : integer = -1;
   SG_MTTRANSFERT : Integer = -1;
   SG_PHASETRA : Integer = -1;
+  SG_TOTLIGNEBCE : integer = -1;
 
 implementation
 uses
@@ -756,6 +757,7 @@ begin
   SG_TOTALTS := -1;
   SG_MTTRANSFERT := -1;
   SG_PHASETRA := -1;
+  SG_TOTLIGNEBCE := -1;
 {$ENDIF}
 end;
 

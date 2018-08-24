@@ -2360,10 +2360,11 @@ begin
         ;
       end else
       begin
-        if NomCol = 'POURCENTMARG'      then SG_POURMARG := icol;
-        if NomCol = 'POURCENTMARQ'      then SG_POURMARQ := icol;
-        if NomCol = 'TOTALTS'           then SG_TOTALTS := icol;
-        if NomCol = 'MTTRANSFERT'           then SG_MTTRANSFERT := icol;
+        if NomCol = 'POURCENTMARG'      then SG_POURMARG := icol else
+        if NomCol = 'POURCENTMARQ'      then SG_POURMARQ := icol else
+        if NomCol = 'TOTALTS'           then SG_TOTALTS := icol else
+        if NomCol = 'MTTRANSFERT'       then SG_MTTRANSFERT := icol else
+        if NomCol = 'TOTLIGNEBCE'       Then SG_TOTLIGNEBCE := Icol;
       end;
     end;
     Inc(icol);

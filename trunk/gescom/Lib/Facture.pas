@@ -200,6 +200,7 @@ type R_Col = record
     SG_TOTALTS : Integer;
     SG_MTTRANSFERT : Integer;
     SG_PHASETRA : Integer;
+    SG_TOTLIGNEBCE : integer;
   end;
 
 const StColNameGSA = 'CB;LIBELLE;QTE;';
@@ -6733,6 +6734,7 @@ begin
   RCOL.SG_TOTALTS := SG_TOTALTS;
   RCol.SG_MTTRANSFERT := SG_MTTRANSFERT;
   RCOL.SG_PHASETRA := SG_PHASETRA;
+  RCOL.SG_TOTLIGNEBCE := SG_TOTLIGNEBCE;
 end;
 
 procedure TFFacture.RestoreColList;
@@ -6811,6 +6813,7 @@ begin
   SG_TOTALTS := RCOL.SG_TOTALTS;
   SG_MTTRANSFERT := RCol.SG_MTTRANSFERT;
   SG_PHASETRA := RCOl.SG_PHASETRA;
+  SG_TOTLIGNEBCE := RCOL.SG_TOTLIGNEBCE;
 
 	MemoriseChampsSupLigneETL (cledoc.NaturePiece,true);
   MemoriseChampsSupLigneOUV (cledoc.NaturePiece);
@@ -7697,7 +7700,7 @@ procedure TFFacture.PostDrawCell(ACol, ARow: Longint; Canvas: TCanvas; AState: T
 
 var ARect,ZRect: TRect;
   Fix: boolean;
-  TheText : string;
+  TheText,TypeL : string;
   II : integer;
   PosX,PosY,Decalage,DecalagePar : integer;
   // modif BTP
@@ -7707,6 +7710,7 @@ var ARect,ZRect: TRect;
   texte : THRichEditOLE;
   LastBrush, LastPen: Tcolor;
   colformat : string;
+  MtTemp : double;
 begin
   if csDestroying in ComponentState then Exit;
   if GS.RowHeights[ARow] <= 0 then Exit;
@@ -7842,6 +7846,7 @@ begin
       end;
     end;
   end;
+
   if (tModeGridMode in SaContexte) then
   begin
     GS.Canvas.Brush.Style := bsClear;
@@ -7984,6 +7989,20 @@ begin
     Canvas.FillRect(ARect); Zrect := ARect; ZRect.Right := ZRect.right - 2;
     TheText := StrF00(fGestionListe.GetMtTotal(TOBL,Acol),DEV.Decimale);
     DrawText(Canvas.Handle,PChar(TheText), -1, ZRect ,DT_SINGLELINE or DT_RIGHT or DT_VCENTER or DT_EDITCONTROL);
+  end;
+
+  if (TOBL.GetString('GL_NATUREPIECEG') = 'BCE') and (VH_GC.BTCODESPECIF = '001')  and (SG_TOTLIGNEBCE <> -1) then
+  begin
+    TypeL := TOBL.GetString('GL_TYPELIGNE');
+    if (ARow >=GS.fixedrows) and (Acol=SG_TOTLIGNEBCE) then
+    begin
+      Canvas.FillRect(ARect); Zrect := ARect; ZRect.Right := ZRect.right - 2;
+      if (TypeL='ART') or (TypeL='SD') then
+      begin
+        TheText := StrF00(TOBL.GetDouble('GL_MONTANTPA')+TOBL.GetDouble('SUMTOTALTS')-TOBL.GetDouble('MTTRANSFERT'),V_PGI.OkDecV);
+        DrawText(Canvas.Handle,PChar(TheText), -1, ZRect ,DT_SINGLELINE or DT_RIGHT or DT_VCENTER or DT_EDITCONTROL);
+      end;
+    end;
   end;
 
   if (Arow >= GS.fixedRows) and (ACol <> SG_LIB) and (Acol <> SG_NL) and (Acol <> SG_Montant) and
@@ -30208,6 +30227,7 @@ begin
   OneTOB := GetTOBLigne(TOBpiece,GS.row);
   GestionTsPOC(TOBPiece,OneTOB,TOBTSPOC);
   AfficheLaLigne(GS.row);
+  GS.InvalidateRow(GS.row); 
 end;
 
 procedure TFFacture.CalculeThisLigne(TOBL: TOB);
