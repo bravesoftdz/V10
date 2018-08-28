@@ -74,7 +74,10 @@ type
 procedure ConstitueDocsFromDatasBSV (WithReport : Boolean);
 
 implementation
-uses FactComm,FactTOB,FactUtil,FactArticle,ENt1,UtilTOBPiece,CalcOLEGenericBTP,galPatience,BTGENFACBAST_TOF,XMLDoc,xmlintf,UconnectBSV;
+uses FactComm,FactTOB,FactUtil,FactArticle,ENt1,
+     UtilTOBPiece,CalcOLEGenericBTP,galPatience,
+     BTGENFACBAST_TOF,XMLDoc,xmlintf,UconnectBSV,
+     UtilsPdf;
 
 
 procedure MoveFilesEx(XF,XXML,REPIN,REPDEST : string);
@@ -169,10 +172,10 @@ var TOBI,TT,TOBE,TOBAFF : TOB;
     XmlDoc : IXMLDocument ;
     NodeFolder : IXMLNode;
     II : Integer;
-    CodeChantier,SousTraitant,CodeMarche,NumSituation,PaiementPOC,DateFacture,LibDoc,TotalHT : string;
+    CodeChantier,SousTraitant,CodeMarche,NumSituation,PaiementPOC,DateFacture,LibDoc,TotalHT,NumFacture : string;
     TheResultID : string;
     QQ : TQuery;
-    TF,TXML,REPIN,REPSAV,REPERR : string;
+    TF,TXML,REPIN,REPSAV,REPERR,factFourn,ResultFile,RacineFicDest : string;
     ResultEcrase : Boolean;
 begin
   LibDoc := '';
@@ -206,7 +209,10 @@ begin
     For II := 0 to Xmldoc.DocumentElement.ChildNodes.Count -1 do
     begin
       NodeFolder := XmlDoc.DocumentElement.ChildNodes[II];
-      if NodeFolder.NodeName = 'MontantHT' then
+      if NodeFolder.NodeName = 'Facture' then
+      begin
+        NumFacture := NodeFolder.NodeValue;
+      end else if NodeFolder.NodeName = 'MontantHT' then
       begin
         TotalHT := NodeFolder.NodeValue;
         TT := TOBI.FindFirst(['BP3_LIBELLE'],['TotalHT'],true);
@@ -308,6 +314,21 @@ begin
       Exit;
     end;
 
+    // regroupement de la facture d'origine et du BAST si besoin
+    factFourn :=  FindDocumentBSV (SousTraitant,NumFacture,DateFacture);
+    if factFourn <> '' then
+    begin
+      RacineFicDest := AglGetGuid;
+      RacineFicDest := StringReplace(RacineFicDest,'-','',[rfreplaceAll]);
+      ResultFile :=IncludeTrailingBackslash(RepIn)+RacineFicDest+'.pdf';
+      RegroupePdf (factFourn,TF,ResultFile);
+      if FileExists(ResultFile) then
+      begin
+        DeleteFile(PChar(FactFourn));
+        DeleteFile(PChar(TF));
+        TF := ResultFile;
+      end;
+    end;
     IF TOBE.GetString('BM4_IDZEDOC') = '0' then
     begin
       // nouveau BAST

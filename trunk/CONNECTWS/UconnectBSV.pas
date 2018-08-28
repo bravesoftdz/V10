@@ -58,6 +58,7 @@ type
     function GetResponseConArchive(HTTPresponse: WideString; ArchiveId: integer;var UploadRight, ViewRight: boolean): Boolean; overload;
     function SearchDocument (BSVDocumentID : WideString) : boolean; overload;
     function SearchDocument (BSVDocumentID : WideString; TOBDatas:TOB) : boolean; overload;
+    function SearchDocumentViaInfoDoc (SousTraitant,NumFacture,DateFacture : string) : string; 
     function FiltreDatas(Src: string): string;
   public
     constructor create;
@@ -108,7 +109,7 @@ procedure VisuDocumentBSV (TOBPiece : TOB);
 function StoreDocumentBSV (FileName : string; TOBFields : TOB;StoreWF : boolean=true) : WideString;
 procedure GetParamStockageBSV (TOBFIelds : TOB; NaturePiece : string);
 function EcraseDocumentBSV (FileName : string; TOBFields : TOB; IDZeDoc : string) : boolean;
-
+function FindDocumentBSV (SousTraitant,NumFacture,DateFacture : string) : string;
 implementation
 
 uses Hctrls,Aglinit,Hent1,db, {$IFNDEF DBXPRESS} dbtables {$ELSE} uDbxDataSet,FactComm,
@@ -273,6 +274,48 @@ begin
     TT.Free;
   END;
 end;
+
+function FindDocumentBSV (SousTraitant,NumFacture,DateFacture : string) : string;
+var QQ : TQuery;
+    XX : TconnectBSV;
+    Currentpasswd,Extension : Widestring;
+    DocName : string;
+    TheArchive : Integer;
+    BSVDocumentID : string;
+begin
+  Result := '';
+  TheArchive := 0;
+  XX := TconnectBSV.create;
+  TRY
+    QQ := OpenSQL('SELECT * FROM BSVSERVER',True,1,'',true);
+    TRY
+      if not QQ.eof then
+      begin
+        XX.BSVServer := QQ.findfield('BP2_SERVERNAME').AsString;
+        XX.BSVPORT := QQ.findfield('BP2_PORT').AsString;
+        TheArchive := QQ.findfield('BP2_ARCHIVE').AsInteger;
+      end;
+    FINALLY
+      ferme (QQ);
+    end;
+    if (XX.BSVServer='') or (XX.BSVPORT='0') or (TheArchive=0) then Exit;
+    //
+    Currentpasswd := AnsiLowerCase_(MD5(DeCryptageSt(V_PGI.Password)));
+    Currentpasswd := FindEtReplace(Currentpasswd,'-','',true);
+    if not XX.ConnectToServer(GetEmail(V_PGI.UserLogin),Currentpasswd,false) then Exit;
+    if Not XX.ConnectToArchive(TheArchive) then Exit;
+    BSVDocumentID := XX.SearchDocumentViaInfoDoc (SousTraitant,NumFacture,DateFacture);
+    if BSVDocumentID <> '' then
+    begin
+      Extension := XX.GetDocumentExtFromId (BSVDocumentID);
+      result := XX.GetDocumentFromId (BSVDocumentID,Extension);
+    end;
+    XX.Disconnect;
+  FINALLY
+    XX.Free;
+  END;
+end;
+
 
 procedure VisuDocumentBSV (TOBpiece : TOB);
 var QQ : TQuery;
@@ -1988,6 +2031,126 @@ begin
   finally
     http := nil;
   end;
+end;
+
+function TconnectBSV.SearchDocumentViaInfoDoc(SousTraitant, NumFacture,DateFacture: string): string;
+
+  function ConstitueTheMessage (SousTraitant, NumFacture,DateFacture: string) : WideString;
+  var DateBSV : string;
+  begin
+    //DateBsv := copy(DateFacture,7,4)+copy(DateFacture,4,2)+copy(DateFacture,1,2);
+    Result := Format('<?xml version="1.0" encoding="utf-8"?>'+
+              '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'+
+              '<soap:Body>'+
+              '<Search xmlns="http://ZeDOC.fr/ZeDOCNetSolution/">'+
+              '<query>(CodeFournisseur contains (%s)) and (NumeroDocument contains (%s))</query>'+
+              '<archiveId>%d</archiveId>'+
+              '</Search>'+
+              '</soap:Body>'+
+              '</soap:Envelope>',[SousTraitant,NumFacture,fArchive]);
+    Result := UTF8Encode(Result);
+  end;
+
+  function GetResponse (HTTPresponse : WideString) : string;
+  var XmlDoc : IXMLDocument ;
+      NodeFolder,OneNode,OneErr,OneResult,OneDoc : IXMLNode;
+      II,JJ,KK,LL,MM : Integer;
+  begin
+    result := '';
+    XmlDoc := NewXMLDocument();
+    TRY
+      TRY
+        XmlDoc.LoadFromXML(HTTPResponse);
+      EXCEPT
+        On E: Exception do
+        begin
+          PgiError('Erreur durant Chargement XML : ' + E.Message );
+        end;
+      end;
+      if not XmlDoc.IsEmptyDoc then
+      begin
+        For II := 0 to Xmldoc.DocumentElement.ChildNodes.Count -1 do
+        begin
+          NodeFolder := XmlDoc.DocumentElement.ChildNodes[II]; // Liste des <Folder>
+          if NodeFolder.NodeName = 'soap:Body' then
+          begin
+            for JJ := 0 to NodeFolder.ChildNodes.Count -1 do
+            begin
+              OneNode := NodeFolder.ChildNodes [JJ];
+              if OneNode.NodeName = 'SearchResponse' then
+              begin
+                for KK := 0 to OneNode.ChildNodes.Count -1 do
+                begin
+                  OneErr := OneNode.ChildNodes [KK];
+                  if OneErr.NodeName = 'SearchResult' then
+                  begin
+                    for LL := 0 to OneErr.ChildNodes.count -1 do
+                    begin
+                      OneResult := OneErr.childNodes[LL];
+                      if OneResult.NodeName = 'DocumentMinInfo' then
+                      begin
+                        for MM := 0 to OneResult.ChildNodes.count -1 do
+                        begin
+                          OneDoc := OneResult.ChildNodes[MM];
+                          if OneDoc.NodeName = 'Id' then
+                          begin
+                            result := OneDoc.NodeValue;
+                            break; // on ne prends que le premier
+                          end;
+                        end;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    FINALLY
+      XmlDoc:= nil;
+    end;
+  end;
+
+
+var http: IWinHttpRequest;
+    url : string;
+    TheXml : WideString;
+begin
+  Result := '';
+  if not fServerConnected then Exit;
+  url := Format(OPERATIONURL,[fServer,fport]);
+  http := CoWinHttpRequest.Create;
+  try
+    http.SetAutoLogonPolicy(2); // Disable SSO
+    http.Open('POST', url, False);
+    http.SetRequestHeader('Content-Type', 'text/xml');
+    http.SetRequestHeader('charset', 'utf8');
+    http.SetRequestHeader('Accept', 'text/xml,*/*');
+    TheXml := constitueTheMessage(SousTraitant, NumFacture,DateFacture);
+    http.SetRequestHeader('Content-Length',IntToStr(length(TheXml)));
+    http.SetRequestHeader('SOAPAction','http://ZeDOC.fr/ZeDOCNetSolution/Search');
+    http.SetRequestHeader('Cookie','ASP.NET_SessionId='+fcookie_session);
+    TRY
+      http.Send(TheXml);
+    EXCEPT
+      on E: Exception do
+      begin
+        ShowMessage(E.Message);
+        exit;
+      end;
+    END;
+    if http.status = 200 then
+    begin
+      result := GetResponse(http.ResponseText);
+    end else
+    begin
+      ShowMessage(GetError(http.ResponseText));
+    end;
+  finally
+    http := nil;
+  end;
+
 end;
 
 function TconnectBSV.SearchDocument(BSVDocumentID: WideString): boolean;
