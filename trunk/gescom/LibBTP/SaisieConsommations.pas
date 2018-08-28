@@ -220,6 +220,7 @@ Type
     OkNumCol 			: Boolean;
     OkSaisEquipe  : Boolean;
     nbcolsInListe : Integer;
+    OkSCETEC      : Boolean;
 
     // -- Colonnes dans les grids
     G_SELECT			: integer;
@@ -1117,6 +1118,8 @@ begin
 
 	AppliqueFontDefaut (THRichEditOle(GetControl('RETOURINT')));
 
+  if VH_GC.BTCODESPECIF = '003' then OkSCETEC := True else OkSCETEC := False;
+
   TypeSaisie := Copy(S,14,12);
   OkSaisEquipe := GetParamSocSecur('SO_BTSAISEQUIPE',false);
 
@@ -1139,12 +1142,16 @@ begin
 	EnteteActive (True);
 
   If TypeSaisie = 'INTERVENTION' then
-     Choix_Appel.Checked := True
+  begin
+     if not OkSCETEC then Choix_Appel.Checked := True
+  end
   else
   begin
-     Choix_Chantier.Checked :=True;
+     Choix_Chantier.Checked := True;
      CHOIX_CHANTIERClick(Self);
   end;
+  //
+  if OkSCETEC then THPanel(GetControl('PANELAPPEL')).Visible := False;
   //
   TToolBarButton97(GetControl('BDUPLICCONSO')).visible := false;
 
@@ -2161,10 +2168,11 @@ begin
      result := result + 'AND BCO_NATUREPIECEG NOT IN ("CF","BLF","BFA","FF","AF","LFR","LCR","AFS")';
      end
   else if CHOIX_MO.checked then
-     begin
+  begin
      Result := '(BCO_NATUREMOUV="MO" OR BCO_NATUREMOUV="FRS" OR BCO_NATUREMOUV="FOU")';
      result := result + ' AND BCO_RESSOURCE="'+Trim(MAINDOEUVRE.text)+'"';
-     end
+     if OkSCETEC then result := result + ' AND BCO_AFFAIRE0<>"W"';
+  end
   else if CHOIX_RESSOURCE.checked then
      begin
      Result := 'BCO_NATUREMOUV="RES"';
@@ -2201,137 +2209,138 @@ begin
 
     NBhrs := 0;
     req := 'SELECT * FROM CONSOMMATIONS WHERE '+ constitueWhere;
+    //
     QQ := OpenSql (Req,true,-1,'',true);
 
-  TRY
-    if not QQ.eof then
-    begin
-       TOBCONSO.LoadDetailDB ('CONSOMMATIONS','','',QQ,FALSE);
-       TOBConsoOLd.dupliquer(TOBCOnso,true,true);
-       //
-       IndDate := TOBConso.detail[0].GetNumChamp ('BCO_DATEMOUV');
-      for Indice := 0 to TOBConso.detail.count -1 do
+    TRY
+      if not QQ.eof then
       begin
-        TOBC := TOBCONSO.detail[indice];
+        TOBCONSO.LoadDetailDB ('CONSOMMATIONS','','',QQ,FALSE);
+        TOBConsoOLd.dupliquer(TOBCOnso,true,true);
         //
-        if not ((CHOIX_CHANTIER.Checked) or (CHOIX_CONTRAT.Checked) OR (CHOIX_APPEL.Checked)) then
+        IndDate := TOBConso.detail[0].GetNumChamp ('BCO_DATEMOUV');
+        for Indice := 0 to TOBConso.detail.count -1 do
         begin
-          if TOBC.GetString('BCO_LINKEQUIPE')<>'' then
+          TOBC := TOBCONSO.detail[indice];
+          //
+          if not ((CHOIX_CHANTIER.Checked) or (CHOIX_CONTRAT.Checked) OR (CHOIX_APPEL.Checked)) then
           begin
-           RecupInfoEquipe(TOBC);
+            if TOBC.GetString('BCO_LINKEQUIPE')<>'' then
+            begin
+             RecupInfoEquipe(TOBC);
+            end;
           end;
+          // Frais - primes
+          if TOBC.GetValue('BCO_NATUREMOUV')='FRS' then
+          begin
+            TOBL := TOB.Create ('CONSOMMATIONS',TOBFRS,-1);
+            if TOBC.GetValeur (inddate) > LastDayFrs Then LastDayFrs := TOBC.GetValeur (inddate);
+            TOBL.Dupliquer (TOBC,true,true);
+            AddLesSupLignesConso (TOBL);
+          end
+          // Matériaux (fournitures)
+          else if TOBC.GetValue('BCO_NATUREMOUV')='FOU' then
+          begin
+            TOBL := TOB.Create ('CONSOMMATIONS',TOBMAT,-1);
+            if TOBC.GetValeur (inddate) > LastDayFourn Then LastDayFourn := TOBC.GetValeur (inddate);
+            TOBL.Dupliquer (TOBC,true,true);
+            AddLesSupLignesConso (TOBL);
+          end
+          // Main d'oeuvre interne
+          else if TOBC.GetValue('BCO_NATUREMOUV')='MO' then
+          begin
+            TOBL := TOB.Create ('CONSOMMATIONS',TOBMO,-1);
+            if TOBC.GetValeur (inddate) > LastDayMo Then LastDayMo := TOBC.GetValeur (inddate);
+            TOBL.Dupliquer (TOBC,true,true);
+            AddLesSupLignesConso (TOBL);
+            NBHRS:= NBHRS + TOBL.GetValue('BCO_QUANTITE');
+          end
+          // Main d'oeuvre Externe
+          else if TOBC.GetValue('BCO_NATUREMOUV')='EXT' then
+          begin
+            TOBL := TOB.Create ('CONSOMMATIONS',TOBMOEXT,-1);
+            if TOBC.GetValeur (inddate) > LastDayMoExt  Then LastDayMoExt := TOBC.GetValeur (inddate);
+            TOBL.Dupliquer (TOBC,true,true);
+            AddLesSupLignesConso (TOBL);
+          end
+          // RESSOURCE (engins)
+          else if TOBC.GetValue('BCO_NATUREMOUV')='RES' then
+          begin
+            TOBL := TOB.Create ('CONSOMMATIONS',TOBRES,-1);
+            if TOBC.GetValeur (inddate) > LastDayMat  Then LastDayMat := TOBC.GetValeur (inddate);
+            TOBL.Dupliquer (TOBC,true,true);
+            AddLesSupLignesConso (TOBL);
+          end
+          // recettes annexes
+          else if TOBC.GetValue('BCO_NATUREMOUV')='RAN' then
+          begin
+            TOBL := TOB.Create ('CONSOMMATIONS',TOBRecettes,-1);
+            if TOBC.GetValeur (inddate) > LastDayrecettes  Then LastDayrecettes := TOBC.GetValeur (inddate);
+            TOBL.Dupliquer (TOBC,true,true);
+            TOBL.PutValue ('BCO_QUANTITE',TOBL.GetValue ('BCO_QUANTITE') * -1); // remet la quantite en positif
+            calculeLaLigne (TOBL);
+            AddLesSupLignesConso (TOBL);
+          end
+          // Frais Annexes
+          else if TOBC.GetValue('BCO_NATUREMOUV')='FAN' then
+          begin
+            TOBL := TOB.Create ('CONSOMMATIONS',TOBRecettes,-1);
+            if TOBC.GetValeur (inddate) > LastDayRecettes  Then LastDayrecettes := TOBC.GetValeur (inddate);
+            TOBL.Dupliquer (TOBC,true,true);
+            AddLesSupLignesConso (TOBL);
+          end;        //
+          PositionneValeurInit (TOBL);
+          //
+          GetLibelleChantier(TOBL);
+          //
         end;
-        // Frais - primes
-        if TOBC.GetValue('BCO_NATUREMOUV')='FRS' then
-        begin
-          TOBL := TOB.Create ('CONSOMMATIONS',TOBFRS,-1);
-          if TOBC.GetValeur (inddate) > LastDayFrs Then LastDayFrs := TOBC.GetValeur (inddate);
-          TOBL.Dupliquer (TOBC,true,true);
-          AddLesSupLignesConso (TOBL);
-        end
-        // Matériaux (fournitures)
-        else if TOBC.GetValue('BCO_NATUREMOUV')='FOU' then
-        begin
-          TOBL := TOB.Create ('CONSOMMATIONS',TOBMAT,-1);
-          if TOBC.GetValeur (inddate) > LastDayFourn Then LastDayFourn := TOBC.GetValeur (inddate);
-          TOBL.Dupliquer (TOBC,true,true);
-          AddLesSupLignesConso (TOBL);
-        end
-        // Main d'oeuvre interne
-        else if TOBC.GetValue('BCO_NATUREMOUV')='MO' then
-        begin
-          TOBL := TOB.Create ('CONSOMMATIONS',TOBMO,-1);
-          if TOBC.GetValeur (inddate) > LastDayMo Then LastDayMo := TOBC.GetValeur (inddate);
-          TOBL.Dupliquer (TOBC,true,true);
-          AddLesSupLignesConso (TOBL);
-          NBHRS:= NBHRS + TOBL.GetValue('BCO_QUANTITE');
-        end
-        // Main d'oeuvre Externe
-        else if TOBC.GetValue('BCO_NATUREMOUV')='EXT' then
-        begin
-          TOBL := TOB.Create ('CONSOMMATIONS',TOBMOEXT,-1);
-          if TOBC.GetValeur (inddate) > LastDayMoExt  Then LastDayMoExt := TOBC.GetValeur (inddate);
-          TOBL.Dupliquer (TOBC,true,true);
-          AddLesSupLignesConso (TOBL);
-        end
-        // RESSOURCE (engins)
-        else if TOBC.GetValue('BCO_NATUREMOUV')='RES' then
-        begin
-          TOBL := TOB.Create ('CONSOMMATIONS',TOBRES,-1);
-          if TOBC.GetValeur (inddate) > LastDayMat  Then LastDayMat := TOBC.GetValeur (inddate);
-          TOBL.Dupliquer (TOBC,true,true);
-          AddLesSupLignesConso (TOBL);
-        end
-        // recettes annexes
-        else if TOBC.GetValue('BCO_NATUREMOUV')='RAN' then
-        begin
-          TOBL := TOB.Create ('CONSOMMATIONS',TOBRecettes,-1);
-          if TOBC.GetValeur (inddate) > LastDayrecettes  Then LastDayrecettes := TOBC.GetValeur (inddate);
-          TOBL.Dupliquer (TOBC,true,true);
-          TOBL.PutValue ('BCO_QUANTITE',TOBL.GetValue ('BCO_QUANTITE') * -1); // remet la quantite en positif
-          calculeLaLigne (TOBL);
-          AddLesSupLignesConso (TOBL);
-        end
-        // Frais Annexes
-        else if TOBC.GetValue('BCO_NATUREMOUV')='FAN' then
-        begin
-          TOBL := TOB.Create ('CONSOMMATIONS',TOBRecettes,-1);
-          if TOBC.GetValeur (inddate) > LastDayRecettes  Then LastDayrecettes := TOBC.GetValeur (inddate);
-          TOBL.Dupliquer (TOBC,true,true);
-          AddLesSupLignesConso (TOBL);
-        end;        //
-        PositionneValeurInit (TOBL);
-        //
-        GetLibelleChantier(TOBL);
-        //
       end;
-    end;
-  FINALLY
-    ferme (QQ);
-    //
-    TOBLIENEQUIPE_O.Dupliquer(TOBLIENEQUIPE,True,true);
-    ///////
-    if LastDayMo = 0        Then LastDayMo        := Calendrier.SelectionStart;
-    if LastDayFrs = 0       Then LastDayFrs       := Calendrier.SelectionStart;
-    if LastDayMat = 0       Then LastDayMat       := Calendrier.SelectionStart;
-    if LastDayFourn = 0     Then LastDayFourn     := Calendrier.SelectionStart;
-    if LastDayMoExt = 0     Then LastDayMoExt     := Calendrier.SelectionStart;
-    if LastDayRecettes = 0  Then LastDayrecettes  := Calendrier.SelectionStart;
-    //
-    if (CHOIX_CHANTIER.Checked) OR (CHOIX_CONTRAT.Checked) Or (CHOIX_Appel.Checked) then
-    begin
-       WithPhases := IsExistPhases (CH_CHANTIER.text);
-       if TOBMo.detail.count        = 0 Then TOBL := AddNewLigne (TOBMO,TgsMO);
-       if TOBMoEXT.detail.count     = 0 Then TOBL := AddNewLigne (TOBMOEXT,TgsMoext);
-       if TOBFRS.detail.count       = 0 Then TOBL := AddNewLigne (TOBFrs,TgsFRS);
-       if TOBMAT.detail.count       = 0 Then TOBL := AddNewLigne (TOBMAT,TgsFOURN);
-       if TOBRES.detail.count       = 0 Then TOBL := AddNewLigne (TOBRES,TgsRES);
-       if TOBRecettes.detail.count  = 0 Then TOBL := AddNewLigne (TOBREcettes,TgsREcettes);
-    end
-    else if CHOIX_MATERIAUX.checked Then
-    begin
-      if TOBMAT.detail.count = 0       Then
-      Begin
-        TOBL := AddNewLigne (TOBMAT,TgsFOURN);
+    FINALLY
+      ferme (QQ);
+      //
+      TOBLIENEQUIPE_O.Dupliquer(TOBLIENEQUIPE,True,true);
+      ///////
+      if LastDayMo = 0        Then LastDayMo        := Calendrier.SelectionStart;
+      if LastDayFrs = 0       Then LastDayFrs       := Calendrier.SelectionStart;
+      if LastDayMat = 0       Then LastDayMat       := Calendrier.SelectionStart;
+      if LastDayFourn = 0     Then LastDayFourn     := Calendrier.SelectionStart;
+      if LastDayMoExt = 0     Then LastDayMoExt     := Calendrier.SelectionStart;
+      if LastDayRecettes = 0  Then LastDayrecettes  := Calendrier.SelectionStart;
+      //
+      if (CHOIX_CHANTIER.Checked) OR (CHOIX_CONTRAT.Checked) Or (CHOIX_Appel.Checked) then
+      begin
+         WithPhases := IsExistPhases (CH_CHANTIER.text);
+         if TOBMo.detail.count        = 0 Then TOBL := AddNewLigne (TOBMO,TgsMO);
+         if TOBMoEXT.detail.count     = 0 Then TOBL := AddNewLigne (TOBMOEXT,TgsMoext);
+         if TOBFRS.detail.count       = 0 Then TOBL := AddNewLigne (TOBFrs,TgsFRS);
+         if TOBMAT.detail.count       = 0 Then TOBL := AddNewLigne (TOBMAT,TgsFOURN);
+         if TOBRES.detail.count       = 0 Then TOBL := AddNewLigne (TOBRES,TgsRES);
+         if TOBRecettes.detail.count  = 0 Then TOBL := AddNewLigne (TOBREcettes,TgsREcettes);
+      end
+      else if CHOIX_MATERIAUX.checked Then
+      begin
+        if TOBMAT.detail.count = 0       Then
+        Begin
+          TOBL := AddNewLigne (TOBMAT,TgsFOURN);
+        end;
+      end
+      else if CHOIX_MO.checked then
+      begin
+        if TOBMo.detail.count = 0        Then TOBL := AddNewLigne (TOBMO,TgsMO);
+        if TOBFRS.detail.count = 0       Then TOBL := AddNewLigne (TOBFrs,TgsFRS);
+      end
+      else if CHOIX_MOEXT.checked then
+      begin
+        if TOBMoEXT.detail.count = 0     Then TOBL := AddNewLigne (TOBMOEXT,TgsMOEXT);
+      end
+      else if CHOIX_RESSOURCE.checked then
+      begin
+        if TOBRES.detail.count = 0       Then TOBL := AddNewLigne (TOBRES,TgsRES);
       end;
-    end
-    else if CHOIX_MO.checked then
-    begin
-      if TOBMo.detail.count = 0        Then TOBL := AddNewLigne (TOBMO,TgsMO);
-      if TOBFRS.detail.count = 0       Then TOBL := AddNewLigne (TOBFrs,TgsFRS);
-    end
-    else if CHOIX_MOEXT.checked then
-    begin
-      if TOBMoEXT.detail.count = 0     Then TOBL := AddNewLigne (TOBMOEXT,TgsMOEXT);
-    end
-    else if CHOIX_RESSOURCE.checked then
-    begin
-      if TOBRES.detail.count = 0       Then TOBL := AddNewLigne (TOBRES,TgsRES);
-    end;
 
-    NBHRSSAISIE.Value := NBHRS;
-//
-  END;
+      NBHRSSAISIE.Value := NBHRS;
+      //
+    END;
 end;
 
 procedure TOF_BTSAISIECONSO.SetGridDefault;
@@ -4534,8 +4543,22 @@ begin
   // Formatage du code affaire dans le cas où l'utilisateur
   // a saisi directement le code sans le type d'affaire et le numero d'avenant
   st := valeur;
-
 	Nat0 := copy(UpperCase (st),1,1);
+
+
+  if (TheMode = TgsMO) and (CHOIX_MO.Checked) then
+  begin
+    If okscetec then
+    begin
+      if Nat0 = 'W' then
+      Begin
+        PGIError('Saisie impossible sur un appel','Erreur de saisie');
+        Valeur := '';
+        Exit;
+      end;
+    end;
+  end;
+
 	if (Nat0 <> 'A') and (Nat0 <> 'W') and (Nat0 <> 'I') then
   begin
     valeur := 'A'+copy(st,1,length(st));
@@ -6651,6 +6674,15 @@ Begin
   //FV1 : 27/01/2014 - FS#827 - DELABOUDINIERE : Contrôle sur chantier non accepté en saisie de consommations
   //                   FS#921 - DELABOUDINIERE : Revoir les contrôles sur appels et contrats en fonction du code état
   //if not ControleAffaire(Result, Ecran.caption,'SCO') then exit;
+  If okscetec then
+  begin
+    if Copy(Result,1,1)='W' then
+    Begin
+      PGIError('Saisie impossible sur un appel','Erreur de saisie');
+      Result := '';
+      Exit;
+    end;
+  end;
 
   Grille.cells[Grille.col,Grille.row] := result;
   TOBL.PutValue('BCO_AFFAIRE',result);

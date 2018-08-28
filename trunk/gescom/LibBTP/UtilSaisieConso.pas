@@ -955,7 +955,7 @@ begin
   end;
 
   //FV1 : 26/11/2013 - FS#784 - BAGE : en saisie consos, gérer la saisie partielle du code chantier dans la grille.
-  StChamps := StChamps + ';AFF_AFFAIRE0='  + Part0;
+  StChamps := StChamps + ';AFF_AFFAIRE0=' + Part0;
   StChamps := StChamps + ';AFF_AFFAIRE1=' + Part1;
   StChamps := StChamps + ';AFF_AFFAIRE2=' + Part2;
   StChamps := StChamps + ';AFF_AFFAIRE3=' + Part3;
