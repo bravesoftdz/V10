@@ -1114,7 +1114,8 @@ uses
   UConnectWSConst in '..\..\CONNECTWS\UConnectWSConst.pas',
   Zip in '..\..\commun\Lib\Zip.pas',
   ZipDlls in '..\..\commun\Lib\ZipDlls.pas',
-  USpecifVerdon in '..\Verdon\USpecifVerdon.pas';
+  USpecifVerdon in '..\Verdon\USpecifVerdon.pas',
+  UtilsPdf in '..\UtilPdfTk\UtilsPdf.pas';
 
 //
 
