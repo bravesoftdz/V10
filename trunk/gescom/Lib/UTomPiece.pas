@@ -54,6 +54,9 @@ Type
 
 {$ENDIF}
            procedure ParamSaisie (Sender : Tobject);
+           procedure JOURNALCPTAChange (Sender : TObject);
+           procedure JOURNALCPTA1Change (Sender : TObject);
+           procedure ActiveEventsCombos(State: Boolean);
        public
            procedure OnArgument (stArgument : string); override;
            procedure OnChangeField (F : TField)  ; override ;
@@ -597,105 +600,119 @@ var i_ind   : Integer;
     StSQL   : String;
     Year,Month,Day : Word;
 begin
-Inherited;
-TOBDetailPiece.ClearDetail;
-//
-st_Flux := GetField ('GPP_VENTEACHAT');
-if st_Flux='VEN' then
-   BEGIN
-   SetControlProperty('GPP_JOURNALCPTA','Plus','AND J_NATUREJAL="VTE"');
-   if Ecran.Name = 'GCPARPIECEUSR' then
-      BEGIN
-      SetControlProperty('GPP_JOURNALCPTA','Enabled',True);
-      SetControlProperty('GPP_JOURNALCPTA','Color',clwindow);
-      END;
-   END else
-   if st_Flux='ACH' then
-      BEGIN
-      SetControlProperty('GPP_FORCEENPA','visible',false);
-      SetControlProperty('GPP_JOURNALCPTA','Plus','AND J_NATUREJAL="ACH"');
-      if Ecran.Name = 'GCPARPIECEUSR' then
-         BEGIN
-         SetControlProperty('GPP_JOURNALCPTA','Enabled',True);
-         SetControlProperty('GPP_JOURNALCPTA','Color',clwindow);
-         END;
-      END else
-      BEGIN
-      SetControlProperty('GPP_JOURNALCPTA','Plus','');
-      if Ecran.Name = 'GCPARPIECEUSR' then
-            BEGIN
-            SetControlProperty('GPP_JOURNALCPTA','Enabled',False);
-            SetControlProperty('GPP_JOURNALCPTA','Color',clbtnface);
-            END;
-      END;
-if (not (ctxAffaire in V_PGI.PGIContexte))and (Ecran.Name='GCPARPIECEUSR') then
-   if (GetField ('GPP_NATUREPIECEG')='CC') or (GetField ('GPP_NATUREPIECEG')='DE') then
-      SetControlVisible ('PCONTREMARQUE', True)
-      else
-      SetControlVisible ('PCONTREMARQUE', False);
-
-i:=0;
-for i_ind:=1 to 8 do
+  Inherited;
+  TOBDetailPiece.ClearDetail;
+  ActiveEventsCombos (False);
+  ThValCOmbobox(GetControl('JOURNALCPTA')).visible := true;
+  ThValCOmbobox(GetControl('JOURNALCPTA1')).visible := false;
+  //
+  st_Flux := GetField ('GPP_VENTEACHAT');
+  if st_Flux='VEN' then
+  BEGIN
+    SetControlProperty('JOURNALCPTA','Plus','AND J_NATUREJAL="VTE"');
+    SetControlText('JOURNALCPTA',GetControlText('GPP_JOURNALCPTA'));
+    if Ecran.Name = 'GCPARPIECEUSR' then
+    BEGIN
+      SetControlProperty('JOURNALCPTA','Enabled',True);
+      SetControlProperty('JOURNALCPTA','Color',clwindow);
+    END;
+  END else if st_Flux='ACH' then
+  BEGIN
+    if GetField('GPP_NATUREPIECEG')='B01' then
     begin
+      ThValCOmbobox(GetControl('JOURNALCPTA')).visible := false;
+      ThValCOmbobox(GetControl('JOURNALCPTA1')).visible := true;
+      SetControlText('JOURNALCPTA1',GetControlText('GPP_JOURNALCPTA'));
+    end else
+    begin
+      SetControlText('JOURNALCPTA',GetControlText('GPP_JOURNALCPTA'));
+      SetControlProperty('GPP_FORCEENPA','visible',false);
+      SetControlProperty('JOURNALCPTA','Plus','AND J_NATUREJAL="ACH"');
+      if Ecran.Name = 'GCPARPIECEUSR' then
+      BEGIN
+        SetControlProperty('JOURNALCPTA','Enabled',True);
+        SetControlProperty('JOURNALCPTA','Color',clwindow);
+      END;
+    end;
+  END else
+  BEGIN
+    SetControlText('JOURNALCPTA',GetControlText('GPP_JOURNALCPTGLOB'));
+    SetControlProperty('JOURNALCPTA','Plus','');
+    if Ecran.Name = 'GCPARPIECEUSR' then
+    BEGIN
+      SetControlProperty('JOURNALCPTA','Enabled',False);
+      SetControlProperty('JOURNALCPTA','Color',clbtnface);
+    END;
+  END;
+  if (not (ctxAffaire in V_PGI.PGIContexte))and (Ecran.Name='GCPARPIECEUSR') then
+  if (GetField ('GPP_NATUREPIECEG')='CC') or (GetField ('GPP_NATUREPIECEG')='DE') then
+    SetControlVisible ('PCONTREMARQUE', True)
+  else
+    SetControlVisible ('PCONTREMARQUE', False);
+
+  i:=0;
+  for i_ind:=1 to 8 do
+  begin
     SetControlProperty('GPP_IFL'+InttoStr(i_ind),'Plus','AND CO_CODE NOT LIKE "9%"');
     if GetField('GPP_IFL'+InttoStr(i_ind))<>'' then
-       begin
-       SetControlProperty('GPP_IFL'+InttoStr(i_ind),'Color',clwindow);
-       SetControlEnabled('GPP_IFL'+InttoStr(i_ind),true);
-       i:=i_ind;
-       end else
-       begin
-       SetControlProperty('GPP_IFL'+InttoStr(i_ind),'Color',clbtnface);
-       SetControlEnabled('GPP_IFL'+InttoStr(i_ind),false);
-       end;
+    begin
+      SetControlProperty('GPP_IFL'+InttoStr(i_ind),'Color',clwindow);
+      SetControlEnabled('GPP_IFL'+InttoStr(i_ind),true);
+      i:=i_ind;
+    end else
+    begin
+      SetControlProperty('GPP_IFL'+InttoStr(i_ind),'Color',clbtnface);
+      SetControlEnabled('GPP_IFL'+InttoStr(i_ind),false);
     end;
-if i<8 then
-   begin
-   SetControlProperty('GPP_IFL'+InttoStr(i+1),'Color',clwindow);
-   SetControlEnabled('GPP_IFL'+InttoStr(i+1),true);
-   end;
-//Gestion : Tables libres
-if (ctxMode  in V_PGI.PGIContexte) then
-   BEGIN
- // Modif 01/08/2001
- //  if GetField('GPP_PIECETABLE1')='' then SetControlEnabled('GPP_AFFPIECETABLE',False)
- //  else SetControlEnabled('GPP_AFFPIECETABLE',true);
-   i:=0;
-   for i_ind:=1 to 3 do
-       begin
-       St_Plus := THDBValComboBox(GetControl('GPP_PIECETABLE'+InttoStr(i_ind))).Value;
-       //if GetField('GPP_PIECETABLE'+InttoStr(i_ind))<>'' then
-       if St_Plus<>'' then
-          begin
-          SetControlEnabled('GPP_PIECETABLE'+InttoStr(i_ind),true); SetControlProperty('GPP_PIECETABLE'+InttoStr(i_ind),'Color',clwindow);
-          SetControlEnabled('GPP_CODPIECEDEF'+InttoStr(i_ind),true); SetControlProperty('GPP_CODPIECEDEF'+InttoStr(i_ind),'Color',clwindow);
-          SetControlProperty('GPP_CODPIECEDEF'+InttoStr(i_ind),'Plus',St_Plus);
-          SetControlEnabled('GPP_CODEPIECEOBL'+InttoStr(i_ind),true);
-          i:=i_ind;
-          end else
-          begin
-          SetControlEnabled('GPP_PIECETABLE'+InttoStr(i_ind),false); SetControlProperty('GPP_PIECETABLE'+InttoStr(i_ind),'Color',clbtnface);
-          SetControlEnabled('GPP_CODPIECEDEF'+InttoStr(i_ind),false); SetControlProperty('GPP_CODPIECEDEF'+InttoStr(i_ind),'Color',clbtnface);
-          SetControlEnabled('GPP_CODEPIECEOBL'+InttoStr(i_ind),false);
-          end;
-       end;
-   if i<3 then
+  end;
+  if i<8 then
+  begin
+    SetControlProperty('GPP_IFL'+InttoStr(i+1),'Color',clwindow);
+    SetControlEnabled('GPP_IFL'+InttoStr(i+1),true);
+  end;
+  //Gestion : Tables libres
+  if (ctxMode  in V_PGI.PGIContexte) then
+  BEGIN
+    // Modif 01/08/2001
+    //  if GetField('GPP_PIECETABLE1')='' then SetControlEnabled('GPP_AFFPIECETABLE',False)
+    //  else SetControlEnabled('GPP_AFFPIECETABLE',true);
+    i:=0;
+    for i_ind:=1 to 3 do
+    begin
+      St_Plus := THDBValComboBox(GetControl('GPP_PIECETABLE'+InttoStr(i_ind))).Value;
+      //if GetField('GPP_PIECETABLE'+InttoStr(i_ind))<>'' then
+      if St_Plus<>'' then
       begin
-      SetControlEnabled('GPP_PIECETABLE'+InttoStr(i+1),true); SetControlProperty('GPP_PIECETABLE'+InttoStr(i+1),'Color',clwindow);
+        SetControlEnabled('GPP_PIECETABLE'+InttoStr(i_ind),true); SetControlProperty('GPP_PIECETABLE'+InttoStr(i_ind),'Color',clwindow);
+        SetControlEnabled('GPP_CODPIECEDEF'+InttoStr(i_ind),true); SetControlProperty('GPP_CODPIECEDEF'+InttoStr(i_ind),'Color',clwindow);
+        SetControlProperty('GPP_CODPIECEDEF'+InttoStr(i_ind),'Plus',St_Plus);
+        SetControlEnabled('GPP_CODEPIECEOBL'+InttoStr(i_ind),true);
+        i:=i_ind;
+      end else
+      begin
+        SetControlEnabled('GPP_PIECETABLE'+InttoStr(i_ind),false); SetControlProperty('GPP_PIECETABLE'+InttoStr(i_ind),'Color',clbtnface);
+        SetControlEnabled('GPP_CODPIECEDEF'+InttoStr(i_ind),false); SetControlProperty('GPP_CODPIECEDEF'+InttoStr(i_ind),'Color',clbtnface);
+        SetControlEnabled('GPP_CODEPIECEOBL'+InttoStr(i_ind),false);
       end;
-   END ;
-{$IFDEF BTP}
-   THRichEditOle(GetControl('TMODEAFFDEF')).lines.Text  := RecupModeAffLibelles (GetField('GPP_TYPEPRESENT'));
-{$ENDIF}
-{$IFDEF GPAO}
+    end;
+    if i<3 then
+    begin
+      SetControlEnabled('GPP_PIECETABLE'+InttoStr(i+1),true); SetControlProperty('GPP_PIECETABLE'+InttoStr(i+1),'Color',clwindow);
+    end;
+  END ;
+  {$IFDEF BTP}
+  THRichEditOle(GetControl('TMODEAFFDEF')).lines.Text  := RecupModeAffLibelles (GetField('GPP_TYPEPRESENT'));
+  {$ENDIF}
+  {$IFDEF GPAO}
   SetConfigState;
-{$ENDIF}
-//AC 18/08/03 NV GESTION COMPTA DIFF
-   TstComptaStock ;
-//Fin AC
+  {$ENDIF}
+  //AC 18/08/03 NV GESTION COMPTA DIFF
+  TstComptaStock ;
+  //Fin AC
   {$IFDEF CCS3}
   if (ctxAffaire  in V_PGI.PGIContexte) then   SetControlVisible ('PAFFAIRE', True);
   {$ENDIF}
+  ActiveEventsCombos (true);
 end;
 
 
@@ -950,6 +967,7 @@ BEGIN
     SetControlVisible('GPP_TAILLAGEAUTO',false);
   end;
   {$ENDIF}
+  ActiveEventsCombos(true);
 END;
 
 {$IFDEF GPAO}
@@ -1127,6 +1145,31 @@ begin
   AGLLanceFiche('BTP','BTCRESAISIE','','','LISTE='+ListeSaisie)
 end;
 
+
+procedure TOM_ParPiece.ActiveEventsCombos (State : Boolean);
+begin
+  if State then
+  begin
+    ThValCOmbobox(GetControl('JOURNALCPTA')).OnChange := JOURNALCPTAChange;
+    ThValCOmbobox(GetControl('JOURNALCPTA1')).OnChange := JOURNALCPTA1Change;
+  end else
+  begin
+    ThValCOmbobox(GetControl('JOURNALCPTA')).OnChange := nil;
+    ThValCOmbobox(GetControl('JOURNALCPTA1')).OnChange := nil;
+  end;
+end;
+
+procedure TOM_ParPiece.JOURNALCPTA1Change(Sender: TObject);
+begin
+  if not (DS.State in [dsInsert, dsEdit]) then DS.edit; // pour passer DS.state en mode dsEdit
+  SetControlText('GPP_JOURNALCPTA',GetControlText('JOURNALCPTA1'));
+end;
+
+procedure TOM_ParPiece.JOURNALCPTAChange(Sender: TObject);
+begin
+  if not (DS.State in [dsInsert, dsEdit]) then DS.edit; // pour passer DS.state en mode dsEdit
+  SetControlText('GPP_JOURNALCPTA',GetControlText('JOURNALCPTA'));
+end;
 
 Initialization
 registerclasses([TOM_ParPiece,TOM_DomainePiece]);

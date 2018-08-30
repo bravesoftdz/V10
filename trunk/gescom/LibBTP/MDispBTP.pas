@@ -810,6 +810,7 @@ BEGIN
               AppelsBAST;
               RetourForce:=TRUE;
             END;
+   146644 : AGLLanceFiche('BTP','BTGENFACBAST','','','RESTITUERG') ; // génération des factures achat depuis BAST définitifs
 
    146311 : AGLLanceFiche('BTP','BTIMPORTMULGIE','','','') ; // Importation des factures d'achat GIE
 //   31515 : AGLLanceFiche('BTP','BTTRANSACH_MUL','','','BFA') ;
@@ -831,6 +832,7 @@ BEGIN
    146131 : AGLLanceFiche('BTP','BTLANCEREA_MUL','','','MODIFICATION') ;     // Modification réappro
    //
    146241  : AGLLanceFiche('BTP','BTPIECE_MUL','GP_NATUREPIECEG=FF;GP_VENTEACHAT=ACH','','MODIFICATION;REAJUSTEANA') ;  //Réajustement analytique
+   146291  : AGLLanceFiche('BTP','BTPIECE_MUL','GP_NATUREPIECEG=B01;GP_VENTEACHAT=ACH','','MODIFICATION') ;  // Libération des RG
    // Editions
    31601 : AGLLanceFiche('BTP','BTEDITDOCDIFF_MUL','','','ACH') ;
    31602 : AGLLanceFiche('BTP','BTPTFPIECEACH','GP_NATUREPIECEG=CF','','ACHAT') ;  // Portefeuille pièces

@@ -90,12 +90,19 @@ begin
 end ;
 
 procedure TOF_BTGENFACBAST.OnArgument (S : String ) ;
+var RestitueRg : boolean;
 begin
   Inherited ;
   TToolbarButton97 (GetControl('BOuvrir')).OnClick := BVAliderClick;
   Rapport := TFBTRapport.create(application.mainform);
   Rapport.MemoRapport.lines.clear;
-
+  RestitueRg := (Pos('RESTITUERG',S)>0);
+  THCheckbox(GetControl('BM3_RGLIBER')).Checked := RestitueRg;
+  if RestitueRg then
+  begin
+    Ecran.Caption := 'Génération des restitutions de RG';
+    UpdateCaption(ecran);
+  end;
 end ;
 
 procedure TOF_BTGENFACBAST.OnClose ;
@@ -260,7 +267,7 @@ var St : string;
 begin
   if Result.result = 0 then
   begin
-    St := Format('BAST N° %s situation N° %d --> %s N° %d',[Result.Numbast,Result.NumSituation,RechDom('GCNATUREPIECEG','FF',false),Result.fNumeroPiece]);
+    St := Format('BAST N° %s situation N° %d --> %s N° %d',[Result.Numbast,Result.NumSituation,RechDom('GCNATUREPIECEG',Result.fNaturePiece,false),Result.fNumeroPiece]);
   end else
   begin
     St := Format('ERREUR en génération du BAST N° %s situation N° %d --> %s',[Result.Numbast,Result.NumSituation,Result.MessageRet]);

@@ -1497,6 +1497,9 @@ Var TauxEsc   : Double ;
     DP,CP,DD,CD,XD,XP : Double ;
 BEGIN
 Result:=rcOk ;
+// restitution de RG --> On sort
+if TOBPiece.GetBoolean('GP_RESTITUERG') then Exit;
+// ----
 TauxEsc:=TOBPiece.GetValue('GP_ESCOMPTE') ; if TauxEsc=0 then Exit ;
 if TOBPiece.GetValue('GP_TOTALESCDEV')=0 then Exit ;
 if ((MM.Nature='FC') or (MM.Nature='AC')) then CpteEsc:=VH_GC.GCCpteEscVTE else CpteEsc:=VH_GC.GCCpteEscACH ;
@@ -1640,6 +1643,10 @@ Var TauxRem   : Double ;
     CumHT                : T_CodeCpta ;
 BEGIN
   Result:=rcOk ;
+  // restitution de RG --> On sort
+  if TOBPiece.GetBoolean('GP_RESTITUERG') then Exit;
+  // ----
+
   TauxRem:=TOBPiece.GetValue('GP_REMISEPIED') ; if TauxRem=0 then Exit ;
   if TOBPiece.GetValue('GP_TOTALREMISEDEV')=0 then Exit ;
   if ((MM.Nature='FC') or (MM.Nature='AC')) then CpteRem:=VH_GC.GCCpteRemVTE else CpteRem:=VH_GC.GCCpteRemACH ;
@@ -2018,6 +2025,10 @@ Var i : integer ;
 
 BEGIN
   Result:=rcOk ;
+    // restitution de RG --> On sort
+  if TOBPiece.GetBoolean('GP_RESTITUERG') then Exit;
+  // ----
+
   if TTCSANSTVA then Exit ;
   Regime:=TOBPiece.GetValue('GP_REGIMETAXE') ;
   Achat:=((MM.Nature='AF') or (MM.Nature='FF')) ;
@@ -3851,6 +3862,9 @@ Var i,k,itrouv,kk : integer ;
 BEGIN
 	EnHt := (TOBPiece.getvalue('GP_FACTUREHT')='X');
   Result:=rcOk ;
+  // restitution de RG --> On sort
+  if TOBPiece.GetBoolean('GP_RESTITUERG') then Exit;
+  // ----
   R_ArtFi.Montant:=0; R_ArtFi.MontantDev:=0;
   {Articles}
   for i:=0 to TOBPiece.Detail.Count-1 do
@@ -4144,6 +4158,118 @@ for i:=0 to TOBEcr.Detail.Count-1 do
        END ;
     END ;
 END ;
+
+
+Function CreerLigneRestitutionRetenueGar ( TOBEcr,TOBPIece,TOBPieceRG,TOBTiers,TOBBasesRG: TOB ; MM : RMVT ) : T_RetCpta ;
+Var CPteRD   : String ;
+    TOBG,TOBE,TOBTTC,TOBL : TOB ;
+    OkVent    : boolean ;
+    NumL      : integer ;
+    DP,CP,DD,CD,XD,XP,XXp,XXD,TheMontantTTC : Double ;
+    DEV : Rdevise;
+    II : integer;
+BEGIN
+  Result:=rcOk ;
+  if TOBPiece.detail.count = 0 then exit;
+  DEV.Code:=TOBPiece.GetValue('GP_DEVISE') ; GetInfosDevise(DEV) ;
+  //
+  TOBTTC:=Nil ;
+  if TOBEcr.Detail.Count>0 then TOBTTC:=TOBEcr.Detail[0] ;
+  //
+  for II := 0 To TOBPiece.detail.count -1 do
+  begin
+    TOBL := TOBPiece.detail[II];
+    if TOBL.GetDouble('GL_MONTANTHTDEV')=0 then continue;
+    {Montants}
+
+    XP := TOBL.getDouble('GL_TOTALTTC') ;
+    XD := TOBL.getDouble('GL_TOTALTTCDEV');
+    if (XP =0) and (XD = 0) then continue;
+    CPteRD := '';
+    if getparamSocSecur('SO_BTVENTCOLLECTIF',false) then
+    begin
+      CPteRD := FindCollectifRGPlus (TOBL,TObpiece);
+    end;
+    //
+    if CPteRD = '' then
+    begin
+      if MM.Nature='FC' then BEGIN  CPteRD := GetParamSocSecur('SO_GCCPTERGVTE',''); END else
+      if MM.Nature='AC' then BEGIN  CPteRD := GetParamSocSecur('SO_GCCPTERGVTE',''); END else
+      if MM.Nature='FF' then BEGIN CPteRD := GetParamSocSecur('SO_GCCPTERGACH',''); END else
+      if MM.Nature='AF' then BEGIN CPteRD := GetParamSocSecur('SO_GCCPTERGACH',''); END ;
+    end;
+    // Erreur sur Compte retenues de garanties
+    if CPteRD='' then BEGIN Result:=rcPar ; LastMsg:=12 ; Exit ; END ;
+    {Etude du compte général }
+    TOBG:=CreerTOBGeneral(CPteRD) ;
+    // Erreur sur Compte RG
+    if TOBG=Nil then
+       BEGIN
+       if VH_GC.GCPontComptable='ATT' then Result:=rcPar else
+        if VH_GC.GCPontComptable='REF' then Result:=rcRef else
+           BEGIN
+           if Not CreerCompteGC(TOBG,CPteRD,'','',ccpRG) then Result:=rcPar ;
+           END ;
+       if Result<>rcOk then BEGIN LastMsg:=2 ; Exit ; END ;
+       END ;
+    OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
+    {Ligne d'écriture}
+    TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
+    PieceVersECR(MM,TOBPiece,TOBTiers,TOBE,False) ;
+    {Général}
+    TOBE.PutValue('E_GENERAL',CPteRD) ;
+    TOBE.PutValue('E_CONSO',TOBG.GetValue('G_CONSO')) ;
+    {Divers}
+    TOBE.PutValue('E_TYPEMVT','TTC') ;
+    {Client}
+    TOBE.PutValue('E_AUXILIAIRE',TOBTiers.GetValue('T_AUXILIAIRE')) ;
+    //FV1 : 27/02/2018 - FS#2957 - DSA - En écriture comptable le libellé des Ports & Frais est erroné
+    if GetParamSocSecur('SO_LIBRETENUE', True) then AlimLibEcr(TobE,TobPiece,TobTiers,TOBL.GetString('GL_LIBELLE'),tecRG,True,(MM.Simul='S'));
+    //
+    {Eche+Vent}
+    NumL:=TOBEcr.Detail.Count-NbEches+1 ; TOBE.PutValue('E_NUMLIGNE',NumL) ;
+    if OkVent then TOBE.PutValue('E_ANA','X') ;
+
+//    if TOBG.GetValue('G_LETTRABLE')='X' then
+    BEGIN
+      TOBE.PutValue('E_ECHE','X') ; TOBE.PutValue('E_NUMECHE',1) ; TOBE.PutValue('E_ETATLETTRAGE','AL') ;
+      TOBE.PutValue('E_ETAT','0000000000') ;
+      //??????? c'est quoi ce truc ?????
+      //if TOBTTC <> nil then
+      if TOBTTC<>Nil then
+      BEGIN
+        TOBE.PutValue('E_MODEPAIE',TOBTTC.GetValue('E_MODEPAIE')) ;
+        TOBE.PutValue('E_DATEECHEANCE',TOBTTC.GetValue('E_DATEECHEANCE')) ;
+      END ;
+    END ;
+    TOBE.PutValue('E_EMETTEURTVA','X') ;
+    {Montants}
+    //GetSommeRG(TOBPieceRG,XP,XD,XE) ;
+
+    DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
+    if MM.Nature='FC' then BEGIN CD:=XD ; CP:=XP ; DD:=0 ; DP:=0 ; END else
+    if MM.Nature='FF' then BEGIN DD:=XD ; DP:=XP ; CD:=0 ; CP:=0 ; END else
+    if MM.Nature='AC' then BEGIN DD:=-XD ; DP:=-XP ; CD:=0 ; CP:=0 ; END else
+    if MM.Nature='AF' then BEGIN CD:=-XD ; CP:=-XP ; DD:=0 ; DP:=0 ; END ;
+
+    // si valeur négative, on inverse le sens : BRL 4/08
+    if DP < 0 then
+    begin
+     CP:=-DP;
+     DP:=0;
+     end;
+    if DD < 0 then
+    begin
+     CD:=-DD;
+     DD:=0;
+     end;
+
+    TOBE.PutValue('E_DEBIT',DP)     ; TOBE.PutValue('E_CREDIT',CP) ;
+    TOBE.PutValue('E_DEBITDEV',DD)  ; TOBE.PutValue('E_CREDITDEV',CD) ;
+    if ((DP=0) and (CP=0)) then TOBE.Free else TheTOBRG := TOBE;
+  end;
+  TOBG.Free ;
+end;
 
 Function CreerLigneRetenueDiv ( TOBEcr,TOBPiece,TOBPorcs,TOBBases,TOBTiers : TOB ; MM : RMVT ) : T_RetCpta ;
 Var CPteRD   : String ;
@@ -5047,31 +5173,37 @@ if TOBPiece.geTDouble('GP_TOTALTTCDEV')<> 0 then
 begin
   {Lignes de Tiers}
   Result:=CreerLignesTiers(TOBEcr,TOBPiece,TOBEches,TOBTiers,TOBAcomptes,TOBPieceRg,TOBbasesRG,TOBpieceTrait,TOBPorcs,TOBVTECOLL,DEV, MM) ;
-  {Lignes HT}
-  if Result=rcOk then Result:=CreerLignesHTTva(TOBEcr,TOBAFFInterv,TOBPieceinterv,TOBPiece,TOBOuvrages,TOBOuvragesP,TOBBases,TOBBasesCharge,TOBTiers,TOBArticles,TOBCpta,TOBPorcs,TOBanaP,TOBAnaS,MM,NbDec,DEV) ;
-  {Taxes}
-  if Result=rcOk then Result:=CreerLignesTaxes(TOBEcr,TOBPiece,TOBBases,TOBBasesST,TOBBasesCharge,TOBTiers,TOBPIeceRG,TOBBASESGlob,TOBPorcs,MM) ;
-  {Escompte et remises}
-  if Result=rcOk then Result:=CreerLigneRemise(TOBEcr,TOBPiece,TOBTiers,TOBanaP,TOBAnaS,TOBCpta,MM) ;
-  if Result=rcOk then Result:=CreerLigneEscompte(TOBEcr,TOBPiece,TOBTiers,MM) ;
-  // Modif BTP
-  {Lignes Retenu de garantie}
-  if RGComptabilise then
-     begin
-     if Result=rcOk then Result:=CreerLigneRetenueGar(TOBEcr,TOBPIece,TOBPieceRG,TOBTiers,TOBBasesRG,MM) ;
-     if Result=rcOk then Result:=CreerLigneRetenueDiv(TOBEcr,TOBPIece,TOBPorcs,TOBBases,TOBTiers,MM) ;
-  //   if Result=rcOk then Result:=CreerLignesTaxesRG(TOBEcr,TOBPiece,TOBPieceRG,TOBTiers,TOBBASESGlob,TOBBasesRg,MM) ;
-     end;
-  if (GetparamSocSecur('SO_BTCPTAPAIEDIRECT',false)) and (not GetparamSocSecur('SO_BTREGLSTTIERS',true)) then
+  if (TOBPiece.GetBoolean('GP_RESTITUERG')) then
   begin
-    if Result=rcOk then Result:=CreerPaiementDirect(TOBEcr,TOBPiece,TOBEches,TOBTiers,TOBAcomptes,TOBPieceRg,TOBbasesRG,TOBpieceTrait,TOBPorcs,DEV, MM) ;
-  end;
-  if (not GetParamsocSecur ('SO_BTCOMPTAREGL',false)) and (GetParamsocSecur ('SO_ACOMPTESFAC', false)) and (MM.Nature='FC') then
+    if Result=rcOk then Result:=CreerLigneRestitutionRetenueGar(TOBEcr,TOBPIece,TOBPieceRG,TOBTiers,TOBBasesRG,MM) ;
+  end else
   begin
-    // contitution de la partie d'écriture comptable correspondante à la deduction de l'acompte
-    if Result=rcOk then
+    {Lignes HT}
+    if Result=rcOk then Result:=CreerLignesHTTva(TOBEcr,TOBAFFInterv,TOBPieceinterv,TOBPiece,TOBOuvrages,TOBOuvragesP,TOBBases,TOBBasesCharge,TOBTiers,TOBArticles,TOBCpta,TOBPorcs,TOBanaP,TOBAnaS,MM,NbDec,DEV) ;
+    {Taxes}
+    if Result=rcOk then Result:=CreerLignesTaxes(TOBEcr,TOBPiece,TOBBases,TOBBasesST,TOBBasesCharge,TOBTiers,TOBPIeceRG,TOBBASESGlob,TOBPorcs,MM) ;
+    {Escompte et remises}
+    if Result=rcOk then Result:=CreerLigneRemise(TOBEcr,TOBPiece,TOBTiers,TOBanaP,TOBAnaS,TOBCpta,MM) ;
+    if Result=rcOk then Result:=CreerLigneEscompte(TOBEcr,TOBPiece,TOBTiers,MM) ;
+    // Modif BTP
+    {Lignes Retenu de garantie}
+    if (RGComptabilise) then
     begin
-      if (TOBpiece.getString('GP_ATTACHEMENT') <> '') and (tobpiece.getDouble('GP_ACOMPTE')<>0)  then ConstituRestitutionAcpt (TOBEcr,TOBPiece,TOBTiers,DEV, MM) ;
+       if Result=rcOk then Result:=CreerLigneRetenueGar(TOBEcr,TOBPIece,TOBPieceRG,TOBTiers,TOBBasesRG,MM) ;
+       if Result=rcOk then Result:=CreerLigneRetenueDiv(TOBEcr,TOBPIece,TOBPorcs,TOBBases,TOBTiers,MM) ;
+    //   if Result=rcOk then Result:=CreerLignesTaxesRG(TOBEcr,TOBPiece,TOBPieceRG,TOBTiers,TOBBASESGlob,TOBBasesRg,MM) ;
+    end;
+    if (GetparamSocSecur('SO_BTCPTAPAIEDIRECT',false)) and (not GetparamSocSecur('SO_BTREGLSTTIERS',true)) then
+    begin
+      if Result=rcOk then Result:=CreerPaiementDirect(TOBEcr,TOBPiece,TOBEches,TOBTiers,TOBAcomptes,TOBPieceRg,TOBbasesRG,TOBpieceTrait,TOBPorcs,DEV, MM) ;
+    end;
+    if (not GetParamsocSecur ('SO_BTCOMPTAREGL',false)) and (GetParamsocSecur ('SO_ACOMPTESFAC', false)) and (MM.Nature='FC') then
+    begin
+      // contitution de la partie d'écriture comptable correspondante à la deduction de l'acompte
+      if Result=rcOk then
+      begin
+        if (TOBpiece.getString('GP_ATTACHEMENT') <> '') and (tobpiece.getDouble('GP_ACOMPTE')<>0)  then ConstituRestitutionAcpt (TOBEcr,TOBPiece,TOBTiers,DEV, MM) ;
+      end;
     end;
   end;
   // ------
