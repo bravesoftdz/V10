@@ -563,6 +563,12 @@ uses
   Zip in '..\..\commun\Lib\Zip.pas',
   ZipDlls in '..\..\commun\Lib\ZipDlls.pas',
   USpecifVerdon in '..\Verdon\USpecifVerdon.pas',
+<<<<<<< HEAD
+=======
+  ConstServices in '..\..\commun\Lib\ConstServices.pas',
+  uLkJSON in '..\..\CONNECTWS\uLkJSON.pas',
+  BTWSTABLEAUTO_TOF in '..\..\Services\BTPY2\Lib\BTWSTABLEAUTO_TOF.pas',
+>>>>>>> aa8c2a9c1abc0d3b533b5251a0455a0de237e84a
   UtilsPdf in '..\UtilPdfTk\UtilsPdf.pas';
 
 {$R *.RES}

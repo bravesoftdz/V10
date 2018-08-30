@@ -70,6 +70,7 @@ uses
   HPanel,
   hStatus,
   CBPTrace
+  , CommonTools
   ;
 
 type
@@ -231,8 +232,6 @@ type
 	tArrondiPrec = (tAPCentaineDeMillier, tAPDizaineDeMillier, tAPMillier, tAPCentaine, tAPDizaine, tAPUnite, tAPDizieme, tAPCentieme, tAPMillieme, tAPDixMillieme);
   tArrondiMeth = (tAMInferieure, tAMSuperieure, tAMPlusProche);
 
-  tTypeField = (ttfNumeric, ttfInt, ttfMemo, ttfBoolean, ttfDate, ttfCombo, ttfText);
-
 	{ Manipulation dans DETABLES, DECHAMPS }
 	function  wGetLibChamp(Const FieldName:String): String;
 	function  wExistFieldInDechamps(Const FieldName:String): Boolean;
@@ -312,7 +311,6 @@ type
                                    const InsertAtPos: Integer = -1): Integer;
   function wExtractSectionFromMemo(const Section: String; var Memo: String; const ModifyMemo: Boolean): String;
   function isVarInt(const ValueV: Variant): Boolean;
-  function GetFieldType(FieldName : string) : tTypeField;
   function GetFieldSize(FieldName : string) : integer;
 
   { Outil Tob }
@@ -370,7 +368,6 @@ type
   function wStringToAlphaNumString(const St: String; const CharsToIgnore: String = ''): String;
   function wFileSizeToStr(FileSize: Integer; const NbDecimal: Integer): String;
   function wIntToC2(i: Integer): String;
-  function CaseFromString(Value: string; Values: array of string): integer;
 
   { Date }
   function wDateTimeToStr(Const LaDate: tDateTime; Const cFormat:string = 'AAAA-S-T-MM-JJ'; Const lFormat: boolean = True): string;
@@ -559,6 +556,7 @@ type
 //GP_20080204_TS_GP14791 <<<
 
   function GetWindowsCaptionFromArgument(Argument, DefaultValue : string) : string;
+  function GetFieldType(FieldName : string) : tTypeField;
 const
   SELECT_FROM_LISTE = 'SELECT * FROM LISTE WHERE LI_LISTE="%s" AND LI_UTILISATEUR="%s" AND LI_LANGUE="%s" ORDER BY LI_UTILISATEUR DESC';
 
@@ -1074,38 +1072,27 @@ Mots clefs ... :
 *****************************************************************}
 function iif(Const Expression, TruePart, FalsePart: Boolean): Boolean; overload;
 begin
-	if Expression then
-		Result := TruePart
-	else
-		Result := FalsePart;
+  Result := Tools.iif(Expression, TruePart, FalsePart);
 end;
+
 function iif(Const Expression: Boolean; Const TruePart, FalsePart: Integer): Integer; overload;
 begin
-	if Expression then
-		Result := TruePart
-	else
-		Result := FalsePart;
+  Result := Tools.iif(Expression, TruePart, FalsePart);
 end;
+
 function iif(Const Expression: Boolean; Const TruePart, FalsePart: Double): Double; overload;
 begin
-	if Expression then
-		Result := TruePart
-	else
-		Result := FalsePart;
+  Result := Tools.iif(Expression, TruePart, FalsePart);
 end;
+
 function iif(Const Expression: Boolean; Const TruePart, FalsePart: String): String; overload;
 begin
-	if Expression then
-		Result := TruePart
-	else
-		Result := FalsePart;
+  Result := Tools.iif(Expression, TruePart, FalsePart);
 end;
+
 function iif(Const Expression: Boolean; Const TruePart, FalsePart: Char): Char; overload;
 begin
-	if Expression then
-		Result := TruePart
-	else
-		Result := FalsePart;
+  Result := Tools.iif(Expression, TruePart, FalsePart);
 end;
 
 function iifV(Const Expression: Boolean; Const TruePart, FalsePart: Variant): Variant;
@@ -5189,16 +5176,7 @@ end;
 
 function GetFieldType(FieldName : string) : tTypeField;
 begin
-  case CaseFromString(ChampToType(FieldName), ['INTEGER', 'SMALLINT', 'DOUBLE', 'RATE', 'EXTENDED', 'DATE', 'BLOB', 'DATA', 'COMBO', 'BOOLEAN']) of
-    0..1 : Result := ttfInt;     {INTEGER , SMALLINT}
-    2..4 : Result := ttfNumeric; {DOUBLE, RATE, EXTENDED}
-    5    : Result := ttfDate;    {DATE}
-    6..7 : Result := ttfMemo;    {BLOB, DATA}
-    8    : Result := ttfCombo;   {COMBO}
-    9    : Result := ttfBoolean; {BOOLEAN}
-  else
-     Result := ttfText;
-  end;
+  Result := Tools.GetFieldType(FieldName{$IF defined(APPSRV)}, '', ''{$IFEND APPSRV});
 end;
 
 function GetFieldSize(FieldName : string) : integer;
@@ -6155,24 +6133,6 @@ begin
   if i < 10 then
     Result := '0';
   Result := Result + IntToStr(i);
-end;
-
-function CaseFromString(Value: string; Values: array of string): integer;
-var
-  Cpt : Integer;
-begin
-  Result := -1;
-  if (Value <> '') and (Length(Values) > -1) then
-  begin
-   for Cpt := Low(Values) to High(Values) do
-    begin
-      if Values[Cpt] = Value then
-      begin
-        Result := Cpt;
-        Break;
-      end;
-    end;
-  end;
 end;
 
 { TMemoFindDialog }
