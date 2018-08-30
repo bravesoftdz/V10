@@ -88,7 +88,6 @@ Uses
   , AglInitGC
   , UFonctionsCBP
   , FormsName
-  , CommonTools
   {$IFNDEF EAGLSERVER}
     {$IFNDEF ERADIO}
   , AglIsoflex
@@ -106,20 +105,19 @@ AGLLanceFiche(Nat,Cod,Range,Lequel,Argument);
 end;
 
 procedure TOF_Prospect_Mul.OnArgument(Arguments : String );
-var
-  F : TForm;
-  ChampMul,ValMul,Critere : String;
-  x : integer;
-  ChgNatTiers : boolean;
+var F : TForm;
+    ChampMul,ValMul,Critere : String;
+    x : integer;
+    ChgNatTiers : boolean;
 
-  procedure AfficheRepresentant(Oui : boolean);
-  begin
-    if assigned(GetControl('T_REPRESENTANT')) then
+    procedure AfficheRepresentant(Oui : boolean);
     begin
-      SetControlVisible('T_REPRESENTANT', Oui);
-      SetControlVisible('TT_REPRESENTANT', Oui);
+      if assigned(GetControl('T_REPRESENTANT')) then
+      begin
+        SetControlVisible('T_REPRESENTANT', Oui);
+        SetControlVisible('TT_REPRESENTANT', Oui);
+      end;
     end;
-  end;
 
 begin
 	fMulDeTraitement := true;
@@ -303,10 +301,7 @@ inherited ;
     ThEdit(GetControl('CODEARTICLE')).OnElipsisClick := CodeArticleRech;
   end;
   Ecran.OnKeyDown := ScreenKeYDown;
-  if not Tools.CanInsertedInTable('TIERS'{$IFDEF APPSRV}, '', '' {$ENDIF APPSRV}) then
-  begin
-    TtoolbarButton97(GetControl('bInsert')).Visible := False;
-  end;
+
   updatecaption(Ecran);
 end;
 

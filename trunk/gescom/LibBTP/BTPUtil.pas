@@ -214,7 +214,6 @@ uses
   , CbpEnumerator
   , UtilWord
   , wCommuns
-  , CommonTools
   ;
 
 function GetPiecesVenteBTP (ForWhat : integer = 3; ForPlus : boolean=true): string;
@@ -5298,7 +5297,7 @@ end;
 
 class function Publipost.GetPrefixFromTableName(TableName : string) : string;
 begin
-  case Tools.CaseFromString(TableName, ['AFFAIRE', 'TIERS', 'PIECEADRESSE', 'RESSOURCE', 'UTILISAT', 'SUSPECTS', 'CONTACT']) of
+  case CaseFromString(TableName, ['AFFAIRE', 'TIERS', 'PIECEADRESSE', 'RESSOURCE', 'UTILISAT', 'SUSPECTS', 'CONTACT']) of
     0 : Result := 'Contrat';     {AFFAIRE}
     1 : Result := 'CliFac';      {TIERS}
     2 : Result := 'AdrInt';      {PIECEADRESSE}

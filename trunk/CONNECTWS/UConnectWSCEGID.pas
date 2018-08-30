@@ -1,138 +1,61 @@
 unit UConnectWSCEGID;
 
 interface
-
 uses
-  Windows
-  , Messages
-  , SysUtils
-  , Variants
-  , Classes
-  , Graphics
-  , Controls                                                        
-  , Forms
-  , Dialogs
-  , StdCtrls
-  , ComCtrls
-  , WinHttp_TLB
-  , XMLDoc
-  , xmlintf
-  , DateUtils
-  , UConnectWSConst
-  , ConstServices
-  {$IFNDEF APPSRV}
-  , UTOB
-  , HMsgBox
-  , ParamSoc
-  {$ENDIF !APPSRV}
-  ;
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, ComCtrls,WinHttp_TLB,UTOB,HMsgBox,XMLDoc,xmlintf,
+  ParamSoc,DateUtils;
 
 type
-  TconnectCEGID = class(TObject)
-  private
-    factive: Boolean;
-    fServer: string;
-    fport: integer;
-    fDossier: string;
 
+  T_WSEntryType = (wsetNone, wsetDocument, wsetPayment, wsetPayer, wsetExtourne, wsetSubContractPayment, wsetStock);
+
+  TconnectCEGID = class (TObject)
+  private
+    factive : Boolean;
+    fServer : string;
+    fport : integer;
+    fDossier : string;
     function GetPort: string;
     procedure SetPort(const Value: string);
     procedure SetDossier(const Value: string);
     procedure SetServer(const Value: string);
-    function AppelEntriesWS(DocInfo : T_WSDocumentInf; TheXml: WideString; var NumDocOut: Integer): Boolean;
-    {$IFNDEF APPSRV}
-    procedure RemplitTOBDossiers(ListeDoss: TOB; HTTPResponse: WideString);
-    procedure RemplitTOBExercices(TOBexer: TOB; HTTPResponse: WideString);
-    {$ENDIF !APPSRV}
-    function GetStartUrl: string;
-    
+    function AppelEntriesWS(TOBPiece : TOB; TheXml: WideString;var NumDocOut: Integer): Boolean;
+    procedure RemplitTOBDossiers(ListeDoss : TOB;HTTPResponse : WideString);
+    procedure RemplitTOBExercices(TOBexer : TOB;HTTPResponse : WideString);
   public
     constructor create;
     destructor destroy; override;
-    {$IFNDEF APPSRV}
-    procedure GetDossiers(var ListeDoss: TOB; var TheResponse: WideString);
-    procedure GetExCpta(TOBexer: TOB);
-    {$ENDIF !APPSRV}
+    procedure GetDossiers (var ListeDoss : TOB; var TheResponse : WideString);
+    procedure GetExCpta (TOBexer : TOB);
 
     //
-    property CEGIDServer: string read fServer write SetServer;
-    property CEGIDPORT: string read GetPort write SetPort;
+    property CEGIDServer : string read fServer write SetServer;
+    property CEGIDPORT : string read GetPort write SetPort;
     property DOSSIER: string read fDossier write SetDossier;
-    property IsActive: boolean read factive;
+    property IsActive : boolean read factive;
   end;
 
-  TGetParamWSCEGID = class(TObject)
+  TGetParamWSCEGID = class (TObject)
   public
-    class function GetCodeFromWsEt(WsEt: T_WSEntryType): string;
-    class function ConnectToY2: Boolean;
-    class function GetPSoc(PSocType: T_WSPSocType): string;
+    class function ConnectToY2 : Boolean;
+    class function GetServer : string;
+    class function GetPort : string;
+    class function GetFolder : string;
+    class function GetLastSynchro : string;
+    class function GetCodeFromWsEt(WsEt : T_WSEntryType) : string;
   end;
 
-  TSendEntryY2 = class(Tobject)
-  private
-    function GetXmlAttributeArray : string;
-
-    function EncodeDocType(TypePiece: string): string;
-    function EncodeEntryType(EntryType: string): string;
-    function EnregistreInfoCptaY2(WsEt: T_WSEntryType; TslLine: string; TheNumDoc: Integer; DocInfo : T_WSDocumentInf): boolean;
-    function EncodeAmount(TslLine: string): string;
-    function EncodeDate(TslLine, DateFieldName: string): string;
-    function GetFirstIndiceEcr(TSlEcr: TStringList): Integer;
-    function ConstitueEntries(TSlEcr: TStringList): WideString;
-    function EncodeAxis(AxisCode: string): string;
-    procedure SetCegidConnectParameters(CegidConnect : TconnectCEGID);
-    procedure SetXmlRootAttributes(RootNode : IXMLNode);
-    function GetDataFlowImport(FilesQty : integer; TSLTraGuid : TStringList) : WideString;
-    function GetDataFlowState(Response : T_WSResponseImportEntries) : WideString;
-    function GetDataFlowReport(Http : IWinHttpRequest) : WideString;
-
-  public
-    ServerName   : string;
-    DBName       : string;
-    SendCegid    : boolean;
-    HttpStateMsg : WideString;
-    TslResult    : TStringList;
-
-    constructor Create;
-    destructor Destroy; override;
-
-    {$IFNDEF APPSRV}
-    function SendEntryCEGID(WsEt: T_WSEntryType; TOBecr: TOB; DocInfo : T_WSDocumentInf) : integer; overload; //DocType: string; DocNumber: integer): integer; overload;
-  	{$ENDIF !APPSRV}
-    function SendEntryCEGID(WsEt: T_WSEntryType; TSlEcr: TStringList; DocInfo : T_WSDocumentInf) : integer; overload; //DocType: string; DocNumber: integer): integer; overload;
-    function SendAccountingParameters(TSLFullPathFiles : TStringList; LogValues : T_WSLogValues) : boolean; //WithDebugWs : boolean): boolean;
-
-  end;
+procedure RecupParamCptaFromWS;
+procedure SendEntryCEGID (TOBPiece,TOBecr : TOB; Var SendCegid : boolean);
 
 implementation
+uses Hctrls,Aglinit,Hent1,db, {$IFNDEF DBXPRESS} dbtables {$ELSE} uDbxDataSet {$ENDIF};
 
-uses
-  db
-  , uLkJSON
-  , CommonTools
-  , ActiveX
-  , AxCtrls
-  , SvcMgr
-  , AdoDB
-  {$IFNDEF DBXPRESS}
-  , dbtables
-  {$ELSE DBXPRESS}
-  , uDbxDataSet
-  {$ENDIF DBXPRESS}
-  {$IFNDEF APPSRV}
-  , Hctrls
-  , Aglinit
-  , Hent1
-  , wCommuns
-  , UtilPGI
-  {$ENDIF !APPSRV}
-  ;
-
-function StringToStream(const AString: string): Tstream;
+function StringToStream(const AString: string) : Tstream;
 var
   SS: TStringStream;
 begin
-  Result := nil;
   SS := TStringStream.Create(AString);
   try
     SS.Position := 0;
@@ -142,1090 +65,568 @@ begin
   end;
 end;
 
-function DateTime2Tdate(TheDateTime: TdateTime): string;
-var
-  YY, MM, DD, Hours, Mins, secs, milli: Word;
+function DateTime2Tdate (TheDateTime : TdateTime ) : String;
+var YY,MM,DD,Hours,Mins,secs,milli : Word;
 begin
-  DecodeDateTime(TheDateTime, YY, MM, DD, Hours, Mins, secs, milli);
-  Result := Format('%4d-%0.2d-%0.2dT%0.2d:%0.2d:%0.2d', [YY, MM, DD, Hours, Mins, secs]);
+  DecodeDateTime(TheDateTime,YY,MM,DD,Hours,Mins,secs,Milli);
+  Result := Format ('%4d-%0.2d-%0.2dT%0.2d:%0.2d:%0.2d',[YY,MM,DD,Hours,Mins,secs]);
 end;
 
-function TDate2DateTime(OneTdate: string): TDateTime;
-var
-  TheTDate : string;
-  YYYY     : string;
-  MM       : string;
-  DD       : string;
-  PDATE    : string;
-  TheTime  : string;
-  IposT    : Integer;
-  II       : Integer;
+function TDate2DateTime (OneTdate : String ) : TDateTime;
+var TheTDate : string;
+    YYYY,MM,DD : string;
+    PDATE : string;
+    TheTime : string;
+    IposT,II : Integer;
 begin
-  {$IFNDEF APPSRV}
   Result := iDate1900;
-  {$ELSE !APPSRV}
-  Result := 2;
-  {$ENDIF !APPSRV}
-  IposT := Pos('T', OneTdate);
-  if IposT > 0 then
+  IposT := Pos('T',OneTdate);
+  if IposT>0 then
   begin
     II := 0;
-    TheTDate := Copy(OneTdate, 1, IposT - 1);
-    TheTime  := Copy(OneTdate, IposT + 1, Length(OneTdate) - 1);
+    TheTDate := Copy(OneTdate,1,IPosT-1);
+    TheTime := Copy(OneTdate,IposT+1,Length(OneTdate)-1);
     repeat
-      PDATE := Tools.ReadTokenSt_(TheTDate, '-');
+      PDATE := READTOKENPipe(TheTDate,'-');
       if PDATE <> '' then
       begin
         if II = 0 then
         begin
-          YYYY := PDATE;
-          Inc(II);
+          YYYY := PDATE; Inc(II);
         end else if II = 1 then
         begin
-          MM := PDATE;
-          Inc(II);
+          MM := PDATE; Inc(II);
         end else
         begin
-          DD := PDATE;
-          Inc(II);
+          DD := PDATE; Inc(II);
         end;
       end;
-    until PDATE = '';
+    until PDATE='';
     if (YYYY <> '') and (MM <> '') and (DD <> '') then
     begin
-      Result := StrToDateTime(DD + '/' + MM + '/' + YYYY + ' ' + TheTime);
+      Result := StrToDateTime(DD+'/'+MM+'/'+YYYY+' '+TheTime);
     end;
   end;
 end;
 
-function TSendEntryY2.GetXmlAttributeArray : string;
-begin
-  Result := 'http://schemas.microsoft.com/2003/10/Serialization/Arrays';
-end;
 
-function TSendEntryY2.EncodeDocType(TypePiece: string): string;
-begin
-  case Tools.CaseFromString(TypePiece, ['N', 'S']) of
-    {N} 0: Result := 'Normal';
-    {S} 1: Result := 'Simulation';
-  end;
-end;
+procedure SendEntryCEGID (TOBPiece,TOBecr : TOB; Var SendCegid : boolean);
 
-function TSendEntryY2.EncodeEntryType(EntryType: string): string;
-begin
-  case Tools.CaseFromString(EntryType, ['AC', 'AF', 'ECC', 'FC', 'FF', 'OC', 'OD', 'OF', 'RC', 'RF']) of
-    {AC } 0: Result := 'CustomerCredit';
-    {AF } 1: Result := 'ProviderCredit';
-    {ECC} 2: Result := 'ExchangeDifference';
-    {FC } 3: Result := 'CustomerInvoice';
-    {FF } 4: Result := 'ProviderInvoice';
-    {OC } 5: Result := 'CustomerDeposite';
-    {OD } 6: Result := 'SpecificOperation';
-    {OF } 7: Result := 'ProviderDeposite';
-    {RC } 8: Result := 'CustomerPayment';
-    {RF } 9: Result := 'ProviderPayment';
-  end;
-end;
-
-function TSendEntryY2.EnregistreInfoCptaY2(WsEt: T_WSEntryType; TslLine: string; TheNumDoc: Integer; DocInfo : T_WSDocumentInf): boolean;
-var
-  eJournal       : string;
-  eExercice      : string;
-  eDateComptable : TDateTime;
-  eEntity        : integer;
-  eNumeroPiece   : integer;
-  {$IFDEF APPSRV}
-  AdoQryL        : AdoQry;
-  AlreadyExist   : boolean;
-  {$ENDIF APPSRV}
-
-  function GetSep: string;
+  function EncodeDocType (TypePiece : string) : string;
   begin
-  {$IFDEF APPSRV}
-    Result := '''';
-  {$ELSE APPSRV}
-    Result := '"';
-  {$ENDIF APPSRV}
+    if TypePiece= 'N' then Result := 'Normal'
+    else if TypePiece = 'S' then result := 'Simulation';
   end;
 
-  function GetWhere: string;
+  function EncodeEntryType (EntryType : string) : string;
   begin
-    Result := ' WHERE BE0_ENTITY      = ' + IntToSTr(eEntity)
-            + '   AND BE0_JOURNAL     = ' + GetSep + eJournal + GetSep
-            + '   AND BE0_EXERCICE    = ' + GetSep + eExercice + GetSep
-            + '   AND BE0_NUMEROPIECE = ' + IntToStr(eNumeroPiece);
+    if EntryType= 'AC' then Result := 'CustomerCredit'
+    else if EntryType = 'AF'  then result := 'ProviderCredit'
+    else if EntryType = 'ECC' then result := 'ExchangeDifference'
+    else if EntryType = 'FC'  then result := 'CustomerInvoice'
+    else if EntryType = 'FF'  then result := 'ProviderInvoice'
+    else if EntryType = 'OC'  then result := 'CustomerDeposite'
+    else if EntryType = 'OD'  then result := 'SpecificOperation'
+    else if EntryType = 'OF'  then result := 'ProviderDeposite'
+    else if EntryType = 'RC'  then result := 'CustomerPayment'
+    else if EntryType = 'RF'  then result := 'ProviderPayment';
   end;
 
-  function GetSqlExist: string;
+  function EncodeSens (TOBE : TOB) : string;
   begin
-    Result := 'SELECT BE0_ENTITY FROM BTPECRITURE' + GetWhere;
+    if TOBE.GetDouble('E_DEBITDEV')<>0 then Result := 'Debit'
+                                       else Result := 'Credit';
   end;
 
-  function GetSqlUpdate: string;
+  function EnregistreInfoCptaY2 (TOBECr : TOB; TheNumDoc : Integer) : boolean;
+  var TOBLBTP : TOB;
+
   begin
-    Result := 'UPDATE BTPECRITURE SET BE0_REFERENCEY2 = ' + IntToStr(TheNumDoc) + GetWhere;
+    Result := false;
+    TOBLBTP := TOB.Create('BTPECRITURE',nil,-1);
+    TRY
+      TOBLBTP.SetInteger('BE0_ENTITY',TOBECr.GetInteger('E_ENTITY'));
+      TOBLBTP.SetString('BE0_JOURNAL',TOBECr.GetString('E_JOURNAL'));
+      TOBLBTP.SetString('BE0_EXERCICE',TOBECr.GetString('E_EXERCICE'));
+      TOBLBTP.SetDateTime('BE0_DATECOMPTABLE',TOBECr.GetDateTime('E_DATECOMPTABLE'));
+      TOBLBTP.SetInteger('BE0_NUMEROPIECE',TOBECr.GetInteger('E_NUMEROPIECE'));
+      TOBLBTP.SetString('BE0_REFERENCEY2',IntToStr(TheNumDoc));
+      TOBLBTP.InsertDB(nil);
+      Result := True;
+    FINALLY
+      TOBLBTP.Free;
+    END;
   end;
 
-  function GetSqlInsert: string;
+  function EncodeAmount (TOBE : TOB) : string;
+  var TheMontant : double;
   begin
-    Result := 'INSERT INTO BTPECRITURE'
-            + ' (  BE0_ENTITY'
-            + '  , BE0_JOURNAL'
-            + '  , BE0_EXERCICE'
-            + '  , BE0_NUMEROPIECE'
-            + '  , BE0_DATECOMPTABLE'
-            + '  , BE0_REFERENCEY2'
-            + '  , BE0_TYPE'
-            + '  , BE0_NATUREPIECEG'
-            + '  , BE0_SOUCHE'
-            + '  , BE0_NUMERO'
-            + '  , BE0_INDICEG'
-            + ' )  VALUES'
-            + ' (' + IntToStr(eEntity)
-            + ', ' + GetSep + eJournal  + GetSep
-            + ', ' + GetSep + eExercice + GetSep
-            + ', ' + IntToStr(eNumeroPiece)
-            + ', ' + GetSep + Tools.CastDateTimeForQry(eDateComptable) + GetSep
-            + ', ' + IntToStr(TheNumDoc)
-            + ', ' + GetSep + TGetParamWSCEGID.GetCodeFromWsEt(WsEt) + GetSep
-            + ', ' + GetSep + DocInfo.dType + GetSep
-            + ', ' + GetSep + DocInfo.dStub + GetSep
-            + ', ' + IntToStr(DocInfo.dNumber)
-            + ', ' + IntToStr(DocInfo.dIndex)
-            + ' )';
+    if TOBE.GetDouble('E_DEBITDEV')<>0 then TheMontant := TOBE.GetDouble('E_DEBITDEV')
+                                       else TheMontant := TOBE.GetDouble('E_CREDITDEV');
+    Result := STRFPOINT(TheMontant);
   end;
 
-begin
-  Result         := False;
-  eEntity        := StrToInt(Tools.GetStValueFromTSl(TslLine, 'E_ENTITY'));
-  eJournal       := trim(Tools.GetStValueFromTSl(TslLine, 'E_JOURNAL'));
-  eExercice      := trim(Tools.GetStValueFromTSl(TslLine, 'E_EXERCICE'));
-  eDateComptable := StrToDateTime(Tools.GetStValueFromTSl(TslLine, 'E_DATECOMPTABLE'));
-  eNumeroPiece   := StrToInt(Tools.GetStValueFromTSl(TslLine, 'E_NUMEROPIECE'));
-  if eJournal <> '' then
+  function EncodeDueDate(TOBE : TOB) : string;
+  var TheDate : Tdatetime;
   begin
-    {$IFDEF APPSRV}
-    AdoQryL := AdoQry.Create;
-    try
-      { Test si existe }
-      AdoQryL.ServerName := ServerName;
-      AdoQryL.DBName     := DBName;
-      AdoQryL.FieldsList := 'BE0_ENTITY';
-      AdoQryL.Request    := GetSqlExist;
-//      AdoQryL.Connect    := TADOConnection.Create(application);
-      AdoQryL.Qry        := TADOQuery.create(nil);
-      try
-        AdoQryL.SingleTableSelect;
-      finally
-//        AdoQryL.Connect.Free;
-      end;
-      AlreadyExist := (AdoQryL.RecordCount = 1);
-      { Exécute l'Update ou l'Insert }
-      AdoQryL.RecordCount := 0;
-      AdoQryL.TSLResult.Clear;
-      AdoQryL.FieldsList := '';
-      AdoQryL.Request    := Tools.iif(AlreadyExist, GetSqlUpdate, GetSqlInsert);
-      AdoQryL.InsertUpdate;
-      Result := (AdoQryL.RecordCount = 1);
-    finally
-      AdoQryL.Qry.Free;
-      AdoQryL.free;
-    end;
-    {$ELSE APPSRV}
-    if ExisteSQL(GetSqlExist) then
-      Result := (ExecuteSql(GetSqlUpdate) = 1)
-    else
-      Result := (ExecuteSql(GetSqlInsert) = 1);
-    {$ENDIF APPSRV}
+    TheDate := TOBE.GetDateTime('E_DATEECHEANCE');
+    if TheDate < iDate1900 then thedate := Idate1900;
+    Result := DateTime2Tdate(TheDate);
   end;
-end;
 
-function TSendEntryY2.GetFirstIndiceEcr(TSlEcr: TStringList): Integer;
-var
-  CptIndice: integer;
-begin
-  Result := -1;
-  for CptIndice := 0 to pred(TSlEcr.count) do
+  function EncodeExternalDateReference(TOBE : TOB) : string;
+  var TheDate : Tdatetime;
   begin
-    if Pos('=ECRITURE' + ToolsTobToTsl_Separator, TSlEcr[CptIndice]) > 0 then
-    begin
-      Result := CptIndice;
-      Break;
-    end;
+    TheDate := TOBE.GetDateTime('E_DATEREFEXTERNE');
+    if TheDate < iDate1900 then thedate := Idate1900;
+    Result := DateTime2Tdate(TheDate);
   end;
-end;
 
-function TSendEntryY2.EncodeAmount(TslLine: string): string;
-var
-  DebAmount  : Double;
-  CredAmount : double;
-begin
-  DebAmount  := StrToFloat(Tools.GetStValueFromTSl(TslLine, 'E_DEBITDEV'));
-  CredAmount := StrToFloat(Tools.GetStValueFromTSl(TslLine, 'E_CREDITDEV'));
-  Result     := Tools.StrFPoint_(Tools.iif(DebAmount <> 0, DebAmount, CredAmount));
-end;
-
-function TSendEntryY2.EncodeDate(TslLine, DateFieldName: string): string;
-var
-  DateValue : TDateTime;
-begin
-  DateValue := StrToDateTime(Tools.GetStValueFromTSl(TslLine, DateFieldName));
-  Result    := DateTime2Tdate(Tools.iif((DateValue < 2), 2, DateValue));
-end;
-
-function TSendEntryY2.EncodeAxis(AxisCode: string): string;
-begin
-  case Tools.CaseFromString(AxisCode, ['A1', 'A2', 'A3', 'A4', 'A5']) of
-    {A1} 0: Result := 'One';
-    {A2} 1: Result := 'Two';
-    {A3} 2: Result := 'Three';
-    {A4} 3: Result := 'Four';
-    {A5} 4: Result := 'Five';
-  end;
-end;
-
-procedure TSendEntryY2.SetCegidConnectParameters(CegidConnect : TconnectCEGID);
-{$IFDEF APPSRV}
-var
-  AdoQryL: AdoQry;
-{$ENDIF APPSRV}
-begin
-  {$IFNDEF APPSRV}
-  CegidConnect.CEGIDServer := TGetParamWSCEGID.GetPSoc(wspsServer);
-  CegidConnect.CEGIDPORT   := TGetParamWSCEGID.GetPSoc(wspsPort);
-  CegidConnect.DOSSIER     := TGetParamWSCEGID.GetPSoc(wspsFolder);
-  {$ELSE APPSRV}
-  AdoQryL := AdoQry.Create;
-  try
-    AdoQryL.ServerName := ServerName;
-    AdoQryL.DBName     := DBName;
-    AdoQryL.FieldsList := 'SOC_DATA';
-    AdoQryL.Request    := Format('SELECT %s FROM PARAMSOC WHERE SOC_NOM IN (''%s'', ''%s'', ''%s'') ORDER BY SOC_NOM DESC', [AdoQryL.FieldsList, WSCDS_SocServer, WSCDS_SocNumPort, WSCDS_SocCegidDos]);
-//    AdoQryL.Connect    := TADOConnection.Create(application);
-    AdoQryL.Qry        := TADOQuery.create(nil);
-    try
-      AdoQryL.SingleTableSelect;
-    finally
-//      AdoQryL.Connect.Free;
-    end;
-    if AdoQryL.RecordCount = 3 then
-    begin
-      CegidConnect.CEGIDServer := AdoQryL.TSLResult[0];
-      CegidConnect.CEGIDPORT   := AdoQryL.TSLResult[1];
-      CegidConnect.DOSSIER     := AdoQryL.TSLResult[2];
-    end;
-  finally
-    AdoQryL.Qry.Free;
-    AdoQryL.free;
-  end;
-  {$ENDIF APPSRV}
-end;
-
-procedure TSendEntryY2.SetXmlRootAttributes(RootNode : IXMLNode);
-begin
-  RootNode.Attributes['xmlns:i'] := 'http://www.w3.org/2001/XMLSchema-instance';
-  RootNode.Attributes['xmlns']   := 'http://schemas.datacontract.org/2004/07/Cegid.Finance.Services.WebPortal';
-end;
-  
-function TSendEntryY2.GetDataFlowImport(FilesQty : integer; TSLTraGuid : TStringList) : WideString;
-var
-  XmlDoc    : IXMLDocument;
-  Root      : IXMLNode;
-  SubLevel  : IXMLNode;
-  SubLevel1 : IXMLNode;
-  Cpt       : Integer;
-
-  function GetGuid(Index : integer) : string;
-  var
-    GuidData : string;
+  function EncodeAxis (TOBAN : TOB) : string;
   begin
-    if (TSLTraGuid.count >= Index) then
-    begin
-      GuidData := TSLTraGuid[Index];
-      Result := copy(GuidData, pos('/">', GuidData) + 3, length(GuidData));
-      Result := copy(Result, 1, pos('</', Result)-1);
-    end else
-      Result := '';
+    if TOBAN.GetString('Y_AXE')='A1' then result := 'One'
+    else if TOBAN.GetString('Y_AXE')='A2' then result := 'Two'
+    else if TOBAN.GetString('Y_AXE')='A3' then result := 'Three'
+    else if TOBAN.GetString('Y_AXE')='A4' then result := 'Four'
+    else if TOBAN.GetString('Y_AXE')='A5' then result := 'Five';
   end;
 
-begin
-  XmlDoc := NewXMLDocument();
-  XmlDoc.Options := [doNodeAutoIndent];
-  try
-    Root := XmlDoc.AddChild('Setting');                          SetXmlRootAttributes(Root);
-      SubLevel := Root.AddChild('ApplicationDate');                  SubLevel.Text := DateTime2Tdate(Now);
-      SubLevel := Root.AddChild('CanCreateSubsidiaryAccount');       SubLevel.Text := WSCDS_XmlTrue;
-      SubLevel := Root.AddChild('CheckBusinessCenter');              SubLevel.Text := WSCDS_XmlFalse;
-      SubLevel := Root.AddChild('CorrespondenceAnalyticTable');      SubLevel.Text := WSCDS_XmlNone;
-      SubLevel := Root.AddChild('CorrespondenceTable');              SubLevel.Text := WSCDS_XmlNone;
-      SubLevel := Root.AddChild('DocumentType');                     SubLevel.Text := WSCDS_XmlNone;
-      SubLevel := Root.AddChild('EmptyInformation');
-        SubLevel1 := SubLevel.AddChild('EmptyCustomUserTable');      SubLevel1.Text := WSCDS_XmlNone;
-        SubLevel1 := SubLevel.AddChild('EmptyInformation');          SubLevel1.Text := WSCDS_XmlNone;
-        SubLevel1 := SubLevel.AddChild('EmptyUserTable');            SubLevel1.Text := WSCDS_XmlNone;
-      SubLevel := Root.AddChild('EntryByJournal');                   SubLevel.Text := '0';
-      SubLevel := Root.AddChild('FileIds');                          SubLevel.Attributes['xmlns:d2p1'] := GetXmlAttributeArray;
-        for Cpt := 0 to pred(FilesQty) do
-        begin
-          SubLevel1 := SubLevel.AddChild('d2p1:guid');
-          SubLevel1.Text := GetGuid(Cpt);
-        end;
-      SubLevel := Root.AddChild('ForbiddenInformation');             SubLevel.Text := WSCDS_XmlNone;
-      SubLevel := Root.AddChild('GenerationDate');                   SubLevel.Text := DateTime2Tdate(Now);
-      SubLevel := Root.AddChild('KeepDocumentBreak');                SubLevel.Text := WSCDS_XmlTrue;
-      SubLevel := Root.AddChild('PartialImportation');               SubLevel.Text := WSCDS_XmlTrue;
-      SubLevel := Root.AddChild('Process');
-        SubLevel1 := SubLevel.AddChild('Account');                   SubLevel1.Text := WSCDS_XmlTrue;
-        SubLevel1 := SubLevel.AddChild('BalanceByLastEntry');        SubLevel1.Text := WSCDS_XmlFalse;
-        SubLevel1 := SubLevel.AddChild('BalanceByRow');              SubLevel1.Text := WSCDS_XmlFalse;
-        SubLevel1 := SubLevel.AddChild('DueDate');                   SubLevel1.Text := WSCDS_XmlFalse;
-        SubLevel1 := SubLevel.AddChild('ExchangeDifference');        SubLevel1.Text := WSCDS_XmlFalse;
-        SubLevel1 := SubLevel.AddChild('IssueVoucher');              SubLevel1.Text := WSCDS_XmlFalse;
-        SubLevel1 := SubLevel.AddChild('OffsetingAccount');          SubLevel1.Text := WSCDS_XmlFalse;
-        SubLevel1 := SubLevel.AddChild('ThirdPartyPayer');           SubLevel1.Text := WSCDS_XmlFalse;
-        SubLevel1 := SubLevel.AddChild('ValidationEntry');           SubLevel1.Text := WSCDS_XmlFalse;
-        SubLevel1 := SubLevel.AddChild('VATOnReceipt');              SubLevel1.Text := WSCDS_XmlFalse;
-        SubLevel1 := SubLevel.AddChild('VATOnRow');                  SubLevel1.Text := WSCDS_XmlFalse;
-      SubLevel := Root.AddChild('Reject');
-        SubLevel1 := SubLevel.AddChild('Amount');                    SubLevel1.Text := WSCDS_XmlTrue;
-        SubLevel1 := SubLevel.AddChild('AmountAnalytic');            SubLevel1.Text := WSCDS_XmlTrue;
-        SubLevel1 := SubLevel.AddChild('DuplicateEntry');            SubLevel1.Text := WSCDS_XmlTrue;
-      SubLevel := Root.AddChild('RejectFile');                       SubLevel.Text := WSCDS_XmlTrue;
-      SubLevel := Root.AddChild('Replacement');
-        SubLevel1 := SubLevel.AddChild('Analytics');                 SubLevel1.Text := '';
-        SubLevel1 := SubLevel.AddChild('CustomerAccount');           SubLevel1.Text := '';
-        SubLevel1 := SubLevel.AddChild('CustomerCollectiveAccount'); SubLevel1.Text := '';
-        SubLevel1 := SubLevel.AddChild('EmployeeAccount');           SubLevel1.Text := '';
-        SubLevel1 := SubLevel.AddChild('GeneralAccount');            SubLevel1.Text := '';
-        SubLevel1 := SubLevel.AddChild('PaymentMethod');             SubLevel1.Text := '';
-        SubLevel1 := SubLevel.AddChild('ProviderAccount');           SubLevel1.Text := '';
-        SubLevel1 := SubLevel.AddChild('ProviderCollectiveAccount'); SubLevel1.Text := '';
-        SubLevel1 := SubLevel.AddChild('VariousAccount');            SubLevel1.Text := '';
-        SubLevel1 := SubLevel.AddChild('VATScheme');                 SubLevel1.Text := '';
-      SubLevel := Root.AddChild('SocietyCode');                      SubLevel.Text := WSCDS_XmlFalse;
-    Result := UTF8Encode(Root.XML);
-  finally
-    XmlDoc := nil;
-  end;
-end;
 
-function TSendEntryY2.GetDataFlowState(Response : T_WSResponseImportEntries) : WideString;
-var
-  XmlDoc    : IXMLDocument;
-  Root      : IXMLNode;
-  SubLevel  : IXMLNode;
-  gGuidP    : TGUID;
-  gGuidR    : TGUID;
-  sGuidP    : string;
-  sGuidR    : string;
-begin
-  CreateGuid(gGuidP);
-  CreateGuid(gGuidR);
-  sGuidP := GUIDToString(gGuidP);
-  sGuidR := GUIDToString(gGuidR);
-  sGuidP := Copy(sGuidP , 2, Length(sGuidP)-2);
-  sGuidR := Copy(sGuidR , 2, Length(sGuidR)-2);
-  XmlDoc := NewXMLDocument();
-  XmlDoc.Options := [doNodeAutoIndent];
-  try
-    Root := XmlDoc.AddChild('ProcessResultAsync'); SetXmlRootAttributes(Root);
-      SubLevel := Root.AddChild('Error');              SubLevel.Text := Response.Error;
-      SubLevel := Root.AddChild('HasError');           SubLevel.Text := BoolToStr(Response.HasError);
-      SubLevel := Root.AddChild('ProcessId');          SubLevel.Text := Response.ProcessId;
-      SubLevel := Root.AddChild('ReportFileId');       SubLevel.Text := Response.ReportFileId;
-      SubLevel := Root.AddChild('Terminated');         SubLevel.Text := BoolToStr(Response.Terminated);
-    Result := UTF8Encode(Root.XML);
-  finally
-    XmlDoc := nil;
-  end;
-end;
-
-function TSendEntryY2.GetDataFlowReport(Http : IWinHttpRequest) : WideString;
-var
-  fs             : TFileStream;
-  HttpStream     : IStream;
-  OleStream      : TOleStream;
-  FilePath       : string;
-  ZipFileName    : string;
-  ReportFileName : string;
-  TxtLine        : string;
-  Info           : TSearchRec;
-  TxtFile        : TextFile;
-begin
-  Result   := '';
-  FilePath := Format('%s\FlowReport\', [GetEnvironmentVariable('TEMP')]);
-  if DirectoryExists(FilePath) then
-    Tools.DeleteDirectroy(FilePath);
-  CreateDir(FilePath);
-  try
-    ZipFileName := Format('%s%s%s%s%s%sReport.ZIP', [  FormatDateTime('yyyy', Now)
-                                                  , FormatDateTime('mm'  , Now)
-                                                  , FormatDateTime('dd'  , Now)
-                                                  , FormatDateTime('hh'  , Now)
-                                                  , FormatDateTime('nn'  , Now)
-                                                  , FormatDateTime('zzz' , Now)
-                                                 ]);
-    { Extraction du fichier zip dans répertoire temporaire }                                               
-    HttpStream := IUnknown(http.ResponseStream) as IStream;
-    OleStream  := TOleStream.Create(HttpStream);
-    try
-      fs:= TFileStream.Create(FilePath + ZipFileName, fmCreate);
-      try
-        OleStream.Position:= 0;
-        fs.CopyFrom(OleStream, OleStream.Size);
-      finally
-        fs.Free;
-      end;
-    finally
-      OleStream.Free;
-    end;
-    { Extraction puis lecture des fichiers afin de trouver le fichier qui commence par "ListeCom" }
-    if Tools.UnCompressFile(FilePath, ZipFileName) > 0 then
-    begin
-      try
-        if FindFirst(FilePath +'ListeCom*.txt', faAnyFile, Info) = 0 then
-        begin
-          ReportFileName := Info.Name;
-          AssignFile(TxtFile, ReportFileName);
-          try
-            Reset(TxtFile);
-            while not Eof(TxtFile) do
-            begin
-              Readln(TxtFile, TxtLine);
-              if TxtLine <> '' then
-                Result := Result + ' - ' + TxtLine;
-            end;
-            Result := copy(Result, 3, length(Result));
-          finally
-            CloseFile(TxtFile);
-          end;
-        end;
-      finally
-        FindClose(Info);
-      end;
-    end;
-  finally
-    Tools.DeleteDirectroy(FilePath);
-  end;
-end;
-
-
-{ TSLecr est une structure issue de la TobEcr à plat.
-  Exemple pour une tob avec 3 lignes d'écriture et de l'analytique sur la 2ème ligne :
-    ^LEVEL1=COMPTABILITE
-    ^LEVEL2=ECRITURE^E_AFFAIRE=^E_ANA=-^E_AUXILIAIRE=CJT0100000^...
-    ^LEVEL2=ECRITURE^E_AFFAIRE=^E_ANA=-^E_AUXILIAIRE=CJT0100000^...
-    ^LEVEL3=A1'
-    ^LEVEL4=ANALYTIQ^Y_AFFAIRE=^Y_AUXILIAIRE=^Y_AXE=A1^...
-    ^LEVEL4=ANALYTIQ^Y_AFFAIRE=^Y_AUXILIAIRE=^Y_AXE=A1^...
-    ^LEVEL3=A2'
-    ^LEVEL3=A3'
-    ^LEVEL3=A4'
-    ^LEVEL3=A5'
-    ^LEVEL2=ECRITURE^E_AFFAIRE=^E_ANA=-^E_AUXILIAIRE=^..
-}
-function TSendEntryY2.ConstitueEntries(TSlEcr: TStringList): WideString;
-var
-  XmlDoc       : IXMLDocument;
-  Root         : IXMLNode;
-  NodeDoc      : IXMLNode;
-  Entries      : IXMLNode;
-  Entry        : IXMLNode;
-  Amounts      : IXMLNode;
-  EntryAmount  : IXMLNode;
-  Analytics    : IXMLNode;
-  Analytic     : IXMLNode;
-  Sections     : IXMLNode;
-  Setting      : IXMLNode;
-  N1           : IXMLNode;
-  FirstIndice  : integer;
-  Cpt          : integer;
-  EcrLevelName : string;
-  AnaLevelName : string;
-
-  function GetLevelName(TableName: string): string;
-  var
-    CptIndice: integer;
+  function ConstitueEntries(TOBecr : TOB) : WideString;
+  var XmlDoc : IXMLDocument ;
+      Root,NodeDoc,Entries,Entry,Amounts,EntryAmount,Analytics,Analytic,Sections,Setting,N1 : IXMLNode;
+      TOBE,TOBAN : TOB;
+      II,JJ : Integer;
+      OO : widestring;
   begin
-    for CptIndice := 0 to pred(TSlEcr.count) do
-    begin
-      if Pos('=' + TableName + ToolsTobToTsl_Separator, TSlEcr[CptIndice]) > 0 then
+    Result := '';
+    XmlDoc := NewXMLDocument();
+    XmlDoc.Options := [doNodeAutoIndent];
+    TRY
+      Root := XmlDoc.AddChild('EntryParameter');
+      NodeDoc := Root.AddChild('Document');    // <- Noeud Document ->
+      // --- Sur le <document>
+      N1 := NodeDoc.Addchild ('AccountingDate');
+      N1.Text := DateTime2Tdate(TOBecr.detail[0].GetDateTime('E_DATECOMPTABLE'));
+      N1 := NodeDoc.Addchild ('BusinessCenter');
+      N1.Text := TOBecr.detail[0].GetString('E_ETABLISSEMENT');
+      N1 := NodeDoc.Addchild ('Currency');
+      N1.Text := TOBecr.detail[0].GetString('E_DEVISE');
+      N1 := NodeDoc.Addchild ('CurrencyRate');
+      N1.Text := STRFPOINT(TOBecr.detail[0].Getdouble('E_TAUXDEV'));
+      N1 := NodeDoc.Addchild ('DocumentType');
+      N1.Text := EncodeDocType(TOBecr.detail[0].GetString('E_QUALIFPIECE'));
+      Entries := NodeDoc.Addchild('Entries'); // <- Noeud Entries ->
+      for II := 0 to TOBecr.detail.count -1 do
       begin
-        Result := Copy(TSlEcr[CptIndice], 1, Pos('=', TSlEcr[CptIndice]) - 1);
-        Break;
-      end;
-    end;
-  end;
-
-  procedure AddAnalytics(ParentNode: IXMLNode; CurrentIndex: integer);
-  var
-    CptE      : integer;
-    StartAna  : Boolean;
-    LevelName : string;
-  begin
-    StartAna  := False;
-    Analytics := Amounts.AddChild('Analytics');    // <- Noeud Analytics> ->
-    for CptE  := CurrentIndex to pred(TSlEcr.Count) do
-    begin
-      LevelName := copy(TSlEcr[CptE], 1, Pos('=', TSlEcr[CptE]) - 1);
-      if (not StartAna) and (LevelName = AnaLevelName) then
-        StartAna := True
-      else if (StartAna) and (LevelName = EcrLevelName) then
-        Break;
-      if (StartAna) and (LevelName = AnaLevelName) then
-      begin
-        Analytic := Analytics.AddChild('EntryAnalytic');    // <- Noeud EntryAnalytic>> ->
-        N1 := Analytic.AddChild('Amount');  N1.Text := Tools.StrFPoint_(StrTofloat(Tools.GetStValueFromTSl(TSlEcr[CptE], 'Y_DEBIT')) + StrTofloat(Tools.GetStValueFromTSl(TSlEcr[CptE], 'Y_CREDIT')));
-        N1 := Analytic.AddChild('Axis');    N1.Text := EncodeAxis(Tools.GetStValueFromTSl(TSlEcr[CptE], 'Y_AXE'));
-        N1 := Analytic.AddChild('Percent'); N1.Text := '0';
-        Sections := Analytic.AddChild('Sections');    // <- Noeud EntryAnalytic>> ->
-        Sections.Attributes['xmlns:a'] := GetXmlAttributeArray;
-        N1 := Sections.AddChild('a:string'); N1.Text := Tools.GetStValueFromTSl(TSlEcr[CptE], 'Y_SECTION');
-      end;
-    end;
-    if not StartAna then
-      Analytics.Attributes['i:nil'] := 'true';
-  end;
-
-begin
-  Result       := '';
-  FirstIndice  := GetFirstIndiceEcr(TSlEcr);
-  EcrLevelName := GetLevelName('ECRITURE');
-  AnaLevelName := GetLevelName('ANALYTIQ');
-  XmlDoc := NewXMLDocument();
-  XmlDoc.Options := [doNodeAutoIndent];
-  try
-    Root := XmlDoc.AddChild('EntryParameter');
-    NodeDoc := Root.AddChild('Document');    // <- Noeud Document ->
-    // --- Sur le <document>
-    N1 := NodeDoc.Addchild('AccountingDate'); N1.Text := DateTime2Tdate(StrToDateTime(Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_DATECOMPTABLE')));
-    N1 := NodeDoc.Addchild('BusinessCenter'); N1.Text := Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_ETABLISSEMENT');
-    N1 := NodeDoc.Addchild('Currency');       N1.Text := Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_DEVISE');
-    N1 := NodeDoc.Addchild('CurrencyRate');   N1.Text := Tools.StrFPoint_(StrToFloat(Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_TAUXDEV')));
-    N1 := NodeDoc.Addchild('DocumentType');   N1.Text := EncodeDocType(Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_QUALIFPIECE'));
-    Entries := NodeDoc.Addchild('Entries'); // <- Noeud Entries ->
-    for Cpt := FirstIndice to pred(TSlEcr.Count) do
-    begin
-      if copy(TSlEcr[Cpt], 1, Pos('=', TSlEcr[Cpt]) - 1) = EcrLevelName then
-      begin
+        TOBE := TOBecr.detail[II];
         Entry := Entries.Addchild('Entry');   // <- Noeud Entry ->
-        N1 := Entry.AddChild('AmountDirection'); N1.Text := Tools.iif(StrToFloat(Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_DEBITDEV')) <> 0, 'Debit', 'Credit');
+        N1 := Entry.AddChild('AmountDirection');
+        N1.Text := EncodeSens(TOBE);
+        N1 := Entry.AddChild('ExternalDateReference');
+        N1.Text := EncodeExternalDateReference(TOBE);
+        N1 := Entry.AddChild('ExternalReference');
+        if TOBE.GetString('E_REFEXTERNE') <> '' then N1.Text := TOBE.GetString('E_REFEXTERNE');
+        N1 := Entry.AddChild('Description');
+        N1.Text := TOBE.GetString('E_LIBELLE');
+        N1 := Entry.AddChild('GeneralAccount');
+        N1.Text := TOBE.GetString('E_GENERAL');
+        N1 := Entry.AddChild('SubsidiaryAccount');
+        if TOBE.GetString('E_AUXILIAIRE') <> '' then N1.Text := TOBE.GetString('E_AUXILIAIRE');
+        N1 := Entry.AddChild('InternalReference');
+        if TOBE.GetString('E_REFINTERNE') <> '' then N1.Text := TOBE.GetString('E_REFINTERNE');
+
         Amounts := Entry.AddChild('Amounts');    // <- Noeud Amounts ->
+
         EntryAmount := Amounts.AddChild('EntryAmount');    // <- Noeud EntryAmount ->
-        N1 := EntryAmount.AddChild('Amount');      N1.Text := EncodeAmount(TSlEcr[Cpt]);
-        N1 := EntryAmount.AddChild('DueDate');     N1.Text := EncodeDate(TSlEcr[Cpt], 'E_DATEECHEANCE');
-        N1 := EntryAmount.AddChild('Iban');        N1.Text := Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_RIB');
-        N1 := EntryAmount.AddChild('PaymentMode'); N1.Text := Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_MODEPAIE');
-        if Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_MODEPAIE') <> '' then
-          N1 := EntryAmount.AddChild('SepaCreditorIdentifier');
-        N1.Attributes['i:nil'] := 'true';
+        N1 := EntryAmount.AddChild('Amount');
+        N1.Text := EncodeAmount(TOBE);
+        N1 := EntryAmount.AddChild('DueDate');
+        N1.Text := EncodeDueDate(TOBE);
+        N1 := EntryAmount.AddChild('Iban');
+        if TOBE.GetString('E_RIB') <> '' then N1.Text := TOBE.GetString('E_RIB');
+        N1 := EntryAmount.AddChild('PaymentMode');
+        N1.Text := TOBE.GetString('E_MODEPAIE');
+        if TOBE.GetString('E_MODEPAIE') <> '' then N1 := EntryAmount.AddChild('SepaCreditorIdentifier');
+        N1.Attributes ['i:nil'] := 'True';
         N1 := EntryAmount.AddChild('UniqueMandateReference');
-        if Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_ANA') = 'X' then
-          AddAnalytics(Entry, Cpt)
-        else
+
+        Analytics := Amounts.AddChild('Analytics');    // <- Noeud Analytics> ->
+        if TOBE.detail.count > 0 then
         begin
-          Analytics := Amounts.AddChild('Analytics');    // <- Noeud Analytics> ->
-          Analytics.Attributes['i:nil'] := 'true';
+          for JJ := 0 to TOBE.Detail.count -1 do
+          begin
+            TOBAN := TOBE.detail[JJ];
+            if TOBAN.detail.count > 0 then
+            begin
+              Analytic := Analytics.AddChild('EntryAnalytic');    // <- Noeud EntryAnalytic>> ->
+              N1 := Analytic.AddChild('Amount');
+              N1.Text := '0';
+              N1 := Analytic.AddChild('Axis');
+              N1.Text := EncodeAxis(TOBAN.detail[0]);
+              N1 := Analytic.AddChild('Percent');
+              N1.Text := STRFPOINT( TOBAN.detail[0].getdouble('Y_POURCENTAGE'));
+              Sections := Analytic.AddChild('Sections');    // <- Noeud EntryAnalytic>> ->
+              Sections.Attributes['xmlns:a'] := 'http://schemas.microsoft.com/2003/10/Serialization/Arrays';
+              N1 := Sections.AddChild('a:string');
+              N1.Text := TOBAN.detail[0].getString('Y_SECTION');
+            end;
+          end;
+        end else
+        begin
+          Analytics.Attributes ['i:nil'] := 'True';
         end;
-        N1 := Entry.AddChild('Description');           N1.Text := Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_LIBELLE');
-        N1 := Entry.AddChild('ExternalDateReference'); N1.Text := EncodeDate(TSlEcr[Cpt], 'E_DATEREFEXTERNE');
-        N1 := Entry.AddChild('ExternalReference');     N1.Text := Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_REFEXTERNE');
-        N1 := Entry.AddChild('GeneralAccount');        N1.Text := Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_GENERAL');
-        N1 := Entry.AddChild('InternalReference');     N1.Text := Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_REFINTERNE');
-        N1 := Entry.AddChild('SubsidiaryAccount');     N1.Text := Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_AUXILIAIRE');
       end;
+      N1 := NodeDoc.Addchild ('Journal');
+      N1.Text := TOBecr.detail[0].GetString('E_JOURNAL');
+      N1 := NodeDoc.Addchild ('EntryType');
+      N1.Text := EncodeEntryType(TOBecr.detail[0].GetString('E_NATUREPIECE'));
+      Setting := Root.AddChild('Setting');
+      N1 := Setting.AddChild('AnalyticBehavior');
+      N1.Text := 'Percent';
+      N1 := Setting.AddChild('CurrencyBehavior');
+      N1.Text := 'Known';
+      N1 := Setting.AddChild('ValidationBehavior');
+      N1.Text := 'Enabled';
+      //
+      Root.Attributes['xmlns']  := 'http://schemas.datacontract.org/2004/07/Cegid.Finance.Services.WebPortal';
+      Root.Attributes['xmlns:i'] := 'http://www.w3.org/2001/XMLSchema-instance';
+      //
+      Result := UTF8Encode(Root.XML);
+      XmlDoc.SaveToFile('C:\pgi01\XMLOUT\out.xml');
+    FINALLY
+      XmlDoc:= nil;
     end;
-    N1 := NodeDoc.Addchild('EntryType'); N1.Text := EncodeEntryType(Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_NATUREPIECE'));
-    N1 := NodeDoc.Addchild('Journal');   N1.Text := Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_JOURNAL');
-    Setting := Root.AddChild('Setting');
-    N1 := Setting.AddChild('AnalyticBehavior');   N1.Text := 'Amount';
-    N1 := Setting.AddChild('CurrencyBehavior');   N1.Text := 'Known';
-    N1 := Setting.AddChild('ValidationBehavior'); N1.Text := 'Enabled';
-    Root.Attributes['xmlns'] := 'http://schemas.datacontract.org/2004/07/Cegid.Finance.Services.WebPortal';
-    Root.Attributes['xmlns:i'] := 'http://www.w3.org/2001/XMLSchema-instance';
-    Result := UTF8Encode(Root.XML);
-    XmlDoc.SaveToFile('C:\pgi01\XMLOUT\out.xml');
-  finally
-    XmlDoc := nil;
   end;
-end;
 
-constructor TSendEntryY2.Create;
+
+var OneConnectCEGID : TconnectCEGID;
+    TheXml : WideString;
+    TheRealNumDoc : Integer;
 begin
-  TslResult := TStringList.Create;
-end;
-
-destructor TSendEntryY2.Destroy;
-begin
-  FreeAndNil(TslResult);
-  inherited;
-end;
-
-
-{$IFNDEF APPSRV}
-function TSendEntryY2.SendEntryCEGID(WsEt: T_WSEntryType; TOBecr: TOB; DocInfo : T_WSDocumentInf) : integer;
-var
-  TSlEcr: TStringList;
-begin
-  { Transformation de la TOB en TStringList }
-  TSlEcr := TStringList.Create;
-  try                                                                    
-    Tools.TobToTStringList(TOBecr, TSlEcr);
-    Result := SendEntryCEGID(WsEt, TSlEcr, DocInfo);
-  finally
-    FreeAndNil(TSlEcr);
-  end;
-end;
-{$ENDIF !APPSRV}
-
-function TSendEntryY2.SendEntryCEGID(WsEt: T_WSEntryType; TSlEcr: TStringList; DocInfo : T_WSDocumentInf) : integer;
-var
-  OneConnectCEGID : TconnectCEGID;
-  TheXml          : WideString;
-  TheRealNumDoc   : Integer;
-begin
-  Result := -1;
+  SendCegid := false;
   OneConnectCEGID := TconnectCEGID.create;
-  try
-    SetCegidConnectParameters(OneConnectCEGID);
+  TRY
+    OneConnectCEGID.CEGIDServer := GetParamSocSecur('SO_BTWSSERVEUR','');
+    OneConnectCEGID.CEGIDPORT := GetParamSocSecur('SO_BTWSCEGIDPORT','');
+    OneConnectCEGID.DOSSIER := GetParamSocSecur('SO_BTWSCEGIDDOSS','');
     if OneConnectCEGID.IsActive then
     begin
-      TheXml := ConstitueEntries(TSlEcr);
-      if (TheXml <> '') then
+      TheXml := ConstitueEntries(TOBecr);
+      if TheXml <> '' then
       begin
-        OneConnectCEGID.AppelEntriesWS(DocInfo, TheXml, TheRealNumDoc);
-        if EnregistreInfoCptaY2(WsEt, TSlEcr[GetFirstIndiceEcr(TSlEcr)], TheRealNumDoc, DocInfo) then
-          Result := TheRealNumDoc;
+        if OneConnectCEGID.AppelEntriesWS (TOBPiece,TheXml,TheRealNumDoc) then
+        begin
+          // Ecriture dans BTPECRITURE
+          if EnregistreInfoCptaY2 (TOBecr,TheRealNumDoc) then SendCegid := True;
+        end;
       end;
     end;
-  finally
+
+  FINALLY
     OneConnectCEGID.free;
-  end;
+  END;
+
 end;
 
-function TSendEntryY2.SendAccountingParameters(TSLFullPathFiles : TStringList; LogValues : T_WSLogValues) : boolean; //WithDebugWs : boolean): boolean;
-var
-  CegidConnect             : TconnectCEGID;
-  ResponseImportEntries    : T_WSResponseImportEntries;
-  ResponseImportEntriesEnd : T_WSResponseImportEntries;
-  Attempt                  : integer;
-  TSLTraGuid               : TStringList;
 
-  procedure AddWindowsLog(Text : string);
-  begin
-    if LogValues.DebugEvents > 0 then
-      TServicesLog.WriteLog(ssbylLog, Text, ServiceName_BTPY2, LogValues, 0);
-  end;
 
-  procedure AnalyseStateReport(HttpResponse: Widestring; wsType : T_WSType);
-  var
-    XmlDoc     : IXMLDocument;
-    NodeFolder : IXMLNode;
-    Cpt        : Integer;
-    IsUpload   : Boolean;
+
+procedure RecupParamCptaFromWS;
+
+  procedure Majexercices (TOBEx : TOB);
+  var II : Integer;
+      TOBE,TOBEXER,TOBEE : TOB;
   begin
-    XmlDoc := NewXMLDocument();
-    try
-      try
-        XmlDoc.LoadFromXML(HTTPResponse);
-      except
-        {$IFNDEF APPSRV}
-        on E: Exception do
-          PgiError('Erreur durant Chargement XML : ' + E.Message);
-        {$ENDIF !APPSRV}
-      end;
-      if not XmlDoc.IsEmptyDoc then
-      begin
-        IsUpload := (wsType = wstypUpload);
-        for Cpt := 0 to XmlDoc.DocumentElement.ChildNodes.Count - 1 do
+    TOBEXER := TOB.Create('LES EXERCICES',nil,-1);
+    TRY
+      BEGINTRANS;
+      TRY
+        ExecuteSQL('DELETE FROM EXERCICE');
+        for II := 0 to TOBEx.detail.count -1 do
         begin
-          NodeFolder := XmlDoc.DocumentElement.ChildNodes[Cpt]; 
-          case Tools.CaseFromString(NodeFolder.NodeName, ['Error', 'HasError', 'ProcessId', 'ReportFileId', 'Terminated']) of
-            {Error}        0 : if IsUpload then ResponseImportEntries.Error           := VarToStr(NodeFolder.NodeValue)
-                                           else ResponseImportEntriesEnd.Error        := VarToStr(NodeFolder.NodeValue);
-            {HasError}     1 : if IsUpload then ResponseImportEntries.HasError        := Boolean(NodeFolder.NodeValue)
-                                           else ResponseImportEntriesEnd.HasError     := Boolean(NodeFolder.NodeValue);
-            {ProcessId}    2 : if IsUpload then ResponseImportEntries.ProcessId       := VarToStr(NodeFolder.NodeValue)
-                                           else ResponseImportEntriesEnd.ProcessId    := VarToStr(NodeFolder.NodeValue);
-            {ReportFileId} 3 : if IsUpload then ResponseImportEntries.ReportFileId    := VarToStr(NodeFolder.NodeValue)
-                                           else ResponseImportEntriesEnd.ReportFileId := VarToStr(NodeFolder.NodeValue);
-            {Terminated}   4 : if IsUpload then ResponseImportEntries.Terminated      := Boolean(NodeFolder.NodeValue)
-                                           else ResponseImportEntriesEnd.Terminated   := Boolean(NodeFolder.NodeValue);
-          end;
-        end;
-      end;
-    finally
-      XmlDoc := nil;
-    end;
-  end;
-
-  function CallWS(wsType : T_WSType; nAttempt : Integer=0) : boolean;
-  var
-    MemFile   : TmemoryStream;
-    http      : IWinHttpRequest;
-    url       : string;
-    urlSuffix : string;
-    HttpVerb  : string;
-    ReportMsg : string;
-    Cpt       : integer;
-    DataFlow  : WideString;
-  begin
-    Result    := False;
-    ReportMsg := '';
-    http   := CoWinHttpRequest.Create;
-    try
-      MemFile := TmemoryStream.Create;
-      try
-        HttpVerb := 'POST';
-        case wsType of
-          wstypUpload    : urlSuffix := WSCDS_EndUrlUploadBytes;
-          wstypImport    : urlSuffix := WSCDS_EndUrlImportEntries;
-          wstypGetState  : urlSuffix := WSCDS_EndUrlImportEntriesEnd;
-          wstypGetReport : begin
-                             HttpVerb := 'GET';
-                             urlSuffix := WSCDS_EndUrlImportEntriesReport + '/' + ResponseImportEntriesEnd.ReportFileId;
-                           end;
-        end;
-        AddWindowsLog(Format('%sStart CallWS : %s', [WSCDS_DebugMsg, urlSuffix]));
-        url := Format('%s/%s/%s', [CegidConnect.GetStartUrl, CegidConnect.fDossier, urlSuffix]);
-        http.SetAutoLogonPolicy(0);
-        http.Open(HttpVerb, url, False);
-        http.SetRequestHeader('Content-Type', 'text/xml');
-        http.SetRequestHeader('Accept', 'application/xml');
-        case wsType of
-          wstypUpload :
-            begin
-              for Cpt := 0 to pred(TSLFullPathFiles.Count) do
-              begin
-                MemFile.Clear;
-                MemFile.LoadFromFile(TSLFullPathFiles[Cpt]);
-                SetString(DataFlow, PChar(MemFile.Memory), MemFile.Size div SizeOf(Char));
-                http.Send(DataFlow);
-                HttpStateMsg := http.ResponseText;
-                TSLTraGuid.Add(HttpStateMsg);
-                Result := (http.status = 200);
-                if not Result then
-                  Break;
-              end;
-            end;
-          wstypImport :
-            begin
-              DataFlow := GetDataFlowImport(TSLFullPathFiles.Count, TSLTraGuid);
-              http.Send(DataFlow);
-              HttpStateMsg := http.ResponseText;
-              Result       := (http.status = 200);
-            end;
-          wstypGetState :
-            begin
-              DataFlow := GetDataFlowState(ResponseImportEntries);
-              http.Send(DataFlow);
-              HttpStateMsg := http.ResponseText;
-              Result       := (http.status = 200);
-            end;
-          wstypGetReport :
-            begin
-              DataFlow := '';
-              http.Send(EmptyParam);
-              HttpStateMsg := http.ResponseText;
-              Result       := (http.status = 200);
-              if Result then
-                ReportMsg := GetDataFlowReport(http);
-            end;
-        end;
-        TslResult.Add(Format('%s=Appel de "%s"%s. Résultat : %s', [DateTimeToStr(Now)
-                                                                   , urlSuffix
-                                                                   , Tools.iif(nAttempt > 0, ' #' + IntToStr(nAttempt), '')
-                                                                   , Tools.iif(Result, 'Succés', 'Echec')
-                                                                  ]));
-        if ReportMsg <> '' then
-          TslResult.Add(Format('%s= Rapport : %s', [DateTimeToStr(Now), ReportMsg]));
-      finally
-        AddWindowsLog(Format('%sEnd CallWS : %s (msg = %s)', [WSCDS_DebugMsg, urlSuffix, HttpStateMsg]));
-        MemFile.free;
-      end;
-    finally
-      http := nil;
-    end;
-  end;
-
-  procedure AddError;
-  begin
-    AddWindowsLog(Format('%sException : %s', [WSCDS_DebugMsg, HttpStateMsg]));
-    TslResult.Add(Format('%s=%s - %s', [DateTimeToStr(Now), WSCDS_ErrorMsg, HttpStateMsg]));
-  end;
-  
-begin
-  Result := False;
-  if TSLFullPathFiles.Count > 0 then
-  begin
-    CegidConnect := TconnectCEGID.create;
-    try
-      TSLTraGuid := TStringList.Create;
-      try
-        SetCegidConnectParameters(CegidConnect);
-        if CegidConnect. IsActive then
-        begin        
-          try
-            Result := CallWS(wstypUpload); // Upload du fichier TRA
-            if Result then                 // Import du fichier
-            begin
-              Result := CallWS(wstypImport);
-              if Result then
-                 AnalyseStateReport(HttpStateMsg, wstypUpload);
-            end;
-          except
-            AddError;
-          end;
-          if Result then                 // Attente de la fin de l'import
+          TOBE := TOBEx.detail[II];
+          TOBEE := TOB.create('EXERCICE',TOBEXER,-1);
+          TOBEE.SetString('EX_EXERCICE',TOBE.GetString('Id'));
+          TOBEE.SetString('EX_LIBELLE',TOBE.GetString('Description'));
+          TOBEE.SetString('EX_ABREGE',TOBE.GetString('ShortName'));
+          TOBEE.SetDateTime('EX_DATEDEBUT',TDate2DateTime(TOBE.GetString('BeginDate')));
+          TOBEE.SetDateTime('EX_DATEFIN',TDate2DateTime(TOBE.GetString('EndDate')));
+          if TOBE.GetString('State')='FinalClosing' then
           begin
-            Attempt := 1;
-            try
-              Result := CallWS(wstypGetState, Attempt);
-              if Result then // Le 1er appel doit être ok pour continuer (http.status = 200)
-              begin
-                AnalyseStateReport(HttpStateMsg, wstypGetState);
-                if not ResponseImportEntriesEnd.HasError then
-                begin
-                  while not ResponseImportEntriesEnd.Terminated do
-                  begin
-                    Inc(Attempt);
-                    try
-                      CallWS(wstypGetState, Attempt);
-                      AnalyseStateReport(HttpStateMsg, wstypGetState);
-                      if (ResponseImportEntriesEnd.HasError) or (pos('An Error has occured', HttpStateMsg) > 0) then
-                       Break;
-                    except
-                      AddError;
-                    end;
-                  end;
-                  Result := (ResponseImportEntriesEnd.Terminated) and (not ResponseImportEntriesEnd.HasError);
-                end;
-                if ResponseImportEntriesEnd.HasError then
-                  TslResult.Add(Format('%s=%s : Web API "%s" - Erreur : %s - ProcessId : %s - ReportFileID : %s'
-                                , [DateTimeToStr(Now)
-                                   , WSCDS_ErrorMsg
-                                   , WSCDS_EndUrlImportEntriesEnd
-                                   , ResponseImportEntriesEnd.Error
-                                   , ResponseImportEntriesEnd.ProcessId
-                                   , ResponseImportEntriesEnd.ReportFileId
-                                  ]));
-              end;
-            except
-              AddError;
-            end;
+            TOBEE.SetString('EX_ETATCPTA','CDE');
+          end else
+          begin
+            TOBEE.SetString('EX_ETATCPTA','OUV');
           end;
-          try
-            CallWS(wstypGetReport); // Récupération du rapport
-          except
-            AddError;
-          end;
+          TOBEE.SetString('EX_ETATBUDGET','OUV');
+          TOBEE.SetString('EX_SOCIETE',V_PGI.CodeSociete);
+          TOBEE.SetString('EX_VALIDEE','------------------------');
+          TOBEE.SetDateTime('EX_DATECUM',Idate1900);
+          TOBEE.SetDateTime('EX_DATECUMRUB',Idate1900);
+          TOBEE.SetDateTime('EX_DATECUMBUD',Idate1900);
+          TOBEE.SetDateTime('EX_DATECUMBUDGET',Idate1900);
+          TOBEE.SetInteger('EX_ENTITY',0);
         end;
-      finally
-        FreeAndNil(TSLTraGuid);
+        if TOBEXER.DETAIL.Count > 0 then
+        begin
+          TOBEXER.InsertDB(nil);
+        end;
+        COMMITTRANS;
+      EXCEPT
+        ROLLBACK;
+      END;
+    FINALLY
+      TOBEXER.Free;
+    END;
+  end;
+
+  procedure GetInfoFromCegid (OneConnectCEGID : TConnectCEGID;  DateDay : Tdatetime);
+  var TOBEx : TOB;
+  begin
+    TOBEx := TOB.Create ('LES EX CPTA',nil,-1);
+    TRY
+      TRY
+        ExecuteSql ('INSERT INTO BTBLOCAGE '+
+                    '(BTB_GUID, BTB_TYPE, BTB_IDDOC, BTB_USER, BTB_DATECREATION, BTB_HEURECREATION) '+
+                    'VALUES '+
+                    '("RECUPINFOCPTAWS","","","'+V_PGI.User+'","'+UsDateTime(DateDay) + '","' + USDateTime(DateDay) + '")');
+        OneConnectCEGID.GetExCpta (TOBEx);
+        Majexercices (TOBEx);
+        ExecuteSQL('DELETE FROM BTBLOCAGE WHERE BTB_GUID="RECUPINFOCPTAWS"');
+        SetParamSoc('SO_BTWSLASTSYNC',DateTimeToStr(DateDay));
+      EXCEPT
       end;
-    finally
-      CegidConnect.Free;
+    FINALLY
+      TOBEx.Free;
     end;
+  end;
+
+var OneConnectCEGID : TconnectCEGID;
+    finTrait : Boolean;
+    NbTry : Integer;
+    DateDay,LastSync,LastDate : TDateTime;
+begin
+  finTrait := false;
+  NbTry := 1;
+  DateDay := Date;
+  LastSync := StrToDate(DateToStr(StrToDateTime(GetParamSocSecur('SO_BTWSLASTSYNC','31/12/20199 23:59:59'))));
+  OneConnectCEGID := TconnectCEGID.create;
+  TRY
+    OneConnectCEGID.CEGIDServer := GetParamSocSecur('SO_BTWSSERVEUR','');
+    OneConnectCEGID.CEGIDPORT := GetParamSocSecur('SO_BTWSCEGIDPORT','');
+    OneConnectCEGID.DOSSIER := GetParamSocSecur('SO_BTWSCEGIDDOSS','');
+    if OneConnectCEGID.IsActive then
+    begin
+      repeat
+        TRY
+          if DateDay > LastSync then
+          begin
+            GetInfoFromCegid (OneConnectCEGID,DateDay);
+            finTrait := True;
+          end else
+          begin
+            fintrait := true;
+          end;
+        except
+          Sleep(1000); inc(NbTry);
+        end;
+      until (finTrait) or (NbTry > 30);
+    end else
+    begin
+      ;
+    end;
+  FINALLY
+    OneConnectCEGID.Free;
   end;
 end;
 
 { TconnectCEGID }
-function TconnectCEGID.AppelEntriesWS(DocInfo : T_WSDocumentInf; TheXml: WideString; var NumDocOut: Integer): Boolean;
 
-  {$IFNDEF APPSRV}
-  procedure EnregistreEVT(NumDocOut: Integer; MessageOut: widestring);
-  var
-    TobJnal  : TOB;
-    Nature   : string;
-    BlocNote : TStringList;
-    QQ       : TQuery;
-    NumEvt   : Integer;
+
+function TconnectCEGID.AppelEntriesWS (TOBPiece : TOB; TheXml : WideString; var NumDocOut : Integer) : Boolean;
+
+  procedure EnregistreEVT (TOBPiece : TOB; NumDocOut : Integer ; MessageOut : widestring);
+  var TobJnal : TOB;
+      Nature : string;
+      BlocNote : TStringList;
+      QQ : TQuery;
+      NumEvt : Integer;
   begin
-    Nature := RechDom('GCNATUREPIECEG', DocInfo.dType, False);
+    Nature := RechDom('GCNATUREPIECEG', TOBPiece.GetValue('GP_NATUREPIECEG'), False);
     BlocNote := TStringList.Create;
-    try
-      if NumDocOut <> 0 then
-      begin
-        BlocNote.Add(Nature + TraduireMemoire(' numéro ') + IntToStr(DocInfo.dNumber));
-        BlocNote.Add(TraduireMemoire(format('L''écriture comptable %d à été créé en comptabilité', [NumDocOut])));
-      end else
-      begin
-        BlocNote.Add(Nature + TraduireMemoire(' numéro ') + IntToStr(DocInfo.dNumber));
-        BlocNote.Add('Annomalie lors du transfert');
-        BlocNote.Add(TraduireMemoire('Message : ') + MessageOut);
-      end;
-      TobJnal := TOB.Create('JNALEVENT', nil, -1);
-      try
-        TobJnal.SetString('GEV_TYPEEVENT', 'WS');
-        TobJnal.SetString('GEV_LIBELLE', 'Liaison WebApi Fiscalité');
-        TobJnal.SetDateTime('GEV_DATEEVENT', Date);
-        TobJnal.SetString('GEV_UTILISATEUR', V_PGI.User);
-        if NumDocOut <> 0 then
-          TobJnal.SetString('GEV_ETATEVENT', 'OK')
-        else
-          TobJnal.SetString('GEV_ETATEVENT', 'ERR');
-        TobJnal.PutValue('GEV_BLOCNOTE', BlocNote.Text);
-        QQ := OpenSQL('SELECT MAX(GEV_NUMEVENT) FROM JNALEVENT', True, -1, '', True);
-        if not QQ.EOF then
-          NumEvt := QQ.Fields[0].AsInteger
-        else
-          NumEvt := 0;
-        Inc(NumEvt);
-        Ferme(QQ);
-        TobJnal.PutValue('GEV_NUMEVENT', NumEvt);
-        TobJnal.InsertDB(nil);
-      finally
-        TobJnal.Free;
-      end;
-    finally
-      BlocNote.Free;
+    if NumDocOut <> 0 then
+    begin
+      BlocNote.Add(Nature + TraduireMemoire(' numéro ') + IntToStr(TOBPiece.GetValue('GP_NUMERO')));
+      BlocNote.Add(TraduireMemoire( format('L''écriture comptable %d à été créé en comptabilité',[NumDocOut])));
+    end else
+    begin
+      BlocNote.Add(Nature + TraduireMemoire(' numéro ') + IntToStr(TOBPiece.GetValue('GP_NUMERO')));
+      BlocNote.Add('Annomalie lors du transfert');
+      BlocNote.Add(TraduireMemoire('Message : ') + MessageOut);
     end;
+
+    TobJnal := TOB.Create('JNALEVENT', nil, -1);
+    TobJnal.PutValue('GEV_TYPEEVENT', 'WS');
+    TobJnal.PutValue('GEV_LIBELLE', 'Liaison WebApi Fiscalité');
+    TobJnal.PutValue('GEV_DATEEVENT', Date);
+    TobJnal.PutValue('GEV_UTILISATEUR', V_PGI.User);
+    if NumDocOut <> 0 then TobJnal.PutValue('GEV_ETATEVENT', 'OK')
+                      else TobJnal.PutValue('GEV_ETATEVENT', 'ERR');
+    TobJnal.PutValue('GEV_BLOCNOTE', BlocNote.Text);
+    QQ := OpenSQL('SELECT MAX(GEV_NUMEVENT) FROM JNALEVENT', True,-1, '', True);
+    if not QQ.EOF then
+    begin
+      NumEvt := QQ.Fields[0].AsInteger;
+    end;
+    Inc(NumEvt);
+    Ferme(QQ);
+    TOBJnal.PutValue('GEV_NUMEVENT', NumEvt);
+    TobJnal.InsertDB(nil);
+    TobJnal.Free;
+    BlocNote.Free;
   end;
-  {$ELSE !APPSRV}
 
-  procedure EnregistreEVT(NumDocOut: Integer; MessageOut: widestring);
-  begin
-
-  end;
-  {$ENDIF !APPSRV}
-
-  procedure EnregistreResponse(HTTPResponse: Widestring; var NumDocOut: integer);
-  var
-    XmlDoc     : IXMLDocument;
-    NodeFolder : IXMLNode;
-    II         : Integer;
-    JJ         : Integer;
-    MessageOut : string;
+  procedure  EnregistreResponse (TOBPiece : TOB; HTTPResponse: Widestring; var NumDocOut : integer);
+  var XmlDoc : IXMLDocument ;
+      NodeFolder,OneErr : IXMLNode;
+      II,JJ : Integer;
+      TOBL : TOB;
+      MessageOut : string;
   begin
     NumDocOut := 0;
     XmlDoc := NewXMLDocument();
-    try
-      try
+    TRY
+      TRY
         XmlDoc.LoadFromXML(HTTPResponse);
-      except
-        {$IFNDEF APPSRV}
-        on E: Exception do
-          PgiError('Erreur durant Chargement XML : ' + E.Message);
-        {$ENDIF !APPSRV}
+      EXCEPT
+        On E: Exception do
+        begin
+          PgiError('Erreur durant Chargement XML : ' + E.Message );
+        end;
       end;
       if not XmlDoc.IsEmptyDoc then
       begin
-        MessageOut := '';
-        for II := 0 to XmlDoc.DocumentElement.ChildNodes.Count - 1 do
+        For II := 0 to Xmldoc.DocumentElement.ChildNodes.Count -1 do
         begin
           NodeFolder := XmlDoc.DocumentElement.ChildNodes[II]; // Liste des <Folder>
-          case Tools.CaseFromString(NodeFolder.NodeName, ['DocumentNumber', 'Errors']) of
-            {DocumentNumber}                         0:
-              NumDocOut := StrToInt(NodeFolder.NodeValue);
-            {Errors}                                 1:
-              begin
-                for JJ := 0 to NodeFolder.ChildNodes.Count - 1 do
-                  MessageOut := MessageOut + Tools.iif(MessageOut <> '', '#13#10', '') + NodeFolder.ChildNodes[JJ].NodeValue;
-                if MessageOut <> '' then
-                  EnregistreEVT(NumDocOut, MessageOut);
-              end;
+          if NodeFolder.NodeName = 'DocumentNumber' then
+          begin
+            NumDocOut := StrToInt(NodeFolder.NodeValue); 
+          end else if NodeFolder.NodeName = 'Errors' then
+          begin
+            for JJ := 0 to NodeFolder.ChildNodes.Count -1 do
+            begin
+              OneErr := NodeFolder.ChildNodes [JJ];
+              if MessageOut = '' then MessageOut := OneErr.NodeValue
+                                 else MessageOut := MessageOut + '#13#10'+ OneErr.NodeValue;
+              EnregistreEVT (TOBPiece,NumDocOut,MessageOut);
+            end;
           end;
         end;
       end;
-    finally
-      XmlDoc := nil;
+    FINALLY
+      XmlDoc:= nil;
     end;
   end;
 
 var
-  http : IWinHttpRequest;
-  url  : string;                                                    
+  http: IWinHttpRequest;
+  url : string;
+
 begin
-  Result := false;
-  url    := Format('%s/%s/%s', [GetStartUrl, fDossier, WSCDS_EndUrlEntries]);
-  http   := CoWinHttpRequest.Create;
+  result := false;
+  url := Format('http://%s:%d/CegidFinanceWebApi/api/v1/%s/entries',[fServer,fport,fDossier]);
+  http := CoWinHttpRequest.Create;
   try
     http.SetAutoLogonPolicy(0); // Enable SSO
     http.Open('POST', url, False);
     http.SetRequestHeader('Content-Type', 'text/xml');
     http.SetRequestHeader('Accept', 'application/xml');
-    try
+    TRY
       http.Send(TheXml);
-    except
+    EXCEPT
       on E: Exception do
       begin
-        EnregistreResponse(http.ResponseText, NumDocOut);
+        EnregistreResponse (TOBPiece,http.ResponseText,NumDocOut);
         ShowMessage(E.Message);
         exit;
       end;
     end;
     if http.status = 200 then
     begin
-      EnregistreResponse(http.ResponseText, NumDocOut);
-      Result := (NumDocOut <> 0);
+      EnregistreResponse (TOBPiece,http.ResponseText,NumDocOut);
+      if NumDocOut <> 0 then result := true;
     end else
     begin
-      EnregistreResponse(http.ResponseText, NumDocOut);
+      EnregistreResponse (TOBPiece,http.ResponseText,NumDocOut);
     end;
   finally
     http := nil;
   end;
+
+
 end;
 
 constructor TconnectCEGID.create;
 begin
-  factive  := false;
-  fServer  := '';
-  fport    := 80;
+  factive := false;
+  fServer := '';
+  fport := 80;
   fDossier := '';
 end;
 
 destructor TconnectCEGID.destroy;
 begin
+
   inherited;
 end;
 
-{$IFNDEF APPSRV}
-procedure TconnectCEGID.GetDossiers(var ListeDoss: TOB; var TheResponse: WideString);
+procedure TconnectCEGID.GetDossiers(var ListeDoss: TOB; var TheResponse : WideString);
 var
   http: IWinHttpRequest;
-  url: string;
+  url : string;
 begin
   if fServer = '' then
   begin
     PgiInfo('LE Serveur CEGID Y2 n''est pas défini');
     Exit;
   end;
-  url := Format('%s/folders', [GetStartUrl]);
+  url := Format('http://%s:%d/CegidFinanceWebApi/api/v1/folders',[fServer,fport]);
   http := CoWinHttpRequest.Create;
   try
     http.SetAutoLogonPolicy(0); // Enable SSO
     http.Open('GET', url, False);
     http.SetRequestHeader('Content-Type', 'text/xml');
     http.SetRequestHeader('Accept', 'application/xml,*/*');
-    try
+    TRY
       http.Send(EmptyParam);
-    except
+    EXCEPT
       on E: Exception do
       begin
         ShowMessage(E.Message);
         exit;
       end;
-    end;
+    END;
     if http.status = 200 then
     begin
       TheResponse := http.ResponseText;
-      RemplitTOBDossiers(ListeDoss, http.ResponseText);
+      RemplitTOBDossiers(ListeDoss,http.ResponseText);
     end;
   finally
     http := nil;
   end;
-end;
-{$ENDIF !APPSRV}
 
-{$IFNDEF APPSRV}
-procedure TconnectCEGID.GetExCpta(TOBexer: TOB);
+
+end;
+
+procedure TconnectCEGID.GetExCpta (TOBexer : TOB);
 var
-  http        : IWinHttpRequest;
-  url         : string;
+  http: IWinHttpRequest;
+  url : string;
   TheResponse : WideString;
 begin
-  url  := Format('%s/%s/fiscalYears', [GetStartUrl, fDossier]);
+  url := Format('http://%s:%d/CegidFinanceWebApi/api/v1/%s/fiscalYears',[fServer,fport,fDossier]);
   http := CoWinHttpRequest.Create;
   try
     http.SetAutoLogonPolicy(0); // Enable SSO
@@ -1236,123 +637,112 @@ begin
     if http.status = 200 then
     begin
       TheResponse := http.ResponseText;
-      RemplitTOBExercices(TOBexer, http.ResponseText);
+      RemplitTOBExercices(TOBexer,http.ResponseText);
     end;
   finally
     http := nil;
   end;
 end;
-{$ENDIF !APPSRV}
 
 function TconnectCEGID.GetPort: string;
 begin
   Result := IntToStr(fPort);
 end;
 
-{$IFNDEF APPSRV}
 procedure TconnectCEGID.RemplitTOBDossiers(ListeDoss: TOB; HTTPResponse: WideString);
-var
-  XmlDoc: IXMLDocument;
-  NodeFolder, OneStep: IXMLNode;
-  II, JJ: Integer;
-  TOBL: TOB;
+var XmlDoc : IXMLDocument ;
+    NodeFolder,OneStep : IXMLNode;
+    II,JJ : Integer;
+    TOBL : TOB;
 begin
   XmlDoc := NewXMLDocument();
-  try
-    try
+  TRY
+    TRY
       XmlDoc.LoadFromXML(HTTPResponse);
-    except
-      on E: Exception do
+    EXCEPT
+      On E: Exception do
       begin
-        PgiError('Erreur durant Chargement XML : ' + E.Message);
+        PgiError('Erreur durant Chargement XML : ' + E.Message );
       end;
     end;
     if not XmlDoc.IsEmptyDoc then
     begin
-      for II := 0 to XmlDoc.DocumentElement.ChildNodes.Count - 1 do
+      For II := 0 to Xmldoc.DocumentElement.ChildNodes.Count -1 do
       begin
         NodeFolder := XmlDoc.DocumentElement.ChildNodes[II]; // Liste des <Folder>
-        TOBL := TOB.Create('UN DOSSIER', ListeDoss, -1);
-        for JJ := 0 to NodeFolder.ChildNodes.Count - 1 do
+        TOBL := TOB.Create('UN DOSSIER',ListeDoss,-1);
+        for JJ := 0 to NodeFolder.ChildNodes.Count -1 do
         begin
           OneStep := NodeFolder.ChildNodes.Nodes[JJ];
-          TOBL.AddChampSupValeur(OneStep.NodeName, OneStep.NodeValue);
+          TOBL.AddChampSupValeur(OneStep.NodeName,OneStep.NodeValue);
         end;
-      end;
+      END;
     end;
-  finally
-    XmlDoc := nil;
+  FINALLY
+  	XmlDoc:= nil;
   end;
 end;
-{$ENDIF !APPSRV}
 
-{$IFNDEF APPSRV}
 procedure TconnectCEGID.RemplitTOBExercices(TOBexer: TOB; HTTPResponse: WideString);
-var
-  XmlDoc     : IXMLDocument;
-  NodeFolder : IXMLNode;
-  OneStep    : IXMLNode;
-  II         : Integer;
-  JJ         : Integer;
-  TOBL       : TOB;
+var XmlDoc : IXMLDocument ;
+    NodeFolder,OneStep : IXMLNode;
+    II,JJ : Integer;
+    TOBL : TOB;
 begin
   XmlDoc := NewXMLDocument();
-  try
-    try
+  TRY
+    TRY
       XmlDoc.LoadFromXML(HTTPResponse);
-    except
-      on E: Exception do
+    EXCEPT
+      On E: Exception do
       begin
-        PgiError('Erreur durant Chargement XML : ' + E.Message);
+        PgiError('Erreur durant Chargement XML : ' + E.Message );
       end;
     end;
     if not XmlDoc.IsEmptyDoc then
     begin
-      for II := 0 to XmlDoc.DocumentElement.ChildNodes.Count - 1 do
+      For II := 0 to Xmldoc.DocumentElement.ChildNodes.Count -1 do
       begin
         NodeFolder := XmlDoc.DocumentElement.ChildNodes[II]; // Liste des <Folder>
-        TOBL := TOB.Create('UN EXERCICE', TOBexer, -1);
-        for JJ := 0 to NodeFolder.ChildNodes.Count - 1 do
+        TOBL := TOB.Create('UN EXERCICE',TOBexer,-1);
+        for JJ := 0 to NodeFolder.ChildNodes.Count -1 do
         begin
           OneStep := NodeFolder.ChildNodes.Nodes[JJ];
-          TOBL.AddChampSupValeur(OneStep.NodeName, OneStep.NodeValue);
+          TOBL.AddChampSupValeur(OneStep.NodeName,OneStep.NodeValue);
         end;
-      end;
+      END;
     end;
-  finally
-    XmlDoc := nil;
+  FINALLY
+  	XmlDoc:= nil;
   end;
-end;
-{$ENDIF !APPSRV}
-
-function TconnectCEGID.GetStartUrl: string;
-begin
-  Result := Format('http://%s:%d/CegidFinanceWebApi/api/v1', [fServer, fport]);
 end;
 
 procedure TconnectCEGID.SetDossier(const Value: string);
 begin
   fDossier := Value;
-  factive := (fServer <> '') and (fDossier <> '');
+  factive :=  (fServer <> '') and (fDossier <> ''); 
 end;
 
 procedure TconnectCEGID.SetPort(const Value: string);
 begin
-  if Tools.IsNumeric_(Value) then
-    fport := strtoint(Value);
-  if fport = 0 then
-    fPort := 80;
-  factive := (fServer <> '') and (fDossier <> '');
+  if IsNumeric(Value) then fport := strtoint(Value);
+  if fport = 0 then fPort := 80;
+  factive :=  (fServer <> '') and (fDossier <> ''); 
 end;
 
 procedure TconnectCEGID.SetServer(const Value: string);
 begin
   fServer := Value;
-  factive := (fServer <> '') and (fDossier <> '');
+  factive :=  (fServer <> '') and (fDossier <> ''); 
 end;
 
 { TGetParamWSCEGID }
-class function TGetParamWSCEGID.GetCodeFromWsEt(WsEt: T_WSEntryType): string;
+class function TGetParamWSCEGID.ConnectToY2: Boolean;
+begin
+  Result := (GetFolder <> '');
+end;
+
+class function TGetParamWSCEGID.GetCodeFromWsEt(WsEt : T_WSEntryType) : string;
 begin
   case WsEt of
     wsetDocument           : Result := 'DOC'; // Ecriture de pièce
@@ -1366,30 +756,23 @@ begin
   end;
 end;
 
-class function TGetParamWSCEGID.ConnectToY2: Boolean;
+class function TGetParamWSCEGID.GetFolder: string;
 begin
-  {$IFNDEF APPSRV}
-  Result := (GetPSoc(wspsFolder) <> '');
-  {$ELSE !APPSRV}
-  Result := True;
-  {$ENDIF !APPSRV}
+  Result := GetParamSocSecur('SO_BTWSCEGIDDOS', '');
 end;
 
-class function TGetParamWSCEGID.GetPSoc(PSocType: T_WSPSocType): string;
+class function TGetParamWSCEGID.GetLastSynchro: string;
 begin
-  {$IFNDEF APPSRV}
-  case PSocType of
-    wspsServer      : Result := GetParamSocSecur(WSCDS_SocServer, '');
-    wspsPort        : Result := GetParamSocSecur(WSCDS_SocNumPort, '');
-    wspsFolder      : Result := GetParamSocSecur(WSCDS_SocCegidDos, '');
-    wspsLastSynchro : Result := GetParamSocSecur(WSCDS_SocLastSync, '31/12/2099 23:59:59');
-  else
-    Result := '';
-  end;
-  {$ELSE !APPSRV}
-  Result := '';
-  {$ENDIF !APPSRV}
+  Result := GetParamSocSecur('SO_BTWSLASTSYNC','31/12/2099 23:59:59');
 end;
 
+class function TGetParamWSCEGID.GetPort: string;
+begin
+  Result := GetParamSocSecur('SO_BTWSCEGIDPORT', '');
+end;
+
+class function TGetParamWSCEGID.GetServer: string;
+begin
+  Result := GetParamSocSecur('SO_BTWSSERVEUR', '');
+end;
 end.
-
