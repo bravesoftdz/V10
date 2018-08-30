@@ -2458,7 +2458,7 @@ Case NumModule of
         if not GetParamSocSecur('SO_BTSITPROVISOIRE',false) then
         begin
           FMenuG.RemoveGroup(-145410,True);  // Situations provisoires
-          FMenuG.RemoveItem  (-145410); 
+          FMenuG.RemoveItem  (-145410);
         end;
         //---- WHYYYYYYYYYY
         FMenuG.RemoveItem  (145951); // Envoie Ecriture
@@ -2497,6 +2497,8 @@ Case NumModule of
           begin
             FMenuG.RemoveItem(146241);
             FMenuG.RemoveItem(146641);
+            FMenuG.RemoveItem(146644);
+            FMenuG.RemoveGroup(-146290,True);
           end;
 
           if not GetParamSocSecur('SO_CHANTIEROBLIGATOIRE',false) then
