@@ -132,7 +132,8 @@ end;
         BtInsert.DropDownAlways := true;
         BtInsert.Width := 35;
      end;
-  end else
+  end
+  else
   Begin
   	 TypeRessource := THValComBoBox(Ecran.FindComponent('ARS_TYPERESSOURCE'));
 

@@ -38,7 +38,6 @@ type
     evt : TEventDecla ;
     InfoTP : Boolean ; //-LM20070201
     Dupli : Boolean; //FC20070904
-    CanCreate : boolean;
 
     //function IsMouvementer: Boolean;//RM2 Remplacement par la fonction IsEtabMouvementer de type public
                                       //Il faut passer en paramètre le numéro de l'etablissement et la
@@ -61,7 +60,6 @@ type
     {$IFDEF PAIEGRH}
     procedure DupliquerEtab(Sender: TObject); //FC20070904
     {$ENDIF}
-    procedure SetButtonEna;
   public
     TobListe, TobUtilisable: TOB;
     GLISTE, GUTILISABLE: THGrid;
@@ -124,17 +122,14 @@ const
 
 implementation
 
-uses
-  hdb
-  , htb97
-  , BtpUtil
-  , HrichOle
-  , CommonTools
-  , HSysMenu
-  {$IFDEF PAIEGRH}
-  , pgOutils
-  {$ENDIF}
-  ;
+// $$$JP 02/06/04: on a besoin du THDBEdit
+//{$IFNDEF EAGLCLIENT}
+uses hdb, htb97, BtpUtil,HrichOle
+{$IFDEF PAIEGRH}
+,pgOutils
+{$ENDIF}
+;
+//{$ENDIF}
 
 
 procedure TOM_Etabliss.OnArgument(Arguments: string);
@@ -152,14 +147,6 @@ procedure TOM_Etabliss.OnArgument(Arguments: string);
 //{$ENDIF}
 begin
   inherited;
-  CanCreate := Tools.CanInsertedInTable('ETABLISS'{$IFDEF APPSRV}, '', '' {$ENDIF APPSRV});
-  if not CanCreate then
-  begin
-    FicheReadOnly(TFFiche(ecran));
-    TFFiche(ecran).TypeAction := taConsult;
-  end;
-  SetButtonEna;
-
   AppliqueFontDefaut (THRichEditOle(GetControl('ET_BLOCNOTE')));
   Dupli := False; //FC20070904
   //+LM20070201
@@ -1177,13 +1164,6 @@ begin
 end;
 {$ENDIF PAIEGRH}
 //FIN FC20070904
-
-procedure Tom_Etabliss.SetButtonEna;
-begin
-  TtoolbarButton97(GetControl('bInsert')).Visible := CanCreate;
-  TtoolbarButton97(GetControl('bDelete')).Visible := CanCreate;  
-end;
-
 initialization
   registerclasses([TOM_Etabliss]);
   RegisterAglProc('AffichePhotoEtablissement', TRUE, 0, AGLControleAffPhoto_ET);

@@ -51,6 +51,9 @@ inherited ;
   //FV1 : 07/06/2018 - FS#3119 - SWEETAIR - On ne pose plus la question en création tiers : prospect ou client
   if (st='CLI') and (pos('T_NATUREAUXI="PRO"',stArg) <> 0 ) then st:='' ; // si cli et PRO on force NATUREAUXI à '' pour poser la question en creation
 
+  //if VH_GC.GCIfDefCEGID then
+  //  if (st='CLI') and (pos('T_NATUREAUXI="PRO"',stArg) <> 0 ) then st:='PRO' ; // si cli et PRO on force NATUREAUXI à PRO pour creation de prospect par defaut
+
   if (ctxScot in V_PGI.PGIContexte) and (st ='FOU') then
   begin
     Ecran.Caption := 'Recherche d''un fournisseur';

@@ -101,8 +101,6 @@ uses
   , BTPUtil
   , TntDBGrids
   , ed_Tools
-  , Grids
-  , CommonTools
   ;
 
 function BLanceFiche_RGPDThirdMul(Nat, Cod, Range, Lequel, Argument: string): string;
@@ -449,7 +447,7 @@ var
           end;
           Sql := copy(Sql, 3, Length(Sql));
           { Ferme la fiche si nécessaire }
-          case Tools.CaseFromString(TableName, ['TIERS', 'RESSOURCE', 'UTILISAT', 'SUSPECTS', 'CONTACT']) of
+          case CaseFromString(TableName, ['TIERS', 'RESSOURCE', 'UTILISAT', 'SUSPECTS', 'CONTACT']) of
             {TIERS}     0 : Sql := Sql + ', T_FERME = "X", T_DATEFERMETURE = "' + UsDateTime(Date) + '", T_DATEMODIF = "' + UsDateTime(Date) + '", T_UTILISATEUR = "' + V_PGI.User + '"';
             {RESSOURCE} 1 : Sql := Sql + ', ARS_FERME = "X", ARS_DATEMODIF = "' + UsDateTime(Date) + '", ARS_UTILISATEUR = "' + V_PGI.User + '"';
             {UTILISAT}  2 : Sql := Sql + ', US_DESACTIVE = "X"';
@@ -652,7 +650,7 @@ var
 begin
   PathFiles := GetArgumentString(PathFile, 'INPUT');
   Response  := GetArgumentString(PathFile, 'RESPONSE');
-  case Tools.CaseFromString(Response, ['V', 'R']) of
+  case CaseFromString(Response, ['V', 'R']) of
     {Validée} 0 : Complement := 'Demande validée.';
     {Refusée} 1 : Complement := 'Demande refusée.';
   end;

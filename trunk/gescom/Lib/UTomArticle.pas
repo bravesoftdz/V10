@@ -3368,6 +3368,8 @@ begin
   end
   else if (NomChamps = 'GA_FAMILLENIV2') then
   begin
+//    if EstSpecifPOC then
+//      SetField('GA_COMPTAARTICLE', GetField('GA_FAMILLENIV2'));
     if GetParamSocSecur('SO_GCFAMHIERARCHIQUE', False) then
     begin
       if Getfield('GA_FAMILLENIV2') = '' then

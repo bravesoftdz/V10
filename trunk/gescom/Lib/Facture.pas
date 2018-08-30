@@ -1,7 +1,7 @@
 unit Facture;
 
 interface
-               
+
 uses {$IFDEF VER150} variants,{$ENDIF}
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   Grids, Hctrls, ExtCtrls, HTB97, StdCtrls, HPanel, UIUtil, Hent1, Menus,
@@ -23,7 +23,7 @@ uses {$IFDEF VER150} variants,{$ENDIF}
   SimulRenTabDoc,
   FactMinute,
   UplannifchUtil,
-  //UtilMetres,                            
+  //UtilMetres,
   FactureBtp,
   UTOF_BTSAISDOCEXT,
   UtilPhases,
@@ -1577,13 +1577,12 @@ uses
   UtilXlsBTP,
   FactCOmmBTP,
   UCumulCollectifs,
+
   UconnectBSV,
   EdtREtat,
-  UspecifPOC
-  , UConnectWSCEGID
-  , CommonTools
-  , UspecifVerdon
-  , SelectPhase
+  UspecifPOC,
+  UspecifVerdon,
+  SelectPhase
   ;
 
 
@@ -2198,9 +2197,22 @@ begin
   begin
   	laDate := Parms[3];
   end;
-  SaisieStock := Tools.iif(nb > 4, Parms[4], False);
-  if CleDoc.NaturePiece <> '' then
-    TransformePiece(CleDoc, NewNat, SaisieAveugle,LaDate,SaisieStock);
+  //
+  if nb > 4 then
+  begin
+  SaisieStock := Parms[4];
+  end;
+  //
+  if CleDoc.NaturePiece <> '' then TransformePiece(CleDoc, NewNat, SaisieAveugle,LaDate,SaisieStock);
+(*
+  {$IFDEF BTP}
+  if (Cledoc.naturePiece = 'CF') or (Cledoc.naturePiece = 'CFR') then
+  begin
+    // reception ou facture fournisseur
+    GenereLivraisonClients (false);
+  end;
+ {$ENDIF}
+*)
 end;
 
 {***********A.G.L.***********************************************
@@ -3197,7 +3209,7 @@ begin
     {$ENDIF GPAO}
   end;
   Recalcul := False; { NEWPIECE }
-  dMtReste := 0;
+
   {
   if ((DuplicPiece) and (NewNature = 'ABT') and (TOBpiece_O.getString('GP_NATUREPIECEG')='FBT')) or (GenAvoirFromSit) then
   begin
@@ -3978,10 +3990,7 @@ begin
       WAIT.refresh;
       Label1.Caption := 'Génération index unique ouvrage & traitement avancement ouvrage';
       //
-  		if ((not TransfoMultiple) and (not TransfoPiece) and (not DuplicPiece) and (not GenAvoirFromSit)) and (modifavanc) then
-        TraiteAvancOuv := True
-      else
-        TraiteAvancOuv := False;
+  		if ((not TransfoMultiple) and (not TransfoPiece) and (not DuplicPiece) and (not GenAvoirFromSit)) and (modifavanc) then TraiteAvancOuv := true;
       //
     	OuvrageDifferencie (TOBpiece,TOBOuvrage,TraiteAvancOuv,DEV);
       Wait.Visible := false;
@@ -4477,6 +4486,13 @@ end;
 
 procedure TFFacture.FormCreate(Sender: TObject);
 begin
+  (*
+  if GetParamSocSecur('SO_SAISIEPLEINECRAN', False) then
+  begin
+    TFFacture(self).WindowState := wsMaximize ;
+    THsystemMenu(HmTrad).Resize(self);
+  end;
+  *)
   LibereMemContratST;
   //
   AccesSousDetailOk := ExJaiLeDroitConcept(TConcept(bt512),False);
@@ -4899,9 +4915,6 @@ begin
   										((TOBPiece.GetValue('GP_NATUREPIECEG')<>'DBT')   OR
                     	((TOBPiece.GetValue('GP_NATUREPIECEG')='DBT')   AND (TOBPiece.GetValue('ETATDOC')='ACP')));
   {$ENDIF}
-  { Si récup des règlements depuis Y2, active que s'il existe des rgt }
-  if (GetParamsocSecur('SO_BTGETREGLCPTA', False)) and (TGetParamWSCEGID.ConnectToY2) then
-    BAcompte.Enabled := (TOBAcomptes.Detail.Count > 0);
   BInfos.Enabled := True;
   BPorcs.Enabled := True;
   {$IFDEF CHR}
@@ -4989,7 +5002,12 @@ begin
   //MBAnal.visible := false;
   //AnalyseDocHtrait.visible := true;
   MBModevisu.visible := False;
+  {$IFDEF CHR}
+  //FV1 : 04/04/2018 - FS#2955 - DSA - Ne pas pouvoir éditer un document si en création ou modif mais que ce dernier n'est pas créé
+  //BImprimer.visible := True;
+  {$ELSE}
   BImprimer.visible := (Action = TaConsult);
+  {$ENDIF}
   BprixMarche.Visible := (VH_GC.BTPrixMarche) or (SaisieTypeAvanc) or (ModifAvanc);
   BArborescence.Visible := VH_GC.BTGestParag;
 
@@ -5889,6 +5907,7 @@ begin
     fAuditPerf.AfficheAudit;
   end;
   Width := Width +1;
+
   fApresCharge := true;
   //
   fGestionListe.AppliqueGrids;
@@ -5900,7 +5919,7 @@ begin
   fGestionListe.SetColsModifiable;
   fGestionListe.AjusteGridTotal;
   if not fGestionListe.IsExistCumul then PGT.Visible := false;
-{$IFDEF V10}                          
+{$IFDEF V10}
   if (VenteAchat <> 'VEN') then
   begin
     TBVOIRTOT.visible := false;
@@ -7827,6 +7846,7 @@ begin
       end;
     end;
   end;
+
   if (tModeGridMode in SaContexte) then
   begin
     GS.Canvas.Brush.Style := bsClear;
@@ -16904,10 +16924,10 @@ begin
   TobAcc.Detail[0].Detail[0].Dupliquer(TobPiece, False, TRUE, TRUE);
   TheTob := TobAcc;
   TOBAcomptes.ChangeParent(TobAcc.Detail[0].Detail[0], -1);
-  if (IsDejaFacture) or ((GetParamsocSecur('SO_BTGETREGLCPTA', False)) and (TGetParamWSCEGID.ConnectToY2)) then
-    TheAction := taConsult
-  else
-    TheAction := Action;
+  if (IsDejaFacture) then
+  begin
+    TheAction := taConsult;
+  end else TheAction := Action;
   // Modif BTP
   TheTob.data := TOBPieceRG;
   TOBpieceRG.Data := TOBPieceTrait;
@@ -17913,10 +17933,26 @@ end;
 
 procedure TFFacture.BZoomTiersClick(Sender: TObject);
 begin
-  if VenteAchat = 'ACH' then
-    AGLLanceFiche('GC', 'GCFOURNISSEUR', '', TOBTiers.GetString('T_AUXILIAIRE'), 'ACTION=CONSULTATION;MONOFICHE')
-  else
-    AGLLanceFiche('GC', 'GCTIERS', '', TOBTiers.GetString('T_AUXILIAIRE'), 'ACTION=CONSULTATION;MONOFICHE;T_NATUREAUXI=' + TOBTiers.GetString('T_NATUREAUXI'));
+
+  //FV1 : 03/11/2015 - FS#1769 - GEG : si appel fiche client depuis un devis, les informations sur commerciaux n'apparaissent pas
+  {if ctxAffaire in V_PGI.PGIContexte then
+  begin
+    $IFDEF BTP
+    V_PGI.DispatchTT(8, taConsult, TOBTiers.GetValue('T_AUXILIAIRE'), '', '');
+    {$ELSE
+    // mcd 06/10/03 modif 25/02 faite sur vdev tiersutil perdue (lors synchro diffusion ou lors passage Tierutil vers facture ??
+    //mcd 25/02/03 mise en tamodif au lieu de taconsult pour permettre la modif tiers lors de la saisie de pièce oua ctivité
+    if VenteAchat = 'ACH' then V_PGI.DispatchTT(12, taModif, TOBTiers.GetValue('T_TIERS'), '', '')
+    else V_PGI.DispatchTT(8, taModif, TOBTiers.GetValue('T_TIERS'), '', '');
+    {$ENDIF
+  end else
+  begin
+  *}
+    if VenteAchat = 'ACH' then
+      AGLLanceFiche('GC', 'GCFOURNISSEUR', '', TOBTiers.GetValue('T_AUXILIAIRE'), 'ACTION=CONSULTATION;MONOFICHE')
+    else
+      AGLLanceFiche('GC', 'GCTIERS', '', TOBTiers.GetValue('T_AUXILIAIRE'), 'ACTION=CONSULTATION;MONOFICHE;T_NATUREAUXI=' + TOBTiers.GetValue('T_NATUREAUXI'));
+  //end;
 end;
 
 procedure TFFacture.BZoomAffaireClick(Sender: TObject);

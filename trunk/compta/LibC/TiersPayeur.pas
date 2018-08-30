@@ -24,7 +24,7 @@ uses Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs, U
      uLibAnalytique,
      uLibExercice;  //ctxExercice
 
-procedure GenerePiecesPayeur(M : RMVT;  LePayeur : string='';ListEcr : TList=nil; TobResult : TOB= nil) ;
+procedure GenerePiecesPayeur(M : RMVT;  LePayeur : string='';ListEcr : TList=nil ) ;
 {$IFDEF COMSX}
 procedure GenerePiecesPayeurCom ;
 {$ENDIF}
@@ -246,49 +246,39 @@ LettrageTP(TOBContrePass,CodeL) ;
 END ;
 //{$ENDIF}
 
-procedure GenereDetailPayeur ( TOBEcr : TOB ; AuxPay : String ; ListEcr : TList; TobResult : TOB=nil) ;
-Var
-  TPass,TContre : TOB ;
-  OkInsert : Boolean;
-  TobL : TOB;
+procedure GenereDetailPayeur ( TOBEcr : TOB ; AuxPay : String ; ListEcr : TList ) ;
+Var TPass,TContre : TOB ;
+
 BEGIN
-  // Création des lignes
-  TPass:=TOB.Create('ECRITURE',Nil,-1) ;
-  TPass.Dupliquer(TOBEcr,True,True) ; TPass.putvalue('E_REFGESCOM','');
-  TContre:=TOB.Create('ECRITURE',Nil,-1) ;
-  TContre.Dupliquer(TOBEcr,True,True) ; TContre.putvalue('E_REFGESCOM','');
-  //{$IFNDEF EAGLSERVER}
-  // Traitement de maj des infos
-  ChainageTP(TPass,TContre,TOBEcr,AuxPay) ;
-  //{$ENDIF}
-  // Ecriture base
-  OkInsert := TPass.InsertDB(Nil) ;
-  if OkInsert then
-    OkInsert := TContre.InsertDB(Nil) ;
-  TOBEcr.UpDateDB(False) ;
-  MajDesSoldesTOB(TPass,True) ;
-  MajDesSoldesTOB(TContre,True) ;
-  if (OkInsert) and (Assigned(TobResult)) then
-  begin
-    TobL := TOB.Create('ECRITURE', TobResult, -1);
-    TobL.Dupliquer(TPass, True, True);
-    TobL := TOB.Create('ECRITURE', TobResult, -1);
-    TobL.Dupliquer(TContre, True, True);
-  end;
-  If ListEcr<>nil then
-  begin
-    ListEcr.Add(TPass) ;
-    ListEcr.Add(TContre) ;
-  end
-  else
-  begin
-  // GP MEMCHECK
-   TPass.Free ;
-   TContre.Free ;
-  end;
+// Création des lignes
+TPass:=TOB.Create('ECRITURE',Nil,-1) ;
+TPass.Dupliquer(TOBEcr,True,True) ; TPass.putvalue('E_REFGESCOM','');
+TContre:=TOB.Create('ECRITURE',Nil,-1) ;
+TContre.Dupliquer(TOBEcr,True,True) ; TContre.putvalue('E_REFGESCOM','');
+//{$IFNDEF EAGLSERVER}
+// Traitement de maj des infos
+ChainageTP(TPass,TContre,TOBEcr,AuxPay) ;
+//{$ENDIF}
+// Ecriture base
+TPass.InsertDB(Nil) ; TContre.InsertDB(Nil) ;
+TOBEcr.UpDateDB(False) ;
+MajDesSoldesTOB(TPass,True) ;
+MajDesSoldesTOB(TContre,True) ;
+
+If ListEcr<>nil then
+begin
+  ListEcr.Add(TPass) ;
+  ListEcr.Add(TContre) ;
+end
+else
+begin
+// GP MEMCHECK
+ TPass.Free ;
+ TContre.Free ;
+end;
 END ;
 
-procedure GenerePiecesPayeur(M : RMVT;  LePayeur : string='';ListEcr : TList=nil; TobResult : TOB= nil) ;
+procedure GenerePiecesPayeur(M : RMVT;  LePayeur : string='';ListEcr : TList=nil ) ;
 Var Q,QAna : TQuery ;
     Ax     : String ;
     SQL,AuxPay,SAna,NumLigne : String ;
@@ -379,7 +369,7 @@ BEGIN
       Ferme(QAna) ;
     end;
     If VerifPayeurOk(Auxpay) then {FQ19277  19.06.07  YMO Verification compte ouvert}
-        GenereDetailPayeur(TOBEcr, AuxPay, ListEcr, TobResult) ;
+        GenereDetailPayeur(TOBEcr, AuxPay, ListEcr) ;
     TOBEcr.Free ;
     Q.Next ;
   end;

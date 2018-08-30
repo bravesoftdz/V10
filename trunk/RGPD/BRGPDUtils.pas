@@ -46,7 +46,6 @@ uses
   , HCtrls
   , UtilWord
   , BTPUtil
-  , CommonTools
   {$IFNDEF DBXPRESS}
   , dbTables
   {$ELSE}
@@ -58,7 +57,7 @@ uses
 
 class function RGPDUtils.GetActionFromCode(Code: string): T_RGPDActions;
 begin
-  case Tools.CaseFromString(Code, ['EXP', 'ANO', 'REC', 'CON', 'RET']) of
+  case CaseFromString(Code, ['EXP', 'ANO', 'REC', 'CON', 'RET']) of
     {EXP}     0: Result := rgpdaDataExport;
     {ANO}     1: Result := rgpdaAnonymization;
     {REC}     2: Result := rgdpaDataRectification;
@@ -110,7 +109,7 @@ end;
 
 class function RGPDUtils.GetPopulationFromCode(Code: string): T_RGPDPopulation;
 begin
-  case Tools.CaseFromString(Code, [RGPDThird, RGPDUser, RGPDResource, RGPDSuspect, rgpdContact]) of
+  case CaseFromString(Code, [RGPDThird, RGPDUser, RGPDResource, RGPDSuspect, rgpdContact]) of
     {THI}     0: Result := rgpdpThird;
     {USE}     1: Result := rgpdpUser;
     {RES}     2: Result := rgpdpResource;
@@ -192,7 +191,7 @@ end;
 
 class function RGPDUtils.CanAnonymizableField(TableName, FieldName: string): boolean;
 begin
-  case Tools.CaseFromString(TableName, ['TIERS', 'RESSOURCE', 'UTILISAT', 'ADRESSES', 'CONTACT', 'RIB', 'TIERSCOMPL', 'PROSPECTS', 'RTINFOS006', 'SUSPECTS', 'SUSPECTSCOMPL']) of
+  case CaseFromString(TableName, ['TIERS', 'RESSOURCE', 'UTILISAT', 'ADRESSES', 'CONTACT', 'RIB', 'TIERSCOMPL', 'PROSPECTS', 'RTINFOS006', 'SUSPECTS', 'SUSPECTSCOMPL']) of
     {TIERS}             0: Result := Pos(';' + FieldName + ';', ';T_AUXILIAIRE;T_TIERS;T_COLLECTIF;T_NATUREAUXI;') = 0;
     {RESSOURCE}         1: Result := Pos(';' + FieldName + ';', ';ARS_RESSOURCE;ARS_AUXILIAIRE;ARS_TYPERESSOURCE;') = 0;
     {UTILISAT}          2: Result := Pos(';' + FieldName + ';', ';US_UTILISATEUR;') = 0;

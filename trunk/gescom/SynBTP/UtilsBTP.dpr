@@ -1114,12 +1114,8 @@ uses
   UConnectWSConst in '..\..\CONNECTWS\UConnectWSConst.pas',
   Zip in '..\..\commun\Lib\Zip.pas',
   ZipDlls in '..\..\commun\Lib\ZipDlls.pas',
-  USpecifVerdon in '..\Verdon\USpecifVerdon.pas',
-  UtilsPdf in '..\UtilPdfTk\UtilsPdf.pas',
-  uLkJSON in '..\..\CONNECTWS\uLkJSON.pas',
-  BTWSTABLEAUTO_TOF in '..\..\Services\BTPY2\Lib\BTWSTABLEAUTO_TOF.pas',
-  BTPARAMWS_TOF in '..\..\CONNECTWS\BTPARAMWS_TOF.pas',
-  uWSDataService in '..\..\Services\BTPY2\Lib\uWSDataService.pas';
+  USpecifVerdon in '..\Verdon\USpecifVerdon.pas';
+
 //
 
 // FIN NEW

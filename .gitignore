@@ -28,6 +28,7 @@
 
 # Delphi compiler-generated binaries (safe to delete)
 *.exe
+*.dll
 *.bpl
 *.bpi
 *.dcp
@@ -55,6 +56,7 @@
 *.projdata
 *.tvsconfig
 *.dsk
+*.dof
 
 # Delphi history and backups
 __history/
@@ -63,4 +65,3 @@ __recovery/
 
 # Castalia statistics file (since XE7 Castalia is distributed with Delphi)
 *.stat
-trunk/gescom/SynBTP/ImportExportCegid.dof

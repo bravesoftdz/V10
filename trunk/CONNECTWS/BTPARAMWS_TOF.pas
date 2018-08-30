@@ -39,19 +39,16 @@ function BTLanceFicheParamWSCegid(Nat,Cod : String ; Range,Lequel,Argument : str
 Type
   TOF_BTPARAMWS = Class (TOF)
   private
-    ServerName    : THEdit;
-    Port          : THEdit;
-    FolderName    : THValComboBox;
-    WSCegid       : TconnectCEGID;
+    ServerName : THEdit;
+    Port       : THEdit;
+    FolderName : THValComboBox;
+    WSCegid    : TconnectCEGID;
     TOBFolderName : TOB;
+    LoadFolderNameResponse : WideString;
     SearchFolders : TToolbarButton97;
 
     procedure ChangeValues(Sender : TObject);
     procedure SetFloderList(Sender : TObject);
-   {$IF defined(APPSRV)}
-    procedure TstWApi_Onclick(Sender : TObject);
-    procedure TstWApiV_Onclick(Sender : TObject);
-   {$IFEND APPSRV}
 
   public
     procedure OnNew                    ; override ;
@@ -69,13 +66,6 @@ Implementation
 uses
   ParamSoc
   , ed_Tools
-  , UConnectWSConst
-  , uWSDataService
- {$IF defined(APPSRV)}
-  , uExecuteService
-  , CommonTools
-  , uMainService
- {$IFEND APPSRV}
   ;
 
 function BTLanceFicheParamWSCegid(Nat, Cod : String ; Range,Lequel,Argument : string) : string;
@@ -102,17 +92,17 @@ end ;
 procedure TOF_BTPARAMWS.OnUpdate ;
 begin
   Inherited ;
-  SetParamSoc(WSCDS_SocServer, ServerName.Text);
-  SetParamSoc(WSCDS_SocNumPort, Port.Text);
-  SetParamSoc(WSCDS_SocCegidDos, FolderName.Value);
+  SetParamSoc('SO_BTWSSERVEUR', ServerName.Text);
+  SetParamSoc('SO_BTWSCEGIDPORT', Port.Text);
+  SetParamSoc('SO_BTWSCEGIDDOS', FolderName.Value);
 end ;
 
 procedure TOF_BTPARAMWS.OnLoad ;
 begin
   Inherited ;
-  ServerName.Text  := TGetParamWSCEGID.GetPSoc(wspsServer);
-  Port.Text        := TGetParamWSCEGID.GetPSoc(wspsPort);
-  FolderName.Value := TGetParamWSCEGID.GetPSoc(wspsFolder); 
+  ServerName.Text  := TGetParamWSCEGID.GetServer;
+  Port.Text        := TGetParamWSCEGID.GetPort;
+  FolderName.Value := TGetParamWSCEGID.GetFolder;
   ChangeValues(nil);
   SetFloderList(nil);
 end ;
@@ -129,15 +119,6 @@ begin
   SearchFolders.OnClick := SetFloderList;
   ServerName.OnChange   := ChangeValues;
   Port.OnChange         := ChangeValues;
- {$IF defined(APPSRV)}
-  TToolbarButton97(GetControl('TSTWEBAPI')).Visible := True;
-  TToolbarButton97(GetControl('TSTWEBAPI')).OnClick := TstWApi_Onclick;
-  TToolbarButton97(GetControl('TSTWEBAPIV')).Visible := True;
-  TToolbarButton97(GetControl('TSTWEBAPIV')).OnClick := TstWApiV_Onclick;
- {$ELSE APPSRV}
-  TToolbarButton97(GetControl('TSTWEBAPI')).Visible := False;
-  TToolbarButton97(GetControl('TSTWEBAPIV')).Visible := False;
- {$IFEND APPSRV}
 end ;
 
 procedure TOF_BTPARAMWS.OnClose ;
@@ -168,16 +149,12 @@ begin
 end;
 
 procedure TOF_BTPARAMWS.SetFloderList(Sender : TObject);
-{$IF not defined(APPSRV)}
 var
   Cpt            : integer;
   TOBFolderNameL : TOB;
   FolderValue    : string;
-  LoadFolderNameResponse : WideString;
   ItemIndex      : integer;
-{$IFEND !APPSRV}
 begin
-  {$IF not defined(APPSRV)}
   if (ServerName.Text = '') or (Port.Text = '') then
   begin
     PGIError('Le nom du serveur et le port de communication doivent être renseignés', Ecran.Caption);
@@ -187,7 +164,7 @@ begin
     try
       WSCegid.CEGIDServer := ServerName.Text;
       WSCegid.CEGIDPORT   := Port.Text;
-      FolderValue         := TGetParamWSCEGID.GetPSoc(wspsFolder);
+      FolderValue         := TGetParamWSCEGID.GetFolder;
       { La liste des dossiers n'est pas encore montée }
       if FolderName.Items.Count = 0 then
       begin
@@ -212,50 +189,8 @@ begin
       FiniMoveProgressForm;
     end;
   end;
-  {$IFEND !APPSRV}
 end;
 
-{$IF defined(APPSRV)}
-procedure TOF_BTPARAMWS.TstWApi_Onclick;
-var
-  BTPY2Exec : TSvcSyncBTPY2Execute;
-  AppName   : string;
-begin
-  { Test du service }
-  AppName   := ExtractFilePath(Application.ExeName); // + 'SvcSynBTPY2.exe';
-  BTPY2Exec := TSvcSyncBTPY2Execute.Create;
-  try
-    BTPY2Exec.IniFilePath := AppName + 'SvcSynBTPY2.ini';
-    BTPY2Exec.AppFilePath := AppName + 'SvcSynBTPY2.exe';
-    BTPY2Exec.LogFilePath := AppName + 'SvcSynBTPY2.log';
-    BTPY2Exec.CreateObjects;
-    try
-      BTPY2Exec.InitApplication;
-      try
-       BTPY2Exec.ServiceExecute;
-      finally
-      end;
-    finally
-      BTPY2Exec.FreeObjects;
-    end;
-  finally
-    BTPY2Exec.Free;
-  end;
-end;
-
-procedure TOF_BTPARAMWS.TstWApiV_Onclick(Sender : TObject);
-var
-  BTPVerdonExec : TSvcSyncBTPVerdon;
-begin
-  BTPVerdonExec := TSvcSyncBTPVerdon.Create(nil);
-  try
-    BTPVerdonExec.ServiceExecute(nil);
-  finally
-    BTPVerdonExec.Free;
-  end;
-end;
-{$IFEND APPSRV}
-  
 Initialization
   registerclasses ( [ TOF_BTPARAMWS ] ) ;
 end.

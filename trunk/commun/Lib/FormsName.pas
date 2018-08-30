@@ -22,7 +22,6 @@ const
   frm_Suspect             = 'RTSUSPECTS';
   frm_JnalEvent           = 'YYJNALEVENT';
   frm_Contact             = 'YYCONTACT';
-  frm_WSAllowedTable      = 'BTWSTABLEAUTO';
 
 type
   OpenForm = class
@@ -39,7 +38,6 @@ type
       class function JnalEvent(Params : string='') : string;
       class function RGPDSensibilisation : string;
       class function RGPDWindows(Population : T_RGPDPopulation; TagMother, TagNumber : integer; Action : T_RGPDActions) : string;
-      class function WSCreationAllowedTable : string;
     end;
 
 implementation
@@ -54,13 +52,11 @@ uses
   , SysUtils
   , wCommuns
   , uDbxDataSet
-  , BRGPDTIERSMUL_TOF
+  , BRGPDTIERSMUL_TOF         
   , BRGPDRESSOURCEMUL_TOF
   , BRGPDUTILISATMUL_TOF
   , BRGPDSUSPECTMUL_TOF
   , BRGPDCONTACTMUL_TOF
-  , BTWSTABLEAUTO_TOF
-  , CommonTools
   ;
 
 class function OpenForm.SetArgument(Argument: string): string;
@@ -115,7 +111,7 @@ begin
       if not ExJaiLeDroitConcept(TConcept(bt511),False) then
         stAction:= 'ACTION=CONSULTATION';
     stArgument := SetArgument(Argument);
-    if (ForceConsult) or (not Tools.CanInsertedInTable('TIERS'{$IFDEF APPSRV}, '', '' {$ENDIF APPSRV})) then
+    if ForceConsult then
       stAction:= 'ACTION=CONSULTATION';
     Result := AGLLanceFiche('GC', frm_ThirdCliPro, '', Auxiliary, stAction + ';MONOFICHE;T_NATUREAUXI=' + ThirdType + stArgument);
   end else
@@ -188,11 +184,6 @@ begin
     rgpdpSuspect  : BLanceFiche_RGPDSuspectMul ('BTP', frm_RGPDSuspectMul , '', '', OpenForm.SetWindowCaption(TagMother, TagNumber, Action, Population)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
     rgpdpContact  : BLanceFiche_RGPDContactMul ('BTP', frm_RGPDContactMul , '', '', OpenForm.SetWindowCaption(TagMother, TagNumber, Action, Population)+ ';ACTION=' + RGPDUtils.GetCodeFromAction(Action));
   end;
-end;
-
-class function OpenForm.WSCreationAllowedTable: string;
-begin
-  Result := BLanceFiche_WSTablesAutorisees('BTP', frm_WSAllowedTable, '', '', SetWindowCaption(-14811, 148906));
 end;
 
 end.

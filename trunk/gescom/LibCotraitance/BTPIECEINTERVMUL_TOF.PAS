@@ -149,6 +149,7 @@ end;
 procedure TOF_BTPIECEINTERVMUL.OnInsert(Sender: Tobject);
 var TTOB : TOB;
 begin
+
   TTOB := TOB.Create('PIECEINTERV',TOBSSTRAIT,-1);
   AddChampsSupTraitCreat (TTOB);
   AddChampsSupTrait (TTOB);
