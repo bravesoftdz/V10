@@ -86,6 +86,7 @@ uses
   , BTCONFIRMPASS_TOF
   , Windows
   , UtilPGI
+  , CommonTools
   ;
 
 const
@@ -277,7 +278,7 @@ var
 begin
   if Assigned(CurrentGrid) then
   begin
-    case CaseFromString(CurrentGrid.Name, [LstNameTables, LstNameFields]) of
+    case Tools.CaseFromString(CurrentGrid.Name, [LstNameTables, LstNameFields]) of
       {LstNameTables} 0 : TobCurrent := TobTables;
       {LstNameFields} 1 : TobCurrent := TobFields;
     else

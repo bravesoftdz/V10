@@ -157,9 +157,11 @@ Type RMVT = RECORD
             NumEncaDeca : String ;
             ParCentral : boolean ;
             FormuleRefCCMP : tFormuleRefCCMP ;
-{$IFDEF GCGC}
+            {$IFDEF GCGC}
             Historique : boolean ;
-{$ENDIF}
+            {$ENDIF GCGC}
+            DocType : string;
+            DocNumber : Integer;
             End ;
 
 Type   P_MV = Class
