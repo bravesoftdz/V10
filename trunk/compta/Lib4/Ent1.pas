@@ -2493,7 +2493,7 @@ Var fb     : TFichierBase ;
 		VersionRef : string;
 BEGIN
 
-  RecupParamCptaFromWS;
+//  TSendEntryY2.RecupParamCptaFromWS;
 
 {$IFNDEF EAGLSERVER}
 // MB : Nécessite AGL 20.21 avec unité FiltresDonnees

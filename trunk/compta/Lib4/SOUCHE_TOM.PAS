@@ -144,6 +144,7 @@ Implementation
 
 uses
   UtilGC
+  , CommonTools
   ;
 
 //==================================================
@@ -1058,7 +1059,7 @@ begin
   SH_SOUCHEEXO.Enabled := True;
   PanelP2              := THPanel(GetControl('PP2'));
   PanelP3              := THPanel(GetControl('PP3'));
-  if not GereNumMensuelCptAnnuel(GetControlText('SH_SOUCHE'), False) then
+  if not GereNumMensuelCptAnnuel(Tools.GetDocTypeFromStub(GetControlText('SH_SOUCHE'){$IFDEF APPSRV}, '', ''{$ENDIF APPSRV}), '') then
   begin
     if BS0_NUMMOISPIECE.checked then
     begin

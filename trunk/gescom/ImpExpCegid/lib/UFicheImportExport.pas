@@ -86,6 +86,9 @@ procedure LanceImportExport;
 
 implementation
 
+uses
+  CommonTools;
+
 {$R *.dfm}
 
 procedure LanceImportExport;
@@ -224,21 +227,7 @@ function TFexpImpCegid.ConstitueRequete(maTable: String): string;
 begin
   if maTable = 'PARAMSOC' then
   begin
-    result := 'SELECT * FROM PARAMSOC '+
-              'WHERE '+
-              '(soc_tree like "001;001;%") or '+
-              '(soc_tree like "001;027;%") or '+
-              '(soc_tree like "001;035;%") or '+
-              '(soc_tree like "001;012;%") or '+
-              '(soc_tree like "001;002;%") or '+
-              '(soc_tree like "001;023;%") or '+
-              '(soc_tree like "001;006;%") or '+
-              '(soc_tree like "001;005;%") or '+
-              '(soc_tree like "001;014;%") or '+
-              '(soc_tree like "001;031;%") or '+
-              '(soc_tree like "001;013;%") or '+
-              '(soc_tree like "001;018;%") or '+
-              '(soc_tree like "001;021;%")';
+    result := 'SELECT * FROM PARAMSOC WHERE '+ Tools.GetPSocTreeToExport;
   end
   else if maTable = 'CHOIXCOD' then result := 'SELECT * FROM CHOIXCOD WHERE CC_TYPE IN (SELECT DO_TYPE FROM DECOMBOS WHERE DO_DOMAINE IN ("C","P","Y","T","D","0") AND DO_PREFIXE="CC")'
   else if maTable = 'CHOIXEXT' then result := 'SELECT * FROM CHOIXEXT WHERE YX_TYPE IN (SELECT DO_TYPE FROM DECOMBOS WHERE DO_DOMAINE IN ("C","P","Y","T","D","0") AND DO_PREFIXE="YX")'

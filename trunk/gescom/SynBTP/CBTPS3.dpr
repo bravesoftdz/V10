@@ -1123,8 +1123,13 @@ uses
   BTBIMIMPORT_TOF in '..\BIM\BTBIMIMPORT_TOF.PAS',
   BTBIMSELAFF_TOF in '..\BIM\BTBIMSELAFF_TOF.PAS',
   USpecifVerdon in '..\Verdon\USpecifVerdon.pas',
+  ConstServices in '..\..\commun\Lib\ConstServices.pas',
+  uLkJSON in '..\..\CONNECTWS\uLkJSON.pas',
+  BTWSTABLEAUTO_TOF in '..\..\Services\BTPY2\Lib\BTWSTABLEAUTO_TOF.pas',
+  UtilsPdf in '..\UtilPdfTk\UtilsPdf.pas',
+  BTPARAMWS_TOF in '..\..\CONNECTWS\BTPARAMWS_TOF.pas',
+  uWSDataService in '..\..\Services\BTPY2\Lib\uWSDataService.pas',
   UtilsPdf in '..\UtilPdfTk\UtilsPdf.pas';
-
 //
 // FIN NEW
 
