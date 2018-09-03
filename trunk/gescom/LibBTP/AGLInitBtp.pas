@@ -1825,10 +1825,28 @@ procedure TAcceptationDocument.ValideLaPieceAcompte;
     end;
   end;
 
+  procedure GetEcriture(MM : RMVT;TOBECR : TOB);
+  var Q : TQuery;
+  begin
+    Q := OpenSQL('SELECT * FROM ECRITURE WHERE '+WhereEcriture(tsGene,MM,False),True,-1, '', True) ;
+    try
+      if Not Q.EOF then
+        TOBEcr.LoadDetailDB('ECRITURE', '', '', Q, False, True) ;
+    finally
+      Ferme(Q);
+    end;
+  end;
+
+
 var NowFutur : TDateTime;
     XX : TFPatience;
-    TOBAffaire : TOB;
+    TOBAffaire,TOBECR : TOB;
+    RefComptable : string;
+    OldEcr : RMVT;
+    DD : TDateTime;
+    II : Integer;
 begin
+  TOBECR := TOB.Create ('LES ECRITURES',nil,-1);
   XX := FenetrePatience('Gestion des Règlements',aoMilieu, False,true);
   XX.lAide.Caption := 'Ecritures des données...';
   XX.lcreation.visible := false ;
@@ -1837,14 +1855,35 @@ begin
   TRY
     TOBAffaire := FindCetteAffaire (TOBPiece.getValue('GP_AFFAIRE'));
  		CalculeReglementsIntervenants(TOBSSTrait, TOBPiece,TOBPIECERG,TOBAcomptes,TOBPorcs,TOBPiece.getValue('GP_AFFAIRE'),TOBPieceTrait,DEV);
+    IntegreAcomptesReglements (TOBPiece,TOBEches,TOBAcomptes);
 		GereEcheancesGC(TOBPiece, TOBTiers, TOBEches, TOBAcomptes, TOBPIECERG,TOBPieceTrait,TOBPorcs, TaModif, DEV, false);
     if fecrModifiable then
     begin
       NowFutur := NowH;
+      RefComptable := TOBPiece.GetString('GP_REFCOMPTABLE') ;
+      DD:=TOBPiece.GetValue('GP_DATEPIECE') ;
+      if RefComptable<>'' then
+      begin
+        OldEcr := DecodeRefGCComptable(RefComptable) ;
+        OldEcr.DocType := TOBPiece.GetString('GP_NATUREPIECEG');
+        OldEcr.DocNumber := TOBPiece.GetInteger('GP_NUMERO');
+      end;
+
+      (* ---------
       if V_PGI.IoError = oeOk then DetruitCompta(TOBPiece_O, NowFutur, OldEcr, OldStk,true);
+      ----------------- *)
       if V_PGI.IoError = oeOk then
       begin
+        GetEcriture(OldEcr,TOBECR);
+        GCLettrerAcomptes(OldEcr,TOBEcr,TOBAcomptes,TOBPiece) ;
+        if GetInfoParPiece(TOBPiece.getString('GP_NATUREPIECEG'),'GPP_ACTIONFINI')='COM' then
+        begin
+          TOBPiece.SetBoolean('GP_VIVANTE', False) ;
+          for ii := 0 to TOBPiece.Detail.count-1 do
+            TOBPiece.Detail[ii].SetBoolean('GL_VIVANTE', False) ;
+        end;
 //        TOBeches.clearDetail;
+        (* ------------------------
         if not PassationComptable( TOBPiece,TOBOUvrages,TOBOuvragesP, TOBBases,TOBBasesL,
                                    TOBEches,TOBPieceTrait,TOBAffaireInterv,TOBTiers, TOBArticles,
                                    TOBCpta, TOBAcomptes, TOBPorcs, TOBPIECERG, TOBBASESRG, TOBanaP,
@@ -1854,6 +1893,7 @@ begin
           V_PGI.IoError := oeLettrage;
           Exit;
         end;
+        --------------------------- *)
       end;
     end;
     if V_PGI.IOError = OeOk then

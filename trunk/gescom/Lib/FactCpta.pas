@@ -96,6 +96,8 @@ Function TraiteFamilleAffaire ( CodeAffaire:string;  TobAffaire : TOB) : string;
 function PieceModifiableCptaPourRegl (TOBPiece : TOB) : Boolean;
 function GetWSDocumentInfFromTob(TobGP : TOB) : T_WSDocumentInf;
 function GetWSDocumentInfFromRmvt(lRmvt : RMVT) : T_WSDocumentInf;
+Procedure GCLettrerAcomptes (MM : RMVT ; TOBEcr,TOBAcomptes,TOBPiece : TOB ) ;
+procedure IntegreAcomptesReglements (TOBpiece,TOBEches,TOBAcomptes : TOB) ;
 
 implementation
 Uses
@@ -5283,39 +5285,39 @@ begin
     begin
       {Lignes de Tiers}
       Result:=CreerLignesTiers(TOBEcr,TOBPiece,TOBEches,TOBTiers,TOBAcomptes,TOBPieceRg,TOBbasesRG,TOBpieceTrait,TOBPorcs,TOBVTECOLL,DEV, MM) ;
-  if (TOBPiece.GetBoolean('GP_RESTITUERG')) then
-  begin
-    if Result=rcOk then Result:=CreerLigneRestitutionRetenueGar(TOBEcr,TOBPIece,TOBPieceRG,TOBTiers,TOBBasesRG,MM) ;
-  end else
-  begin
-    {Lignes HT}
-    if Result=rcOk then Result:=CreerLignesHTTva(TOBEcr,TOBAFFInterv,TOBPieceinterv,TOBPiece,TOBOuvrages,TOBOuvragesP,TOBBases,TOBBasesCharge,TOBTiers,TOBArticles,TOBCpta,TOBPorcs,TOBanaP,TOBAnaS,MM,NbDec,DEV) ;
-    {Taxes}
-    if Result=rcOk then Result:=CreerLignesTaxes(TOBEcr,TOBPiece,TOBBases,TOBBasesST,TOBBasesCharge,TOBTiers,TOBPIeceRG,TOBBASESGlob,TOBPorcs,MM) ;
-    {Escompte et remises}
-    if Result=rcOk then Result:=CreerLigneRemise(TOBEcr,TOBPiece,TOBTiers,TOBanaP,TOBAnaS,TOBCpta,MM) ;
-    if Result=rcOk then Result:=CreerLigneEscompte(TOBEcr,TOBPiece,TOBTiers,MM) ;
-    // Modif BTP
-    {Lignes Retenu de garantie}
-    if (RGComptabilise) then
-    begin
-       if Result=rcOk then Result:=CreerLigneRetenueGar(TOBEcr,TOBPIece,TOBPieceRG,TOBTiers,TOBBasesRG,MM) ;
-       if Result=rcOk then Result:=CreerLigneRetenueDiv(TOBEcr,TOBPIece,TOBPorcs,TOBBases,TOBTiers,MM) ;
-    //   if Result=rcOk then Result:=CreerLignesTaxesRG(TOBEcr,TOBPiece,TOBPieceRG,TOBTiers,TOBBASESGlob,TOBBasesRg,MM) ;
-    end;
-    if (GetparamSocSecur('SO_BTCPTAPAIEDIRECT',false)) and (not GetparamSocSecur('SO_BTREGLSTTIERS',true)) then
-    begin
-      if Result=rcOk then Result:=CreerPaiementDirect(TOBEcr,TOBPiece,TOBEches,TOBTiers,TOBAcomptes,TOBPieceRg,TOBbasesRG,TOBpieceTrait,TOBPorcs,DEV, MM) ;
-    end;
-    if (not GetParamsocSecur ('SO_BTCOMPTAREGL',false)) and (GetParamsocSecur ('SO_ACOMPTESFAC', false)) and (MM.Nature='FC') then
-    begin
-      // contitution de la partie d'écriture comptable correspondante à la deduction de l'acompte
-      if Result=rcOk then
+      if (TOBPiece.GetBoolean('GP_RESTITUERG')) then
       begin
-        if (TOBpiece.getString('GP_ATTACHEMENT') <> '') and (tobpiece.getDouble('GP_ACOMPTE')<>0)  then ConstituRestitutionAcpt (TOBEcr,TOBPiece,TOBTiers,DEV, MM) ;
+        if Result=rcOk then Result:=CreerLigneRestitutionRetenueGar(TOBEcr,TOBPIece,TOBPieceRG,TOBTiers,TOBBasesRG,MM) ;
+      end else
+      begin
+        {Lignes HT}
+        if Result=rcOk then Result:=CreerLignesHTTva(TOBEcr,TOBAFFInterv,TOBPieceinterv,TOBPiece,TOBOuvrages,TOBOuvragesP,TOBBases,TOBBasesCharge,TOBTiers,TOBArticles,TOBCpta,TOBPorcs,TOBanaP,TOBAnaS,MM,NbDec,DEV) ;
+        {Taxes}
+        if Result=rcOk then Result:=CreerLignesTaxes(TOBEcr,TOBPiece,TOBBases,TOBBasesST,TOBBasesCharge,TOBTiers,TOBPIeceRG,TOBBASESGlob,TOBPorcs,MM) ;
+        {Escompte et remises}
+        if Result=rcOk then Result:=CreerLigneRemise(TOBEcr,TOBPiece,TOBTiers,TOBanaP,TOBAnaS,TOBCpta,MM) ;
+        if Result=rcOk then Result:=CreerLigneEscompte(TOBEcr,TOBPiece,TOBTiers,MM) ;
+        // Modif BTP
+        {Lignes Retenu de garantie}
+        if (RGComptabilise) then
+        begin
+           if Result=rcOk then Result:=CreerLigneRetenueGar(TOBEcr,TOBPIece,TOBPieceRG,TOBTiers,TOBBasesRG,MM) ;
+           if Result=rcOk then Result:=CreerLigneRetenueDiv(TOBEcr,TOBPIece,TOBPorcs,TOBBases,TOBTiers,MM) ;
+        //   if Result=rcOk then Result:=CreerLignesTaxesRG(TOBEcr,TOBPiece,TOBPieceRG,TOBTiers,TOBBASESGlob,TOBBasesRg,MM) ;
+        end;
+        if (GetparamSocSecur('SO_BTCPTAPAIEDIRECT',false)) and (not GetparamSocSecur('SO_BTREGLSTTIERS',true)) then
+        begin
+          if Result=rcOk then Result:=CreerPaiementDirect(TOBEcr,TOBPiece,TOBEches,TOBTiers,TOBAcomptes,TOBPieceRg,TOBbasesRG,TOBpieceTrait,TOBPorcs,DEV, MM) ;
+        end;
+        if (not GetParamsocSecur ('SO_BTCOMPTAREGL',false)) and (GetParamsocSecur ('SO_ACOMPTESFAC', false)) and (MM.Nature='FC') then
+        begin
+          // contitution de la partie d'écriture comptable correspondante à la deduction de l'acompte
+          if Result=rcOk then
+          begin
+            if (TOBpiece.getString('GP_ATTACHEMENT') <> '') and (tobpiece.getDouble('GP_ACOMPTE')<>0)  then ConstituRestitutionAcpt (TOBEcr,TOBPiece,TOBTiers,DEV, MM) ;
+          end;
+        end;
       end;
-    end;
-  end;
       // ------
     end else
     begin
@@ -6255,103 +6257,103 @@ Var Res : T_RetCpta ;
     TOBEchesCpta,TOBBasesCpta,TOBBasesCptaST,TOBPieceCpta,TOBPieceRGCpta,TOBBaseRGCpta,TOBPorcsCpta,TOBAcomptesCpta,TOBOuvragesPCpta,TOBPieceTraitCpta,TOBBasesCharges : TOB;
     I : Integer;
 BEGIN
-  TOBBasesCharges := TOB.Create ('LES BASES DES CHARGES',nil,-1);
-//AC 18/08/03 NV GESTION COMPTA DIFF
-//Si compta différée pour pièce et acompte, ne gère rien içi
-Result := True;
-if TOBPiece.GetBoolean('GP_HORSCOMPTA') then Exit;
-if not IsComptaPce(TOBPiece.GetValue('GP_NATUREPIECEG')) then exit;
-// Fin AC
-// Modif BTP
-LaDEV.Code:=TOBPiece.GetValue('GP_DEVISE') ; GetInfosDevise(LaDEV) ;
-RGComptabilise := GetParamsoc('SO_GCVENTILRG') ;
-// --
-if VH_GC.GCIfDefCEGID then
-begin
-  Result:=True ;
-  if ((TOBPiece.GetValue('GP_TOTALHT')=0) and (TOBPiece.GetValue('GP_TOTALTTC')=0)) then Exit ;
-end;
-
-//
-if (GetParamSocSecur('SO_BTCPTAPAIEDIRECT',false)) and IsComptabilisationInterv (TOBPieceTrait) then // comptabilisation co traitance et/ou sous traitance
-begin
-  TOBPorcsCpta := TOB.Create('BASES RG ENTREP',nil,-1);
-  TOBEchesCpta := TOB.create ('LES ECHEANCES ENTREPRISE',nil,-1);
-  TOBBasesCpta := TOB.Create ('LES BASES ENTREPRISE',nil,-1);
-  TOBBasesCptaST := TOB.Create ('LES BASES ST AUTOLIQUIDE',nil,-1);
-  TOBPieceRGCpta := TOB.Create('PIECE RG ENTREP',nil,-1);
-  TOBPieceRGCpta.Dupliquer(TOBPieceRG,true,true);
-  EnleveLesNonConcernesRG (TOBPieceRGCpta);
-  TOBPieceCpta := TOB.Create ('PIECE',nil,-1); // la piece de l'entreprise
-  TOBBaseRGCpta := TOB.Create('BASES RG ENTREP',nil,-1);
-  TOBAcomptesCpta := TOB.Create('ACOMPTES ENTREP',nil,-1);
-  TOBOuvragesPCpta := TOB.Create ('LES OUVRAGES PLAT CPTA',nil,-1);
-	TOBPieceTraitCpta := TOB.Create ('LES INTERV',nil,-1);
-  //
-  AddLesSupEntete (TOBpieceCpta);
-  TOBPieceCpta.Dupliquer (TOBpiece,true,true);
-  //
-  TOBPorcsCpta.Dupliquer(TOBPorcs,true,true);
-  TOBAcomptesCpta.Dupliquer(TOBAcomptes,true,true);
-  //
-  ZeroFacture (TOBpieceCpta);
-  ZeroMontantPorts (TOBPorcsCpta);
-  //
-//  RecupReglementsEnt (TOBAcomptesCpta,TOBAcomptes);
-  // Redefini une piece et des montants pour l'entreprise mandataire
-  CalculeLaPieceCpta (TOBpieceCpta,TOBAcomptesCpta,TOBEchesCpta,TOBArticles,TOBBasesCpta,TOBBasesCptaST,TOBOuvrages,TOBOuvragesPCpta,TOBTiers,TOBAFFinterv,TOBPorcsCpta,TOBPieceRGCpta,TOBBaseRGCpta,TOBPieceTrait,TOBPieceInterv,TOBOuvragesP, DEV);
-  //
-end else
-begin
-	TOBPorcsCpta := TOBPorcs;
-  TOBEchesCpta := TOBEches;
-  TOBBasesCpta := TOB.Create ('LES BASES ENTREPRISE',nil,-1);
-  TOBBasesCpta.Dupliquer(TOBBases,True,true);
-  TOBPieceRGCpta := TOBpieceRg;
-  TOBpieceCpta := TOBpiece;
-  TOBBaseRGCpta := TOBBasesRG;
-  TOBAcomptesCpta := TOBAcomptes;
-  TOBOuvragesPCpta := TOBOuvragesP;
-  TOBPieceTraitCpta := TOBPieceTrait;
-  TOBBasesCptaST := nil;
-	RePackBase (TOBBasesCpta,TOBBasesCptaST,DEV);
-end;
-//
-for I := 0 TO TOBPorcsCpta.detail.count -1 do
-begin
-  if TOBPorcsCpta.detail[I].GetString('GPT_RETENUEDIVERSE')='X' then continue;
-  if (Pos(TOBPorcsCpta.detail[I].GetString('GPT_TYPEPORT'),'PT;MIC;MTC;')>0) and (TOBPorcsCpta.detail[I].GetDouble('GPT_TOTALTTCDEV')<0) then
+    TOBBasesCharges := TOB.Create ('LES BASES DES CHARGES',nil,-1);
+  //AC 18/08/03 NV GESTION COMPTA DIFF
+  //Si compta différée pour pièce et acompte, ne gère rien içi
+  Result := True;
+  if TOBPiece.GetBoolean('GP_HORSCOMPTA') then Exit;
+  if not IsComptaPce(TOBPiece.GetValue('GP_NATUREPIECEG')) then exit;
+  // Fin AC
+  // Modif BTP
+  LaDEV.Code:=TOBPiece.GetValue('GP_DEVISE') ; GetInfosDevise(LaDEV) ;
+  RGComptabilise := GetParamsoc('SO_GCVENTILRG') ;
+  // --
+  if VH_GC.GCIfDefCEGID then
   begin
-    AddPorcBase(TOBBasesCpta,TOBPorcsCpta.detail[I],'-');
-    AddPorcBase(TOBBasesCharges,TOBPorcsCpta.detail[I]);
+    Result:=True ;
+    if ((TOBPiece.GetValue('GP_TOTALHT')=0) and (TOBPiece.GetValue('GP_TOTALTTC')=0)) then Exit ;
   end;
-end;
-//
-Result:=False ; DistinctAffaire:=GetParamsoc('SO_GCDISTINCTAFFAIRE') ;
-TOBTiersCpta:=TOB.Create('TIERS',Nil,-1) ; TOBTiersCpta.Dupliquer(TOBTiers,True,True) ;
-RenseigneTiersFact(TOBPiece,TOBTiers,TOBTiersCpta) ;
-Res:=PasseEnCompta(TOBPieceCpta,TOBOuvrages,TOBOuvragesPCpta,TOBBasesCpta,TOBBasesCptaST,TOBBasesCharges,TOBEchesCpta,TOBPieceTrait,TOBAFFInterv,TOBTiersCpta,TOBArticles,TOBCpta,TOBAcomptesCpta ,TOBPorcsCpta,TOBPieceRGCpta,TOBBaseRGCpta ,TOBanaP,TOBAnaS,TOBPieceinterv,TOBVTECOLL,DEV.Decimale,OldEcr,DEV,NewPiece) ;
-if Res=rcOk then Res:=PasseEnStock(TOBPiece,TOBTiers,TOBArticles,TOBCpta,DEV.Decimale,OldStk) ;
-TOBBasesCpta.free;
-if (GetParamSocSecur('SO_BTCPTAPAIEDIRECT',false)) and (IsComptabilisationInterv (TOBPieceTrait))  then  // gestion co traitance et sous traitance
-begin
-	TOBpiece.putValue('GP_REFCOMPTABLE',TOBPieceCpta.GetValue('GP_REFCOMPTABLE'));
-	TOBPorcsCpta.free;
-  TOBEchesCpta.free;
-  TOBPieceRGCpta.free;
-  TOBpieceCpta.free;
-  TOBBaseRGCpta.free;
-  TOBAcomptesCpta.free;
-  TOBPieceTraitCpta.free;
-  if TOBBasesCptaST <> nil then TOBBasesCptaST.free;
-end;
-if LastMsg>0 then Tex:=TexteMessage[LastMsg] else Tex:='' ;
-Case Res of
-   rcOk  : Result:=True ;
-   else result := false;
-   END ;
-TOBTiersCpta.Free ;
-TOBBasesCharges.free;
+
+  //
+  if (GetParamSocSecur('SO_BTCPTAPAIEDIRECT',false)) and IsComptabilisationInterv (TOBPieceTrait) then // comptabilisation co traitance et/ou sous traitance
+  begin
+    TOBPorcsCpta := TOB.Create('BASES RG ENTREP',nil,-1);
+    TOBEchesCpta := TOB.create ('LES ECHEANCES ENTREPRISE',nil,-1);
+    TOBBasesCpta := TOB.Create ('LES BASES ENTREPRISE',nil,-1);
+    TOBBasesCptaST := TOB.Create ('LES BASES ST AUTOLIQUIDE',nil,-1);
+    TOBPieceRGCpta := TOB.Create('PIECE RG ENTREP',nil,-1);
+    TOBPieceRGCpta.Dupliquer(TOBPieceRG,true,true);
+    EnleveLesNonConcernesRG (TOBPieceRGCpta);
+    TOBPieceCpta := TOB.Create ('PIECE',nil,-1); // la piece de l'entreprise
+    TOBBaseRGCpta := TOB.Create('BASES RG ENTREP',nil,-1);
+    TOBAcomptesCpta := TOB.Create('ACOMPTES ENTREP',nil,-1);
+    TOBOuvragesPCpta := TOB.Create ('LES OUVRAGES PLAT CPTA',nil,-1);
+    TOBPieceTraitCpta := TOB.Create ('LES INTERV',nil,-1);
+    //
+    AddLesSupEntete (TOBpieceCpta);
+    TOBPieceCpta.Dupliquer (TOBpiece,true,true);
+    //
+    TOBPorcsCpta.Dupliquer(TOBPorcs,true,true);
+    TOBAcomptesCpta.Dupliquer(TOBAcomptes,true,true);
+    //
+    ZeroFacture (TOBpieceCpta);
+    ZeroMontantPorts (TOBPorcsCpta);
+    //
+  //  RecupReglementsEnt (TOBAcomptesCpta,TOBAcomptes);
+    // Redefini une piece et des montants pour l'entreprise mandataire
+    CalculeLaPieceCpta (TOBpieceCpta,TOBAcomptesCpta,TOBEchesCpta,TOBArticles,TOBBasesCpta,TOBBasesCptaST,TOBOuvrages,TOBOuvragesPCpta,TOBTiers,TOBAFFinterv,TOBPorcsCpta,TOBPieceRGCpta,TOBBaseRGCpta,TOBPieceTrait,TOBPieceInterv,TOBOuvragesP, DEV);
+    //
+  end else
+  begin
+    TOBPorcsCpta := TOBPorcs;
+    TOBEchesCpta := TOBEches;
+    TOBBasesCpta := TOB.Create ('LES BASES ENTREPRISE',nil,-1);
+    TOBBasesCpta.Dupliquer(TOBBases,True,true);
+    TOBPieceRGCpta := TOBpieceRg;
+    TOBpieceCpta := TOBpiece;
+    TOBBaseRGCpta := TOBBasesRG;
+    TOBAcomptesCpta := TOBAcomptes;
+    TOBOuvragesPCpta := TOBOuvragesP;
+    TOBPieceTraitCpta := TOBPieceTrait;
+    TOBBasesCptaST := nil;
+    RePackBase (TOBBasesCpta,TOBBasesCptaST,DEV);
+  end;
+  //
+  for I := 0 TO TOBPorcsCpta.detail.count -1 do
+  begin
+    if TOBPorcsCpta.detail[I].GetString('GPT_RETENUEDIVERSE')='X' then continue;
+    if (Pos(TOBPorcsCpta.detail[I].GetString('GPT_TYPEPORT'),'PT;MIC;MTC;')>0) and (TOBPorcsCpta.detail[I].GetDouble('GPT_TOTALTTCDEV')<0) then
+    begin
+      AddPorcBase(TOBBasesCpta,TOBPorcsCpta.detail[I],'-');
+      AddPorcBase(TOBBasesCharges,TOBPorcsCpta.detail[I]);
+    end;
+  end;
+  //
+  Result:=False ; DistinctAffaire:=GetParamsoc('SO_GCDISTINCTAFFAIRE') ;
+  TOBTiersCpta:=TOB.Create('TIERS',Nil,-1) ; TOBTiersCpta.Dupliquer(TOBTiers,True,True) ;
+  RenseigneTiersFact(TOBPiece,TOBTiers,TOBTiersCpta) ;
+  Res:=PasseEnCompta(TOBPieceCpta,TOBOuvrages,TOBOuvragesPCpta,TOBBasesCpta,TOBBasesCptaST,TOBBasesCharges,TOBEchesCpta,TOBPieceTrait,TOBAFFInterv,TOBTiersCpta,TOBArticles,TOBCpta,TOBAcomptesCpta ,TOBPorcsCpta,TOBPieceRGCpta,TOBBaseRGCpta ,TOBanaP,TOBAnaS,TOBPieceinterv,TOBVTECOLL,DEV.Decimale,OldEcr,DEV,NewPiece) ;
+  if Res=rcOk then Res:=PasseEnStock(TOBPiece,TOBTiers,TOBArticles,TOBCpta,DEV.Decimale,OldStk) ;
+  TOBBasesCpta.free;
+  if (GetParamSocSecur('SO_BTCPTAPAIEDIRECT',false)) and (IsComptabilisationInterv (TOBPieceTrait))  then  // gestion co traitance et sous traitance
+  begin
+    TOBpiece.putValue('GP_REFCOMPTABLE',TOBPieceCpta.GetValue('GP_REFCOMPTABLE'));
+    TOBPorcsCpta.free;
+    TOBEchesCpta.free;
+    TOBPieceRGCpta.free;
+    TOBpieceCpta.free;
+    TOBBaseRGCpta.free;
+    TOBAcomptesCpta.free;
+    TOBPieceTraitCpta.free;
+    if TOBBasesCptaST <> nil then TOBBasesCptaST.free;
+  end;
+  if LastMsg>0 then Tex:=TexteMessage[LastMsg] else Tex:='' ;
+  Case Res of
+     rcOk  : Result:=True ;
+     else result := false;
+     END ;
+  TOBTiersCpta.Free ;
+  TOBBasesCharges.free;
 END ;
 
 {==============================================================================}
@@ -7390,13 +7392,13 @@ begin
     //
     if GetInfoParPiece(TOBPiece.GetValue('GP_NATUREPIECEG'),'GPP_TYPEPASSCPTA') = 'AUC' then Exit;
     //
+    (*
     if isExerciceClo (TOBPiece.GetValue('GP_DATEPIECE')) then
     begin
       PGIInfo(TraduireMemoire('Cette pièce est sur un exercice clôturé en comptabilité.'),'ATTENTION');
       Result := False;
       Exit;
     end;
-
     // Contrôle Journal période cloturée
     if GetInfoParPiece(TOBPiece.GetValue('GP_NATUREPIECEG'),'GPP_JOURNALCPTA') <> '' then
     begin
@@ -7422,6 +7424,7 @@ begin
       Result := False;
       Exit;
     end;
+    *)
     //
     if TOBPiece.GetValue('GP_REFCOMPTABLE') = '' then Exit;
     // contrôle lettrage
@@ -7716,5 +7719,11 @@ begin
   Result.dNumber := TobGP.GetInteger('GP_NUMERO');
   Result.dIndex  := TobGP.GetInteger('GP_INDICEG');
 end;
+
+procedure IntegreAcomptesReglements (TOBpiece,TOBEches,TOBAcomptes : TOB) ;
+begin
+  NbAcc := InsereEcheancesAcompte ( TOBPiece,TOBEches,TOBAcomptes);
+end;
+
 
 end.
