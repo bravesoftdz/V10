@@ -320,6 +320,7 @@ uses
   CbpMCD,
   CbpEnumerator,
  UProcGen  {StrRight}
+ , CommonTools
  ;
 
 
@@ -3967,19 +3968,8 @@ Description .. : GetArgumentValue('MAZEL', S) retourne 'TOF'
 Mots clefs ... : ARGUMENTS
 *****************************************************************}
 Function GetArgumentValue(Argument: string; Const MyArg : String; Const WithUpperCase: Boolean = True; const Separator: String = ';'): String;
-var
-	Critere	: String;
 begin
-	Result := '';
-  while (Argument <> '') and (Result = '') do
-  begin
-    if WithUpperCase then
-     	Critere := UpperCase(ReadTokenPipe(Argument, Separator))
-    else
-      Critere := ReadTokenPipe(Argument, Separator);
-   	if (Pos(MyArg, Critere) > 0) and (Pos('=', Critere) <> 0) and (Trim(Copy(Critere, 1, Pos('=', Critere) - 1)) = MyArg) then
-   	  Result := Trim(Copy(Critere, Pos('=', Critere) + 1, Length(Critere)));
-	end;
+  Result := Tools.GetArgumentValue(Argument, MyArg, WithUpperCase, Separator);
 end;
 
 function AGLGetArgumentValue(Parms : array of variant; nb : integer): Variant;
@@ -4010,10 +4000,7 @@ Mots clefs ... :
 *****************************************************************}
 Function GetArgumentString(Argument: string; Const MyArg : String; WithUpperCase: Boolean = True; const Separator: String = ';'):String;
 begin
-	if Pos(MyArg, Argument) > 0 then
-		Result := VarToStr(GetArgumentValue(Argument, MyArg, WithUpperCase, Separator))
-  else
-   	Result := '';
+  Result := Tools.GetArgumentString(Argument, MyArg, WithUpperCase, Separator);
 end;
 
 {***********A.G.L.***********************************************

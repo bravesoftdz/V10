@@ -1216,6 +1216,7 @@ procedure TGenerePiece.ConstituePieceFromBast(TOBBAST: TOB; DateFac : TDateTime)
       SQL : String;
       QQ : TQuery;
   begin
+    TOBA := nil;
     result := false;
     SQL := 'SELECT A.*,AC.*,N.BNP_TYPERESSOURCE,N.BNP_LIBELLE,'+
            '"" AS REFARTSAISIE, '+
@@ -1265,6 +1266,69 @@ procedure TGenerePiece.ConstituePieceFromBast(TOBBAST: TOB; DateFac : TDateTime)
     TOBL.PutValue('GL_FAMILLETAXE1', TOBBAST.GetValue('BM4_FAMILLETAXE1'));
     TOBL.PutValue('GL_FAMILLENIV2', TOBBAST.GetValue('BM4_FAMILLENIV2'));
     TOBL.SetInteger('GL_IDENTIFIANTWOL', -1); // ajout LS pour génération des livraison chantier
+    if PhaseTravaux <> '' then
+    begin
+      TOBL.SetString('BLP_PHASETRA', PhaseTravaux);
+    end;
+  end;
+
+  function  AjouteLigneRestitutionRg (TOBPiece,TLBAST,TParam,TOBRRG : TOB ; var NbTrait : Integer ; PhaseTravaux : string =''; Sens : string='+') : boolean;
+  var TOBL : TOB;
+      TOBA : TOB;
+      SQL : String;
+      QQ : TQuery;
+  begin
+    TOBA := nil;
+    result := false;
+    SQL := 'SELECT A.*,AC.*,N.BNP_TYPERESSOURCE,N.BNP_LIBELLE,'+
+           '"" AS REFARTSAISIE, '+
+           '"" AS REFARTBARRE, '+
+           '"" AS REFARTTIERS, '+
+           '"" AS _FROMOUVRAGE, '+
+           '"-" AS SUPPRIME, '+
+           '"-" AS UTILISE '+
+          'FROM ARTICLE A '+
+          'LEFT JOIN NATUREPREST N ON N.BNP_NATUREPRES=A.GA_NATUREPRES '+
+          'LEFT JOIN ARTICLECOMPL AC ON AC.GA2_ARTICLE=A.GA_ARTICLE '+
+          'WHERE GA_ARTICLE="'+TPARAM.getString('BM6_ARTICLE')+'"';
+    QQ := OpenSQL(SQL,True,1,'',true);
+    if not QQ.eof then
+    begin
+      TOBA := TOB.Create('ARTICLE',TOBArticles,-1);
+      TOBA.SelectDB('',QQ);
+      result := true;
+    end;
+    ferme (QQ);
+    if not result then Exit;
+    TOBL := NewTOBLigne(TobPiece, 0);
+    PieceVersLigne(TobPiece,TOBL,True);
+    TOBL.PutValue('GL_PERIODE', GetPeriode(TOBL.GetValue('GL_DATEPIECE')));
+    TOBL.PutValue('GL_SEMAINE', NumSemaine(TOBL.GetValue('GL_DATEPIECE')));
+    TOBL.PutValue('GL_ARTICLE', TOBA.GetValue('GA_ARTICLE'));
+    TOBL.PutValue('GL_REFARTSAISIE', TOBA.GetValue('GA_CODEARTICLE'));
+    TOBL.PutValue('GL_CODEARTICLE', TOBA.GetValue('GA_CODEARTICLE'));
+    TOBL.PutValue('GL_TYPEREF', 'ART');
+    ArticleVersLigne(TOBPiece,TOBA,nil,TOBL,TOBTiers);
+    TOBL.PutValue('GL_LIBELLE', TLBAST.GetString('BM5_LIBELLE')+' TVA '+TOBRRG.GetString('TVARG'));
+    if TParam.getString('BM6_SENS')='+' then
+    begin
+      TOBL.SetDouble('GL_QTEFACT', 1);
+    end else
+    begin
+      TOBL.SetDouble('GL_QTEFACT', -1);
+    end;
+    TOBL.SetString('GL_FAMILLETAXE1',TOBRRG.GetString('TVARG'));
+    TOBL.SetDouble('GL_QTESTOCK', TOBL.GetDouble('GL_QTEFACT'));
+    TOBL.SetDouble('GL_QTERESTE', TOBL.GetDouble('GL_QTEFACT'));
+    //
+    TOBL.SetDouble('GL_PUHTDEV', TOBRRG.GetDouble('MONTANTRG'));
+    TOBL.SetDouble('GL_PUTTCDEV', TOBRRG.GetDouble('MONTANTRG'));
+    TOBL.SetDouble('GL_DPA', TOBL.GetDouble('GL_PUHTDEV'));
+    TOBL.SetDouble('GL_DPR', TOBL.GetDouble('GL_PUHTDEV'));
+    TOBL.PutValue('GL_COEFMARG', 0);
+    TOBL.PutValue('GL_COEFFG', 1);
+    TOBL.SetString('GL_TYPEDIM', 'NOR');
+    TOBL.SetInteger('GL_IDENTIFIANTWOL', 0); // ajout LS pour éviter la génération de livraison chantier
     if PhaseTravaux <> '' then
     begin
       TOBL.SetString('BLP_PHASETRA', PhaseTravaux);
@@ -1343,15 +1407,85 @@ procedure TGenerePiece.ConstituePieceFromBast(TOBBAST: TOB; DateFac : TDateTime)
     END;
   end;
 
-  function  AjouteLigneRG (TOBPiece,TOBRG,TLBAST,TParam : TOB ; var NbTrait : Integer) : boolean;
-  var TT,TOBL : TOB;
-      MtCaution,MtRgreste,MtRgCum,TauxTaxe,MtCautionCum,MtCautionMois,MtRgMois,MtCautionPrec,MtRgPrec : double;
-      resteCum,restePrec,MtRgDue : Double;
+  procedure  GetLesRGPrecByTVA (TOBBAST,TOBOLDRG : TOB);
+  var QQ: TQuery;
+      SQL : String;
       II : Integer;
+      TOBDOLBAST,TRG : TOB;
+      TheTva : string;
+      MtRg : double;
   begin
+    TRG := nil;
+    TOBDOLBAST := TOB.Create ('LES BAST',nil,-1);
+    TRY
+      SQL := 'SELECT BM4_NUMSITUATION,BM4_FAMILLETAXE1,BM4_AFFAIRE,BM4_CODEMARCHE,BM4_NUMSITUATION,BM4_PAIEMENTPOC,'+
+             '( '+
+              'SELECT BM5_MTSITUATION FROM BASTLIG WHERE '+
+              'BM5_AFFAIRE=BM4_AFFAIRE AND '+
+              'BM5_CODEMARCHE=BM4_CODEMARCHE AND '+
+              'BM5_NUMSITUATION=BM4_NUMSITUATION AND '+
+              'BM5_PAIEMENTPOC="X" AND '+
+              'BM5_TYPELBAST="001" AND '+
+              'BM5_TYPELIG="TOT"'+
+             ') AS MTRGTTC '+
+             'FROM BASTENT '+
+             'WHERE '+
+             'BM4_AFFAIRE="'+TOBBAST.GetString('BM4_AFFAIRE')+'" AND '+
+             'BM4_CODEMARCHE="'+TOBBAST.GetString('BM4_CODEMARCHE')+'" AND '+
+             'BM4_PAIEMENTPOC="X" AND '+
+             'BM4_NUMSITUATION < '+TOBBAST.GetString('BM4_NUMSITUATION')+' '+
+             'ORDER BY BM4_FAMILLETAXE1';
+      QQ := OpenSQl(SQL,true,-1,'',True);
+      if not QQ.eof then
+      begin
+        TOBDOLBAST.LoadDetailDB('BASTENT','','',QQ,false);
+      end;
+      ferme(QQ);
+      TheTva := '';
+      if TOBDOLBAST.Detail.count > 0 then
+      begin
+        for II:= 0 TO TOBDOLBAST.Detail.count -1 do
+        begin
+          (*
+          MtRG := 0;
+          SQL := 'SELECT BM5_MTSITUATION FROM BASTLIG WHERE '+
+              'BM5_AFFAIRE="'+ TOBDOLBAST.Detail[II].GetString('BM4_AFFAIRE')+'" AND '+
+              'BM5_CODEMARCHE="'+ TOBDOLBAST.Detail[II].GetString('BM4_CODEMARCHE')+'" AND '+
+              'BM5_NUMSITUATION="'+ TOBDOLBAST.Detail[II].GetString('BM4_NUMSITUATION')+'" AND '+
+              'BM5_PAIEMENTPOC="X" AND '+
+              'BM5_TYPELBAST="001" AND '+
+              'BM5_TYPELIG="TOT"';
+          QQ := OpenSQL(SQL,True,1,'',true);
+          if not QQ.eof then
+          begin
+            MtRg := QQ.Fields[0].asfloat;
+          end;
+          Ferme(QQ);
+          *)
+          if (TheTva <> TOBDOLBAST.detail[II].GetString('BM4_FAMILLETAXE1')) then
+          begin
+            TheTva := TOBDOLBAST.detail[II].GetString('BM4_FAMILLETAXE1');
+            TRG := TOB.Create ('UNE RG A UN TAUX',TOBOLDRG,-1);
+            TRG.AddChampSupValeur('TVARG',TheTva);
+            TRG.AddChampSupValeur('MONTANTRG',0);
+          end;
+          TRG.SetDouble('MONTANTRG',TRG.GetDouble('MONTANTRG')+TOBDOLBAST.detail[II].GetDouble('MTRGTTC'));
+        end;
+      end;
+    FINALLY
+      TOBDOLBAST.free;
+    END;
+  end;
+
+
+  function  AjouteLigneRG (TOBPiece,TOBRG,TOBBAST,TLBAST,TParam : TOB ; var NbTrait : Integer) : boolean;
+  var TT : TOB;
+      MtRgCum,TauxTaxe,MtCautionCum,MtCautionMois,MtRgMois,MtCautionPrec,MtRgPrec : double;
+      resteCum,restePrec,MtRgDue : Double;
+  begin
+    result := false;
     if TLBAST.GetString('BM5_CODE')='RET0000000001' then
     begin
-      result := false;
       //
       TT := TOB.Create ('PIECERG',TOBRG,-1);
       initLigneRg (TT,TOBPiece);
@@ -1375,7 +1509,6 @@ procedure TGenerePiece.ConstituePieceFromBast(TOBBAST: TOB; DateFac : TDateTime)
         TT := TOBRG.detail[0];
         if TT <> nil then
         begin
-          result := false;
           MtCautionCum := Arrondi(TLBAST.GetDouble('BM5_MTDEJAFACT')+TLBAST.getDouble('BM5_MTSITUATION'),DEV.Decimale);
           MtRgCum := TT.GetDouble('RGCUM');
           ResteCum :=  ARRONDI(MtRgCum - MtCautionCum,DEV.Decimale); if ResteCum < 0 then resteCum := 0;
@@ -1407,10 +1540,9 @@ procedure TGenerePiece.ConstituePieceFromBast(TOBBAST: TOB; DateFac : TDateTime)
     end;
   end;
 
-var TT,TB,TOBPARAM,TP : TOB;
-    QQ : TQuery;
+var TT,TB,TOBPARAM,TP,TOBOLDRG : TOB;
     cledoc : R_CLEDOC;
-    II,NbTrait : Integer;
+    II,JJ,NbTrait : Integer;
     PhaseTravaux : string;
 begin
   PhaseTravaux := FindPhasePoc(TOBBAST.GetString ('BM4_AFFAIRE'),TOBBAST.GetString ('BM4_FOURNISSEUR'),TOBBAST.GetString ('BM4_CODEMARCHE'));
@@ -1421,7 +1553,13 @@ begin
   //
   TOBPARAM.LoadDetailFromSQL('SELECT * FROM BTYPELIGBAST',false);
   //
-  cledoc.NaturePiece := 'FF';
+  if TOBBAST.getBoolean('BM4_RGLIBER') then
+  begin
+    cledoc.NaturePiece := 'B01';
+  end else
+  begin
+    cledoc.NaturePiece := 'FF';
+  end;
   TT := CreerTOBPieceVide (cledoc,TOBBAST.GetString ('BM4_FOURNISSEUR'),TOBBAST.GetString ('BM4_AFFAIRE'),VH^.EtablisDefaut,'',True,False,1);
   TRY
     TOBPiece.Dupliquer(TT,false,true);
@@ -1433,11 +1571,14 @@ begin
     TOBPiece.SetString('GP_HORSCOMPTA',TOBBAST.GetString('BM4_HORSCOMPTA'));
     // ------
     TOBPiece.SetString('GP_CREEPAR','BST');
+    TOBPiece.SetBoolean('GP_RESTITUERG',TOBBAST.getBoolean('BM4_RGLIBER'));
     //
     if (Pos(TOBBAST.GetString('BM4_FAMILLETAXE1'),VH_GC.AutoLiquiTVAST)>0) then
     begin
       TOBPiece.SetBoolean('GP_AUTOLIQUID',true);
     end;
+    //
+    if TOBBAST.getBoolean('BM4_RGLIBER') then TOBPiece.SetBoolean('GP_AUTOLIQUID',true);;
     //
     for II := 0 to TOBBAST.Detail.count -1 do
     begin
@@ -1452,10 +1593,29 @@ begin
         //
         if TP.GetString('BM6_TYPEERP')='ART' then
         begin
-          if not AjouteLigneArticle (TOBPiece,TB,TP,NbTrait,PhaseTravaux) then break;
+          if TP.GetString('BM6_CODE')='RET0000000003' then
+          begin
+            // Restitution des RGS
+            TOBOLDRG := TOB.Create ('LES OLD BAST',nil,-1);
+            TRY
+              GetLesRGPrecByTVA (TOBBAST,TOBOLDRG);
+              if TOBOLDRG.Detail.count > 0 then
+              begin
+                for JJ := 0 to TOBOLDRG.detail.count -1 do
+                begin
+                  AjouteLigneRestitutionRg (TOBPiece,TB,TP,TOBOLDRG.detail[JJ],NbTrait);
+                end;
+              end;
+            FINALLY
+              TOBOLDRG.free;
+            END;
+          end else
+          begin
+            if not AjouteLigneArticle (TOBPiece,TB,TP,NbTrait,PhaseTravaux) then break;
+          end;
         end else if (Pos (TP.GetString('BM6_TYPEERP'),'RG;CAU')>0) then
         begin
-            if not AjouteLigneRG (TOBPiece,TOBPieceRG,TB,TP,NbTrait) then break;
+            if not AjouteLigneRG (TOBPiece,TOBPieceRG,TOBBAST,TB,TP,NbTrait) then break;
         end else
         begin
           if not AjouteLignePort (TOBPiece,TOBPorcs,TB,TP,NbTrait) then break;

@@ -144,9 +144,16 @@ begin
   FamAff := '';
   Etabl := TOBPiece.GetString('GP_ETABLISSEMENT');
   Regime := TOBPiece.GetString('GP_REGIMETAXE');
-  if TOBBRG.Detail.count = 0 then Exit;
-  FamTaxe := TOBBRG.detail[0].getString('PBR_FAMILLETAXE');
-  SQL := GetSqlPlus ('002','',FamArt,FamTiers,FamAff,Etabl,Regime,FamTaxe);
+  if TOBBRG.NomTable = 'LIGNE' then
+  begin
+    FamTaxe := TOBBRG.GetString('GL_FAMILLETAXE1');
+    SQL := GetSqlPlus ('002','',FamArt,FamTiers,FamAff,Etabl,Regime,FamTaxe);
+  end else
+  begin
+    if TOBBRG.Detail.count = 0 then Exit;
+    FamTaxe := TOBBRG.detail[0].getString('PBR_FAMILLETAXE');
+    SQL := GetSqlPlus ('002','',FamArt,FamTiers,FamAff,Etabl,Regime,FamTaxe);
+  end;
   TOBDatas := TOB.Create ('LES DATAS',nil,-1);
   TOBDatas.LoadDetailDBFromSQL('BVENTILCOLL',SQL,false);
   TOBF := FindTOBCodePlus (TOBDatas,'',FamArt,FamTiers,FamAff,Etabl,Regime,FamTaxe);
@@ -274,10 +281,17 @@ begin
     TOBV.SetInteger('BPB_INDICEG',TOBL.GetValue(prefixe+'_INDICEG'));
     TOBV.SetString('BPB_COLLECTIF',COLLECTIF);
   end;
-  for II := 0 to TOBTAXESL.detail.count -1 do
+  if TOBTAXESL.detail.count > 0 then
   begin
-    TOBV.SetDouble('BPB_BASETTC',TOBV.GetDouble('BPB_BASETTC')+TOBTaxesL.detail[II].GetDouble('BLB_BASETAXE')+TOBTaxesL.detail[II].GetDouble('BLB_VALEURTAXE'));
-    TOBV.SetDouble('BPB_BASETTCDEV',TOBV.GetDouble('BPB_BASETTCDEV')+TOBTaxesL.detail[II].GetDouble('BLB_BASEDEV')+TOBTaxesL.detail[II].GetDouble('BLB_VALEURDEV'));
+    for II := 0 to TOBTAXESL.detail.count -1 do
+    begin
+      TOBV.SetDouble('BPB_BASETTC',TOBV.GetDouble('BPB_BASETTC')+TOBTaxesL.detail[II].GetDouble('BLB_BASETAXE')+TOBTaxesL.detail[II].GetDouble('BLB_VALEURTAXE'));
+      TOBV.SetDouble('BPB_BASETTCDEV',TOBV.GetDouble('BPB_BASETTCDEV')+TOBTaxesL.detail[II].GetDouble('BLB_BASEDEV')+TOBTaxesL.detail[II].GetDouble('BLB_VALEURDEV'));
+    end;
+  end else
+  begin
+    TOBV.SetDouble('BPB_BASETTC',TOBV.GetDouble('BPB_BASETTC')+TOBL.getDouble('GL_TOTALTTC'));
+    TOBV.SetDouble('BPB_BASETTCDEV',TOBV.GetDouble('BPB_BASETTCDEV')++TOBL.getDouble('GL_TOTALTTCDEV'));
   end;
 end;
 

@@ -63,7 +63,7 @@ procedure GCTestDepotOblig;
 function MAJJnalEvent(TypeEvt, Etat, Libelle, BlocNote : string; FileName: string ='') : integer;
 function TransformeLesInToOr(stIn : string) : string;
 function GereCommercial : boolean;
-function GereNumMensuelCptAnnuel(SearchValue : string; IsDocType : boolean) : boolean;
+function GereNumMensuelCptAnnuel(DocType, Establishment : string) : boolean;
 procedure TraiteParametresSurTForm(FF : TForm; LesChamps : string=''; AffecteFiltre : boolean=false);
 function NbOccurenceString(Chaine, Occurence : string) : integer;
 Procedure RTCreerProspectPourClient ;
@@ -1982,9 +1982,9 @@ begin
   Result := GetParamSocSecur ('SO_GERECOMMERCIAL',False);
 end;
 
-function GereNumMensuelCptAnnuel(SearchValue : string; IsDocType : boolean) : boolean;
+function GereNumMensuelCptAnnuel(DocType, Establishment : string) : boolean;
 begin
-  Result := (Tools.IsRecordableDocument(SearchValue, IsDocType));
+  Result := (Tools.IsRecordableDocument(DocType, Establishment{$IFDEF APPSRV}, '', ''{$ENDIF APPSRV}));
 end;
 
 {***********A.G.L.***********************************************

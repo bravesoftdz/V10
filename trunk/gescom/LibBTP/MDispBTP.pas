@@ -136,6 +136,7 @@ uses Facture,(*Souche,*)dimension,UTomPiece, Traduc
      ,UdroitUtilisation
      ,UTraiteTables
      ,UspecifPOC
+     , CommonTools
      , BRGPDREFERENTIEL_TOF
      , BRGPDTIERSMUL_TOF
      , FormsName
@@ -143,7 +144,11 @@ uses Facture,(*Souche,*)dimension,UTomPiece, Traduc
      , BRGPDRESSOURCEMUL_TOF
      , BRGPDUTILISATMUL_TOF
      , BRGPDSUSPECTMUL_TOF
-     , DB, Math;
+     , BTPARAMWS_TOF
+     , BTWSTABLEAUTO_TOF
+     , DB
+     , Math
+     ;
 {$R *.DFM}
 
 var lesTagsToRemove : string;
@@ -237,7 +242,14 @@ begin
   end;
 end;
 
-// ****************************************************************************
+function GetActionFiche(TableName : string) : TActionFiche;
+begin
+  if Tools.CanInsertedInTable(TableName{$IFDEF APPSRV}, '', '' {$ENDIF APPSRV}) then
+    Result := taCreat
+  else
+    Result := taConsult;
+end;
+
 // ******************* Dispatch gestion interne + Gestion d'affaire  **********
 // ****************************************************************************
 Procedure Dispatch ( Num : Integer ; PRien : THPanel ; var retourforce,sortiehalley : boolean);
@@ -810,6 +822,7 @@ BEGIN
               AppelsBAST;
               RetourForce:=TRUE;
             END;
+   146644 : AGLLanceFiche('BTP','BTGENFACBAST','','','RESTITUERG') ; // génération des factures achat depuis BAST définitifs
 
    146311 : AGLLanceFiche('BTP','BTIMPORTMULGIE','','','') ; // Importation des factures d'achat GIE
 //   31515 : AGLLanceFiche('BTP','BTTRANSACH_MUL','','','BFA') ;
@@ -831,6 +844,7 @@ BEGIN
    146131 : AGLLanceFiche('BTP','BTLANCEREA_MUL','','','MODIFICATION') ;     // Modification réappro
    //
    146241  : AGLLanceFiche('BTP','BTPIECE_MUL','GP_NATUREPIECEG=FF;GP_VENTEACHAT=ACH','','MODIFICATION;REAJUSTEANA') ;  //Réajustement analytique
+   146291  : AGLLanceFiche('BTP','BTPIECE_MUL','GP_NATUREPIECEG=B01;GP_VENTEACHAT=ACH','','MODIFICATION') ;  // Libération des RG
    // Editions
    31601 : AGLLanceFiche('BTP','BTEDITDOCDIFF_MUL','','','ACH') ;
    31602 : AGLLanceFiche('BTP','BTPTFPIECEACH','GP_NATUREPIECEG=CF','','ACHAT') ;  // Portefeuille pièces
@@ -842,7 +856,7 @@ BEGIN
    32503 : AGLLanceFiche('GC','GCARTICLE_MODIFLO','','','') ;  // modification en série
    32505 : EntreeTradArticle (taModif) ;  // traduction libellé articles
    //32506 : AGLLanceFiche('GC','GCTARIFART_MUL','','','') ;  // Maj BAses Tarifaires
-   65106 : ParamTable('TTSECTEUR',taCreat,0,PRien) ;        // secteurs d'activité
+   65106 : ParamTable('TTSECTEUR', GetActionFiche('CHOIXCOD'), 0, PRien); // secteurs d'activité
 //   32206 : AGLLanceFiche('GC','GCINITSTOCK','','','');  // Initialisation des stocks
    // type et côte emplacement se trouvant dans le module établissement
    65305 : ParamTable('GCTYPEEMPLACEMENT',taCreat,0,PRien) ;    // type emplacement
@@ -906,130 +920,101 @@ BEGIN
 //uniquement en line
 //Prevoir la mise à jour du Paramsoc en fonction si assistant ou menu (zone de paramètre)
    320111 : Begin //
-				   	TheTOB := TOBparamSoc;
-            SaisirHorsInside('BTPARAMSOCS');
-            TheTOB := nil;
-            RetourForce:=True;
+              TheTOB := TOBparamSoc;
+              SaisirHorsInside('BTPARAMSOCS');
+              TheTOB := nil;
+              RetourForce:=True;
             end;
    320112 : Begin
-            TheTOB := TOBparamSoc;
-            SaisirHorsInside('BTPARAMGENS1');
-            TheTOB := nil;
-            RetourForce:=True;
+              TheTOB := TOBparamSoc;
+              SaisirHorsInside('BTPARAMGENS1');
+              TheTOB := nil;
+              RetourForce:=True;
             end;
    320113 : Begin
-            TheTOB := TOBparamSoc;
-            SaisirHorsInside('BTPARSOCCPTAGS1');
-            TheTOB := nil;
-            RetourForce:=True;
+              TheTOB := TOBparamSoc;
+              SaisirHorsInside('BTPARSOCCPTAGS1');
+              TheTOB := nil;
+              RetourForce:=True;
             end;
    320114	: Begin
-            SaisirHorsInside('BTCPTPIECE_S1') ;
-            RetourForce:=True;
+              SaisirHorsInside('BTCPTPIECE_S1') ;
+              RetourForce:=True;
             end;
 	 320115	: Begin
-					  SaisirHorsInside('BTPARAMSOCPART');
-            RetourForce:=True;
+              SaisirHorsInside('BTPARAMSOCPART');
+              RetourForce:=True;
    					End;
    320120 : Begin
-						SaisirHorsInside ('PARAMSOC');
-            RetourForce:=True;
+              SaisirHorsInside ('PARAMSOC');
+              RetourForce:=True;
    					end;
    320131 : Begin
-            if PrepareOuvreExoSansCompta then
-               OuvertureExo
-            Else
-	  			     RetourForce:=True;
-   					End;
+              if PrepareOuvreExoSansCompta then
+                 OuvertureExo
+              Else
+                 RetourForce:=True;
+              End;
    320132 : Begin
-            SaisirHorsInside ('BTCLOTUREEX');
-            RetourForce:=TRUE;
-   					End;
-   320141 : Begin
-            RegimesTva ;
-            End;
+              SaisirHorsInside ('BTCLOTUREEX');
+              RetourForce:=TRUE;
+   			End;
+   320141 : RegimesTva ;
    320143	: Begin
-					  //ParamTvaTpf(true) ;
-            SaisirHorsInside ('BTTVA');
-            RetourForce:=TRUE;
-   					End;
-   320151 : Begin
-       			FicheDevise('',tamodif,False);
-            end;
-   320152 : Begin
-            FicheModePaie_AGL('');
-            end;
-   320153 : Begin
-            FicheRegle_AGL ('',False,taModif);
-            end;
-   320154 : Begin
-            OuvrePostal(PRien) ;
-            end;
-   320155 : Begin
-    				FicheRegion('','',False) ;
-            end;
-   320156 : Begin
-    			  OuvrePays ;
-            end;
-   320157 : Begin
-						ParamTable('ttFormeJuridique',taCreat,1120000,PRien) ;
-            end;
-   320158 : Begin
-						ParamTable('ttCivilite',taCreat,1122000,PRien) ;
-            end;
-   320159 : Begin
-            AgLlanceFIche('BTP','BDOMACT_MUL','','','');
-            end;
-   320161 : Begin
-   					AGLLanceFiche('BTP','BTPARIMPDOC','','','NATURE=DBT;SOUCHE=DBT;NUMERO=0') ;
-   					end;
-   320162 : Begin
-   					AGLLanceFiche('BTP','BTPARIMPDOC','','','NATURE=FBT;SOUCHE=FBT;NUMERO=0') ;
-   					end;
-   320163 : Begin
-   					AGLLanceFiche ('BTP','BTPARIMPDOC','','','NATURE=ABT;SOUCHE=ABT;NUMERO=0') ;
-   					end;
+                SaisirHorsInside ('BTTVA');
+                RetourForce:=TRUE;
+   			  End;
+   320151 : FicheDevise('',tamodif,False);
+   320152 : FicheModePaie_AGL('');
+   320153 : FicheRegle_AGL ('',False,taModif);
+   320154 : OuvrePostal(PRien) ;
+   320155 : FicheRegion('','',False) ;
+   320156 : OuvrePays ;
+   320157 : ParamTable('ttFormeJuridique', GetActionFiche('CHOIXCOD'), 1120000, PRien);
+   320158 : ParamTable('ttCivilite', GetActionFiche('CHOIXCOD'), 1122000, PRien);
+   320159 : AgLlanceFIche('BTP','BDOMACT_MUL','','','');
+   320161 : AGLLanceFiche('BTP','BTPARIMPDOC','','','NATURE=DBT;SOUCHE=DBT;NUMERO=0') ;
+   320162 : AGLLanceFiche('BTP','BTPARIMPDOC','','','NATURE=FBT;SOUCHE=FBT;NUMERO=0') ;
+   320163 : AGLLanceFiche('BTP','BTPARIMPDOC','','','NATURE=ABT;SOUCHE=ABT;NUMERO=0') ;
    320164 : Begin
-						EditEtat('E','GPJ','',True, nil, '', '');
-   					RetourForce:=TRUE;
-   					end;
+              EditEtat('E','GPJ','',True, nil, '', '');
+              RetourForce:=TRUE;
+   			end;
 	 320211 : Begin
-            AppelAssistExport;
-   					RetourForce:=TRUE;
-   					end;
+                AppelAssistExport;
+                RetourForce:=TRUE;
+   		       end;
    320212 : Begin
-            AppelAssistImport;
-   					RetourForce:=TRUE;
-   					end;
+              AppelAssistImport;
+              RetourForce:=TRUE;
+   			end;
    320221 : Begin
-            BackupPGIS1;
-            RetourForce:=TRUE;
+              BackupPGIS1;
+              RetourForce:=TRUE;
             end;
    320222 : Begin
-            //RestorePGIS1;
-            PGIInfoAF('Si vous désirez restaurer une sauvegarde, veuillez utiliser l''administrateur SQL ou appeller le service de maintenance', 'Restauration');
-            RetourForce:=TRUE;
+              PGIInfoAF('Si vous désirez restaurer une sauvegarde, veuillez utiliser l''administrateur SQL ou appeller le service de maintenance', 'Restauration');
+              RetourForce:=TRUE;
             end;
    320230 : Begin
-            if DetectionConnexionInternet then
+              if DetectionConnexionInternet then
                OuvertureWebBrowser;
-   					end;
+   			end;
    320241 : Begin
-            FicheUSer(V_PGI.User) ;
-				  	ControleUsers;
+              FicheUSer(V_PGI.User) ;
+              ControleUsers;
             End;
-   320242 : Begin
-				    ReseauUtilisateurs(False)
-            End;
+   320242 : ReseauUtilisateurs(False);
    320321 : Begin
-  					ParamTable('GCCOMPTAARTICLE',taCreat,0,nil) ;
-					  AvertirTable ('GCCOMPTAARTICLE');
-  					end;
+              ParamTable('GCCOMPTAARTICLE',taCreat,0,nil) ;
+              AvertirTable ('GCCOMPTAARTICLE');
+  			end;
    320322 : Begin
-            paramTable('GCCOMPTATIERS',taCreat,0,nil) ;
-					  AvertirTable ('GCCOMPTATIERS');
-  					end;
+              paramTable('GCCOMPTATIERS',taCreat,0,nil) ;
+              AvertirTable ('GCCOMPTATIERS');
+  			end;
    320323 : Begin
+<<<<<<< HEAD
             ParamTable('AFCOMPTAAFFAIRE',taCreat,0,nil) ;
             AvertirTable ('AFCOMPTAAFFAIRE');
   					end;
@@ -1037,11 +1022,17 @@ BEGIN
             //AglLanceFiche ('GC','GCCODECPTA','','','') ;
             AglLanceFiche ('BTP','BTCODECPTA_MUL','','','') ;
             End;
+=======
+              ParamTable('AFCOMPTAAFFAIRE',taCreat,0,nil) ;
+              AvertirTable ('AFCOMPTAAFFAIRE');
+  			end;
+   320331 : AglLanceFiche ('GC','GCCODECPTA','','','') ;
+>>>>>>> 79c2ad42bbd36126d2a9602177f801254007b094
    320332 : Begin
-				   	TheTOB := TOBparamSoc;
-					  AglLanceFiche ('BTP','BTVENTILCPTAS1','','','');
-					  TheTOB := nil;
-   					End;
+              TheTOB := TOBparamSoc;
+              AglLanceFiche ('BTP','BTVENTILCPTAS1','','','');
+              TheTOB := nil;
+   			End;
 
 {$IFNDEF SANSCOMPTA} // aujourd'hui InitSociété= compta
 // Administration
@@ -1400,13 +1391,13 @@ Cegid,False,False)};
     74153 : FicheModePaie_AGL('');
     74154 : FicheRegle_AGL ('',False,taModif);
     74155 : FicheDevise('',tamodif,False);
-    74156 : ParamTable('ttFormeJuridique',taCreat,1120000,PRien) ;
-    74157 : ParamTable('ttCivilite',taCreat,1122000,PRien) ;
-    74158 : OuvrePays ;
+    74156 : ParamTable('ttFormeJuridique', GetActionFiche('CHOIXCOD'), 1120000, PRien);
+    74157 : ParamTable('ttCivilite', GetActionFiche('CHOIXCOD'), 1122000, PRien);
+    74158 : OuvrePays;
     74159 : FicheRegion('','',False) ;
     //FV1 : 16/03/2017 -  FS#2452 - Viviane - Ajouter la recherche par Code Postal ou Dépt dans liste Codes Postaux - Ville
     74160 : AGLLanceFiche( 'BTP', 'BTCODEPOSTAL' , '' , '' , '') ; //OuvrePostal(PRien) ;
-    74161 : ParamTable('ttLangue',taCreat,0,PRien) ;
+    74161 : ParamTable('ttLangue', GetActionFiche('CHOIXCOD'), 0, PRien);
     74162 : ParamFont('BLOC') ;
     74163 : BEGIN
     				SaisirHorsInside('BTPARAFFDOC');
@@ -1415,10 +1406,9 @@ Cegid,False,False)};
 {$IFDEF V10}     
     74164 : AglLanceFiche ('BTP','BTCOMMENTAIRE','','','') ;
 {$ELSE}
-    74164 : HShowMessage('2;?caption?;'+TraduireMemoire('Fonction disponible uniquement à partir de la Version 10 : ')+';W;O;O;O;',TitreHalley,IntToStr(Num));
+    74164 : HShowMessage('2;?caption?;'+TraduireMemoire('Fonction disponible uniquement à partir de la Version 10 : ')+';W;O;O;O;',TitreHalley,IntToStr(Num)); 
 {$ENDIF}
     74165 : AglLanceFiche ('BTP','BTVENTILCOLLMUL','','','ACTION=MODIFICATION') ;
-    //
     /// contrats
     14851 : ParametrageTypeAction;
     14852 : ParamTable ('AFTRESILAFF',taCreat,0,PRien,3,'Résiliation contrat / Rejet Devis');
@@ -1452,12 +1442,12 @@ Cegid,False,False)};
     // Client
     74311 : ParamTable('YYCODENAF',taCreat,0,PRien,3,'Code NAF') ;
     74312 : ParamTable('GCCOMPTATIERS',taCreat,0,PRien) ;
-    74313 : ParamTable ('GCZONECOM',taCreat,0,PRien);
-    74314 : ParamTable('TTSECTEUR',taCreat,0,PRien) ;       // secteurs d'activité
+    74313 : ParamTable ('GCZONECOM', GetActionFiche('CHOIXCOD'), 0, PRien);
+    74314 : ParamTable('TTSECTEUR', GetActionFiche('CHOIXCOD'), 0, PRien) ;       // secteurs d'activité
     74315 : ParamTable('TTTARIFCLIENT',taCreat,0,PRien) ;
-    74316 : ParamTable('GCORIGINETIERS',taCreat,0,PRien) ;
+    74316 : ParamTable('GCORIGINETIERS', GetActionFiche('CHOIXCOD'), 0, PRien) ;
     // Contacts
-    74321 : ParamTable('ttFonction',taCreat,1125000,PRien) ;
+    74321 : ParamTable('ttFonction', GetActionFiche('CHOIXCOD'), 1125000, PRien) ;
     // Affaire
     74331 : ParamTable('AFCOMPTAAFFAIRE',taCreat,0,PRien) ;
     74332 : ParamTable ('AFDEPARTEMENT',taCreat,0,PRien) ;
@@ -1944,6 +1934,8 @@ Cegid,False,False)};
     //
     148901..148903 : ParamTable('BTFAMILLEOUV'+IntToStr(Num-148900),taCreat,0,PRien) ;
     148904 : BEGIN ParamTable('BTLIBOUVRAGE',taModif,0,PRien) ; AvertirTable ('GCLIBFAMILLE'); AfterChangeModule (148); END;
+    148905 : BTLanceFicheParamWSCegid('BTP', 'BTPARAMWS', '', '', '');
+    148906 : OpenForm.WSCreationAllowedTable;
     //
     // BIBLIOTHEQUE
 		149204 : AGLLanceFiche('BTP','BBPRIXMATFAM_MUL','','','ACTION=MODIFICATION');
@@ -2477,7 +2469,7 @@ Case NumModule of
         if not GetParamSocSecur('SO_BTSITPROVISOIRE',false) then
         begin
           FMenuG.RemoveGroup(-145410,True);  // Situations provisoires
-          FMenuG.RemoveItem  (-145410); 
+          FMenuG.RemoveItem  (-145410);
         end;
         //---- WHYYYYYYYYYY
         FMenuG.RemoveItem  (145951); // Envoie Ecriture
@@ -2516,6 +2508,8 @@ Case NumModule of
           begin
             FMenuG.RemoveItem(146241);
             FMenuG.RemoveItem(146641);
+            FMenuG.RemoveItem(146644);
+            FMenuG.RemoveGroup(-146290,True);
           end;
 
           if not GetParamSocSecur('SO_CHANTIEROBLIGATOIRE',false) then
@@ -2947,7 +2941,6 @@ end else
 begin
 	FMenuG.SetModules([145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,281,148,280,60],[24,77,21,74,72,121,124,41,77,99,127,73,9,110,45,69,99,89,34,78,49]) ;
 end;
-//V_PGI.FUserGrp
 V_PGI.NbColModuleButtons:=2 ; V_PGI.NbRowModuleButtons:=9 ;
 
 FMenuG.OnChangeModule:=AfterChangeModule ;

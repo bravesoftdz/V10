@@ -1120,9 +1120,13 @@ uses
   BTBIMSELAFF_TOF in '..\BIM\BTBIMSELAFF_TOF.PAS',
   USpecifVerdon in '..\Verdon\USpecifVerdon.pas',
   UtilsPdf in '..\UtilPdfTk\UtilsPdf.pas',
+  ConstServices in '..\..\commun\Lib\ConstServices.pas',
+  BTWSTABLEAUTO_TOF in '..\..\Services\BTPY2\Lib\BTWSTABLEAUTO_TOF.pas',
+  uLkJSON in '..\..\CONNECTWS\uLkJSON.pas',
+  BTPARAMWS_TOF in '..\..\CONNECTWS\BTPARAMWS_TOF.pas',
+  uWSDataService in '..\..\Services\BTPY2\Lib\uWSDataService.pas';
   UTOF_BTCODECPTA_MUL in '..\LibBTP\UTOF_BTCODECPTA_MUL.pas',
   UTOF_BTCODECPTA in '..\LibBTP\UTOF_BTCODECPTA.pas';
-
 //
 
 // FIN NEW

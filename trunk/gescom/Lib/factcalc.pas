@@ -1579,131 +1579,130 @@ BEGIN
     IndNumOrdre     := TOBpiece.detail[0].GetNumChamp ('GL_NUMORDRE');
     IndIndiceNomen  := TOBpiece.detail[0].GetNumChamp ('GL_INDICENOMEN');
     IndRecalculer   := TOBpiece.detail[0].GetNumChamp ('GL_RECALCULER');
-  end else exit;
-  //
-  if (not SaisieTypeAvanc) then
-  begin
-    DeduitDeltaBases (TOBpiece,TOBBases,EnHt);
-//    AddLesports(TOBpiece,TOBPorcs,TOBBases,TOBBasesL,TOBTiers,DEV,Action,'-');
-  end;
-  //
-  for i:=IndiceDepart to IndiceArrive do
-  BEGIN
-    TOBL:=TOBPiece.Detail[i] ;
-
-    if TOBL=Nil then Break ;
     //
-    NumOrdre := TOBL.getValue('GL_NUMORDRE');
-    //
-    NumLigne := TOBL.getValue('GL_NUMLIGNE');
-    //
-    if TOBL.GetValue('GL_RECALCULER')<>'X' then continue;
-    if IsSousDetail(TOBL) then continue;
-    //
-    if (not SaisieTypeAvanc) and (Pos(TOBL.GetValeur(IndTypeLigne),'ART;ARV;CEN')>0) and (not IsLigneFromCentralis(TOBL)) then
+    if (not SaisieTypeAvanc) then
     begin
-      Ligne := TOBL.GetValue('GL_NUMLIGNE');
-      // -------------------------------------------------------
-      // Deduction des montants ligne avant l'ajout de celle-ci recalcule
-      // -------------------------------------------------------
-      if (TOBL.GetValeur(IndTypeLigne)='CEN') OR ((TOBL.GetValeur(IndTypeLigne)='ART') AND (not IsLigneFromCentralis(TOBL))) and (not FromZero) and (not FromGenFac) then
+      DeduitDeltaBases (TOBpiece,TOBBases,EnHt);
+  //    AddLesports(TOBpiece,TOBPorcs,TOBBases,TOBBasesL,TOBTiers,DEV,Action,'-');
+    end;
+    //
+    for i:=IndiceDepart to IndiceArrive do
+    BEGIN
+      TOBL:=TOBPiece.Detail[i] ;
+
+      if TOBL=Nil then Break ;
+      //
+      NumOrdre := TOBL.getValue('GL_NUMORDRE');
+      //
+      NumLigne := TOBL.getValue('GL_NUMLIGNE');
+      //
+      if TOBL.GetValue('GL_RECALCULER')<>'X' then continue;
+      if IsSousDetail(TOBL) then continue;
+      //
+      if (not SaisieTypeAvanc) and (Pos(TOBL.GetValeur(IndTypeLigne),'ART;ARV;CEN')>0) and (not IsLigneFromCentralis(TOBL)) then
       begin
-        DeduitLigneModifie (TOBL,TOBpiece,TOBPieceTrait,TOBouvrages,TOBOuvragesP,TOBBases,TOBBasesL,TOBTiers,DEV, Action);
-      end;
-      // --------
-      if IsOuvrage (TOBL) and (TOBL.GetValeur(IndIndiceNomen)<>0) and (TOBL.GetString('GL_NATUREPIECEG')<>'BBO') then
-      begin
-        if TOBL.getBoolean('GL_GESTIONPTC') and (Pos(TOBPiece.getString('GP_NATUREPIECEG'),'DBT;ETU')>0) then
+        Ligne := TOBL.GetValue('GL_NUMLIGNE');
+        // -------------------------------------------------------
+        // Deduction des montants ligne avant l'ajout de celle-ci recalcule
+        // -------------------------------------------------------
+        if (TOBL.GetValeur(IndTypeLigne)='CEN') OR ((TOBL.GetValeur(IndTypeLigne)='ART') AND (not IsLigneFromCentralis(TOBL))) and (not FromZero) and (not FromGenFac) then
         begin
-          IndiceNomen := TOBL.getInteger('GL_INDICENOMEN');
-          TOBOUV := nil;
-          if (IndiceNomen > 0) and (IndiceNomen <= TOBOuvrages.detail.count) then
-          begin
-            TOBOUV := TOBOuvrages.detail[IndiceNomen-1];
-            SupprimeEcart(TOBOUV,ArtEcart);
-          end;
+          DeduitLigneModifie (TOBL,TOBpiece,TOBPieceTrait,TOBouvrages,TOBOuvragesP,TOBBases,TOBBasesL,TOBTiers,DEV, Action);
         end;
-        CalculeThisLigneOUv (TOBL,VenteAchat, IsDetailleCollectif, not TOBL.getBoolean('GL_GESTIONPTC')); // on precalcule la ligne sans impatcer les montant de la piece
-        if TOBL.getBoolean('GL_GESTIONPTC') and (Pos(TOBPiece.getString('GP_NATUREPIECEG'),'DBT;ETU')>0) then
+        // --------
+        if IsOuvrage (TOBL) and (TOBL.GetValeur(IndIndiceNomen)<>0) and (TOBL.GetString('GL_NATUREPIECEG')<>'BBO') then
         begin
-          Qte := TOBL.GetDouble('GL_QTEFACT'); if QTe = 0 then Qte := 1;
-          NewPu := Arrondi(TOBL.GetDouble('MONTANTPTC')/Qte,DEV.decimale);
-          if NewPu <> TOBL.getDouble('GL_PUHTDEV') then
+          if TOBL.getBoolean('GL_GESTIONPTC') and (Pos(TOBPiece.getString('GP_NATUREPIECEG'),'DBT;ETU')>0) then
           begin
-            TraitePrixOuvrage(TOBPiece,TOBL,TOBBases,TOBBasesL,TOBouvrages, EnHt, NewPu,0,DEV,false);
-            // if TOBOUV <> nil then ReajusteMontantOuvrage(nil,TOBPiece, TOBL, TOBOUV, TOBL.GetDouble('MONTANTPTC'), NewPr, NewPu, DEV, EnHt,false);
-            TOBL.SetDOuble('GL_PUHTDEV',newPu); TOBL.SetDouble('GL_PUHT',DEVISETOPIVOTEx (newPu,DEV.Taux,DEV.Quotite,V_PGI.okdecP));
-            ReinitCoefMarg (TOBL,TOBouvrages );
-          end;
-          CalculeThisLigneOUv (TOBL,VenteAchat,IsDetailleCollectif);
-        end;
-        CumuleTypeSurPiece (TOBPiece,TOBL);
-      end else
-      begin
-        TOBTaxesL.clearDetail;
-        if TOBL.GetValeur (IndTypeArticle) = 'POU' then CalculLignePourcent (TOBPiece,TOBL,I);
-        if EnHT then
-        BEGIN
-          if TOBL.FieldExists('BLF_MTSITUATION') then
-          begin
-            if (TOBL.GetValue ('BLF_MTSITUATION') <> 0) and
-               (TOBL.GetString('BLF_FOURNISSEUR')<>'') and
-               (TOBL.GetString('BLF_NATURETRAVAIL')='002') and 
-               (GetPaiementSSTrait (TOBSSTRAIT,TOBL.GetString('BLF_FOURNISSEUR'))='001') then
+            IndiceNomen := TOBL.getInteger('GL_INDICENOMEN');
+            TOBOUV := nil;
+            if (IndiceNomen > 0) and (IndiceNomen <= TOBOuvrages.detail.count) then
             begin
-              // cas du paiement direct d'un sous traitant
-              TOBL.SetDouble('GL_MONTANTPA',TOBL.Getdouble ('BLF_MTSITUATION'));
-              TOBL.SetDouble('GL_DPA',Arrondi(TOBL.Getdouble ('GL_MONTANTPA')/TOBL.Getdouble ('GL_QTEFACT'),V_PGI.okdecP));
+              TOBOUV := TOBOuvrages.detail[IndiceNomen-1];
+              SupprimeEcart(TOBOUV,ArtEcart);
             end;
           end;
-          CalculeLigneHT(TOBL,TOBTaxesL,TOBPiece,DEV, NbDec,False,TOBTiers) ;
-          if {(VenteAchat = 'VEN') and} (IsDetailleCollectif) then CumuleCollectifs(TOBL,TOBTaxesL,TOBVTECOLL,TOBSSTRAIT,TOBArticles,TOBTiers,TOBAffaire);
-          ChangeParentLignesBases (TOBBasesL,TOBtaxesL,NBdec);
-          //
-          if (not IsVariante(TOBL)) and (not IsLigneFromCentralis(TOBL)) then
+          CalculeThisLigneOUv (TOBL,VenteAchat, IsDetailleCollectif, not TOBL.getBoolean('GL_GESTIONPTC')); // on precalcule la ligne sans impatcer les montant de la piece
+          if TOBL.getBoolean('GL_GESTIONPTC') and (Pos(TOBPiece.getString('GP_NATUREPIECEG'),'DBT;ETU')>0) then
           begin
-            SommeLignePiedHT(TOBL,TOBPiece) ;
+            Qte := TOBL.GetDouble('GL_QTEFACT'); if QTe = 0 then Qte := 1;
+            NewPu := Arrondi(TOBL.GetDouble('MONTANTPTC')/Qte,DEV.decimale);
+            if NewPu <> TOBL.getDouble('GL_PUHTDEV') then
+            begin
+              TraitePrixOuvrage(TOBPiece,TOBL,TOBBases,TOBBasesL,TOBouvrages, EnHt, NewPu,0,DEV,false);
+              // if TOBOUV <> nil then ReajusteMontantOuvrage(nil,TOBPiece, TOBL, TOBOUV, TOBL.GetDouble('MONTANTPTC'), NewPr, NewPu, DEV, EnHt,false);
+              TOBL.SetDOuble('GL_PUHTDEV',newPu); TOBL.SetDouble('GL_PUHT',DEVISETOPIVOTEx (newPu,DEV.Taux,DEV.Quotite,V_PGI.okdecP));
+              ReinitCoefMarg (TOBL,TOBouvrages );
+            end;
+            CalculeThisLigneOUv (TOBL,VenteAchat,IsDetailleCollectif);
           end;
-        END else
-        BEGIN
-          CalculeLigneTTC(TOBL,TOBTaxesL,TOBPiece,DEV, NbDec,False,TOBTiers) ;
-          if {(VenteAchat = 'VEN') and }(IsDetailleCollectif) then CumuleCollectifs(TOBL,TOBTaxesL,TOBVTECOLL,TOBSSTRAIT,TOBArticles,TOBTiers,TOBAffaire);
-          ChangeParentLignesBases (TOBBasesL,TOBtaxesL,NBdec);
-          //
-          if (not IsVariante(TOBL)) and (not IsLigneFromCentralis(TOBL)) then
-          begin
-            SommeLignePiedTTC(TOBL,TOBPiece) ;
-          end;
-        END ;
-        StockeMontantTypeSurLigne (TOBL);
-        if not IsVariante(TOBL) and (not IsLigneFromCentralis(TOBL)) then
-        begin
-          CalcLigneMesure(TOBL) ;
-          SommeLigneMesures(TOBL,TOBPiece) ;
           CumuleTypeSurPiece (TOBPiece,TOBL);
-        end;
-        // cumul final
-        if not IsVariante(TOBL) and (not IsLigneFromCentralis(TOBL)) then
+        end else
         begin
-          TOBB := FindLignesbases (NumOrdre,TOBBasesL);
-          if TOBB <> nil then CumuleLesBases(TOBBases,TOBB,NbDec);
+          TOBTaxesL.clearDetail;
+          if TOBL.GetValeur (IndTypeArticle) = 'POU' then CalculLignePourcent (TOBPiece,TOBL,I);
+          if EnHT then
+          BEGIN
+            if TOBL.FieldExists('BLF_MTSITUATION') then
+            begin
+              if (TOBL.GetValue ('BLF_MTSITUATION') <> 0) and
+                 (TOBL.GetString('BLF_FOURNISSEUR')<>'') and
+                 (TOBL.GetString('BLF_NATURETRAVAIL')='002') and 
+                 (GetPaiementSSTrait (TOBSSTRAIT,TOBL.GetString('BLF_FOURNISSEUR'))='001') then
+              begin
+                // cas du paiement direct d'un sous traitant
+                TOBL.SetDouble('GL_MONTANTPA',TOBL.Getdouble ('BLF_MTSITUATION'));
+                TOBL.SetDouble('GL_DPA',Arrondi(TOBL.Getdouble ('GL_MONTANTPA')/TOBL.Getdouble ('GL_QTEFACT'),V_PGI.okdecP));
+              end;
+            end;
+            CalculeLigneHT(TOBL,TOBTaxesL,TOBPiece,DEV, NbDec,False,TOBTiers) ;
+            if {(VenteAchat = 'VEN') and} (IsDetailleCollectif) then CumuleCollectifs(TOBL,TOBTaxesL,TOBVTECOLL,TOBSSTRAIT,TOBArticles,TOBTiers,TOBAffaire);
+            ChangeParentLignesBases (TOBBasesL,TOBtaxesL,NBdec);
+            //
+            if (not IsVariante(TOBL)) and (not IsLigneFromCentralis(TOBL)) then
+            begin
+              SommeLignePiedHT(TOBL,TOBPiece) ;
+            end;
+          END else
+          BEGIN
+            CalculeLigneTTC(TOBL,TOBTaxesL,TOBPiece,DEV, NbDec,False,TOBTiers) ;
+            if {(VenteAchat = 'VEN') and }(IsDetailleCollectif) then CumuleCollectifs(TOBL,TOBTaxesL,TOBVTECOLL,TOBSSTRAIT,TOBArticles,TOBTiers,TOBAffaire);
+            ChangeParentLignesBases (TOBBasesL,TOBtaxesL,NBdec);
+            //
+            if (not IsVariante(TOBL)) and (not IsLigneFromCentralis(TOBL)) then
+            begin
+              SommeLignePiedTTC(TOBL,TOBPiece) ;
+            end;
+          END ;
+          StockeMontantTypeSurLigne (TOBL);
+          if not IsVariante(TOBL) and (not IsLigneFromCentralis(TOBL)) then
+          begin
+            CalcLigneMesure(TOBL) ;
+            SommeLigneMesures(TOBL,TOBPiece) ;
+            CumuleTypeSurPiece (TOBPiece,TOBL);
+          end;
+          // cumul final
+          if not IsVariante(TOBL) and (not IsLigneFromCentralis(TOBL)) then
+          begin
+            TOBB := FindLignesbases (NumOrdre,TOBBasesL);
+            if TOBB <> nil then CumuleLesBases(TOBBases,TOBB,NbDec);
+          end;
         end;
+        if IsVariante(TOBl) then DroplesBasesLigne (TOBL,TOBBasesL);
       end;
-      if IsVariante(TOBl) then DroplesBasesLigne (TOBL,TOBBasesL);
-    end;
-    if {(SaisieTypeAvanc) or }(ModifAvanc) then
-    BEGIN
-      if (TOBL.fieldExists('MONTANTSIT')) and (TOBPiece.fieldExists('MONTANTSIT')) then
-      begin
-        TOBL.PutValue('MONTANTSIT',TOBL.GetValue('BLF_MTSITUATION'));
-        TOBPiece.PutValue('MONTANTSIT',TOBPiece.GetValue('MONTANTSIT')+TOBL.GetValue('MONTANTSIT'));
-      end;
-      CalculAvancementPiece (TobPiece,TOBL,DEV,ModifAvanc);
-    END;
-    TOBL.Putvalue ('GL_RECALCULER','-');
-    //
-  END ;
-
+      if {(SaisieTypeAvanc) or }(ModifAvanc) then
+      BEGIN
+        if (TOBL.fieldExists('MONTANTSIT')) and (TOBPiece.fieldExists('MONTANTSIT')) then
+        begin
+          TOBL.PutValue('MONTANTSIT',TOBL.GetValue('BLF_MTSITUATION'));
+          TOBPiece.PutValue('MONTANTSIT',TOBPiece.GetValue('MONTANTSIT')+TOBL.GetValue('MONTANTSIT'));
+        end;
+        CalculAvancementPiece (TobPiece,TOBL,DEV,ModifAvanc);
+      END;
+      TOBL.Putvalue ('GL_RECALCULER','-');
+      //
+    END ;
+  END;
   //
   if (not SaisieTypeAvanc) then
   begin
