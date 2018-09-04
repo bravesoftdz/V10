@@ -1985,8 +1985,16 @@ begin
   TOBItem.AddChampSupValeur('BPL_NUMEROADRESSE',  TOBEvent.GetValue('NUMEROADRESSE'));
   TobItem.AddChampSupValeur('BPL_CONTROLCAL',     CtrlCal);
   //FV1 : 03/04/2018 - FS#3032 - ECHAFAUDAGE SERVICE : Ajouter date début et date fin du chantier
-  DateD   := StrToDate(DateToStr(TOBEvent.getValue('DATEDEBAFF')));
-  DateF   := StrToDate(DateToStr(TOBEvent.getValue('DATEFINAFF')));
+  if TOBEvent.getValue('DATEDEBAFF') = '' then
+    DateD   := Idate1900
+  else
+    DateD   := StrToDate(DateToStr(TOBEvent.getValue('DATEDEBAFF')));
+
+  if TOBEvent.getValue('DATEFINAFF') = '' then
+    DateF   := idate2099
+  else
+    DateF   := StrToDate(DateToStr(TOBEvent.getValue('DATEFINAFF')));
+  //
   TOBItem.putValue('BPL_DATEDEBAFF',      DateD);
   TOBItem.putValue('BPL_DATEFINAFF',      DateF);
   //
