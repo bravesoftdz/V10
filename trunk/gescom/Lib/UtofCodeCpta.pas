@@ -492,54 +492,66 @@ procedure TOF_CODECPTA.PrepareGrid;
 var i,NbCol : integer ;
     St,Nam : string ;
 begin
-LesColonnes:='FIXED;GCP_RANG;GCP_VENTEACHAT' ;
-NbCol := 8;   // PA
-if GetParamSocSecur('SO_GCVENTCPTAART', False) then begin LesColonnes:=LesColonnes+';GCP_COMPTAARTICLE'; inc(NbCol); end ;
-if GetParamSocSecur('SO_GCVENTCPTATIERS', False) then begin LesColonnes:=LesColonnes+';GCP_COMPTATIERS'; inc(NbCol); end ;
-if GetParamSocSecur('SO_GCVENTCPTAAFF', False) then begin LesColonnes:=LesColonnes+';GCP_COMPTAAFFAIRE'; inc(NbCol); end ;
-LesColonnes :=LesColonnes+';GCP_ETABLISSEMENT;GCP_REGIMETAXE;GCP_FAMILLETAXE;GCP_CPTEGENEACH;GCP_CPTEGENEVTE' ;
-if AvecStock then begin LesColonnes:=LesColonnes+';GCP_CPTEGENESTOCK;GCP_CPTEGENEVARSTK'; inc(NbCol,2); end ;
-St:=LesColonnes ;
-GS.ColCount:=NbCol; // PA
-for i:=0 to GS.ColCount-1 do
-   BEGIN
-   if i>1 then  GS.ColWidths[i]:=100;
-   Nam:=ReadTokenSt(St) ;
-   if Nam='GCP_COMPTAARTICLE' then
-   begin
-		ColCptaArt := i;
-   	GS.ColFormats[i]:='CB=GCCOMPTAARTICLE||<<Tous>>';
-		GS.ColWidths [I] := 120;
-   end else if Nam='GCP_COMPTATIERS' then
-   begin
-   	GS.ColFormats[i]:='CB=GCCOMPTATIERS||<<Tous>>';
-    ColTiers := i;
-   end else if Nam='GCP_VENTEACHAT' then
-   begin
-   	GS.ColFormats[i]:='CB=GCVENTEACHAT|AND (CO_CODE="ACH" OR CO_CODE="VEN" OR CO_CODE="CON")|<<Toute>>';
-    ColVenteAchat := i;
-   end else if Nam='GCP_COMPTAAFFAIRE' then
-   begin
-    GS.ColFormats[i]:='CB=AFCOMPTAAFFAIRE||<<Tous>>';
-    Colaffaire := I;
-   end else if Nam='GCP_ETABLISSEMENT' then
-   begin
-   	GS.ColFormats[i]:='CB=TTETABLISSEMENT||<<Tous>>';
-    ColEtabliss := i;
-   end else if Nam='GCP_REGIMETAXE' then GS.ColFormats[i]:='CB=TTREGIMETVA||<<Tous>>'
-   else if Nam='GCP_FAMILLETAXE' then BEGIN GS.ColFormats[i]:='CB=GCFAMILLETAXE1||<<Tous>>'; GS.ColWidths[i]:=120; END
-   else if Nam='GCP_CPTEGENEACH' then ColCpteAch:=i
-   else if Nam='GCP_CPTEGENEVTE' then ColCpteVte:=i
-   else if Nam='GCP_CPTEGENESTOCK' then ColCpteStock:=i
-   else if Nam='GCP_CPTEGENEVARSTK' then ColCpteVarStk:=i
-   ;
-   END ;
-if NoAchat then
-   begin
-   GS.ColWidths[ColCpteAch]:=0;   // Masque Compte d'achat
-   SetControlVisible('BVENTILACH',False) ;
-   end ;
-if Not AvecStock then SetControlVisible('BVENTILSTK',False) ;
+  LesColonnes:='FIXED;GCP_RANG;GCP_VENTEACHAT' ;
+  NbCol := 8;   // PA
+  if GetParamSocSecur('SO_GCVENTCPTAART', False) then begin LesColonnes:=LesColonnes+';GCP_COMPTAARTICLE'; inc(NbCol); end ;
+  if GetParamSocSecur('SO_GCVENTCPTATIERS', False) then begin LesColonnes:=LesColonnes+';GCP_COMPTATIERS'; inc(NbCol); end ;
+  if GetParamSocSecur('SO_GCVENTCPTAAFF', False) then begin LesColonnes:=LesColonnes+';GCP_COMPTAAFFAIRE'; inc(NbCol); end ;
+  LesColonnes :=LesColonnes+';GCP_ETABLISSEMENT;GCP_REGIMETAXE;GCP_FAMILLETAXE;GCP_CPTEGENEACH;GCP_CPTEGENEVTE' ;
+  if AvecStock then begin LesColonnes:=LesColonnes+';GCP_CPTEGENESTOCK;GCP_CPTEGENEVARSTK'; inc(NbCol,2); end ;
+  St:=LesColonnes ;
+  GS.ColCount:=NbCol; // PA
+  //
+  for i:=0 to GS.ColCount-1 do
+  BEGIN
+    if i>1 then  GS.ColWidths[i]:=100;
+    Nam:=ReadTokenSt(St) ;
+    if Nam='GCP_COMPTAARTICLE'       then
+    begin
+      ColCptaArt := i;
+      GS.ColFormats[i]:='CB=GCCOMPTAARTICLE||<<Tous>>';
+      GS.ColWidths [I] := 120;
+    end
+    else if Nam='GCP_COMPTATIERS'    then
+    begin
+      GS.ColFormats[i]:='CB=GCCOMPTATIERS||<<Tous>>';
+      ColTiers := i;
+    end
+    else if Nam='GCP_VENTEACHAT'     then
+    begin
+      GS.ColFormats[i]:='CB=GCVENTEACHAT|AND (CO_CODE="ACH" OR CO_CODE="VEN" OR CO_CODE="CON")|<<Toute>>';
+      ColVenteAchat := i;
+    end
+    else if Nam='GCP_COMPTAAFFAIRE'  then
+    begin
+      GS.ColFormats[i]:='CB=AFCOMPTAAFFAIRE||<<Tous>>';
+      Colaffaire := I;
+    end
+    else if Nam='GCP_ETABLISSEMENT'  then
+    begin
+      GS.ColFormats[i]:='CB=TTETABLISSEMENT||<<Tous>>';
+      ColEtabliss := i;
+    end
+    else if Nam='GCP_REGIMETAXE'     then GS.ColFormats[i]:='CB=TTREGIMETVA||<<Tous>>'
+    else if Nam='GCP_FAMILLETAXE'    then
+    BEGIN
+      GS.ColFormats[i]:='CB=GCFAMILLETAXE1||<<Tous>>';
+      GS.ColWidths[i]:=120;
+    END
+    else if Nam='GCP_CPTEGENEACH'    then ColCpteAch:=i
+    else if Nam='GCP_CPTEGENEVTE'    then ColCpteVte:=i
+    else if Nam='GCP_CPTEGENESTOCK'  then ColCpteStock:=i
+    else if Nam='GCP_CPTEGENEVARSTK' then ColCpteVarStk:=i;
+  END;
+
+  if NoAchat then
+  begin
+    GS.ColWidths[ColCpteAch]:=0;   // Masque Compte d'achat
+    SetControlVisible('BVENTILACH',False) ;
+  end ;
+
+  if Not AvecStock then SetControlVisible('BVENTILSTK',False) ;
+
 end;
 
 function TOF_CODECPTA.PrepareImpression : integer ;
