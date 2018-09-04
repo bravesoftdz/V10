@@ -1014,7 +1014,6 @@ BEGIN
               AvertirTable ('GCCOMPTATIERS');
   			end;
    320323 : Begin
-<<<<<<< HEAD
             ParamTable('AFCOMPTAAFFAIRE',taCreat,0,nil) ;
             AvertirTable ('AFCOMPTAAFFAIRE');
   					end;
@@ -1022,12 +1021,6 @@ BEGIN
             //AglLanceFiche ('GC','GCCODECPTA','','','') ;
             AglLanceFiche ('BTP','BTCODECPTA_MUL','','','') ;
             End;
-=======
-              ParamTable('AFCOMPTAAFFAIRE',taCreat,0,nil) ;
-              AvertirTable ('AFCOMPTAAFFAIRE');
-  			end;
-   320331 : AglLanceFiche ('GC','GCCODECPTA','','','') ;
->>>>>>> 79c2ad42bbd36126d2a9602177f801254007b094
    320332 : Begin
               TheTOB := TOBparamSoc;
               AglLanceFiche ('BTP','BTVENTILCPTAS1','','','');
