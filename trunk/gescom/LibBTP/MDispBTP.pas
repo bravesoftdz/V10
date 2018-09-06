@@ -1409,8 +1409,8 @@ Cegid,False,False)};
 
     ////// Paramétres honoraires & commerciaux
     74201 : AGLLanceFiche ('AFF','AFPROFILGENER','','','TYPE:DEF');
-    74202 : AglLanceFiche ('GC','GCCODECPTA','','','') ; // Ventilation comptable GCCOMPTESHT_MUL
-            //AglLanceFiche ('BTP','BTCODECPTA_MUL','','','') ; // Ventilation comptable GCCOMPTESHT_MUL
+    74202 : //AglLanceFiche ('GC','GCCODECPTA','','','') ; // Ventilation comptable GCCOMPTESHT_MUL
+            AglLanceFiche ('BTP','BTCODECPTA_MUL','','','') ; // Ventilation comptable GCCOMPTESHT_MUL
     74203 : AGLLanceFiche('GC','GCUNITEMESURE','','','');
     74204 : ParamTable ('GCEMPLOIBLOB',taCreat,0,PRien) ;
     74205 : EntreeArrondi (taModif) ;

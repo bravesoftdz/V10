@@ -91,6 +91,7 @@ Type
     AvecImmoDiv : Boolean;
     //
     BImprimer   : TToolbarButton97;
+    BDelete     : TToolbarButton97;
     BVENTILACH  : TToolbarButton97;
     BVENTILVTE  : TToolbarButton97;
     BVENTILSTK  : TToolbarButton97;
@@ -104,12 +105,19 @@ Type
     PageCTRL    : TPageControl;
     //
     procedure AffichageInitEcran(OkAff: Boolean);
+    procedure ChargeTobWithZoneEcran;
+    procedure ChargeZoneEcranWithTob;
+    function CompteExiste(Tablette, Valeur: string): boolean;
     procedure Controlechamp(Champ, Valeur: String);
     procedure CreateEdition;
     procedure CreateTOB;
     procedure DestroyTOB;
     procedure GetObjects;
     procedure OnChangeVenteAchat(Sender: TObject);
+    procedure OnElipsisCptAchClick(Sender: Tobject);
+    procedure OnElipsisCptStkClick(Sender: Tobject);
+    procedure OnElipsisCptVarStkClick(Sender: Tobject);
+    procedure OnElipsisCptVteClick(Sender: Tobject);
     procedure OnImprimeFiche(Sender: TObject);
     procedure RazZoneEcran;
     procedure SetScreenEvents;
@@ -117,8 +125,24 @@ Type
     procedure VentilationStock(Sender: TObject);
     procedure VentilationVente(Sender: TObject);
     procedure VentilCompteHT(Nature: String);
+    function VerifTout: Boolean;
+    procedure CalculRang;
     //
+
   end ;
+
+Const
+	// libellés des messages
+  TexteMessage: array[1..4] of string  = (
+          {1}   'Vous devez renseigner un compte comptable'
+          {2},  'Ce compte n''existe pas'
+          {3},  'La suppression de la ventilation comptable a échoué'
+          {4},  'La suppression de la ventilation analytique a échoué'
+                                         );
+
+
+
+
 
 Implementation
 
@@ -131,25 +155,81 @@ begin
 end ;
 
 procedure TOF_BTCODECPTA.OnDelete ;
+var StSQL : string;
 begin
   Inherited ;
+
+  if PGIAsk('Confirmez-vous la suppression de cette ventilation comptable ? ', 'Ventilation comptable') = Mryes then
+  begin
+    //suppression pure et simple de l'enregistrement avec confirmation
+    StSQL := 'DELETE CODECPTA WHERE GCP_RANG="' + Rang.Text + '"';
+    if ExecuteSQL(StSQL)=0 then PGIError(TexteMessage[3], ' Ventilation comptable');
+    //Suppression des ventilation analytique associées
+    StSQL := 'DELETE FROM VENTIL WHERE (V_NATURE like "HA%" OR V_NATURE like "HV%" OR V_NATURE like "ST%") ';
+    StSQL := StSQL + 'AND V_COMPTE="'+ Rang.Text +'"';
+    if ExecuteSQL(StSQL)=0 then PGIError(TexteMessage[4], ' Ventilation comptable');
+  end;
+
+  Ecran.ModalResult := 1;
+
 end ;
 
 procedure TOF_BTCODECPTA.OnUpdate ;
 begin
   Inherited ;
+
+  if not VerifTout then
+  Begin
+    Ecran.ModalResult := 0;
+    Exit;
+  End;
+
+  ChargeTobWithZoneEcran;
+
+  TobCodeCPTA.SetAllModifie (True);
+  TobCodeCPTA.InsertOrUpdateDB(True);
+
+  Ecran.ModalResult := 1;
+
 end ;
 
 procedure TOF_BTCODECPTA.OnLoad ;
+Var StSql : string;
+    QQ    : TQuery;
 begin
   Inherited ;
+
+    If (Rang.Text = '') or (Action=TaCreat) then exit;
+
+    StSql := 'SELECT * FROM CODECPTA WHERE GCP_RANG=' + Rang.text;
+    QQ := OpenSQL(StSql, False);
+
+    If Not QQ.eof then
+    begin
+      TobCodeCPTA.SelectDB('CODECPTA', QQ);
+      //
+      ChargeZoneEcranWithTob;
+      //
+      If VenteAchat.Value = 'ACH' then
+      begin
+          BVENTILVTE.Visible := False;
+          BVENTILACH.Visible := True;
+      end;
+      If VenteAchat.Value = 'VEN' then
+      begin
+        BVENTILVTE.Visible := True;
+        BVENTILACH.Visible := False;
+      end;
+    end;
+
+    Ferme(QQ);
+
 end ;
 
 procedure TOF_BTCODECPTA.OnArgument (S : String ) ;
 var Critere : string;
     Champ   : string;
     Valeur  : string;
-    i       : Integer;
     x       : Integer;
 begin
   Inherited ;
@@ -198,6 +278,9 @@ end ;
 procedure TOF_BTCODECPTA.OnClose ;
 begin
   Inherited ;
+
+  DestroyTOB;
+
 end ;
 
 procedure TOF_BTCODECPTA.OnDisplay () ;
@@ -231,10 +314,17 @@ begin
   if Assigned(GetControl('GCP_CPTEGENESTOCK'))  then CptHTStock   := THEdit(GetControl('GCP_CPTEGENESTOCK'));
   if Assigned(GetControl('GCP_CPTEGENEVARSTK')) then CptHTVarStk  := THEdit(GetControl('GCP_CPTEGENEVARSTK'));
 
+  if Assigned(GetControl('TGCP_CPTEGENEACH'))   then TCptHTAchat  := THLabel(GetControl('TGCP_CPTEGENEACH'));
+  if Assigned(GetControl('TGCP_CPTEGENEVTE'))   then TCptHTVente  := THLabel(GetControl('TGCP_CPTEGENEVTE'));
+  if Assigned(GetControl('TGCP_CPTEGENESTOCK')) then TCptStock    := THLabel(GetControl('TGCP_CPTEGENESTOCK'));
+  if Assigned(GetControl('TGCP_CPTEGENEVARSTK'))then TCptVarStk   := THLabel(GetControl('TGCP_CPTEGENEVARSTK'));
+
+
   if Assigned(GetControl('GROUPBOXESC'))        then GroupBoxEsc  := TGroupBox(GetControl('GROUPBOXESC'));
   if Assigned(GetControl('GROUPBOXREM'))        then GroupBoxRem  := TGroupBox(GetControl('GROUPBOXREM'));
 
   if Assigned(GetControl('BIMPRIMER'))          then BImprimer    := TToolbarButton97(GetControl('BIMPRIMER'));
+  If Assigned(GetControl('BDelete'))            then BDelete      := TToolbarButton97(Getcontrol('Bdelete'));
   if assigned(Getcontrol('BVENTILACH'))         then BVENTILACH   := TToolbarButton97(Getcontrol('BVENTILACH'));
   if assigned(Getcontrol('BVENTILVTE'))         then BVENTILVTE   := TToolbarButton97(Getcontrol('BVENTILVTE'));
   if assigned(Getcontrol('BVENTILSTK'))         then BVENTILSTK   := TToolbarButton97(Getcontrol('BVENTILSTK'));
@@ -250,6 +340,12 @@ begin
   BVENTILACH.OnClick  := VentilationAchat;
   BVENTILVTE.OnClick  := VentilationVente;
   BVENTILSTK.OnClick  := VentilationStock;
+  //
+  CptHTVente.OnElipsisClick := OnElipsisCptVteClick;
+  CptHTAchat.OnElipsisClick := OnElipsisCptAchClick;
+  CptHtStock.OnElipsisClick := OnElipsisCptStkClick;
+  CptHTVarStk.OnElipsisClick:= OnElipsisCptVarStkClick;
+  //
 
 end;
 
@@ -271,18 +367,19 @@ end;
 procedure TOF_BTCODECPTA.RazZoneEcran;
 begin
 
-  Rang.text         := '0';
-  VenteAchat.Text   := '';
+  If Action=TaCreat then Rang.text := '';
   //
-  FamCptaArt.Text   := '';
-  FamCptaAff.Text   := '';
-  FamCptaTiers.Text := '';
+  VenteAchat.Value   := '';
   //
-  Etablissement.Text:= '';
-  FamTaxe.Text      := '';
-  RegimeTaxe.text   := '';
+  FamCptaArt.Value   := '';
+  FamCptaAff.Value   := '';
+  FamCptaTiers.Value := '';
   //
-  CptHTAchat.Text   := '';
+  Etablissement.Value:= '';
+  FamTaxe.Value      := '';
+  RegimeTaxe.Value   := '';
+  //
+  CptHTAchat.text   := '';
   CptHTVente.text   := '';
   CptHtStock.text   := '';
   CptHTVarStk.text  := '';
@@ -290,8 +387,80 @@ begin
 
 end;
 
+Procedure TOF_BTCODECPTA.ChargeZoneEcranWithTob;
+begin
+
+  Rang.text           := TobCodeCPTA.GetString('GCP_RANG');
+  VenteAchat.Value    := TobCodeCPTA.GetString('GCP_VENTEACHAT');
+  //
+  FamCptaArt.Value    := TobCodeCPTA.GetString('GCP_COMPTAARTICLE');
+  FamCptaAff.Value    := TobCodeCPTA.GetString('GCP_COMPTAAFFAIRE');
+  FamCptaTiers.Value  := TobCodeCPTA.GetString('GCP_COMPTATIERS');
+  //
+  Etablissement.Value := TobCodeCPTA.GetString('GCP_ETABLISSEMENT');
+  FamTaxe.Value       := TobCodeCPTA.GetString('GCP_FAMILLETAXE');
+  RegimeTaxe.Value    := TobCodeCPTA.GetString('GCP_REGIMETAXE');
+  //
+  CptHTAchat.Text     := TobCodeCPTA.GetString('GCP_CPTEGENEACH');
+  CptHTVente.text     := TobCodeCPTA.GetString('GCP_CPTEGENEVTE');
+  CptHtStock.text     := TobCodeCPTA.GetString('GCP_CPTEGENESTOCK');
+  CptHTVarStk.text    := TobCodeCPTA.GetString('GCP_CPTEGENEVARSTK');
+
+end;
+
+Procedure TOF_BTCODECPTA.ChargeTobWithZoneEcran;
+begin
+
+  if Action = TaCreat then CalculRang;
+
+  TobCodeCPTA.PutValue('GCP_RANG', Rang.text);
+
+  TobCodeCPTA.PutValue('GCP_VENTEACHAT',     VenteAchat.Value);
+  //
+  TobCodeCPTA.PutValue('GCP_COMPTAARTICLE',  FamCptaArt.Value);
+  TobCodeCPTA.PutValue('GCP_COMPTAAFFAIRE',  FamCptaAff.Value);
+  TobCodeCPTA.PutValue('GCP_COMPTATIERS',    FamCptaTiers.Value);
+  //
+  TobCodeCPTA.PutValue('GCP_ETABLISSEMENT',  Etablissement.Value);
+  TobCodeCPTA.PutValue('GCP_FAMILLETAXE',    FamTaxe.Value);
+  TobCodeCPTA.PutValue('GCP_REGIMETAXE',     RegimeTaxe.Value);
+  //
+  TobCodeCPTA.PutValue('GCP_CPTEGENEACH',    CptHTAchat.text);
+  TobCodeCPTA.PutValue('GCP_CPTEGENEVTE',    CptHTVente.text);
+  TobCodeCPTA.PutValue('GCP_CPTEGENESTOCK',  CptHtStock.text);
+  TobCodeCPTA.PutValue('GCP_CPTEGENEVARSTK', CptHTVarStk.text);
+
+end;
+
 Procedure TOF_BTCODECPTA.AffichageInitEcran(OkAff : Boolean);
 begin
+
+  FamCptaArt.Visible  := OkCptaArt;
+  FamCptaAff.Visible  := OkCptaAff;
+  FamCptaTiers.Visible := OkCptaTiers;
+
+  TCptaArt.visible    := OkCptaArt;
+  TCptaTiers.visible  := OkCptaTiers;
+  TCptaAff.Visible    := OkCptaAff;
+
+  CptHtStock.Visible  := AvecStock;
+  CptHTVarStk.Visible := AvecStock;
+  TCptStock.Visible   := AvecStock;
+  TCptVarStk.Visible  := AvecStock;
+  BVENTILSTK.Visible  := AvecStock;
+
+  GROUPBOXESC.Visible := False;
+  GroupBoxRem.Visible := False;
+
+  Ecran.Height := Ecran.Height - (GroupBoxRem.Height + GroupBoxEsc.Height);
+
+  BVENTILVTE.Visible := True;
+  BVENTILACH.Visible := True;
+
+  If Action = TaCreat then
+    BDelete.Visible := false
+  else
+    BDelete.Visible := True;
 
 end;
 
@@ -315,6 +484,86 @@ begin
 
 end;
 
+Function TOF_BTCODECPTA.VerifTout : Boolean ;
+begin
+
+  Result:= True ;
+
+  if (CptHTAchat.Text = '') And (CptHTVente.text = '') then
+  begin
+    PGIError(TexteMessage[1], ' Ventilation comptable');
+    Result:=false;
+    if NoAchat then
+      CptHtVente.SetFocus
+    else
+      CptHTAchat.SetFocus;
+    Exit;
+  end;
+
+  If (Not NoAchat) and (CptHTAchat.text <> '') and (not CompteExiste('TZGCHARGE',CptHTAchat.text)) then
+  Begin
+    if (Not AvecImmoDiv) or
+      ((Not CompteExiste('TZGIMMO',CptHTAchat.text)) and
+       (Not CompteExiste('TZGDIVERS',CptHTAchat.text))) then
+    begin
+      PGIError(TexteMessage[2], ' Ventilation comptable');
+      Result:=false;
+      CptHTAchat.SetFocus;
+      Exit;
+    end ;
+  End;
+
+  If (CptHTVente.text <> '') and (not CompteExiste('TZGPRODUIT',CptHTVente.text)) then
+  begin
+    if (Not AvecImmoDiv) or
+      ((Not CompteExiste('TZGIMMO',CptHTVente.text)) and
+       (Not CompteExiste('TZGDIVERS',CptHTVente.text))) then
+    Begin
+      PGIError(TexteMessage[2], ' Ventilation comptable');
+      Result:=false;
+      CptHTVente.SetFocus;
+      Exit;
+    end;
+  end;
+
+  if AvecStock then
+  Begin
+    if (CptHtStock.text <> '') and (not CompteExiste('TZGDIVERS', CptHtStock.text)) then
+    Begin
+      PGIError(TexteMessage[2], ' Ventilation comptable');
+      Result:=False ;
+      CptHtStock.SetFocus;
+      Exit;
+    end;
+    //
+    if (CptHTVarStk.text <> '') and
+       (not CompteExiste('TZGCHARGE',CptHTVarStk.text)) and
+       (not CompteExiste('TZGPRODUIT',CptHTVarStk.text)) then
+    Begin
+      if (Not AvecImmoDiv) or
+        ((Not CompteExiste('TZGIMMO',CptHTVarStk.text)) and
+         (Not CompteExiste('TZGDIVERS',CptHTVarStk.text))) then
+      Begin
+        PGIError(TexteMessage[2], ' Ventilation comptable');
+        Result:=False ;
+        CptHTVarStk.SetFocus;
+        Exit;
+      End;
+    End;
+  end;
+
+end ;
+
+Function TOF_BTCODECPTA.CompteExiste (Tablette, Valeur : string) : boolean;
+var St : string;
+BEGIN
+
+  Result := False;
+  St := RechDom (Tablette, Valeur, False);
+  if (St <> '') AND (St <> 'Error') then Result := True;
+
+END;
+
 procedure TOF_BTCODECPTA.CreateEdition;
 begin
   //
@@ -331,28 +580,124 @@ begin
 
 end;
 
-Procedure TOF_BTCODECPTA.OnImprimeFiche(Sender : TObject);
+Procedure TOF_BTCODECPTA.OnElipsisCptVteClick(Sender : Tobject);
+Var Criteres : string;
 begin
+
+  if AvecImmoDiv then
+    Criteres  := '(G_NATUREGENE="PRO" OR G_NATUREGENE="IMO" OR G_NATUREGENE="DIV")'
+  else
+    Criteres  := 'G_NATUREGENE="PRO"' ;
+
+  LookupList(CptHTVente,TraduireMemoire('Comptes de produits'),'GENERAUX','G_GENERAL','G_LIBELLE',Criteres,'G_GENERAL',TRUE, 0) ;
+
+end;
+
+Procedure TOF_BTCODECPTA.OnElipsisCptAchClick(Sender : Tobject);
+Var Criteres : string;
+begin
+
+  if AvecImmoDiv then
+    Criteres:='(G_NATUREGENE="CHA" OR G_NATUREGENE="IMO" OR G_NATUREGENE="DIV")'
+  else
+    Criteres:='G_NATUREGENE="CHA"' ;
+
+  LookupList(CptHTAchat,TraduireMemoire('Comptes de charges'),'GENERAUX','G_GENERAL','G_LIBELLE',Criteres,'G_GENERAL',TRUE, 0) ;
+
+end;
+
+Procedure TOF_BTCODECPTA.OnElipsisCptStkClick(Sender : Tobject);
+Var Criteres : string;
+begin
+
+  if AvecStock then
+  begin
+    Criteres:='G_NATUREGENE="DIV"' ;
+    LookupList(CptHTStock,TraduireMemoire('Comptes divers de stock'),'GENERAUX','G_GENERAL','G_LIBELLE',Criteres,'G_GENERAL',TRUE, 0) ;
+  end ;
+
+end;
+
+Procedure TOF_BTCODECPTA.OnElipsisCptVarStkClick(Sender : Tobject);
+Var Criteres : string;
+begin
+
+  if AvecStock then
+  begin
+    if AvecImmoDiv then
+      Criteres:='(G_NATUREGENE="CHA" OR G_NATUREGENE="PRO" OR G_NATUREGENE="IMO" OR G_NATUREGENE="DIV")'
+    else
+      Criteres:='G_NATUREGENE="CHA" OR G_NATUREGENE="PRO" ' ;
+
+   LookupList(CptHTVarStk,TraduireMemoire('Comptes de variation de stock'),'GENERAUX','G_GENERAL','G_LIBELLE',Criteres,'G_GENERAL',TRUE, 0) ;
+  end ;
+
+end;
+
+
+Procedure TOF_BTCODECPTA.OnImprimeFiche(Sender : TObject);
+Var StSQL : String;
+    QQ    : TQuery;
+begin
+
+  TobEdition.ClearDetail;
+
+  StSQL := 'SELECT * FROM CODECPTA';
+  QQ := OpenSQL(StSQL, False);
+
+  If not QQ.eof then
+  begin
+    TobEdition.LoadDetailDB('EDITION VENTILCPTA','','',QQ, False);
+  end;
+
+  Ferme(QQ);
+
+  if OptionEdition.LanceImpression('', TobEdition) < 0 then V_PGI.IoError:=oeUnknown;
 
 end;
 
 Procedure TOF_BTCODECPTA.OnChangeVenteAchat(Sender : TObject);
 begin
 
+  if VenteAchat.Value = 'ACH' then
+  begin
+    BVENTILACH.Visible := True;
+    BVENTILVTE.Visible := False;
+    BVENTILSTK.Visible := False;
+  end;
+
+  if VenteAchat.Value = 'VEN' then
+  begin
+    BVENTILACH.Visible := False;
+    BVENTILVTE.Visible := True;
+    BVENTILSTK.Visible := False;
+  end;
+
+  if VenteAchat.Value = 'CON' then
+  begin
+    BVENTILACH.Visible := False;
+    BVENTILVTE.Visible := False;
+    BVENTILSTK.Visible := False;
+  end;
+
 end;
 
 Procedure TOF_BTCODECPTA.VentilationAchat(Sender : TObject);
 begin
-
+  VentilCompteHT('HA');
 end;
 
 Procedure TOF_BTCODECPTA.VentilationVente(Sender : TObject);
 begin
 
+  VentilCompteHT('HV');
+
 end;
 
 Procedure TOF_BTCODECPTA.VentilationStock(Sender : TObject);
 begin
+
+  VentilCompteHT('ST')
 
 end;
 
@@ -360,7 +705,11 @@ procedure TOF_BTCODECPTA.VentilCompteHT(Nature : String) ;
 Var StAxes : String ;
 begin
 
-  //if GS.cells[colRang,GS.row]='' then begin GS.cells[colRang,GS.row]:=inttostr(NextRang); inc(NextRang); end ;
+  if (Nature = 'HV') and (CptHTVente.text = '') then Exit;
+  //
+  if (Nature = 'HA') and (CptHTAchat.text = '') then Exit;
+  //
+  if (Nature = 'ST') and (CptHTStock.text = '') then Exit;
 
   if EstSerie(S7) then
     StAxes:='12345'
@@ -373,12 +722,27 @@ begin
     {$ENDIF}
   END ;
 
-  //ParamVentil(Nature,string(GS.cells[colRang,GS.row]) ,StAxes,taCreat,FALSE);
+  if (Nature = 'HV') then ParamVentil(Nature,CptHTVente.text, StAxes, taCreat, FALSE);
+  if (Nature = 'HA') then ParamVentil(Nature,CptHTAchat.text, StAxes, taCreat, FALSE);
+  if (Nature = 'ST') then ParamVentil(Nature,CptHTStock.text, StAxes, taCreat, FALSE);
 
 end ;
 
+procedure TOF_BTCODECPTA.CalculRang;
+var StSQl : string;
+    QQ    : TQuery;
+begin
 
+  StSQl := 'select Max(GCP_RANG) as MaxRang From CodeCPTA';
+  QQ := OpenSQL(StSQl, False);
+  If not QQ.eof then
+  begin
+    Rang.text := InttoStr(QQ.FindField('MaxRang').AsInteger + 1)
+  end;
 
+  Ferme(QQ);
+
+end;
 
 Initialization
   registerclasses ( [ TOF_BTCODECPTA ] ) ; 
