@@ -672,6 +672,7 @@ if Arrondi(QteF*(1.0-RemLigne),6)<>0 then
    TOBOuv.PutValue('BLO_PUTTCDEV',Arrondi(PUTTCDEV,V_PGI.okdecP)) ;
    END ;
 TOBOuv.PutValue('BLO_PUTTC',DeviseToPivotEx(TOBOUV.GetValue('BLO_PUTTCDEV'),DEV.Taux,DEV.quotite,V_PGI.okdecP));
+TOBOuv.PutValue('BLO_PUHT',DeviseToPivotEx(TOBOUV.GetValue('BLO_PUHTDEV'),DEV.Taux,DEV.quotite,V_PGI.okdecP));
 CalculMontantHtDevLigOuv (TOBOUV,DEV);
 TOBTaxes.Free ; TOBTaxes:=Nil ;
 END ;

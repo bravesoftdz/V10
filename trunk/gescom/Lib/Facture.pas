@@ -23681,6 +23681,7 @@ begin
       TOBL.SetString('GL_PERTE',TOBLoc.GetValue('BLO_PERTE'));
       TOBL.SetString('GL_RENDEMENT',TOBLoc.GetValue('BLO_RENDEMENT'));
       TOBL.SetString('GL_QUALIFHEURE', TOBLoc.GetValue('BLO_QUALIFHEURE'));
+      TOBL.SetDouble('GL_COEFMARG', TOBLoc.GetValue('BLO_COEFMARG'));
       // -- POC --
       TOBL.PutValue('NUMTRANSFERT', TOBLoc.GetValue('NUMTRANSFERT'));
       TOBL.PutValue('MTTRANSFERT', TOBLoc.GetVAlue('MTTRANSFERT'));
