@@ -164,9 +164,6 @@ begin
   if (TOBPIece.GetValue('GP_COEFFC') <> 0) and (TOBD.GetValue('BLO_NONAPPLICFC')<>'X' ) THEN TOBD.PutValue('BLO_COEFFC',TOBPIece.GetValue('GP_COEFFC'));
   if (TOBPIece.GetValue('GP_COEFFR') <> 0) and (TOBD.GetValue('BLO_NONAPPLICFRAIS')<>'X' ) THEN TOBD.PutValue('BLO_COEFFR',TOBPIece.GetValue('GP_COEFFR'));
 
-  //Why this Mother fucker area not initialize ????
-  TOBD.PutValue('BLO_COEFMARG',0);
-
   if TOBD.GetValue('BLO_NATURETRAVAIL') <> '' then
   begin
     TOBD.PutValue('BLO_NATURETRAVAIL','');
@@ -1449,13 +1446,13 @@ begin
     //
     if not memedoc then
     begin
+      TOBD.PutValue('BLO_COEFMARG',0);
       if (TOBL.getValue('GL_DOMAINE')<>'') then
       begin
         TOBD.putValue('BLO_DOMAINE',TOBL.getValue('GL_DOMAINE'));
       end;
       if TOBD.getValue('BLO_DOMAINE') <> '' then
       begin
-
         if (TOBA.GetValue('GA_PRIXPASMODIF')<>'X') and (TOBL.GetValue('GLC_FROMBORDEREAU')<>'X') then
         begin
           //FV1 : 12/09/2013 - FS#33 - POUCHAIN : En facturation de consos, les coefficients de l'UO ne sont pas repris
@@ -1463,13 +1460,13 @@ begin
           AppliqueCoefDomaineActOuv (TOBD, copy(TOBD.GetValue('BLO_AFFAIRE'),0,1));
         if VH_GC.BTCODESPECIF = '001' then ApliqueCoeflignePOC (TOBD,DEV);
         end;
-    end else
-    begin
-      if (TOBA.GetValue('GA_PRIXPASMODIF')<>'X') and (TOBL.GetValue('GLC_FROMBORDEREAU')<>'X') then
+      end else
       begin
-        if VH_GC.BTCODESPECIF = '001' then ApliqueCoeflignePOC (TOBD,DEV);
+        if (TOBA.GetValue('GA_PRIXPASMODIF')<>'X') and (TOBL.GetValue('GLC_FROMBORDEREAU')<>'X') then
+        begin
+          if VH_GC.BTCODESPECIF = '001' then ApliqueCoeflignePOC (TOBD,DEV);
+        end;
       end;
-    end;
   end;
   // iNCRMETATION DU NUMERO UNIQUE DE LIGNE OUVRAGE
   TOBPiece.putValue('GP_UNIQUEBLO',TOBPiece.getValue('GP_UNIQUEBLO')+1);
