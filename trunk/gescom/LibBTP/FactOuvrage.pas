@@ -3724,6 +3724,7 @@ var Indice : integer;
     ValPou : T_Valeurs;
     IndPou : integer;
     ArticleOk : string;
+    QteDetail : Double;
 begin
   TOBO := TOBOuvrage.findfirst(['BLO_TYPEARTICLE'], ['POU'], false);
   if TOBO <> nil then
@@ -3746,8 +3747,13 @@ begin
   for Indice := 0 to TOBOuvrage.detail.count -1 do
   begin
   	TOBO := TOBOuvrage.detail[Indice];
+    //
     if TOBO.GetValue('BLO_QTEFACT') = 0 then continue;
     if TOBO.GetValue('BLO_TYPEARTICLE') = 'POU' then continue;
+    //
+    //FV1 - 31/08/2018 - FS#3230 - BENETEAU - Message Division par zéro en virgule flottante
+    QteDetail := TOBO.GetValue ('BLO_QTEDUDETAIL');
+    If QteDetail = 0 then  QteDetail := 1;
     //
     ValTrav := VALEUR(TOBO.GetValue('BLO_NATURETRAVAIL'));
     if (ValTrav > 0) then Continue;   // cotraité ou sous traité
@@ -3844,12 +3850,12 @@ begin
     end;
     if ArticleOKInPOUR(TOBO.GetValue('BLO_TYPEARTICLE'), ArticleOk) then
     begin
-      ValPou[0] := ValPou[0] + ((TOBO.GetValue ('BLO_QTEFACT')/TOBO.GetValue ('BLO_QTEDUDETAIL')) * TOBO.GetValue ('BLO_DPA'));
-      ValPou[1] := ValPou[1] + ((TOBO.GetValue ('BLO_QTEFACT')/TOBO.GetValue ('BLO_QTEDUDETAIL')) * TOBO.GetValue ('BLO_DPR'));
-      ValPou[6] := ValPou[6] + ((TOBO.GetValue ('BLO_QTEFACT')/TOBO.GetValue ('BLO_QTEDUDETAIL')) * TOBO.GetValue ('BLO_PMAP'));
-      ValPou[7] := ValPou[7] + ((TOBO.GetValue ('BLO_QTEFACT')/TOBO.GetValue ('BLO_QTEDUDETAIL')) * TOBO.GetValue ('BLO_PMRP'));
-      ValPou[2] := ValPou[2] + ((TOBO.GetValue ('BLO_QTEFACT')/TOBO.GetValue ('BLO_QTEDUDETAIL')) * TOBO.GetValue ('BLO_PUHTDEV'));
-      ValPou[3] := ValPou[3] + ((TOBO.GetValue ('BLO_QTEFACT')/TOBO.GetValue ('BLO_QTEDUDETAIL')) * TOBO.GetValue ('BLO_PUTTCDEV'));
+      ValPou[0] := ValPou[0] + ((TOBO.GetValue ('BLO_QTEFACT')/QteDetail) * TOBO.GetValue ('BLO_DPA'));
+      ValPou[1] := ValPou[1] + ((TOBO.GetValue ('BLO_QTEFACT')/QteDetail) * TOBO.GetValue ('BLO_DPR'));
+      ValPou[6] := ValPou[6] + ((TOBO.GetValue ('BLO_QTEFACT')/QteDetail) * TOBO.GetValue ('BLO_PMAP'));
+      ValPou[7] := ValPou[7] + ((TOBO.GetValue ('BLO_QTEFACT')/QteDetail) * TOBO.GetValue ('BLO_PMRP'));
+      ValPou[2] := ValPou[2] + ((TOBO.GetValue ('BLO_QTEFACT')/QteDetail) * TOBO.GetValue ('BLO_PUHTDEV'));
+      ValPou[3] := ValPou[3] + ((TOBO.GetValue ('BLO_QTEFACT')/QteDetail) * TOBO.GetValue ('BLO_PUTTCDEV'));
     end;
     // --
     SumLoc := ARRONDI(SumLoc + MontantLoc,V_PGI.okdecP);
@@ -4196,6 +4202,7 @@ begin
       Qte := TOBLoc.getvaleur(IndQte);
       QteDuPv := TOBLOc.getValeur(IndQteDupv);
     	QteDuDetail := TOBLoc.GetValue('BLO_QTEDUDETAIL');
+      If QteDuDetail = 0 then QteDuDetail := 1;
       if EnPA then
       begin
         TOBLOC.Putvaleur(IndPa, ValPou[0]);
@@ -4963,7 +4970,7 @@ begin
           QteDuDetailSuite := QteDudetail * TOBLOC.GetValue('BLO_QTEDUDETAIL')
         else
           QteDuDetailSuite := QteDudetail;
-
+        if QTEDuDetailSuite = 0 then QteDuDetailsuite := 1;
         QteSuite := Qte * TOBLOc.GetValue('BLO_QTEFACT');
       end;
       //
