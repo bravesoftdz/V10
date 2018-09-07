@@ -1736,8 +1736,7 @@ BEGIN
     end
     else if VH_GC.GCPontComptable='REF' then
     begin
-      PGIError('Veuillez vérifier vos paramètres société/Gestion commerciale/Passation comptable/Comptes Inexistant', 'Refuser l''enregistrement');
-
+      PGIError('Veuillez vérifier vos paramètres société/Gestion commerciale/Passation comptable/Comptes Inexistant', 'Refuser l''enregistrement');     
       Result:=rcRef;
     end
     else
