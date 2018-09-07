@@ -264,6 +264,8 @@ var code : String;
 begin
     Inherited;
 
+    SetField('SH_SOUCHEEXO', BoolToStr(SH_SOUCHEEXO.Checked)); // Pour forcer
+
     // Test sur le code
     code := GetControlText('SH_SOUCHE');
     if (DS.State = dsInsert) then
