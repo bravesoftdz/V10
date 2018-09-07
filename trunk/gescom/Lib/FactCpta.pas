@@ -1728,14 +1728,24 @@ BEGIN
   TOBG:=CreerTOBGeneral(CpteRem) ;
   // Erreur sur Compte remise
   if TOBG=Nil then
-   BEGIN
-   if VH_GC.GCPontComptable='ATT' then Result:=rcPar else
-    if VH_GC.GCPontComptable='REF' then Result:=rcRef else
-       BEGIN
-       if Not CreerCompteGC(TOBG,CpteRem,'','',ccpRemise) then Result:=rcPar ;
-       END ;
-   if Result<>rcOk then BEGIN LastMsg:=2 ; Exit ; END ;
-   END ;
+  BEGIN
+    if VH_GC.GCPontComptable='ATT' then
+    Begin
+      PGIError('Veuillez vérifier vos paramètres société/Gestion commerciale/Passation comptable/Comptes Inexistant', 'Comptes d''attente');
+      Result:=rcPar;
+    end
+    else if VH_GC.GCPontComptable='REF' then
+    begin
+      PGIError('Veuillez vérifier vos paramètres société/Gestion commerciale/Passation comptable/Comptes Inexistant', 'Refuser l''enregistrement');
+
+      Result:=rcRef;
+    end
+    else
+    BEGIN
+     if Not CreerCompteGC(TOBG,CpteRem,'','',ccpRemise) then Result:=rcPar ;
+    END ;
+    if Result<>rcOk then BEGIN LastMsg:=2 ; Exit ; END ;
+  END ;
   OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
   {Ligne d'écriture}
   TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
