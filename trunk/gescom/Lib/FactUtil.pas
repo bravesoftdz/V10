@@ -5371,30 +5371,32 @@ begin
     TobPiedPort.PutValue('GPT_POURCENT', TobPort.GetValue('GPO_COEFF'));
   end;
 
-  if (Pos(TypePort, 'MT;MTC')>0) then
+  if (TypePort = 'MT') or (TypePort = 'MTC') then
   begin
-    TobPiedPort.PutValue('GPT_POURCENT', 0);
-  if TypePort = 'MT' then
-  begin
+    if TypePort = 'MT' then
+    begin
       base := TobPort.GetValue('GPO_PVHT');
+      TobPiedPort.PutValue('GPT_POURCENT', 0);
     end else
     begin
       base := TobPort.GetValue('GPO_PVTTC');
+      TobPiedPort.PutValue('GPT_POURCENT', 0);
     end;
+
     Base := Arrondi(PivotToSaisie(DEV, Base, DEV.Taux, DEV.Quotite, DEV.Decimale), DEV.decimale);
     if TypePort = 'MT' then
     begin
       TobPiedPort.PutValue('GPT_TOTALHTDEV', Base);
-  end else
+    end else
     begin
       TobPiedPort.PutValue('GPT_TOTALTTCDEV', Base);
     end;
   end;
-  
+
   if (Pos(TypePort, 'MI;MIC')>0) then
   begin
-  if TypePort = 'MI' then
-  begin
+    if TypePort = 'MI' then
+    begin
       base := TobPort.GetValue('GPO_PVHT');
     end else
     begin
@@ -5412,25 +5414,25 @@ begin
   TobPiedPort.PutValue('GPT_NUMPORT', 0);
   if (Pos(TypePort ,'MT;MTC')>0) then
   begin
-    TobPiedPort.PutValue('GPT_BASEHT', 0);
-    TobPiedPort.PutValue('GPT_BASETTC', 0);
-    TobPiedPort.PutValue('GPT_BASEHTDEV', 0);
-    TobPiedPort.PutValue('GPT_BASETTCDEV', 0);
+//    TobPiedPort.PutValue('GPT_BASEHT', TobPort.GetValue('GPO_PVHT'));
+//    TobPiedPort.PutValue('GPT_BASETTC', TobPort.GetValue('GPO_PVTTC'));
+    TobPiedPort.PutValue('GPT_BASEHTDEV',TobPiedPort.GetValue('GPT_TOTALHTDEV'));
+    TobPiedPort.PutValue('GPT_BASETTCDEV', TobPiedPort.GetValue('GPT_TOTALTTCDEV'));
   end else
   begin
-      Base := TOBPiece.Somme('GL_TOTALHT', ['GL_TYPELIGNE'], ['ART'], False);
-      Base := Base + TOBPiece.GetValue('GP_TOTALESC');
-      TobPiedPort.PutValue('GPT_BASEHT', Base);
-      Base := TOBPiece.Somme('GL_TOTALHTDEV', ['GL_TYPELIGNE'], ['ART'], False);
-      Base := Base + TOBPiece.GetValue('GP_TOTALESCDEV');
-      TobPiedPort.PutValue('GPT_BASEHTDEV', Base);
-      Base := TOBPiece.Somme('GL_TOTALTTC', ['GL_TYPELIGNE'], ['ART'], False);
-      Base := Base + TOBPiece.GetValue('GP_TOTESCTTC');
-      TobPiedPort.PutValue('GPT_BASETTC', Base);
-      Base := TOBPiece.Somme('GL_TOTALTTCDEV', ['GL_TYPELIGNE'], ['ART'], False);
-      Base := Base + TOBPiece.GetValue('GP_TOTESCTTCDEV');
-      TobPiedPort.PutValue('GPT_BASETTCDEV', Base);
-    end;
+    Base := TOBPiece.Somme('GL_TOTALHT', ['GL_TYPELIGNE'], ['ART'], False);
+    Base := Base + TOBPiece.GetValue('GP_TOTALESC');
+    TobPiedPort.PutValue('GPT_BASEHT', Base);
+    Base := TOBPiece.Somme('GL_TOTALHTDEV', ['GL_TYPELIGNE'], ['ART'], False);
+    Base := Base + TOBPiece.GetValue('GP_TOTALESCDEV');
+    TobPiedPort.PutValue('GPT_BASEHTDEV', Base);
+    Base := TOBPiece.Somme('GL_TOTALTTC', ['GL_TYPELIGNE'], ['ART'], False);
+    Base := Base + TOBPiece.GetValue('GP_TOTESCTTC');
+    TobPiedPort.PutValue('GPT_BASETTC', Base);
+    Base := TOBPiece.Somme('GL_TOTALTTCDEV', ['GL_TYPELIGNE'], ['ART'], False);
+    Base := Base + TOBPiece.GetValue('GP_TOTESCTTCDEV');
+    TobPiedPort.PutValue('GPT_BASETTCDEV', Base);
+  end;
 end;
 
 function PivotToSaisie(TheDEV: RDevise; Base, Taux, Quotite: Double; Decimale: integer): double;
@@ -5611,14 +5613,14 @@ begin
     end;
     TOBPL.PutValue('GPT_TOTALHTDEV', Total);
   end else if TypePort = 'PT' then
-    begin
+  begin
       Pour := TOBPL.GetValue('GPT_POURCENT');
       Base := TOBPiece.Somme('GL_TOTALTTCDEV', ['GL_TYPELIGNE'], ['ART'], False);
       Base := Base + TOBPiece.GetValue('GP_TOTESCTTCDEV');
-    Total := Arrondi(Base * Pour / 100.0, DEV.Decimale);
-    if TOBPL.GetValue('GPT_FRANCO') = 'X' then
+      Total := Arrondi(Base * Pour / 100.0, DEV.Decimale);
+      if TOBPL.GetValue('GPT_FRANCO') = 'X' then
       if Base >= TOBPL.GetValue('GPT_MINIMUM') then Total := 0;
-    TOBPL.PutValue('GPT_TOTALTTCDEV', Total);
+      TOBPL.PutValue('GPT_TOTALTTCDEV', Total);
   end else if TypePort = 'MI' then
   begin
       Base := TOBPL.GetValue('GPT_BASEHTDEV');
@@ -5628,9 +5630,9 @@ begin
       if Total < Montmini then Total := Montmini;
       Base := TOBPiece.Somme('GL_TOTALHTDEV', ['GL_TYPELIGNE'], ['ART'], False);
       Base := Base + TOBPiece.GetValue('GP_TOTALESCDEV');
-    if TOBPL.GetValue('GPT_FRANCO') = 'X' then
+      if TOBPL.GetValue('GPT_FRANCO') = 'X' then
       if Base >= TOBPL.GetValue('GPT_MINIMUM') then Total := 0;
-    TOBPL.PutValue('GPT_TOTALHTDEV', Total);
+      TOBPL.PutValue('GPT_TOTALHTDEV', Total);
   end else if TypePort = 'MIC' then
     begin
       Base := TOBPL.GetValue('GPT_BASETTCDEV');
@@ -5640,9 +5642,9 @@ begin
       if Total < Montmini then Total := Montmini;
       Base := TOBPiece.Somme('GL_TOTALTTCDEV', ['GL_TYPELIGNE'], ['ART'], False);
       Base := Base + TOBPiece.GetValue('GP_TOTESCTTCDEV');
-    if TOBPL.GetValue('GPT_FRANCO') = 'X' then
+      if TOBPL.GetValue('GPT_FRANCO') = 'X' then
       if Base >= TOBPL.GetValue('GPT_MINIMUM') then Total := 0;
-    TOBPL.PutValue('GPT_TOTALTTCDEV', Total);
+      TOBPL.PutValue('GPT_TOTALTTCDEV', Total);
   end else if (TypePort='MT') or (TypePort='MTC') then
   begin
     if TypePort = 'MT' then
@@ -5651,7 +5653,7 @@ begin
     end else
     begin
       TOBPL.PutValue('GPT_TOTALTTCDEV', TOBPL.GetValue('GPT_BASETTCDEV'));
-  end;
+    end;
   end;
 
   if DEV.Code <> V_PGI.DevisePivot then
