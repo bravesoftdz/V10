@@ -101,7 +101,7 @@ type
     function UploadDocument (FileName : string; Update : boolean=false) : boolean;
   end;
 
-function GetEmail (CodeUser : string) : string;
+function GetEmail (CodeUser : string; Server,Database : string = '') : string;
 function GetParamsUserBSV (var UploadRight : Boolean; var ViewRight : boolean) : boolean;
 procedure GetParamsUploadBSV (TOBParamsBSV : TOB; ZeXX : TconnectBSV = nil);
 function SetFactureRegleBSV (BSVDocumentID : string) : boolean;

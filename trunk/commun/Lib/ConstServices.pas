@@ -25,6 +25,7 @@ type
 const
   ServiceName_BTPY2     = 'SvcSynBTPY2';
   ServiceName_BTPVerdon = 'SvcSynBTPVerdon';
+  ServiceName_BASTVERSGED = 'SvcEnvoiBASTGed';
   WSCDS_ErrorMsg        = '##### ERREUR';
   WSCDS_DebugMsg        = '***** DEBUG : ';
 
@@ -36,7 +37,6 @@ uses
   , SysUtils
   , Windows
   , CommonTools
-  , UConnectWSConst
   ;
 
 { TServicesLgo }
@@ -57,7 +57,7 @@ begin
     Result := Format('%s%s.%s', [ExtractFilePath(ParamStr(0)), ServiceName, 'log']);
     if Logvalues.OneLogPerDay then
       Result := Format('%s_%s.log', [Copy(Result, 1, pos('.log', Result) -1), Tools.CastDateTimeForQry(Now)]);
-    if LogValues.DebugEvents > 0 then TServicesLog.WriteLog(ssbylLog, Format('%s - TSvcSyncBTPY2Execute.LogsManagement : LogFilePath = %s', [WSCDS_DebugMsg, Result]), ServiceName, LogValues, 0);
+    if LogValues.DebugEvents > 0 then TServicesLog.WriteLog(ssbylLog, Format('%s - Service.LogsManagement : LogFilePath = %s', [WSCDS_DebugMsg, Result]), ServiceName, LogValues, 0);
     if not LogValues.OneLogPerDay then
     begin
       MaxSize := LogValues.LogMoMaxSize;

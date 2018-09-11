@@ -4,7 +4,6 @@ interface
 
 uses
   Classes
-  , UConnectWSConst
   , ConstServices
   , ADODB
   {$IFNDEF APPSRV}
@@ -12,6 +11,7 @@ uses
   , HEnt1
   {$ELSE APPSRV}
    {$IFDEF APPSRVWITHCBP}
+  , UTob
   , HEnt1
    {$ENDIF APPSRVWITHCBP}
   {$ENDIF !APPSRV}
@@ -122,9 +122,15 @@ type
     {$IFNDEF APPSRV}
     class procedure TobToTStringList(TobOrig : TOB; TSlResult : TStringList; Level : Integer=1);
     {$ENDIF !APPSRV}
+    {$IFDEF APPSRVWITHCBP}
+    class procedure TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
+    {$ENDIF}
     {$IF not Defined(APPSRV) or (Defined(APPSRV) and Defined(APPSRVWITHCBP))}
     class function BlobToString_(Texte : string) : string;
     {$IFEND}
+    class function ExtractFieldName(Value : string) : string;
+    class function ExtractFieldType(Value : string) : string;
+
   end;
 
 implementation
@@ -137,7 +143,6 @@ uses
   , Variants
   , DateUtils
   , Zip
-  , UConnectWSCEGID
   , SvcMgr
   , Windows
   , ComCtrls
@@ -801,6 +806,36 @@ begin
 end;
 {$ENDIF !APPSRV}
 
+{$IFDEF APPSRVWITHCBP}
+class procedure Tools.TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
+var
+  Cpt        : integer;
+  CptField   : integer;
+  Value      : string;
+  FieldName  : string;
+  FieldValue : string;
+  TobL       : TOB;
+begin
+  if assigned(TobResult) and (TslValues.Count > 0) then
+  begin
+    for Cpt := 0 to pred(TslValues.Count) do
+    begin
+      TobL     := TOB.Create('_DATA', TobResult, -1);
+      Value    := TslValues[Cpt];
+      CptField := 0;
+      while Value <> '' do
+      begin
+        FieldName  := Tools.iif(WithType, ExtractFieldName(ArrOfFields[CptField]), ArrOfFields[CptField]);
+        FieldValue := Tools.ReadTokenSt_(Value, '^');
+        TobL.AddChampSupValeur(FieldName, FieldValue);
+        inc(CptField);
+      end;
+    end;
+  end;
+end;
+{$ENDIF APPSRVWITHCBP}
+
+
 class function Tools.GetTableNameFromTtn(Ttn: tTableName): string;
 begin
   case Ttn of
@@ -1334,6 +1369,16 @@ begin
   end;
 end;
 {$IFEND}
+
+class function Tools.ExtractFieldName(Value : string) : string;
+begin
+  Result := copy(Value, 1, pos(';', Value) -1)
+end;
+
+class function Tools.ExtractFieldType(Value : string) : string;
+begin
+  Result := copy(Value, pos(';', Value) +1,length(Value));
+end;
 
 end.
 

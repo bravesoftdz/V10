@@ -10,7 +10,8 @@ DCC = $(ROOT)\bin\dcc32.exe $**
 BRCC = $(ROOT)\bin\brcc32.exe $**
 #------------------------------------------------------------------------------
 PROJECTS = ImportExportCegid.exe BuildNewCptx.exe SvcSynBTPY2.exe \
-  SvcSynBTPVerdon.exe UtilsBTP.exe MajVerBTP.exe CBTPS3.exe CBTPS5.exe
+  SvcSynBTPVerdon.exe SVCEnvoiBASTGed.exe UtilsBTP.exe MajVerBTP.exe CBTPS3.exe \
+  CBTPS5.exe
 #------------------------------------------------------------------------------
 default: $(PROJECTS)
 #------------------------------------------------------------------------------
@@ -37,6 +38,9 @@ SvcSynBTPVerdon.exe: ..\..\Services\BTPVerdon\Syn\SvcSynBTPVerdon.dpr
   $(DCC)
 
 SvcSynBTPY2.exe: ..\..\Services\BTPY2\Syn\SvcSynBTPY2.dpr
+  $(DCC)
+
+SVCEnvoiBASTGed.exe: SVCEnvoiBASTGed.dpr
   $(DCC)
 
 

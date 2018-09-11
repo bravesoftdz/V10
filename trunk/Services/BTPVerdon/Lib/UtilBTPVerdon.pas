@@ -75,8 +75,10 @@ type
     function GetTMPIndexFieldName : string;
     function GetBTPIndexFieldName : string;
     function GetBTPLabelFieldName : string;
+    (* ---------
     function ExtractFieldName(Value : string) : string;
     function ExtractFieldType(Value : string) : string;
+    ---------- *)
     function SetFieldsArray : boolean;
     function GetSqlDataExist(FieldsList, KeyValue1, KeyValue2 : string) : string;
     function GetSystemFields : string;
@@ -92,7 +94,7 @@ type
     function InsertUpdateData(TobData: TOB): boolean;
     procedure SetLinkedRecords(TobAdd, TobData : TOB);
     procedure SetLastSynchro;
-    procedure TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
+//    procedure TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
                                                                                   
   public
     Tn           : T_TablesName;
@@ -193,7 +195,7 @@ begin
 end;
   
 { TTnTreatment }
-
+(* --
 function TTnTreatment.ExtractFieldName(Value : string) : string;
 begin
   Result := copy(Value, 1, pos(';', Value) -1)
@@ -203,6 +205,7 @@ function TTnTreatment.ExtractFieldType(Value : string) : string;
 begin
   Result := copy(Value, pos(';', Value) +1,length(Value));
 end;
+--- *)
 
 function TTnTreatment.SetFieldsArray : boolean;
 var
@@ -397,9 +400,9 @@ begin
   begin
     for Cpt := Low(BTPArrFields) to High(BTPArrFields) do
     begin
-     if ExtractFieldName(BTPArrFields[Cpt]) = BTPFieldName then
+     if Tools.ExtractFieldName(BTPArrFields[Cpt]) = BTPFieldName then
       begin
-       Result := ExtractFieldName(TMPArrFields[Cpt]);
+       Result := Tools.ExtractFieldName(TMPArrFields[Cpt]);
        break;
       end;
     end;
@@ -457,9 +460,9 @@ begin
       IndexFieldType := ttfNone;
       for Cpt := 0 to High(TMPArrFields) do
       begin
-        if ExtractFieldName(TMPArrFields[Cpt]) = IndexFieldName then
+        if Tools.ExtractFieldName(TMPArrFields[Cpt]) = IndexFieldName then
         begin
-          IndexFieldType := Tools.GetTypeFieldFromStringType(ExtractFieldType(TMPArrFields[Cpt]));
+          IndexFieldType := Tools.GetTypeFieldFromStringType(Tools.ExtractFieldType(TMPArrFields[Cpt]));
           break;
         end;
       end;
@@ -534,7 +537,7 @@ procedure TTnTreatment.SetLinkedRecords(TobAdd, TobData : TOB);
       AdoQryBTP.FieldsList := Trim(GetFieldsListFromArray(FieldsList, False));
       AdoQryBTP.Request := Sql;
       AdoQryBTP.SingleTableSelect;
-      TStringListToTOB(AdoQryBTP.TSLResult, FieldsList, TobAdr, False);
+      Tools.TStringListToTOB(AdoQryBTP.TSLResult, FieldsList, TobAdr, False);
       AdoQryBTP.TSLResult.Clear;
       for Cpt := 0 to pred(TobAdr.Detail.count) do
       begin
@@ -601,7 +604,7 @@ begin
     SettingFile.Free;
   end;
 end;
-
+(*
 procedure TTnTreatment.TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
 var
   Cpt        : integer;
@@ -628,7 +631,7 @@ begin
     end;
   end;
 end;
-
+*)
 function TTnTreatment.GetSystemFields : string;
 var
   Prefix : string;
@@ -645,7 +648,7 @@ begin
   Result := '';
   for Cpt := Low(ArrData) to High(ArrData) do
   begin
-    FieldName := Tools.iif(WithType, ExtractFieldName(ArrData[Cpt]), ArrData[Cpt]);
+    FieldName := Tools.iif(WithType, Tools.ExtractFieldName(ArrData[Cpt]), ArrData[Cpt]);
     Result := Format('%s,%s', [Result, FieldName]);
   end;
   Result := copy(Result, 2, length(Result));
@@ -684,7 +687,7 @@ var
 begin
   Result := '';
   for Cpt :=  Low(TMPArrFields) to High(TMPArrFields) do
-    Result := Format('%s, %s', [Result, ExtractFieldName(TMPArrFields[Cpt])]);
+    Result := Format('%s, %s', [Result, Tools.ExtractFieldName(TMPArrFields[Cpt])]);
   SystemFields := GetSystemFields;
   while SystemFields <> '' do
     Result := Format('%s, %s', [Result, Tools.ReadTokenSt_(SystemFields, ';')]);
@@ -697,7 +700,7 @@ var
 begin
   Result := '';
   for Cpt :=  Low(TMPArrAdditionalFields) to High(TMPArrAdditionalFields) do
-    Result := Format('%s, %s', [Result, ExtractFieldName(TMPArrAdditionalFields[Cpt])]);
+    Result := Format('%s, %s', [Result, Tools.ExtractFieldName(TMPArrAdditionalFields[Cpt])]);
   Result := Copy(Result, 2, length(Result));
 end;
 
@@ -713,9 +716,9 @@ begin
   begin
     for Cpt := 0 to High(BTPArrFields) do
     begin
-      FieldNameBTP := ExtractFieldName(BTPArrFields[Cpt]);
-      FieldNameTMP := ExtractFieldName(TMPArrFields[Cpt]);
-      FieldType    := Tools.GetTypeFieldFromStringType(ExtractFieldType(BTPArrFields[Cpt]));
+      FieldNameBTP := Tools.ExtractFieldName(BTPArrFields[Cpt]);
+      FieldNameTMP := Tools.ExtractFieldName(TMPArrFields[Cpt]);
+      FieldType    := Tools.GetTypeFieldFromStringType(Tools.ExtractFieldType(BTPArrFields[Cpt]));
       Result       := Format('%s, %s', [Result, GetValue(FieldNameBTP, FieldNameTMP, FieldType, TobData)]);
     end;
     Result := Format('%s, ''%s'', ''%s'', ''%s''', [Result, LockDefaultValue, TraiteDefaultValue, DateTraiteDefaultValue]);
@@ -723,9 +726,9 @@ begin
   begin
     for Cpt := 0 to High(BTPArrAdditionalFields) do
     begin
-      FieldNameBTP := ExtractFieldName(BTPArrAdditionalFields[Cpt]);
-      FieldNameTMP := ExtractFieldName(TMPArrAdditionalFields[Cpt]);
-      FieldType    := Tools.GetTypeFieldFromStringType(ExtractFieldType(BTPArrAdditionalFields[Cpt]));
+      FieldNameBTP := Tools.ExtractFieldName(BTPArrAdditionalFields[Cpt]);
+      FieldNameTMP := Tools.ExtractFieldName(TMPArrAdditionalFields[Cpt]);
+      FieldType    := Tools.GetTypeFieldFromStringType(Tools.ExtractFieldType(BTPArrAdditionalFields[Cpt]));
       Result       := Format('%s, %s', [Result, GetValue(FieldNameBTP, FieldNameTMP, FieldType, TobData)]);
     end;
   end;
@@ -744,9 +747,9 @@ var
 begin
   for Cpt := 0 to High(TMPArrFields) do
   begin
-    FieldNameTMP := ExtractFieldName(TMPArrFields[Cpt]);
-    FieldNameBTP := ExtractFieldName(BTPArrFields[Cpt]);
-    FieldType    := Tools.GetTypeFieldFromStringType(ExtractFieldType(TMPArrFields[Cpt]));
+    FieldNameTMP := Tools.ExtractFieldName(TMPArrFields[Cpt]);
+    FieldNameBTP := Tools.ExtractFieldName(BTPArrFields[Cpt]);
+    FieldType    := Tools.GetTypeFieldFromStringType(Tools.ExtractFieldType(TMPArrFields[Cpt]));
     Sql          := Format('%s, %s=%s', [Sql, FieldNameTMP, GetValue(FieldNameBTP, FieldNameTMP, FieldType, TobData)]);
   end;
   case Tn of
@@ -754,9 +757,9 @@ begin
     begin
       for Cpt :=  Low(BTPArrAdditionalFields) to High(BTPArrAdditionalFields) do
       begin
-        FieldNameTMP := ExtractFieldName(TMPArrAdditionalFields[Cpt]);
-        FieldNameBTP := ExtractFieldName(BTPArrAdditionalFields[Cpt]);
-        FieldType    := Tools.GetTypeFieldFromStringType(ExtractFieldType(TMPArrAdditionalFields[Cpt]));
+        FieldNameTMP := Tools.ExtractFieldName(TMPArrAdditionalFields[Cpt]);
+        FieldNameBTP := Tools.ExtractFieldName(BTPArrAdditionalFields[Cpt]);
+        FieldType    := Tools.GetTypeFieldFromStringType(Tools.ExtractFieldType(TMPArrAdditionalFields[Cpt]));
         Sql          := Format('%s, %s=%s', [Sql, FieldNameTMP, GetValue(FieldNameBTP, FieldNameTMP, FieldType, TobAdd)]); //TobAdd.GetString(FieldNameBTP)]);
       end;
     end;
@@ -904,7 +907,7 @@ begin
   AdoQryBTP.FieldsList := Trim(GetFieldsListFromArray(BTPArrFields, True));
   AdoQryBTP.Request := Sql;
   AdoQryBTP.SingleTableSelect;
-  TStringListToTOB(AdoQryBTP.TSLResult, BTPArrFields, TobTable, True);
+  Tools.TStringListToTOB(AdoQryBTP.TSLResult, BTPArrFields, TobTable, True);
   Sql := '';
   if TobTable.Detail.Count > 0 then
   begin
