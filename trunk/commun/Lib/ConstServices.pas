@@ -20,15 +20,17 @@ type
     class function CreateLog(LogValues : T_WSLogValues; ServiceName : string): string;
     class procedure WriteLog(TypeDebug: T_SvcTypeLog; Text, ServiceName: string; LogValues : T_WSLogValues; LineLevel: integer; WithoutDateTime: Boolean=true; AddFileName : string='');
     class function GetAppDataFileName (ServiceName, Extension: string): string;
+    class function GetServicesAppDataPath(CreatIfNotExist : Boolean; SubDirectory : string='') : string;
   end;
 
 const
-  ServiceName_BTPY2        = 'SvcSynBTPY2';
-  ServiceName_BTPVerdonImp = 'SvcSynBTPVerdonImp';
-  ServiceName_BTPVerdonExp = 'SvcSynBTPVerdonExp';
-  ServiceName_BASTVERSGED = 'SvcEnvoiBASTGed';
-  WSCDS_ErrorMsg           = '##### ERREUR';
-  WSCDS_DebugMsg        = '***** DEBUG : ';
+  ServiceName_BTPY2            = 'SvcSynBTPY2';
+  ServiceName_BTPVerdonImp     = 'SvcSynBTPVerdonImp';
+  ServiceName_BTPVerdonExp     = 'SvcSynBTPVerdonExp';
+  ServiceName_BTPVerdonIniFile = 'SvcSynBTPVerdon';
+  ServiceName_BASTVERSGED      = 'SvcEnvoiBASTGed';
+  WSCDS_ErrorMsg               = '##### ERREUR';
+  WSCDS_DebugMsg               = '***** DEBUG : ';
 
 implementation
 
@@ -45,7 +47,7 @@ uses
 
 class function TServicesLog.GetAppDataFileName(ServiceName, Extension: string): string;
 begin
-  Result := Format('%s%s.%s', [TWinSystem.GetAppDataPath, ServiceName, Extension]);
+  Result := Format('%s\%s.%s', [TWinSystem.GetAppDataPath, ServiceName, Extension]);
 end;
 
 class function TServicesLog.GetFilePath(ServiceName, Extension: string): string;
@@ -53,6 +55,20 @@ begin
   Result := Format('%s%s.%s', [ExtractFilePath(ParamStr(0)), ServiceName, Extension]);
 end;
 
+class function TServicesLog.GetServicesAppDataPath(CreatIfNotExist : Boolean; SubDirectory : string='') : string;
+var
+  DataPrg : string;
+begin
+  DataPrg := TWinSystem.GetAppDataPath;
+  DataPrg := StringReplace(DataPrg, '%SystemDrive%', GetEnvironmentVariable('systemdrive'), [rfReplaceAll]);
+  Result := Format('%s\LSE\Services\%s', [DataPrg, SubDirectory]);
+  if (CreatIfNotExist) and (not DirectoryExists(Result)) then
+  begin
+    if not CreateDir(Result) then
+      Result := '';
+  end;
+end;
+  
 class function TServicesLog.CreateLog(LogValues : T_WSLogValues; ServiceName : string): string;
 var
   SizeFile    : Extended;

@@ -274,7 +274,7 @@ begin
         3 : T_SvcTestExecute.SvcVerdonToBtp;
       end;
     finally
-      FiniMoveProgressForm;
+      FiniMoveProgressForm;                       
     end;
   end;
 {$ENDIF APPSRV}

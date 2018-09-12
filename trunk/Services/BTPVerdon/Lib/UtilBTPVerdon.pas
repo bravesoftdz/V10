@@ -172,6 +172,7 @@ uses
   , ParamSoc
   , ed_Tools
   , Windows
+  , UWinSystem
   {$IFNDEF DBXPRESS}
   , dbTables
   {$ELSE !DBXPRESS}
