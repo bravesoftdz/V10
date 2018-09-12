@@ -26,8 +26,9 @@ const
   ServiceName_BTPY2        = 'SvcSynBTPY2';
   ServiceName_BTPVerdonImp = 'SvcSynBTPVerdonImp';
   ServiceName_BTPVerdonExp = 'SvcSynBTPVerdonExp';
-  WSCDS_ErrorMsg           = '##### ERREUR';
   ServiceName_BASTVERSGED = 'SvcEnvoiBASTGed';
+  WSCDS_ErrorMsg           = '##### ERREUR';
+  WSCDS_DebugMsg        = '***** DEBUG : ';
 
 implementation
 

@@ -258,9 +258,9 @@ procedure TSvcSyncBTPVerdonImp.ServiceExecute(Sender: TService);
   end;
 
 begin
-  IniPath := TServicesLog.GetAppDataFileName(ServiceName_BTPVerdon, 'ini');
-  AppPath := TServicesLog.GetFilePath(ServiceName_BTPVerdon, 'exe');
-  LogPath := TServicesLog.GetAppDataFileName(ServiceName_BTPVerdon, 'log');
+  IniPath := TServicesLog.GetAppDataFileName(ServiceName_BTPVerdonImp, 'ini');
+  AppPath := TServicesLog.GetFilePath(ServiceName_BTPVerdonImp, 'exe');
+  LogPath := TServicesLog.GetAppDataFileName(ServiceName_BTPVerdonImp, 'log');
   if not FileExists(IniPath) then
   begin
     LogMessage(Format('Impossible d''initialiser le service %s. Le fichier de configuration "%s" est inexistant.', [ServiceName_BTPVerdonImp, IniPath]), EVENTLOG_ERROR_TYPE);

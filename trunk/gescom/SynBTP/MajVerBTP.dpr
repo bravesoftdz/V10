@@ -585,7 +585,8 @@ uses
   uExecuteServiceBtpVerdonExp in '..\..\Services\BTPVerdon\Lib\uExecuteServiceBtpVerdonExp.pas',
   uMainServiceBtpVerdonExp in '..\..\Services\BTPVerdon\Lib\uMainServiceBtpVerdonExp.pas' {SvcSyncBTPVerdonExp: TService},
   ServicesTest in '..\..\commun\Lib\ServicesTest.pas',
-  TRAFileUtil in '..\..\COMMUN\LIB\TRAFileUtil.pas';
+  TRAFileUtil in '..\..\COMMUN\LIB\TRAFileUtil.pas',
+  UWinSystem in '..\..\COMMUN\LIB\UWinSystem.pas';
 
 {$R *.RES}
 

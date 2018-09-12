@@ -17,7 +17,8 @@ uses
   uLkJSON in '..\..\..\CONNECTWS\uLkJSON.pas',
   tThreadChantiers in '..\Lib\tThreadChantiers.pas',
   tThreadDevis in '..\Lib\tThreadDevis.pas',
-  tThreadLignesBR in '..\Lib\tThreadLignesBR.pas';
+  tThreadLignesBR in '..\Lib\tThreadLignesBR.pas',
+  UWinSystem in '..\..\..\commun\Lib\UWinSystem.pas';
 
 {$R *.RES}
 

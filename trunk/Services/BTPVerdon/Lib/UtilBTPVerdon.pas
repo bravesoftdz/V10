@@ -103,7 +103,7 @@ type
     function GetTMPFieldSizeMax(FieldName : string) : integer;
     function InsertUpdateData(TobData: TOB): boolean;
     procedure SetLinkedRecords(TobAdd, TobData : TOB);
-    procedure SetLastSynchro;
+    procedure SetLastSynchro(ServiceName : string);
 //    procedure TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
 
   public
@@ -593,7 +593,9 @@ procedure TTnTreatment.SetLinkedRecords(TobAdd, TobData : TOB);
       AdoQryBTP.FieldsList := Trim(GetFieldsListFromArray(FieldsList, False));
       AdoQryBTP.Request := Sql;
       AdoQryBTP.SingleTableSelect;
+     {$IFDEF APPSRVWITHCBP}
       Tools.TStringListToTOB(AdoQryBTP.TSLResult, FieldsList, TobAdr, False);
+     {$ENDIF APPSRVWITHCBP}
       AdoQryBTP.TSLResult.Clear;
       for Cpt := 0 to pred(TobAdr.Detail.count) do
       begin
@@ -963,7 +965,9 @@ begin
   AdoQryBTP.FieldsList := Trim(GetFieldsListFromArray(BTPArrFields, True));
   AdoQryBTP.Request := Sql;
   AdoQryBTP.SingleTableSelect;
+  {$IFDEF APPSRVWITHCBP}
   Tools.TStringListToTOB(AdoQryBTP.TSLResult, BTPArrFields, TobTable, True);
+  {$ENDIF APPSRVWITHCBP}
   Sql := '';
   if TobTable.Detail.Count > 0 then
   begin
