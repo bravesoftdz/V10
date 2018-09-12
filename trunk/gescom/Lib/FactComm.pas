@@ -167,7 +167,6 @@ procedure EnleveEvtsMateriels (TOBL,TOBEvtsMat : TOB);
 procedure DeleteEvtsMateriels (TOBL,TOBEvtsMat : TOB);
 function GetTauxTaxe (RegimeTaxe,FamilleTaxe : string; Achat : boolean=false) : double;
 function ExistRefBsv (TOBpiece : TOB) : boolean;
-function GetIDBSVDOC (TOBpiece : TOB) : string;
 
 
 type T_ValideNumPieceVide = class
@@ -5636,29 +5635,6 @@ begin
       result := ExisteSql('SELECT 1 FROM BASTENT WHERE BM4_REFGESCOM="'+RefGescom+'"');
     EXCEPT
       Result := false;
-    END;
-  end;
-end;
-
-function GetIDBSVDOC (TOBpiece : TOB) : string;
-var RefGEscom : string;
-    QQ : Tquery;
-begin
-  if TOBpiece.getString('GP_BSVREF')<>'' then
-  begin
-    result := TOBpiece.getString('GP_BSVREF')
-  end else
-  begin
-    RefGescom := EncodeRefPresqueCPGescom(TOBpiece);
-    TRY
-      QQ := openSql('SELECT BM4_IDZEDOC FROM BASTENT WHERE BM4_REFGESCOM="'+RefGescom+'"',True,1,'',true);
-      if not QQ.eof then
-      begin
-        Result := IntToStr(QQ.Fields[0].asInteger);
-      end;
-      ferme (QQ);
-    EXCEPT
-      Result := '';
     END;
   end;
 end;

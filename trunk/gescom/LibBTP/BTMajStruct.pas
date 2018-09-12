@@ -665,7 +665,13 @@ var sql : string;
 begin                    
   // ERP CEGID
   //
-  if NomTable ='BTRESSOURCE' then
+  if NomTable ='BTMARCHEST' then
+  begin
+    if VersionBaseDest < '998.ZZZZ7' then
+    begin
+      ExecuteSQL('UPDATE BTMARCHEST SET BM0_RGLIBER="-",BM0_RGDATELIBER="'+UsDateTime(IDate2099)+'" WHERE BM0_RGLIBER IS NULL');
+    end;
+  end else if NomTable ='BTRESSOURCE' then
   begin
     if VersionBaseDest < '998.ZZZZ1' then
     begin
@@ -677,11 +683,19 @@ begin
     begin
       ExecuteSQL('UPDATE BASTENT SET BM4_HORSCOMPTA="-" WHERE BM4_HORSCOMPTA IS NULL');
     end;
+    if VersionBaseDest < '998.ZZZZ7' then
+    begin
+      ExecuteSQL('UPDATE BASTENT SET BM4_RGLIBER="-",BM4_RGDATELIBER="'+UsDateTime (Idate2099)+'" WHERE BM4_RGLIBER IS NULL');
+    end;
   end else if NomTable ='UTILISAT' then
   begin
     if VersionBaseDest < '998.ZZZZ1' then
     begin
       ExecuteSQL('UPDATE UTILISAT SET US_RGPDOK="-" WHERE US_RGPDOK IS NULL');
+    end;
+    if VersionBaseDest < '998.ZZZZ7' then
+    begin
+      ExecuteSQL('UPDATE UTILISAT SET US_GDPRDATE="01/01/1900",US_GDPRCHECKED="-" WHERE US_GDPRCHECKED IS NULL');
     end;
   end else if NomTable ='PHASESCHANTIER' then
   begin
@@ -708,6 +722,10 @@ begin
     if VersionBaseDest < '998.ZZZZ5' then
     begin
       ExecuteSQL('UPDATE BTFACTST SET BM3_NUMANTER=0,BM3_HORSCOMPTA="-" WHERE BM3_NUMANTER IS NULL');
+    end;
+    if VersionBaseDest < '998.ZZZZ7' then
+    begin
+      ExecuteSQL('UPDATE BTFACTST SET BM3_RGLIBER="-",BM3_RGDATELIBER="'+UsDateTime (Idate2099)+'" WHERE BM3_RGLIBER IS NULL');
     end;
   end else if NomTable = 'TXCPTTVA' then
   begin
@@ -880,6 +898,10 @@ begin
     if VersionBaseDest < '998.X' then
     begin
   		ExecuteSQL ('UPDATE ACOMPTES SET GAC_FOURNISSEUR="" WHERE GAC_FOURNISSEUR IS NULL');
+    end;
+    if VersionBaseDest < '998.ZZZZ7' then
+    begin
+  		ExecuteSQL ('UPDATE ACOMPTES SET GAC_ORIGINE="",GAC_NUMLECR=0 WHERE GAC_ORIGINE IS NULL');
     end;
   end else if NomTable = 'PGEXCEPTIONS' then
   begin
@@ -1311,6 +1333,10 @@ begin
     if VersionBaseDest < '998.ZZZZ1' then
     begin
     	UpDateDecoupePiece('GP_HORSCOMPTA="-"',' AND GP_HORSCOMPTA IS NULL');
+    end;
+    if VersionBaseDest < '998.ZZZZ7' then
+    begin
+    	UpDateDecoupePiece('GP_RESTITUERG="-"',' AND GP_RESTITUERG IS NULL');
     end;
   end else if nomTable ='PIECETRAIT' then
   begin

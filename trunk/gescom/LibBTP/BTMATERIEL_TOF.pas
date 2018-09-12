@@ -1599,13 +1599,19 @@ begin
 
   //stWhere := 'AND ARS_TYPERESSOURCE IN ("OUT","MAT","LOC","AUT")';
   if (VH_GC.AFRechResAv) then
-    stWhere := 'TYPERESSOURCE : OUT,MAT,LOC,AUT'
+  begin
+    stWhere := 'TYPERESSOURCE:OUT,MAT,LOC,AUT';
+    DispatchRecherche(CodeRessource, 3,'','ARS_RESSOURCE=' + Trim(StChamp)+ ';' + StWhere, '');
+  end
   else
+  begin
     stWhere := 'AND ARS_TYPERESSOURCE IN ("OUT","MAT","LOC","AUT")';
+    DispatchRecherche(CodeRessource, 3,StWhere,'ARS_RESSOURCE=' + Trim(StChamp), '');
+  end;
 
   StChamp  := CodeRessource.Text;
 
-  DispatchRecherche(CodeRessource, 3, StWhere,'ARS_RESSOURCE=' + Trim(CodeRessource.Text), '');
+  
 
   ChargeInfoRessource;
 
@@ -1652,6 +1658,7 @@ procedure TOF_BTMATERIEL.ArticleOnElipsisClick(Sender: Tobject);
 Var StWhere : String;
     StChamps: String;
     title   : string;
+    StPresta: string;
 begin
 
   title := 'Recherche Prestation Associée';
@@ -1662,9 +1669,15 @@ begin
 
   if stWhere <> '' then StChamps := StChamps + ';' + stWhere;
 
-  CodeArticle.text := AGLLanceFiche('BTP', 'BTPREST_RECH', 'GA_CODEARTICLE='+Trim(Copy(CodeArticle.text, 1, 18)), '', stchamps);
+  StPresta := AGLLanceFiche('BTP', 'BTPREST_RECH', 'GA_CODEARTICLE='+Trim(Copy(CodeArticle.text, 1, 18)), '', stchamps);
 
-  if CodeArticle.text <> '' then ChargeInfoArticle;
+  if StPresta <> '' then
+  begin
+    CodeArticle.text := StPresta;
+    ChargeInfoArticle;
+  end
+  else
+    ChargeInfoArticle;
 
 end;
 

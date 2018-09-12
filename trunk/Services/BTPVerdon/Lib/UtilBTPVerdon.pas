@@ -12,7 +12,7 @@ uses
   , XMLDoc
   ;
 
-type                                                                                     
+type
 
   T_TablesName = (tnNone, tnChantier, tnDevis, tnLignesBR, tnTiers);
 
@@ -85,8 +85,10 @@ type
     function GetTMPIndexFieldName : string;
     function GetBTPIndexFieldName : string;
     function GetBTPLabelFieldName : string;
+    (* ---------
     function ExtractFieldName(Value : string) : string;
     function ExtractFieldType(Value : string) : string;
+    ---------- *)
     function SetFieldsArray : boolean;
     function GetSqlDataExist(FieldsList, KeyValue1, KeyValue2 : string) : string;
     function GetSystemFields : string;
@@ -101,9 +103,9 @@ type
     function GetTMPFieldSizeMax(FieldName : string) : integer;
     function InsertUpdateData(TobData: TOB): boolean;
     procedure SetLinkedRecords(TobAdd, TobData : TOB);
-    procedure SetLastSynchro(ServiceName : string);
-    procedure TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
-                                                                                  
+    procedure SetLastSynchro;
+//    procedure TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
+
   public
     Tn           : T_TablesName;
     LogValues    : T_WSLogValues;
@@ -200,7 +202,7 @@ end;
 
 class function TUtilBTPVerdon.GetMsgStartEnd(Tn : T_TablesName; Start : boolean; LastSynchro : string) : string;
 begin
-  Result := Format('%s de traitement de la table %s (données créées ou modifiées depuis le %s).', [Tools.iif(Start, 'Début', 'Fin'), TUtilBTPVerdon.GetTMPTableName(Tn), LastSynchro]);
+  Result := Format('%s de traitement de la table %s (donnï¿½es crï¿½ï¿½es ou modifiï¿½es depuis le %s).', [Tools.iif(Start, 'Dï¿½but', 'Fin'), TUtilBTPVerdon.GetTMPTableName(Tn), LastSynchro]);
 end;
 
 class function TUtilBTPVerdon.AddLog(ServiceName : string; Tn : T_TablesName; Msg : string; LogValues : T_WSLogValues; LineLevel : integer) : string;
@@ -248,9 +250,9 @@ begin
   AdoQryTMP.Qry.ConnectionString := AdoQryTMP.GetConnectionString;
   AdoQryTMP.LogValues            := LogValues;
 end;
-  
-{ TTnTreatment }
 
+{ TTnTreatment }
+(* --
 function TTnTreatment.ExtractFieldName(Value : string) : string;
 begin
   Result := copy(Value, 1, pos(';', Value) -1)
@@ -260,6 +262,7 @@ function TTnTreatment.ExtractFieldType(Value : string) : string;
 begin
   Result := copy(Value, pos(';', Value) +1,length(Value));
 end;
+--- *)
 
 function TTnTreatment.SetFieldsArray : boolean;
 var
@@ -453,16 +456,16 @@ begin
   begin
     for Cpt := Low(BTPArrFields) to High(BTPArrFields) do
     begin
-     if ExtractFieldName(BTPArrFields[Cpt]) = BTPFieldName then
+     if Tools.ExtractFieldName(BTPArrFields[Cpt]) = BTPFieldName then
       begin
-       Result := ExtractFieldName(TMPArrFields[Cpt]);
+       Result := Tools.ExtractFieldName(TMPArrFields[Cpt]);
        break;
       end;
     end;
   end else
     Result := '';
 end;
-  
+
 function TTnTreatment.GetTMPIndexFieldName : string;
 begin
   case Tn of
@@ -486,7 +489,7 @@ begin
     Result := '';
   end;
 end;
-              
+
 function TTnTreatment.GetBTPLabelFieldName : string;
 begin
   case Tn of
@@ -513,9 +516,9 @@ begin
       IndexFieldType := ttfNone;
       for Cpt := 0 to High(TMPArrFields) do
       begin
-        if ExtractFieldName(TMPArrFields[Cpt]) = IndexFieldName then
+        if Tools.ExtractFieldName(TMPArrFields[Cpt]) = IndexFieldName then
         begin
-          IndexFieldType := Tools.GetTypeFieldFromStringType(ExtractFieldType(TMPArrFields[Cpt]));
+          IndexFieldType := Tools.GetTypeFieldFromStringType(Tools.ExtractFieldType(TMPArrFields[Cpt]));
           break;
         end;
       end;
@@ -590,7 +593,7 @@ procedure TTnTreatment.SetLinkedRecords(TobAdd, TobData : TOB);
       AdoQryBTP.FieldsList := Trim(GetFieldsListFromArray(FieldsList, False));
       AdoQryBTP.Request := Sql;
       AdoQryBTP.SingleTableSelect;
-      TStringListToTOB(AdoQryBTP.TSLResult, FieldsList, TobAdr, False);
+      Tools.TStringListToTOB(AdoQryBTP.TSLResult, FieldsList, TobAdr, False);
       AdoQryBTP.TSLResult.Clear;
       for Cpt := 0 to pred(TobAdr.Detail.count) do
       begin
@@ -657,7 +660,7 @@ begin
     SettingFile.Free;
   end;
 end;
-
+(*
 procedure TTnTreatment.TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
 var
   Cpt        : integer;
@@ -684,7 +687,7 @@ begin
     end;
   end;
 end;
-
+*)
 function TTnTreatment.GetSystemFields : string;
 var
   Prefix : string;
@@ -701,7 +704,7 @@ begin
   Result := '';
   for Cpt := Low(ArrData) to High(ArrData) do
   begin
-    FieldName := Tools.iif(WithType, ExtractFieldName(ArrData[Cpt]), ArrData[Cpt]);
+    FieldName := Tools.iif(WithType, Tools.ExtractFieldName(ArrData[Cpt]), ArrData[Cpt]);
     Result := Format('%s,%s', [Result, FieldName]);
   end;
   Result := copy(Result, 2, length(Result));
@@ -710,16 +713,16 @@ end;
 function TTnTreatment.GetValue(FieldNameBTP, FieldNameTMP : string; FieldType : tTypeField; TobData : TOB) : string;
 var
   FieldSize : integer;
-  Value     : variant;     
+  Value     : variant;
 begin
   Result := '';
   Value  := TobData.GetValue(FieldNameBTP);
   case FieldType of
     ttfNumeric, ttfInt                     : Result := StringReplace(Value, ',', '.', [rfReplaceAll]);
-    ttfDate                                : Result := Format('''%s''', [Tools.UsDateTime_(StrToDateTime(Value))]); 
+    ttfDate                                : Result := Format('''%s''', [Tools.UsDateTime_(StrToDateTime(Value))]);
     ttfCombo, ttfText, ttfBoolean, ttfMemo : begin
                                                Result := Value;
-                                               if Result <> '' then                                                   
+                                               if Result <> '' then
                                                begin
                                                  if FieldType = ttfMemo then
                                                    Result := Tools.BlobToString_(Result);
@@ -732,7 +735,7 @@ begin
                                               end;
   end;
 end;
-  
+
 function TTnTreatment.GetSqlInsertFields : string;
 var
   Cpt          : integer;
@@ -740,7 +743,7 @@ var
 begin
   Result := '';
   for Cpt :=  Low(TMPArrFields) to High(TMPArrFields) do
-    Result := Format('%s, %s', [Result, ExtractFieldName(TMPArrFields[Cpt])]);
+    Result := Format('%s, %s', [Result, Tools.ExtractFieldName(TMPArrFields[Cpt])]);
   SystemFields := GetSystemFields;
   while SystemFields <> '' do
     Result := Format('%s, %s', [Result, Tools.ReadTokenSt_(SystemFields, ';')]);
@@ -753,7 +756,7 @@ var
 begin
   Result := '';
   for Cpt :=  Low(TMPArrAdditionalFields) to High(TMPArrAdditionalFields) do
-    Result := Format('%s, %s', [Result, ExtractFieldName(TMPArrAdditionalFields[Cpt])]);
+    Result := Format('%s, %s', [Result, Tools.ExtractFieldName(TMPArrAdditionalFields[Cpt])]);
   Result := Copy(Result, 2, length(Result));
 end;
 
@@ -769,9 +772,9 @@ begin
   begin
     for Cpt := 0 to High(BTPArrFields) do
     begin
-      FieldNameBTP := ExtractFieldName(BTPArrFields[Cpt]);
-      FieldNameTMP := ExtractFieldName(TMPArrFields[Cpt]);
-      FieldType    := Tools.GetTypeFieldFromStringType(ExtractFieldType(BTPArrFields[Cpt]));
+      FieldNameBTP := Tools.ExtractFieldName(BTPArrFields[Cpt]);
+      FieldNameTMP := Tools.ExtractFieldName(TMPArrFields[Cpt]);
+      FieldType    := Tools.GetTypeFieldFromStringType(Tools.ExtractFieldType(BTPArrFields[Cpt]));
       Result       := Format('%s, %s', [Result, GetValue(FieldNameBTP, FieldNameTMP, FieldType, TobData)]);
     end;
     Result := Format('%s, ''%s'', ''%s'', ''%s''', [Result, LockDefaultValue, TraiteDefaultValue, DateTraiteDefaultValue]);
@@ -779,9 +782,9 @@ begin
   begin
     for Cpt := 0 to High(BTPArrAdditionalFields) do
     begin
-      FieldNameBTP := ExtractFieldName(BTPArrAdditionalFields[Cpt]);
-      FieldNameTMP := ExtractFieldName(TMPArrAdditionalFields[Cpt]);
-      FieldType    := Tools.GetTypeFieldFromStringType(ExtractFieldType(BTPArrAdditionalFields[Cpt]));
+      FieldNameBTP := Tools.ExtractFieldName(BTPArrAdditionalFields[Cpt]);
+      FieldNameTMP := Tools.ExtractFieldName(TMPArrAdditionalFields[Cpt]);
+      FieldType    := Tools.GetTypeFieldFromStringType(Tools.ExtractFieldType(BTPArrAdditionalFields[Cpt]));
       Result       := Format('%s, %s', [Result, GetValue(FieldNameBTP, FieldNameTMP, FieldType, TobData)]);
     end;
   end;
@@ -800,9 +803,9 @@ var
 begin
   for Cpt := 0 to High(TMPArrFields) do
   begin
-    FieldNameTMP := ExtractFieldName(TMPArrFields[Cpt]);
-    FieldNameBTP := ExtractFieldName(BTPArrFields[Cpt]);
-    FieldType    := Tools.GetTypeFieldFromStringType(ExtractFieldType(TMPArrFields[Cpt]));
+    FieldNameTMP := Tools.ExtractFieldName(TMPArrFields[Cpt]);
+    FieldNameBTP := Tools.ExtractFieldName(BTPArrFields[Cpt]);
+    FieldType    := Tools.GetTypeFieldFromStringType(Tools.ExtractFieldType(TMPArrFields[Cpt]));
     Sql          := Format('%s, %s=%s', [Sql, FieldNameTMP, GetValue(FieldNameBTP, FieldNameTMP, FieldType, TobData)]);
   end;
   case Tn of
@@ -810,9 +813,9 @@ begin
     begin
       for Cpt :=  Low(BTPArrAdditionalFields) to High(BTPArrAdditionalFields) do
       begin
-        FieldNameTMP := ExtractFieldName(TMPArrAdditionalFields[Cpt]);
-        FieldNameBTP := ExtractFieldName(BTPArrAdditionalFields[Cpt]);
-        FieldType    := Tools.GetTypeFieldFromStringType(ExtractFieldType(TMPArrAdditionalFields[Cpt]));
+        FieldNameTMP := Tools.ExtractFieldName(TMPArrAdditionalFields[Cpt]);
+        FieldNameBTP := Tools.ExtractFieldName(BTPArrAdditionalFields[Cpt]);
+        FieldType    := Tools.GetTypeFieldFromStringType(Tools.ExtractFieldType(TMPArrAdditionalFields[Cpt]));
         Sql          := Format('%s, %s=%s', [Sql, FieldNameTMP, GetValue(FieldNameBTP, FieldNameTMP, FieldType, TobAdd)]); //TobAdd.GetString(FieldNameBTP)]);
       end;
     end;
@@ -911,15 +914,15 @@ begin
       begin
         AdoQryTMP.RecordCount := 0;
         AdoQryTMP.Request     := TobData.Detail[Cpt].GetString('SqlQry');
-        if LogValues.DebugEvents > 0 then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%sExécution de %s ', [WSCDS_DebugMsg, AdoQryTMP.Request]), LogValues, 1);
+        if LogValues.DebugEvents > 0 then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%sExï¿½cution de %s ', [WSCDS_DebugMsg, AdoQryTMP.Request]), LogValues, 1);
         AdoQryTMP.InsertUpdate;
       end;
       if UpdateQty > 0 then
-        TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%s enregistrements de la table %s modifié(s)', [IntToStr(UpdateQty), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
+        TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%s enregistrements de la table %s modifiï¿½(s)', [IntToStr(UpdateQty), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
       if InsertQty > 0 then
-        TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%s enregistrements de la table %s créé(s)', [IntToStr(InsertQty), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
+        TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%s enregistrements de la table %s crï¿½ï¿½(s)', [IntToStr(InsertQty), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
       if OtherQty > 0 then
-        TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%s enregistrements de la table %s non traité(s) car verrouillé(s)', [IntToStr(OtherQty), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
+        TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%s enregistrements de la table %s non traitï¿½(s) car verrouillï¿½(s)', [IntToStr(OtherQty), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
       SetLastSynchro(ServiceName_BTPVerdonExp);
     except
       Result := False;
@@ -935,7 +938,7 @@ var
   UpdateQty     : integer;
   OtherQty      : integer;
   FieldSize     : integer;
-  SqlUnlock     : string;                           
+  SqlUnlock     : string;
   Sql           : string;
   Lock          : string;
   Treat         : string;
@@ -960,11 +963,11 @@ begin
   AdoQryBTP.FieldsList := Trim(GetFieldsListFromArray(BTPArrFields, True));
   AdoQryBTP.Request := Sql;
   AdoQryBTP.SingleTableSelect;
-  TStringListToTOB(AdoQryBTP.TSLResult, BTPArrFields, TobTable, True);
+  Tools.TStringListToTOB(AdoQryBTP.TSLResult, BTPArrFields, TobTable, True);
   Sql := '';
   if TobTable.Detail.Count > 0 then
   begin
-    TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Recherche des données (%s enregistrement(s) de la table %s)', [IntToStr(TobTable.Detail.Count), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
+    TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Recherche des donnï¿½es (%s enregistrement(s) de la table %s)', [IntToStr(TobTable.Detail.Count), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
     AdoQryTMP.TSLResult.Clear;
     AdoQryTMP.FieldsList := Format('%s_LOCK,%s_TRAITE', [GetPrefix, GetPrefix]);
     AdoQryTMP.LogValues  := LogValues;
@@ -977,7 +980,7 @@ begin
       TobL          := TobTable.Detail[Cpt];
       KeyFieldsName := GetBTPIndexFieldName;
       KeyField1     := Tools.ReadTokenSt_(KeyFieldsName, ';');
-      KeyField2     := Tools.ReadTokenSt_(KeyFieldsName, ';'); 
+      KeyField2     := Tools.ReadTokenSt_(KeyFieldsName, ';');
       KeyValue1     := TobL.GetString(KeyField1);
       FieldSize     := GetTMPFieldSizeMax(GetTMPFieldName(KeyField1));
       KeyValue1     := Tools.iif(FieldSize > -1, Trim(Copy(KeyValue1, 1, FieldSize)), KeyValue1);
@@ -989,7 +992,7 @@ begin
       end;
       SetLinkedRecords(TobAdd, TobL);
       LabelValue := TobL.GetString(GetBTPLabelFieldName);
-      SqlUnlock  := Format('%s%s''%s''', [SqlUnlock, Tools.iif(Cpt = 0, '', ', '), KeyValue1]); // Prépare update de Unlock
+      SqlUnlock  := Format('%s%s''%s''', [SqlUnlock, Tools.iif(Cpt = 0, '', ', '), KeyValue1]); // Prï¿½pare update de Unlock
       AdoQryTMP.Request := GetSqlDataExist(AdoQryTMP.FieldsList, KeyValue1, KeyValue2); // Test si enregistrement existe
       AdoQryTMP.SingleTableSelect;
       if AdoQryTMP.RecordCount = 1 then // Update
@@ -1000,20 +1003,20 @@ begin
         if Lock = 'N' then
         begin
           if LogValues.LogLevel = 2 then
-            TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Mise à jour de %s%s - %s', [KeyValue1, Tools.iif(KeyValue2 <> '', ' - ' + KeyValue2, ''), LabelValue]), LogValues, 2);
+            TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Mise ï¿½ jour de %s%s - %s', [KeyValue1, Tools.iif(KeyValue2 <> '', ' - ' + KeyValue2, ''), LabelValue]), LogValues, 2);
           inc(UpdateQty);
           FindData  := True;
           Sql := GetSqlUpdate(TobL, TobAdd, KeyValue1, KeyValue2);
         end else
         begin
           if LogValues.LogLevel = 2 then
-            TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Mise à jour de %s%s - %s impossible (bloqué)', [KeyValue1, Tools.iif(KeyValue2 <> '', ' - ' + KeyValue2, ''), LabelValue]), LogValues, 2);
+            TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Mise ï¿½ jour de %s%s - %s impossible (bloquï¿½)', [KeyValue1, Tools.iif(KeyValue2 <> '', ' - ' + KeyValue2, ''), LabelValue]), LogValues, 2);
           Inc(OtherQty);
         end;
       end else
       begin
         if LogValues.LogLevel = 2 then
-          TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Création de %s%s - %s', [KeyValue1, Tools.iif(KeyValue2 <> '', ' - ' + KeyValue2, ''), LabelValue]), LogValues, 2);
+          TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Crï¿½ation de %s%s - %s', [KeyValue1, Tools.iif(KeyValue2 <> '', ' - ' + KeyValue2, ''), LabelValue]), LogValues, 2);
         Inc(InsertQty);
         FindData  := True;
         Sql := GetSqlInsert(TobL, TobAdd);
@@ -1036,7 +1039,7 @@ begin
     TobQry.AddChampSupValeur('OTHERQTY', IntToStr(OtherQty));
     InsertUpdateData(TobQry);
   end else
-    TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Aucun %s n''a été trouvé.', [TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
+    TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Aucun %s n''a ï¿½tï¿½ trouvï¿½.', [TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
 end;
 
 { TExportEcr }
@@ -1111,7 +1114,7 @@ var
   end;
 
 begin
-  InitMoveProgressForm(nil, MsgCaption, 'Recherche des écritures en cours.', 0, False, True);
+  InitMoveProgressForm(nil, MsgCaption, 'Recherche des ï¿½critures en cours.', 0, False, True);
   try
     TobEcr := TOB.Create('_ECR', nil, -1);
     try
@@ -1150,7 +1153,7 @@ end;
 function TExportEcr.LoadAnalytic : boolean;
 var
   CptA     : integer;
-begin                                   
+begin
   Result := True;
   if TobEcrP.Detail.Count > 0 then
   begin
@@ -1188,7 +1191,7 @@ begin
   ThirdCode := TobL.GetString('E_AUXILIAIRE');
   AccDate   := FormatDateTime('yyyy-mm-dd', TobL.GetDateTime('E_DATECOMPTABLE'));
   ThirdType := Tools.iif(IsSales, 'Debtor', 'Creditor');
-  { Ajout de la pièce comptable dans le fichier }
+  { Ajout de la piï¿½ce comptable dans le fichier }
   GLEntry := GLEntries.AddChild('GLEntry');     GLEntry.Attributes['entry']  := TobL.GetString('E_NUMEROPIECE');
                                                 GLEntry.Attributes['status'] := 'E';
   SubLevel := GLEntry.AddChild('Division');     SubLevel.Attributes['code']  := FolderCode;
@@ -1297,7 +1300,7 @@ var
 
   function GetTaxSytem : string;
   begin
-    { L=Assujeti, E=Exempté, N=Non assujeti }
+    { L=Assujeti, E=Exemptï¿½, N=Non assujeti }
     case Tools.CaseFromString(TobData.GetString('T_REGIMETVA'), ['COR', 'DTM', 'EXO', 'EXP', 'FRA', 'INT']) of
       {COR} 0 : Result := 'N';
       {DTM} 1 : Result := 'N';
@@ -1567,20 +1570,20 @@ var
     Result := Format('%s_%s.xml', [FormatDateTime('yyyymmdd', NowH), Suffix]);
   end;
 
-begin                                                                                          
+begin
   Result         := True;
-  MsgCaption     := 'Export écritures';
+  MsgCaption     := 'Export ï¿½critures';
   PathXMLFile    := IncludeTrailingBackslash(GetParamSocSecur('SO_EXPXMLDIR', ''));
   PathXMLTmpFile := IncludeTrailingBackslash(GetEnvironmentVariable('TEMP'));
   FolderCode     := GetParamSocSecur('SO_EXPXMLDOSSIERCPTA', '');
   if PathXMLFile = '' then
-    PGIError('Export impossible, le répertoire de stockage des fichiers n''est pas renseigné.', MsgCaption)
+    PGIError('Export impossible, le rï¿½pertoire de stockage des fichiers n''est pas renseignï¿½.', MsgCaption)
   else if FolderCode = '' then
-    PGIError('Export impossible, le numéro de dossier EXACT n''est pas renseigné.', MsgCaption)
+    PGIError('Export impossible, le numï¿½ro de dossier EXACT n''est pas renseignï¿½.', MsgCaption)
   else
   begin
-    MsgConfirm := Format('Ce traitement exporte toutes les écritures%s non exportées du %s au %s et bloque les pièces associées.#13#10 Voulez-vous continuer ?'
-                         , [  Tools.iif(ForceExport, ' déjà exportées et', '')
+    MsgConfirm := Format('Ce traitement exporte toutes les ï¿½critures%s non exportï¿½es du %s au %s et bloque les piï¿½ces associï¿½es.#13#10 Voulez-vous continuer ?'
+                         , [  Tools.iif(ForceExport, ' dï¿½jï¿½ exportï¿½es et', '')
                             , DateToStr(StartDate)
                             , DateToStr(EndDate)
                            ]);
@@ -1601,10 +1604,10 @@ begin
          or (FileExists(PathXMLFileFOU))
       then
       begin
-        PGIError(Format('Export impossible, un des fichiers à générer existe déjà dans %s', [PathXMLFile]), MsgCaption);
+        PGIError(Format('Export impossible, un des fichiers ï¿½ gï¿½nï¿½rer existe dï¿½jï¿½ dans %s', [PathXMLFile]), MsgCaption);
       end else
       begin
-        { Supprime les fichiers du répertoire temporaire si existent }
+        { Supprime les fichiers du rï¿½pertoire temporaire si existent }
         DeleteFile(PAnsiChar(TempPathXMLFileVTE));
         DeleteFile(PAnsiChar(TempPathXMLFileACH));
         DeleteFile(PAnsiChar(TempPathXMLFileCLI));
@@ -1612,7 +1615,7 @@ begin
         if LoadEcr then
         begin
           TslData.Add('');
-          TslData.Add('Pièces comptable (Exercice - Journal - N° de pièce) :');
+          TslData.Add('Piï¿½ces comptable (Exercice - Journal - Nï¿½ de piï¿½ce) :');
           BeginTrans;
           try
             if TobEcrVen.Detail.Count   > 0 then
@@ -1622,7 +1625,7 @@ begin
               finally
                 Result := CheckExportEntry(TobEcrVen);
                 if not Result then
-                  PGIError('Erreur lors de la mise à jour des écritures de ventes.', MsgCaption);
+                  PGIError('Erreur lors de la mise ï¿½ jour des ï¿½critures de ventes.', MsgCaption);
               end;
             end;
             if (Result) and (TobEcrAch.Detail.Count   > 0) then
@@ -1632,7 +1635,7 @@ begin
               finally
                 Result := CheckExportEntry(TobEcrAch);
                 if not Result then
-                  PGIError('Erreur lors de la mise à jour des écritures de ventes.', MsgCaption);
+                  PGIError('Erreur lors de la mise ï¿½ jour des ï¿½critures de ventes.', MsgCaption);
               end;
             end;
             if (Result) and (TobCustomer.Detail.Count > 0) then Result := ThirdTreatment('VTE');
@@ -1652,9 +1655,9 @@ begin
             SetParamSoc('SO_EXPXMLDE', StartDate);
             SetParamSoc('SO_EXPXMLA' , EndDate);
           end;
-          Msg := Format('%s des écritures %s de ventes et achats du %s au %s.%s%s%s'
+          Msg := Format('%s des ï¿½critures %s de ventes et achats du %s au %s.%s%s%s'
                         , [  Tools.iif(Result, 'Export', 'Tentative d''export')
-                           , Tools.iif(ForceExport, 'déjà exportées et non exportées', 'non exportées')
+                           , Tools.iif(ForceExport, 'dï¿½jï¿½ exportï¿½es et non exportï¿½es', 'non exportï¿½es')
                            , DateTimeToStr(StartDate)
                            , DateTimeToStr(EndDate)
                            , #13#10
@@ -1662,9 +1665,9 @@ begin
                            , TslData.Text
                           ]);
           MAJJnalEvent('EPC', Tools.iif(Result, 'OK', 'ERR'), MsgCaption, Msg);
-          PGIBox(Format('Traitement terminé avec %s.', [Tools.iif(Result, 'succès', 'des erreurs')]), MsgCaption);
+          PGIBox(Format('Traitement terminï¿½ avec %s.', [Tools.iif(Result, 'succï¿½s', 'des erreurs')]), MsgCaption);
         end else
-          PGIBox('Il n''y a pas d''écritures à exporter sur la période demandée.', MsgCaption);
+          PGIBox('Il n''y a pas d''ï¿½critures ï¿½ exporter sur la pï¿½riode demandï¿½e.', MsgCaption);
       end;
     end;
   end;

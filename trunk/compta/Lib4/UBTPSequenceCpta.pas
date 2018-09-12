@@ -2,7 +2,7 @@ unit UBTPSequenceCpta;
 
 interface
 uses uTob, HEnt1, HCtrls, StdCtrls, Ent1,
-     DB,SysUtils,CbpMCD,ADODB,Forms,
+     DB,SysUtils,CbpMCD,ADODB,Forms,Messages,
     {$IFNDEF DBXPRESS} dbtables {$ELSE} uDbxDataSet {$ENDIF}
 ;
 // COMPTA
@@ -224,6 +224,10 @@ begin
             Result := -1;
             Raise Exception.Create('Erreur mise à jour compteur pièce comptable');
           end;
+        end
+        else
+        begin
+          Application.MessageBox(PAnsiChar('Erreur de paramétrage compteur DESEQUENCES et CPSEQCORRESP' + #10#13 + ' CODE : ' + Cle + ' VALEUR : ' + InttoStr(OldValue)), 'Erreur numérotation comptable');
         end;
       FINALLY
         QQ.active := False;

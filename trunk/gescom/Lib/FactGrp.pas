@@ -2066,7 +2066,7 @@ BEGIN
   if V_PGI.IoError = oeOk then EcritlesOuvragesP (TOBgenere.getValue('GP_NATUREPIECEG'),TOBOuvragesP);
   if V_PGI.IoError = oeOk then TOBBasesL.InsertDB(nil);
   //--
-  if V_PGI.IoError=oeOk then TOBBases.InsertDB(Nil) ;
+  if V_PGI.IoError=oeOk then TOBBases.InsertDB(nil) ;
   //if V_PGI.IoError=oeOk then TOBEches.InsertDB(Nil) ;
   if V_PGI.IoError=oeOk then TOBEches.InsertOrUpdateDB(True) ;
 

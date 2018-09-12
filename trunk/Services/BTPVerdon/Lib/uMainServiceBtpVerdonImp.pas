@@ -7,12 +7,12 @@ uses
   , Messages
   , SysUtils
   , Classes
-  , Graphics                                  
+  , Graphics
   , Controls
   , SvcMgr
   , Dialogs
   , ConstServices
-  , UtilBTPVerdon                                                  
+  , UtilBTPVerdon
   , tThreadTiers
   , tThreadChantiers
   , tThreadDevis
@@ -145,18 +145,18 @@ end;
 procedure TSvcSyncBTPVerdonImp.ServiceAfterInstall(Sender: TService);
 var
   Reg : TRegistry;
-begin                                                                               
+begin
   Reg := TRegistry.Create(KEY_READ or KEY_WRITE);
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     if Reg.OpenKey('\SYSTEM\CurrentControlSet\Services\' + Sender.Name, false) then
     try
-      Reg.WriteString('Description', 'LSE-Synchronisation des données entre BTP et VERDON - Import.');
+      Reg.WriteString('Description', 'LSE-Synchronisation des donnï¿½es entre BTP et VERDON - Import.');
     finally
       Reg.CloseKey;
     end;
   finally
-    Reg.Free;                                                                              
+    Reg.Free;
   end;
 end;
 
@@ -187,7 +187,7 @@ procedure TSvcSyncBTPVerdonImp.ServiceExecute(Sender: TService);
       uThreadTiers.Resume;
     except
       on E: Exception do
-        LogMessage(Format('Fin exécution du service avec erreur : %s', [E.Message]), EVENTLOG_ERROR_TYPE);
+        LogMessage(Format('Fin exï¿½cution du service avec erreur : %s', [E.Message]), EVENTLOG_ERROR_TYPE);
     end;
   end;
 
@@ -209,7 +209,7 @@ procedure TSvcSyncBTPVerdonImp.ServiceExecute(Sender: TService);
       uThreadChantier.Resume;
     except
       on E: Exception do
-        LogMessage(Format('Fin exécution du service avec erreur : %s', [E.Message]), EVENTLOG_ERROR_TYPE);
+        LogMessage(Format('Fin exï¿½cution du service avec erreur : %s', [E.Message]), EVENTLOG_ERROR_TYPE);
     end;
   end;
 
@@ -231,7 +231,7 @@ procedure TSvcSyncBTPVerdonImp.ServiceExecute(Sender: TService);
       uThreadDevis.Resume;
     except
       on E: Exception do
-        LogMessage(Format('Fin exécution du service avec erreur : %s', [E.Message]), EVENTLOG_ERROR_TYPE);
+        LogMessage(Format('Fin exï¿½cution du service avec erreur : %s', [E.Message]), EVENTLOG_ERROR_TYPE);
     end;
   end;
 
@@ -253,20 +253,20 @@ procedure TSvcSyncBTPVerdonImp.ServiceExecute(Sender: TService);
       uThreadLignesBR.Resume;
     except
       on E: Exception do
-        LogMessage(Format('Fin exécution du service avec erreur : %s', [E.Message]), EVENTLOG_ERROR_TYPE);
+        LogMessage(Format('Fin exï¿½cution du service avec erreur : %s', [E.Message]), EVENTLOG_ERROR_TYPE);
     end;
   end;
 
 begin
-  IniPath := TServicesLog.GetFilePath(ServiceName_BTPVerdonImp, 'ini');
-  AppPath := TServicesLog.GetFilePath(ServiceName_BTPVerdonImp, 'exe');
-  LogPath := TServicesLog.GetFilePath(ServiceName_BTPVerdonImp, 'log');
+  IniPath := TServicesLog.GetAppDataFileName(ServiceName_BTPVerdon, 'ini');
+  AppPath := TServicesLog.GetFilePath(ServiceName_BTPVerdon, 'exe');
+  LogPath := TServicesLog.GetAppDataFileName(ServiceName_BTPVerdon, 'log');
   if not FileExists(IniPath) then
   begin
     LogMessage(Format('Impossible d''initialiser le service %s. Le fichier de configuration "%s" est inexistant.', [ServiceName_BTPVerdonImp, IniPath]), EVENTLOG_ERROR_TYPE);
   end else
   begin
-    ClearTablesValues;                         
+    ClearTablesValues;
     ReadSettings;
     while not Terminated do
     begin
@@ -290,13 +290,12 @@ begin
   FreeAndNil(uThreadChantier);
   FreeAndNil(uThreadDevis);
   FreeAndNil(uThreadLignesBR);
-  LogMessage(Format('Arrêt de %s.', [ServiceName_BTPVerdonImp]), EVENTLOG_INFORMATION_TYPE);
+  LogMessage(Format('Arrï¿½t de %s.', [ServiceName_BTPVerdonImp]), EVENTLOG_INFORMATION_TYPE);
 end;
 
 procedure TSvcSyncBTPVerdonImp.ServiceStart(Sender: TService; var Started: Boolean);
 begin
-  LogMessage(Format('Démarrage de de %s.', [ServiceName_BTPVerdonImp]), EVENTLOG_INFORMATION_TYPE);
+  LogMessage(Format('Dï¿½marrage de de %s.', [ServiceName_BTPVerdonImp]), EVENTLOG_INFORMATION_TYPE);
 end;
 
 end.
-

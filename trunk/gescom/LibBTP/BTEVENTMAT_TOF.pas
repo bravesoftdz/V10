@@ -20,6 +20,7 @@ Uses StdCtrls,
      eMul, 
      uTob,
 {$ENDIF}
+     fe_main,
      forms,
      HPanel,
      Vierge,
@@ -173,6 +174,7 @@ Type
     procedure TiersSelectOnClick(Sender: TObject);
     procedure TypeActionOnExit(Sender: TObject);
     procedure TypeActionOnChange(Sender: TObject);
+    procedure CodeMaterielOnElipsisClick(Sender: TObject);
 
 
 
@@ -607,6 +609,7 @@ begin
   Affaire3.OnExit         := AffaireOnExit;
   //
   CodeMateriel.OnExit     := CodeMaterielOnExit;
+  CodeMateriel.OnElipsisClick := CodeMaterielOnElipsisClick;
   TypeAction.OnExit       := TypeActionOnExit;
   CodeClient.OnExit       := TiersOnExit;
   Ressource.OnExit        := RessourceOnExit;
@@ -714,6 +717,17 @@ begin
   end
   else CodeMateriel.Setfocus;
 
+end;
+
+Procedure TOF_BTEVENTMAT.CodeMaterielOnElipsisClick(Sender : TObject);
+var CodeMat : string;
+begin
+
+  CodeMat := CodeMateriel.text;
+  CodeMat := AGLLanceFiche('BTP','BTMATERIEL_MUL','BMA_CODEMATERIEL='+CodeMat,'','RECH=X');
+
+  if CodeMat <> '' then CodeMateriel.text := CodeMat;
+                                              
 end;
 
 Procedure TOF_BTEVENTMAT.TypeActionOnExit(Sender : TObject);

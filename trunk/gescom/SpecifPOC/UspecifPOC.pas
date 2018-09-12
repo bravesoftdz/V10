@@ -13,6 +13,7 @@ uses
   wCommuns,
   uEntCommun,
   UtilConso,
+  UtilBsv,
   Db, {$IFNDEF DBXPRESS} dbTables, {$ELSE} uDbxDataSet, {$ENDIF}
   affaireutil,FE_Main
   ;
@@ -681,7 +682,7 @@ var TheIDZeDoc : string;
 begin
   result := True;
   if TOBPiece.getString('GP_NATUREPIECEG')<>'FF' then exit;
-  TheIDZeDoc := GetIDBSVDOC (TOBPiece);
+  TheIDZeDoc := TFUnctionBSV.GetIDBSVDOC (TOBPiece);
   if TheIDZeDoc = '' then Exit;
   result :=  SetFactureRegleBSV (TheIDZeDoc);
 end;

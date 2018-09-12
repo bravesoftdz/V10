@@ -193,22 +193,22 @@ object FInitSoc: TFInitSoc
           Height = 21
           TabStop = False
           Color = clYellow
-          Decimals = 0
-          Digits = 12
           Enabled = False
           Font.Charset = DEFAULT_CHARSET
           Font.Color = clRed
           Font.Height = -11
           Font.Name = 'MS Sans Serif'
           Font.Style = []
-          Masks.PositiveMask = '#,##0'
-          Debit = False
           ParentFont = False
           TabOrder = 1
+          Visible = False
+          Decimals = 0
+          Digits = 12
+          Masks.PositiveMask = '#,##0'
+          Debit = False
           UseRounding = True
           Value = 9.000000000000000000
           Validate = False
-          Visible = False
         end
         object UG_NUMERO: THNumEdit
           Left = 164
@@ -217,22 +217,22 @@ object FInitSoc: TFInitSoc
           Height = 21
           TabStop = False
           Color = clYellow
-          Decimals = 0
-          Digits = 12
           Enabled = False
           Font.Charset = DEFAULT_CHARSET
           Font.Color = clRed
           Font.Height = -11
           Font.Name = 'MS Sans Serif'
           Font.Style = []
-          Masks.PositiveMask = '#,##0'
-          Debit = False
           ParentFont = False
           TabOrder = 2
+          Visible = False
+          Decimals = 0
+          Digits = 12
+          Masks.PositiveMask = '#,##0'
+          Debit = False
           UseRounding = True
           Value = 1.000000000000000000
           Validate = False
-          Visible = False
         end
         object UG_LIBELLE: TEdit
           Left = 212
@@ -928,7 +928,6 @@ object FInitSoc: TFInitSoc
       ParentShowHint = False
       ShowHint = True
       TabOrder = 3
-      NumGlyphs = 2
       GlobalIndexImage = 'Z1770_S16G1'
     end
     object BValider: THBitBtn

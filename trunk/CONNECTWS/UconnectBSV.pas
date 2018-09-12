@@ -4,7 +4,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ComCtrls,WinHttp_TLB,UTOB,HMsgBox,XMLDoc,xmlintf,
-  ParamSoc,DateUtils,ENTGC,SHellApi,XeroTypes,Ulog;
+  ParamSoc,DateUtils,{ENTGC,}SHellApi,XeroTypes,Ulog,UtilBSV;
 
 type
 //  TConnectionSource = (Web, Outlook, Word, Excel, Scan, Custom, Mobile);
@@ -101,7 +101,7 @@ type
     function UploadDocument (FileName : string; Update : boolean=false) : boolean;
   end;
 
-function GetEmail (CodeUser : string) : string;
+function GetEmail (CodeUser : string; Server: string='';Database : string = '') : string;
 function GetParamsUserBSV (var UploadRight : Boolean; var ViewRight : boolean) : boolean;
 procedure GetParamsUploadBSV (TOBParamsBSV : TOB; ZeXX : TconnectBSV = nil);
 function SetFactureRegleBSV (BSVDocumentID : string) : boolean;
@@ -110,12 +110,13 @@ function StoreDocumentBSV (FileName : string; TOBFields : TOB;StoreWF : boolean=
 procedure GetParamStockageBSV (TOBFIelds : TOB; NaturePiece : string);
 function EcraseDocumentBSV (FileName : string; TOBFields : TOB; IDZeDoc : string) : boolean;
 function FindDocumentBSV (SousTraitant,NumFacture,DateFacture : string) : string;
+
 implementation
 
-uses Hctrls,Aglinit,Hent1,db, {$IFNDEF DBXPRESS} dbtables {$ELSE} uDbxDataSet,FactComm,
+uses Hctrls,Aglinit,Hent1,db, {$IFNDEF DBXPRESS} dbtables {$ELSE} uDbxDataSet,{FactComm,}
   XeroBase64 {$ENDIF}, UdefServices, UCryptage,LicUtil;
 
-function GetEmail (CodeUser : string) : string;
+function GetEmail (CodeUser : string;Server: string='';Database : string = '') : string;
 var QQ: TQuery;
 begin
   Result :='';
@@ -326,7 +327,7 @@ var QQ : TQuery;
     BSVDocumentID : string;
 begin
   TheArchive := 0;
-  BSVDocumentID := GetIDBSVDOC (TOBPiece);
+  BSVDocumentID := TFUnctionBSV.GetIDBSVDOC (TOBPiece);
   XX := TconnectBSV.create;
   TRY
     QQ := OpenSQL('SELECT * FROM BSVSERVER',True,1,'',true);

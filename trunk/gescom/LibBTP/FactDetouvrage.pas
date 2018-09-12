@@ -1364,6 +1364,7 @@ begin
         begin
           TOBDetOuv.PutValue('BLO_PUHT', TOBLigNom.GetValue('GNL_PRIXFIXE'));
           TOBDetOuv.PutValue('BLO_PUHTDEV', pivottodevise(TOBLigNom.GetValue('GNL_PRIXFIXE'),DEV.Taux,DEV.quotite,V_PGI.OkdecP));
+          TOBDetOuv.SetDouble('BLO_COEFMARG', 0);
         end;
         Qte := TOBDetOuv.getValue('BLO_QTEFACT');
         QteDuPv := TOBDetOuv.getValue('BLO_PRIXPOURQTE'); if QteDuPv = 0 then QteDuPv := 1;

@@ -4,14 +4,14 @@ interface
 
 uses
   Classes
-//  , UConnectWSConst
   , ConstServices
   , ADODB
   {$IFNDEF APPSRV}
-  , UTob                                                    
+  , UTob
   , HEnt1
   {$ELSE APPSRV}
    {$IFDEF APPSRVWITHCBP}
+  , UTob
   , HEnt1
    {$ENDIF APPSRVWITHCBP}
   {$ENDIF !APPSRV}
@@ -123,9 +123,15 @@ type
     {$IFNDEF APPSRV}
     class procedure TobToTStringList(TobOrig : TOB; TSlResult : TStringList; Level : Integer=1);
     {$ENDIF !APPSRV}
+    {$IFDEF APPSRVWITHCBP}
+    class procedure TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
+    {$ENDIF}
     {$IF not Defined(APPSRV) or (Defined(APPSRV) and Defined(APPSRVWITHCBP))}
     class function BlobToString_(Texte : string) : string;
     {$IFEND}
+    class function ExtractFieldName(Value : string) : string;
+    class function ExtractFieldType(Value : string) : string;
+
   end;
 
 implementation
@@ -138,7 +144,6 @@ uses
   , Variants
   , DateUtils
   , Zip
-//  , UConnectWSCEGID
   , SvcMgr
   , Windows
   , ComCtrls
@@ -190,8 +195,8 @@ begin
   inherited;
 end;
 
-{ Renvoie dans TSLResult le résultat du SELECT dont les valeurs sont séparées par des ^.
-  Exemple de code pour appeler cette méthode :
+{ Renvoie dans TSLResult le rï¿½sultat du SELECT dont les valeurs sont sï¿½parï¿½es par des ^.
+  Exemple de code pour appeler cette mï¿½thode :
 
     lAdoQry := AdoQry.Create;
     try
@@ -226,7 +231,7 @@ begin
   Result := '';
   if     (ServerName <> '') // Nom du serveur
      and (DBName <> '')     // Nom de la BDD
-     and (Request <> '')    // Requête
+     and (Request <> '')    // Requï¿½te
      and (FieldsList <> '') // Liste des champs
   then
   begin
@@ -299,13 +304,13 @@ begin
       end;
     end;
   end;
-end;                                                                                                    
+end;
 
 procedure AdoQry.InsertUpdate;
 begin
   if     (ServerName <> '') // Nom du serveur
      and (DBName <> '')     // Nom de la BDD
-     and (Request <> '')    // Requête
+     and (Request <> '')    // Requï¿½te
   then
   begin
     Qry.ConnectionString := GetConnectionString;
@@ -810,6 +815,36 @@ begin
 end;
 {$ENDIF !APPSRV}
 
+{$IFDEF APPSRVWITHCBP}
+class procedure Tools.TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
+var
+  Cpt        : integer;
+  CptField   : integer;
+  Value      : string;
+  FieldName  : string;
+  FieldValue : string;
+  TobL       : TOB;
+begin
+  if assigned(TobResult) and (TslValues.Count > 0) then
+  begin
+    for Cpt := 0 to pred(TslValues.Count) do
+    begin
+      TobL     := TOB.Create('_DATA', TobResult, -1);
+      Value    := TslValues[Cpt];
+      CptField := 0;
+      while Value <> '' do
+      begin
+        FieldName  := Tools.iif(WithType, ExtractFieldName(ArrOfFields[CptField]), ArrOfFields[CptField]);
+        FieldValue := Tools.ReadTokenSt_(Value, '^');
+        TobL.AddChampSupValeur(FieldName, FieldValue);
+        inc(CptField);
+      end;
+    end;
+  end;
+end;
+{$ENDIF APPSRVWITHCBP}
+
+
 class function Tools.GetTableNameFromTtn(Ttn: tTableName): string;
 begin
   case Ttn of
@@ -1039,7 +1074,7 @@ begin
 
   end;
 end;
-  
+
 class procedure Tools.FileCut(FullPath : string; MaxSizeBytes : integer; TSLResult : TStringList; KeepOriginFile : boolean=True);
 var
   FileStream : TFileStream;
@@ -1255,10 +1290,10 @@ begin
   Result := FormatDateTime('yyyymmdd hh:nn:ss', lDate);
 end;
 
-class function Tools.CastDateForQry(lDate : TDateTime) : string;                                                       
+class function Tools.CastDateForQry(lDate : TDateTime) : string;
 begin
   Result := FormatDateTime('yyyymmdd', lDate);
-end;                                                                                
+end;
 
 class function Tools.UsDateTime_(dDateTime: TDateTime): string;
 begin
@@ -1272,7 +1307,7 @@ var
   Qry : TQuery;
   {$ELSE !APPSRV}
   AdoQryL : AdoQry;
-  {$ENDIF !APPSRV}                                      
+  {$ENDIF !APPSRV}
 begin
   if Stub <> '' then
   begin
@@ -1332,7 +1367,7 @@ begin
   Lignes.Free;
   RichEdit.Free;
   Panel.Free;
-  // On remplace les saut de lignes et tabulations pour que ça passe dans le fichier d'échange (et pas de saut de ligne en fin de texte)
+  // On remplace les saut de lignes et tabulations pour que ï¿½a passe dans le fichier d'ï¿½change (et pas de saut de ligne en fin de texte)
   if Result <> '' then
   begin
     while (Result [Length (Result)] = #10) or (Result [Length (Result)] = #13) do
@@ -1344,5 +1379,14 @@ begin
 end;
 {$IFEND}
 
-end.
+class function Tools.ExtractFieldName(Value : string) : string;
+begin
+  Result := copy(Value, 1, pos(';', Value) -1)
+end;
 
+class function Tools.ExtractFieldType(Value : string) : string;
+begin
+  Result := copy(Value, pos(';', Value) +1,length(Value));
+end;
+
+end.

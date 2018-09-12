@@ -19,6 +19,7 @@ type
     class function GetFilePath(ServiceName, Extension: string): string;
     class function CreateLog(LogValues : T_WSLogValues; ServiceName : string): string;
     class procedure WriteLog(TypeDebug: T_SvcTypeLog; Text, ServiceName: string; LogValues : T_WSLogValues; LineLevel: integer; WithoutDateTime: Boolean=true; AddFileName : string='');
+    class function GetAppDataFileName (ServiceName, Extension: string): string;
   end;
 
 const
@@ -26,7 +27,7 @@ const
   ServiceName_BTPVerdonImp = 'SvcSynBTPVerdonImp';
   ServiceName_BTPVerdonExp = 'SvcSynBTPVerdonExp';
   WSCDS_ErrorMsg           = '##### ERREUR';
-  WSCDS_DebugMsg           = '***** DEBUG : ';
+  ServiceName_BASTVERSGED = 'SvcEnvoiBASTGed';
 
 implementation
 
@@ -35,10 +36,16 @@ uses
   , SysUtils
   , Windows
   , CommonTools
-  , UConnectWSConst
+  , UWinSystem
   ;
 
 { TServicesLgo }
+
+
+class function TServicesLog.GetAppDataFileName(ServiceName, Extension: string): string;
+begin
+  Result := Format('%s%s.%s', [TWinSystem.GetAppDataPath, ServiceName, Extension]);
+end;
 
 class function TServicesLog.GetFilePath(ServiceName, Extension: string): string;
 begin
@@ -56,11 +63,11 @@ begin
     Result := Format('%s%s.%s', [ExtractFilePath(ParamStr(0)), ServiceName, 'log']);
     if Logvalues.OneLogPerDay then
       Result := Format('%s_%s.log', [Copy(Result, 1, pos('.log', Result) -1), Tools.CastDateTimeForQry(Now)]);
-    if LogValues.DebugEvents > 0 then TServicesLog.WriteLog(ssbylLog, Format('%s - TSvcSyncBTPY2Execute.LogsManagement : LogFilePath = %s', [WSCDS_DebugMsg, Result]), ServiceName, LogValues, 0);
+    if LogValues.DebugEvents > 0 then TServicesLog.WriteLog(ssbylLog, Format('%s - Service.LogsManagement : LogFilePath = %s', [WSCDS_DebugMsg, Result]), ServiceName, LogValues, 0);
     if not LogValues.OneLogPerDay then
     begin
       MaxSize := LogValues.LogMoMaxSize;
-      { Si dépasse la taille max, supprime puis créé un nouveau }
+      { Si dï¿½passe la taille max, supprime puis crï¿½ï¿½ un nouveau }
       if (MaxSize > 0) then
       begin
         if FindFirst(Result, faAnyFile, SearchFile) = 0 then
@@ -127,7 +134,7 @@ var
       end;
     end else
     begin
-      { Si pas de log métier, on écrit dans le log windows uniquement pour le débug }
+      { Si pas de log mï¿½tier, on ï¿½crit dans le log windows uniquement pour le dï¿½bug }
       if (LogValues.DebugEvents > 0) and (pos(WSCDS_DebugMsg, Text) > 0 ) then
         WriteWindowsLog;
     end;

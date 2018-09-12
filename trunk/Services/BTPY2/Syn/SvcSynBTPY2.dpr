@@ -15,7 +15,8 @@ uses
   Ulog in '..\..\..\commun\Lib\Ulog.pas',
   Zip in '..\..\..\commun\Lib\Zip.pas',
   ZipDlls in '..\..\..\commun\Lib\ZipDlls.pas',
-  ConstServices in '..\..\..\commun\Lib\ConstServices.pas';
+  ConstServices in '..\..\..\commun\Lib\ConstServices.pas',
+  UWinSystem in '..\..\..\COMMUN\LIB\UWinSystem.pas';
 
 {$R *.RES}
 

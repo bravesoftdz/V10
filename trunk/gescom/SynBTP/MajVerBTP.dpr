@@ -567,6 +567,8 @@ uses
   uLkJSON in '..\..\CONNECTWS\uLkJSON.pas',
   BTWSTABLEAUTO_TOF in '..\..\Services\BTPY2\Lib\BTWSTABLEAUTO_TOF.pas',
   UtilsPdf in '..\UtilPdfTk\UtilsPdf.pas',
+  UtilBSV in '..\LibBTP\UtilBSV.pas',
+  UDefGlobals in '..\LibBTP\UDefGlobals.pas',
   BTPARAMWS_TOF in '..\..\CONNECTWS\BTPARAMWS_TOF.pas',
   uWSDataService in '..\..\Services\BTPY2\Lib\uWSDataService.pas',
   UtilBTPVerdon in '..\..\Services\BTPVerdon\Lib\UtilBTPVerdon.pas',
@@ -592,7 +594,7 @@ begin
   //
   Application.Initialize;
   InitAgl;
-  Application.Title := 'Administration Société BTP';
+  Application.Title := 'Administration Sociï¿½tï¿½ BTP';
   Application.CreateForm(TFMenuG, FMenuG);
   InitApplication ;
   SplashScreen:=NIL  ;
