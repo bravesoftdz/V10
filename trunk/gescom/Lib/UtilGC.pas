@@ -73,6 +73,7 @@ function IntervertirNomChampsXX ( FF:Tform; sChampSansIndice:string; iDebut, iFi
 Function ChangeLibre2 ( NomChamp : string ; FF : Tform ) : boolean;
 Function RTTypeProduitCRM : string;
 function EstSpecifPOC : boolean;
+function EstSpecifVERDON : boolean;
 
 Type T_SupArt = Class
                    // DCA - FQ MODE 10815 - Ajout du statut
@@ -2273,6 +2274,11 @@ end;
 function EstSpecifPOC : boolean;
 begin
   Result := (VH_GC.BTCODESPECIF = '001');
+end;
+
+function EstSpecifVERDON : boolean;
+begin
+  Result := (VH_GC.BTCODESPECIF = '002');
 end;
 
 Initialization

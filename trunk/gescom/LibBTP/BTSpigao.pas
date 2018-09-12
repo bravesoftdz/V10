@@ -69,7 +69,9 @@ uses affaireutil,UTOF_VideInside
 {$IFNDEF MOBILITE}
 {$IFNDEF POUCHAIN}
 {$IFNDEF SPINNAKER}
+{$IFNDEF IMPEXP}
 ,MdispBTP
+{$ENDIF IMPEXP}
 {$ENDIF}
 {$ENDIF}
 {$ENDIF}
@@ -211,7 +213,9 @@ begin
 {$IFNDEF MOBILITE}
 {$IFNDEF POUCHAIN}
 {$IFNDEF SPINNAKER}
+{$IFNDEF IMPEXP}
     AfterChangeModule(145); // pour recharger les nombres d'affaires dans les libellés du menu
+{$ENDIF IMPEXP}
 {$ENDIF}
 {$ENDIF}
 {$ENDIF}
@@ -328,7 +332,9 @@ begin
 {$IFNDEF MOBILITE}
 {$IFNDEF POUCHAIN}
 {$IFNDEF SPINNAKER}
+{$IFNDEF IMPEXP}
 	if fDetect.Account.type_ <> AccountType_Undefined then AfterChangeModule(145);
+{$ENDIF IMPEXP}
 {$ENDIF}
 {$ENDIF}
 {$ENDIF}
@@ -474,8 +480,10 @@ begin
 {$IFNDEF PGIMAJVER}
 {$IFNDEF MOBILITE}
 {$IFNDEF POUCHAIN}
-{$IFNDEF SPINNAKER}
+{$IFNDEF SPINNAKER}                                                                                       
+{$IFNDEF IMPEXP}
   	AfterChangeModule (145);
+{$ENDIF IMPEXP}
 {$ENDIF}
 {$ENDIF}
 {$ENDIF}

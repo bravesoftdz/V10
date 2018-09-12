@@ -1,2 +1,3 @@
-net stop "Synchronisation BTP VERDON"
+net stop "Synchronisation BTP VERDON - Import"
+net stop "Synchronisation BTP VERDON - Export"
 pause

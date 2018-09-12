@@ -193,6 +193,8 @@ function IsMasterOnShare (elementpartage : String) : boolean;
 procedure CryptePassword(var   Valeur : String);
 procedure DeCryptePassword(var Valeur : String);
 //pocedure ChkProtectOnExit(Sender: TObject);
+procedure GereExpXmlVerdon(CC : TControl);
+
 
 implementation
 
@@ -6576,6 +6578,32 @@ begin
 
 end;
 
+procedure GereExpXmlVerdon(CC : TControl);
+var
+  FF : TForm ;
+
+  procedure SetVisible(FieldName : string);
+  var
+    cField : TControl;
+  begin
+    cField := GetFromNam(FieldName, FF);
+    cField.Visible := (VH_GC.BTCODESPECIF = '002');
+    cField := GetFromNam('L' + FieldName, FF);
+    cField.Visible := (VH_GC.BTCODESPECIF = '002');
+  end;
+
+begin
+  FF:=GetLaForm(CC) ;
+  if ExisteNam('SCO_EXPXML',FF) then
+  begin
+    SetVisible('SCO_EXPXML');
+    SetVisible('SO_EXPXMLDIR');
+    SetVisible('SO_EXPXMLDE');
+    SetVisible('SO_EXPXMLA');
+    SetVisible('SO_EXPXMLDOSSIERCPTA');
+  end;
+end;
+
 {$IFNDEF EAGLSERVER}
 Function ChargePageSoc ( CC : TControl ) : boolean ;
 Var FF : TForm ;
@@ -6715,6 +6743,7 @@ BEGIN
   end;
   // GC_20071016_GM_GC15422_FIN
   GereMdpMargeMini(CC);
+  GereExpXmlVerdon(CC);
   Result:=True ;
 END ;
 {$ENDIF EAGLSERVER}

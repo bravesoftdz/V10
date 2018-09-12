@@ -4,11 +4,11 @@ interface
 
 uses
   Classes
-  , UConnectWSConst
+//  , UConnectWSConst
   , ConstServices
   , ADODB
   {$IFNDEF APPSRV}
-  , UTob
+  , UTob                                                    
   , HEnt1
   {$ELSE APPSRV}
    {$IFDEF APPSRVWITHCBP}
@@ -84,6 +84,7 @@ type
     class function iif(Const Expression: Boolean; Const TruePart, FalsePart: TStringList): TStringList; overload;
     {$IFNDEF APPSRV}
     class function iif(Const Expression: Boolean; Const TruePart, FalsePart: TActionFiche): TActionFiche; overload;
+    class function iif(Const Expression: Boolean; Const TruePart, FalsePart: TOB): TOB; overload;
     {$ENDIF !APPSRV}
     class function ReadTokenSt_(var S : string; Separator : string) : string;
     class function CountOccurenceString(const S : string; ToCount : string) : integer;
@@ -137,7 +138,7 @@ uses
   , Variants
   , DateUtils
   , Zip
-  , UConnectWSCEGID
+//  , UConnectWSCEGID
   , SvcMgr
   , Windows
   , ComCtrls
@@ -298,7 +299,7 @@ begin
       end;
     end;
   end;
-end;
+end;                                                                                                    
 
 procedure AdoQry.InsertUpdate;
 begin
@@ -466,6 +467,14 @@ end;
 
 {$IFNDEF APPSRV}
 class function Tools.iif(Const Expression: Boolean; Const TruePart, FalsePart: TActionFiche): TActionFiche;
+begin
+	if Expression then
+		Result := TruePart
+	else
+		Result := FalsePart;
+end;
+
+class function Tools.iif(Const Expression: Boolean; Const TruePart, FalsePart: TOB): TOB;
 begin
 	if Expression then
 		Result := TruePart

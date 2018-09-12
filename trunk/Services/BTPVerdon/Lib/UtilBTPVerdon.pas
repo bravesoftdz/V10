@@ -8,11 +8,21 @@ uses
   , CommonTools
   , AdoDB
   , Classes
+  , XmlIntf
+  , XMLDoc
   ;
 
 type                                                                                     
 
   T_TablesName = (tnNone, tnChantier, tnDevis, tnLignesBR, tnTiers);
+
+  T_ThirdXmlFileType = (  txft_None
+                        , txft_BankAccount_Code
+                        , txft_BankAccountType_Code
+                        , txft_Bank_Code
+                        , txft_SwiftCode
+                        , txft_Bic
+                       );
 
   T_TiersValues    = Record
                        FirstExec   : boolean;
@@ -58,7 +68,7 @@ type
   TUtilBTPVerdon = class (TObject)
     class function GetTMPTableName(Tn : T_TablesName) : string;
     class function GetMsgStartEnd(Tn : T_TablesName; Start : boolean; LastSynchro : string) : string;
-    class function AddLog(Tn : T_TablesName; Msg : string; LogValues : T_WSLogValues; LineLevel : integer) : string;
+    class function AddLog(ServiceName : string; Tn : T_TablesName; Msg : string; LogValues : T_WSLogValues; LineLevel : integer) : string;
     class procedure AddFieldsTobAdd(Tn : T_TablesName; TobResult : TOB);
     class procedure AssignAdoQry(AdoQryBTP, AdoQryTMP : AdoQry; FolderValues : T_FolderValues; LogValues : T_WSLogValues);
   end;
@@ -91,7 +101,7 @@ type
     function GetTMPFieldSizeMax(FieldName : string) : integer;
     function InsertUpdateData(TobData: TOB): boolean;
     procedure SetLinkedRecords(TobAdd, TobData : TOB);
-    procedure SetLastSynchro;
+    procedure SetLastSynchro(ServiceName : string);
     procedure TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
                                                                                   
   public
@@ -105,8 +115,46 @@ type
     function TnTreatment(TobTable, TobAdd, TobQry: TOB): boolean;
   end;
 
+  {$IFNDEF APPSRV}
+  TExportEcr = class (TObject)
+  private
+    MsgCaption         : string;
+    FolderCode         : string;
+    PathXMLFileVTE     : string;
+    PathXMLFileACH     : string;
+    PathXMLFileCLI     : string;
+    PathXMLFileFOU     : string;
+    TempPathXMLFileVTE : string;
+    TempPathXMLFileACH : string;
+    TempPathXMLFileCLI : string;
+    TempPathXMLFileFOU : string;
+    TobEcrVen          : TOB;
+    TobEcrAch          : TOB;
+    TobEcrP            : TOB;
+    TobCustomer        : TOB;
+    TobProvider        : TOB;
+    LineNumber         : integer;
+    TslData            : TStringList;
+
+    function LoadEcr : boolean;
+    function LoadAnalytic : boolean;
+    function GetAmount(Amount : double; PositiveValue : boolean) : string;
+    function AddEntryToFile(GLEntries : IXMLNode) : boolean;
+    function AddThirdToFile(Accounts : IXMLNode; TobData : TOB) : boolean;
+
+  public
+    StartDate   : TDateTime;
+    EndDate     : TDateTime;
+    ForceExport : boolean;
+
+    constructor create;
+    destructor destroy; override;
+    function ExpTreatment : boolean;
+  end;
+  {$ENDIF APPSRV}
+
 const
-  DBSynchroName          = 'VERDON_TAMPON';
+  DBSynchroName          = 'GLO_LSE_SYNCHRONISATION';
   LockDefaultValue       = 'O';
   TraiteDefaultValue     = 'N';
   DateTraiteDefaultValue = '19000101';
@@ -120,11 +168,20 @@ uses
   , hCtrls
   , SvcMgr
   , ParamSoc
+  , ed_Tools
+  , Windows
   {$IFNDEF DBXPRESS}
   , dbTables
   {$ELSE !DBXPRESS}
   , uDbxDataSet
   {$ENDIF !DBXPRESS}
+  {$IFNDEF APPSRV}
+  , hMsgBox
+  , Controls
+  , FactCpta
+  , EntGC
+  , UtilGC
+  {$ENDIF APPSRV}
   ;
 
 { TUtilBTPVerdon }
@@ -146,9 +203,9 @@ begin
   Result := Format('%s de traitement de la table %s (données créées ou modifiées depuis le %s).', [Tools.iif(Start, 'Début', 'Fin'), TUtilBTPVerdon.GetTMPTableName(Tn), LastSynchro]);
 end;
 
-class function TUtilBTPVerdon.AddLog(Tn : T_TablesName; Msg : string; LogValues : T_WSLogValues; LineLevel : integer) : string;
+class function TUtilBTPVerdon.AddLog(ServiceName : string; Tn : T_TablesName; Msg : string; LogValues : T_WSLogValues; LineLevel : integer) : string;
 begin
-  TServicesLog.WriteLog(ssbylLog, Msg, ServiceName_BTPVerdon, LogValues, LineLevel, True, TUtilBTPVerdon.GetTMPTableName(Tn));
+  TServicesLog.WriteLog(ssbylLog, Msg, ServiceName_BTPVerdonImp, LogValues, LineLevel, True, TUtilBTPVerdon.GetTMPTableName(Tn));
 end;
 
 class procedure TUtilBTPVerdon.AddFieldsTobAdd(Tn : T_TablesName; TobResult : TOB);
@@ -245,9 +302,8 @@ var
 
 begin
   Result := True;
-//  if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(Tn, Format('%sThreadTiers.SetFieldsArray / Srv=%s, Folder=%s', [WSCDS_DebugMsg, FolderValues.BTPServer, FolderValues.BTPDataBase]), LogValues, 0);
   case Tn of
-    tnChantier : ArrLen := 11;
+    tnChantier : ArrLen := 12;
     tnDevis    : ArrLen := 12;
     tnLignesBR : ArrLen := 12;
     tnTiers    : ArrLen := 25;
@@ -262,17 +318,18 @@ begin
         for Cpt := Low(BTPArrFields) to High(BTPArrFields) do
         begin
           case Cpt of
-            0  : AddValues('AFF_AFFAIRE'      , 'CHA_CODE');
-            1  : AddValues('AFF_LIBELLE'      , 'CHA_LIBELLE');
-            2  : AddValues('AFF_DESCRIPTIF'   , 'CHA_BLOCNOTE');
-            3  : AddValues('AFF_TIERS'        , 'CHA_CODECLIENT');
-            4  : AddValues('AFF_DATEDEBUT'    , 'CHA_DATEDEBUT');
-            5  : AddValues('AFF_DATEFIN'      , 'CHA_DATEFIN');
-            6  : AddValues('AFF_BOOLLIBRE1'   , 'CHA_VISA');
-            7  : AddValues('AFF_STATUTAFFAIRE', 'CHA_STATUT');
-            8  : AddValues('AFF_RESPONSABLE'  , 'CHA_RESPONSABLE');
-            9  : AddValues('AFF_DATECREATION' , 'CHA_DATECREATION');
-            10 : AddValues('AFF_DATEMODIF'    , 'CHA_DATEMODIF');
+            0  : AddValues('AFF_AFFAIRE'      , 'CHA_CODECOMPLET');
+            1  : AddValues('AFF_AFFAIRE1'     , 'CHA_CODE');
+            2  : AddValues('AFF_LIBELLE'      , 'CHA_LIBELLE');
+            3  : AddValues('AFF_DESCRIPTIF'   , 'CHA_BLOCNOTE');
+            4  : AddValues('AFF_TIERS'        , 'CHA_CODECLIENT');
+            5  : AddValues('AFF_DATEDEBUT'    , 'CHA_DATEDEBUT');
+            6  : AddValues('AFF_DATEFIN'      , 'CHA_DATEFIN');
+            7  : AddValues('AFF_BOOLLIBRE1'   , 'CHA_VISA');
+            8  : AddValues('AFF_STATUTAFFAIRE', 'CHA_STATUT');
+            9  : AddValues('AFF_RESPONSABLE'  , 'CHA_RESPONSABLE');
+            10 : AddValues('AFF_DATECREATION' , 'CHA_DATECREATION');
+            11 : AddValues('AFF_DATEMODIF'    , 'CHA_DATEMODIF');
           end;
         end;
         ArrLen := 16;
@@ -374,7 +431,6 @@ begin
         end;
       end;
   end;
-//  if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(Tn, Format('%sEnd ThreadTiers.SetFieldsArray / Srv=%s, Folder=%s', [WSCDS_DebugMsg, FolderValues.BTPServer, FolderValues.BTPDataBase]), LogValues, 0);
 end;
 
 function TTnTreatment.GetPrefix : string;
@@ -410,7 +466,7 @@ end;
 function TTnTreatment.GetTMPIndexFieldName : string;
 begin
   case Tn of
-    tnChantier : Result := 'CHA_CODE';
+    tnChantier : Result := 'CHA_CODECOMPLET';
     tnDevis    : Result := 'DEV_NUMDEVIS';
     tnLignesBR : Result := 'LBR_NUMBR;LBR_NUMORDRE';
     tnTiers    : Result := 'TIE_AUXILIAIRE';
@@ -529,7 +585,7 @@ procedure TTnTreatment.SetLinkedRecords(TobAdd, TobData : TOB);
                   + ' WHERE ADR_REFCODE     = ''%s'''
                   + '   AND ADR_TYPEADRESSE IN (''INT'', ''AFA'')'
                   , [Trim(GetFieldsListFromArray(FieldsList, False)), TobData.GetString('AFF_AFFAIRE')]);
-      if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(Tn, Format('%sSql Adress = %s', [WSCDS_DebugMsg, Sql]), LogValues, 0);
+      if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%sSql Adress = %s', [WSCDS_DebugMsg, Sql]), LogValues, 0);
       AdoQryBTP.TSLResult.Clear;
       AdoQryBTP.FieldsList := Trim(GetFieldsListFromArray(FieldsList, False));
       AdoQryBTP.Request := Sql;
@@ -563,7 +619,7 @@ procedure TTnTreatment.SetLinkedRecords(TobAdd, TobData : TOB);
                 + '       AND GP_TIERS    = ''%s'''
                 + '       AND GP_AFFAIRE  = ''%s'''
                   , [FieldName, TobData.GetString('AFF_TIERS'), TobData.GetString('AFF_AFFAIRE')]);
-    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(Tn, Format('%sSql Quotation list = %s', [WSCDS_DebugMsg, Sql]), LogValues, 0);
+    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%sSql Quotation list = %s', [WSCDS_DebugMsg, Sql]), LogValues, 0);
     AdoQryBTP.TSLResult.Clear;
     AdoQryBTP.FieldsList := FieldName;
     AdoQryBTP.Request    := Sql;
@@ -575,7 +631,7 @@ procedure TTnTreatment.SetLinkedRecords(TobAdd, TobData : TOB);
   end;
 
 begin
-  if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(Tn, Format('%sTTnTreatment.SetLinkedRecords', [WSCDS_DebugMsg]), LogValues, 0);
+  if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%sTTnTreatment.SetLinkedRecords', [WSCDS_DebugMsg]), LogValues, 0);
   TobAdd.ClearDetail;
   case Tn of
     tnChantier :
@@ -587,15 +643,15 @@ begin
   end;
 end;
 
-procedure TTnTreatment.SetLastSynchro;
+procedure TTnTreatment.SetLastSynchro(ServiceName : string);
 var
   SettingFile : TInifile;
   IniFilePath : string;
 begin
-  IniFilePath := TServicesLog.GetFilePath(ServiceName_BTPVerdon, 'ini');
+  IniFilePath := TServicesLog.GetFilePath(ServiceName, 'ini');
   SettingFile := TIniFile.Create(IniFilePath);
   try
-    SettingFile.WriteString('TABLESLASTSYNCHRO', TUtilBTPVerdon.GetTMPTableName(Tn), DateTimeToStr(Now));
+    SettingFile.WriteString('EXPTABLESLASTSYNCHRO', TUtilBTPVerdon.GetTMPTableName(Tn), DateTimeToStr(Now));
     SettingFile.UpdateFile;
   finally
     SettingFile.Free;
@@ -842,29 +898,29 @@ var
   InsertQty : integer;
   OtherQty  : integer;
 begin
-  if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(Tn, Format('%sStart TTnTreatment.InsertUpdateData', [WSCDS_DebugMsg]), LogValues, 0);
+  if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%sStart TTnTreatment.InsertUpdateData', [WSCDS_DebugMsg]), LogValues, 0);
   Result := True;
   if (assigned(TobData)) then
   begin
     UpdateQty := TobData.GetInteger('UPDATEQTY');
     InsertQty := TobData.GetInteger('INSERTQTY');
     OtherQty  := TobData.GetInteger('OTHERQTY');
-    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(Tn, Format('%sUpdateQty=%s, InsertQty=%s, OtherQty=%s', [WSCDS_DebugMsg, IntToStr(UpdateQty), IntToStr(InsertQty), IntToStr(OtherQty)]), LogValues, 0);
+    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%sUpdateQty=%s, InsertQty=%s, OtherQty=%s', [WSCDS_DebugMsg, IntToStr(UpdateQty), IntToStr(InsertQty), IntToStr(OtherQty)]), LogValues, 0);
     try
       for Cpt := 0 to pred(TobData.Detail.Count) do
       begin
         AdoQryTMP.RecordCount := 0;
         AdoQryTMP.Request     := TobData.Detail[Cpt].GetString('SqlQry');
-        if LogValues.DebugEvents > 0 then TUtilBTPVerdon.AddLog(Tn, Format('%sExécution de %s ', [WSCDS_DebugMsg, AdoQryTMP.Request]), LogValues, 1);
+        if LogValues.DebugEvents > 0 then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%sExécution de %s ', [WSCDS_DebugMsg, AdoQryTMP.Request]), LogValues, 1);
         AdoQryTMP.InsertUpdate;
       end;
       if UpdateQty > 0 then
-        TUtilBTPVerdon.AddLog(Tn, Format('%s enregistrements de la table %s modifié(s)', [IntToStr(UpdateQty), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
+        TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%s enregistrements de la table %s modifié(s)', [IntToStr(UpdateQty), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
       if InsertQty > 0 then
-        TUtilBTPVerdon.AddLog(Tn, Format('%s enregistrements de la table %s créé(s)', [IntToStr(InsertQty), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
+        TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%s enregistrements de la table %s créé(s)', [IntToStr(InsertQty), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
       if OtherQty > 0 then
-        TUtilBTPVerdon.AddLog(Tn, Format('%s enregistrements de la table %s non traité(s) car verrouillé(s)', [IntToStr(OtherQty), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
-      SetLastSynchro;
+        TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%s enregistrements de la table %s non traité(s) car verrouillé(s)', [IntToStr(OtherQty), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
+      SetLastSynchro(ServiceName_BTPVerdonExp);
     except
       Result := False;
     end;
@@ -879,7 +935,7 @@ var
   UpdateQty     : integer;
   OtherQty      : integer;
   FieldSize     : integer;
-  SqlUnlock     : string;
+  SqlUnlock     : string;                           
   Sql           : string;
   Lock          : string;
   Treat         : string;
@@ -892,14 +948,14 @@ var
   Values        : string;
   FindData      : boolean;
 begin
-  if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(Tn, Format('%s Start TTnTreatment.TnTreatment', [WSCDS_DebugMsg]), LogValues, 0);
+  if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%s Start TTnTreatment.TnTreatment', [WSCDS_DebugMsg]), LogValues, 0);
   Result    := True;
   InsertQty := 0;
   UpdateQty := 0;
   OtherQty  := 0;
   SetFieldsArray;
   Sql := GetDataSearchSql;
-  if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(Tn, Format('%s TTnTreatment.TnTreatment / Sql = %s', [WSCDS_DebugMsg, Sql]), LogValues, 0);
+  if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('%s TTnTreatment.TnTreatment / Sql = %s', [WSCDS_DebugMsg, Sql]), LogValues, 0);
   AdoQryBTP.TSLResult.Clear;
   AdoQryBTP.FieldsList := Trim(GetFieldsListFromArray(BTPArrFields, True));
   AdoQryBTP.Request := Sql;
@@ -908,7 +964,7 @@ begin
   Sql := '';
   if TobTable.Detail.Count > 0 then
   begin
-    TUtilBTPVerdon.AddLog(Tn, Format('Recherche des données (%s enregistrement(s) de la table %s)', [IntToStr(TobTable.Detail.Count), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
+    TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Recherche des données (%s enregistrement(s) de la table %s)', [IntToStr(TobTable.Detail.Count), TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
     AdoQryTMP.TSLResult.Clear;
     AdoQryTMP.FieldsList := Format('%s_LOCK,%s_TRAITE', [GetPrefix, GetPrefix]);
     AdoQryTMP.LogValues  := LogValues;
@@ -944,20 +1000,20 @@ begin
         if Lock = 'N' then
         begin
           if LogValues.LogLevel = 2 then
-            TUtilBTPVerdon.AddLog(Tn, Format('Mise à jour de %s%s - %s', [KeyValue1, Tools.iif(KeyValue2 <> '', ' - ' + KeyValue2, ''), LabelValue]), LogValues, 2);
+            TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Mise à jour de %s%s - %s', [KeyValue1, Tools.iif(KeyValue2 <> '', ' - ' + KeyValue2, ''), LabelValue]), LogValues, 2);
           inc(UpdateQty);
           FindData  := True;
           Sql := GetSqlUpdate(TobL, TobAdd, KeyValue1, KeyValue2);
         end else
         begin
           if LogValues.LogLevel = 2 then
-            TUtilBTPVerdon.AddLog(Tn, Format('Mise à jour de %s%s - %s impossible (bloqué)', [KeyValue1, Tools.iif(KeyValue2 <> '', ' - ' + KeyValue2, ''), LabelValue]), LogValues, 2);
+            TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Mise à jour de %s%s - %s impossible (bloqué)', [KeyValue1, Tools.iif(KeyValue2 <> '', ' - ' + KeyValue2, ''), LabelValue]), LogValues, 2);
           Inc(OtherQty);
         end;
       end else
       begin
         if LogValues.LogLevel = 2 then
-          TUtilBTPVerdon.AddLog(Tn, Format('Création de %s%s - %s', [KeyValue1, Tools.iif(KeyValue2 <> '', ' - ' + KeyValue2, ''), LabelValue]), LogValues, 2);
+          TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Création de %s%s - %s', [KeyValue1, Tools.iif(KeyValue2 <> '', ' - ' + KeyValue2, ''), LabelValue]), LogValues, 2);
         Inc(InsertQty);
         FindData  := True;
         Sql := GetSqlInsert(TobL, TobAdd);
@@ -980,8 +1036,639 @@ begin
     TobQry.AddChampSupValeur('OTHERQTY', IntToStr(OtherQty));
     InsertUpdateData(TobQry);
   end else
-    TUtilBTPVerdon.AddLog(Tn, Format('Aucun %s n''a été trouvé.', [TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
-//  SetLastSynchro;
+    TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, Tn, Format('Aucun %s n''a été trouvé.', [TUtilBTPVerdon.GetTMPTableName(Tn)]), LogValues, 1);
 end;
+
+{ TExportEcr }
+{$IFNDEF APPSRV}
+constructor TExportEcr.create;
+begin
+  TobEcrVen   := TOB.Create('_ECRITURE', nil, -1);
+  TobEcrAch   := TOB.Create('_ECRITURE', nil, -1);
+  TobEcrP     := TOB.Create('_ECRITURE', nil, -1);
+  TobCustomer := TOB.Create('_CLIENT', nil, -1);
+  TobProvider := TOB.Create('_FOURNISSEUR', nil, -1);
+  TslData     := TStringList.Create;
+end;
+
+destructor TExportEcr.destroy;
+begin
+  inherited;
+  FreeAndNil(TobEcrP);
+  FreeAndNil(TobEcrVen);
+  FreeAndNil(TobEcrAch);
+  FreeAndNil(TobCustomer);
+  FreeAndNil(TobProvider);
+  FreeAndNil(TslData);
+end;
+
+function TExportEcr.LoadEcr : boolean;
+var
+  TobEcr : TOB;
+  Sql    : string;
+
+  procedure SearchThird(Flow, AuxiliaryCode : string);
+  var
+    TobT : TOB;
+    TobL : TOB;
+    Sql  : string;
+    Qry  : TQuery;
+  begin
+    if not assigned(Tools.iif(Flow = 'VTE', TobCustomer, TobProvider).FindFirst(['T_AUXILIAIRE'], [AuxiliaryCode], True)) then
+    begin
+      TobT := TOB.Create('TIERS', Tools.iif(Flow = 'VTE', TobCustomer, TobProvider), -1);
+      Sql  := Format('SELECT TIERS.*'
+                   + '     , YTC_TEXTELIBRE1'
+                   + ' FROM TIERS'
+                   + ' LEFT JOIN TIERSCOMPL ON YTC_AUXILIAIRE = T_AUXILIAIRE'
+                   + ' WHERE T_AUXILIAIRE = "%s"', [AuxiliaryCode]);
+      Qry  := OpenSql(Sql, True);
+      try
+        if not Qry.Eof then
+        begin
+          TobT.SelectDB('', Qry);
+          TslData.Add(Format('%s : %s - %s', [Tools.iif(TobT.GetString('T_NATUREAUXI') = 'CLI', 'Client', 'Fournisseur'), TobT.GetString('T_TIERS'), TobT.GetString('T_LIBELLE')]));
+          { Recherche les adresses }
+          TobL := TOB.Create('_ADRESSES', TobT, -1);
+          TobL.AddChampSupValeur('TYPE', 'ADRESSES');
+          Sql  := Format('SELECT * FROM ADRESSES WHERE ADR_REFCODE = "%s"', [TobT.GetString('T_TIERS')]);
+          TobL.LoadDetailFromSQL(Sql);
+          { Recherche les contacts }
+          TobL := TOB.Create('_CONTACT', TobT, -1);
+          TobL.AddChampSupValeur('TYPE', 'CONTACT');
+          Sql  := Format('SELECT * FROM CONTACT WHERE C_TIERS = "%s" ORDER BY C_PRINCIPAL DESC', [TobT.GetString('T_TIERS')]);
+          TobL.LoadDetailFromSQL(Sql);
+          { Recherche les RIB }
+          TobL := TOB.Create('_RIB', TobT, -1);
+          TobL.AddChampSupValeur('TYPE', 'RIB');
+          Sql  := Format('SELECT * FROM RIB WHERE R_AUXILIAIRE = "%s" ORDER BY R_PRINCIPAL DESC', [AuxiliaryCode]);
+          TobL.LoadDetailFromSQL(Sql);
+        end;
+      finally
+        Ferme(Qry);
+      end;
+    end;
+  end;
+
+begin
+  InitMoveProgressForm(nil, MsgCaption, 'Recherche des écritures en cours.', 0, False, True);
+  try
+    TobEcr := TOB.Create('_ECR', nil, -1);
+    try
+      Sql := Format('SELECT J_NATUREJAL'
+                  + '     , G_LIBELLE'
+                  + '     , ECRITURE.*'
+                  + ' FROM ECRITURE'
+                  + ' JOIN JOURNAL  ON J_JOURNAL = E_JOURNAL AND J_NATUREJAL IN ("VTE", "ACH")'
+                  + ' JOIN GENERAUX ON G_GENERAL = E_GENERAL'
+                  + ' WHERE E_DATECOMPTABLE BETWEEN "%s" AND "%s"'
+                  + '   AND E_EXPORTE = "---"'
+                  + ' ORDER BY E_JOURNAL, E_NUMEROPIECE, E_NUMLIGNE'
+                    , [Tools.UsDateTime_(StartDate), Tools.UsDateTime_(EndDate)]);
+      TobEcr.LoadDetailFromSQL(Sql);
+      Result := (TobEcr.Detail.Count > 0);
+      if Result then
+      begin
+        { Eclate Vente et Achat}
+        repeat
+          if TobEcr.Detail[0].GetString('E_TYPEMVT') = 'TTC' then
+            SearchThird(TobEcr.Detail[0].GetString('J_NATUREJAL'), TobEcr.Detail[0].GetString('E_AUXILIAIRE'));
+          if TobEcr.Detail[0].GetString('J_NATUREJAL') = 'VTE' then
+            TobEcr.Detail[0].ChangeParent(TobEcrVen, -1)
+          else
+            TobEcr.Detail[0].ChangeParent(TobEcrAch, -1);
+        until TobEcr.Detail.count = 0
+      end;
+    finally
+      FreeAndNil(TobEcr);
+    end;
+  finally
+    FiniMoveProgressForm;
+  end;
+end;
+
+function TExportEcr.LoadAnalytic : boolean;
+var
+  CptA     : integer;
+begin                                   
+  Result := True;
+  if TobEcrP.Detail.Count > 0 then
+  begin
+    for CptA := 0 to pred(TobEcrP.Detail.Count) do
+      LoadAnalyticOnTobEntry(TobEcrP.Detail[CptA]);
+  end;
+end;
+
+function TExportEcr.GetAmount(Amount : double; PositiveValue : boolean) : string;
+begin
+  Result := FloatToStr((Arrondi(Amount, 2)) * Tools.iif(PositiveValue, 1, -1));
+  Result := StringReplace(Result, ',', '.', [rfReplaceAll]);
+end;
+
+function TExportEcr.AddEntryToFile(GLEntries : IXMLNode) : boolean;
+var
+  Cpt        : integer;
+  TobL       : TOB;
+  AccDate    : string;
+  ThirdType  : string;
+  ThirdCode  : string;
+  Payment    : string;
+  IsInvoice  : boolean;
+  IsSales    : boolean;
+  GLEntry    : IXMLNode;
+  SubLevel   : IXMLNode;
+  SubLevel1  : IXMLNode;
+  SubLevel2  : IXMLNode;
+begin
+  Result    := True;
+  TobL      := TobEcrP.FindFirst(['E_TYPEMVT'], ['TTC'], True);
+  IsInvoice := ((TobL.GetString('E_NATUREPIECE') = 'FC') or (TobL.GetString('E_NATUREPIECE') = 'FF'));
+  IsSales   := (TobL.GetString('J_NATUREJAL') = 'VTE');
+  Payment   := TobL.GetString('E_MODEPAIE');
+  ThirdCode := TobL.GetString('E_AUXILIAIRE');
+  AccDate   := FormatDateTime('yyyy-mm-dd', TobL.GetDateTime('E_DATECOMPTABLE'));
+  ThirdType := Tools.iif(IsSales, 'Debtor', 'Creditor');
+  { Ajout de la pièce comptable dans le fichier }
+  GLEntry := GLEntries.AddChild('GLEntry');     GLEntry.Attributes['entry']  := TobL.GetString('E_NUMEROPIECE');
+                                                GLEntry.Attributes['status'] := 'E';
+  SubLevel := GLEntry.AddChild('Division');     SubLevel.Attributes['code']  := FolderCode;
+  SubLevel := GLEntry.AddChild('Description');  SubLevel.Text                := TobL.GetString('E_LIBELLE');
+  SubLevel := GLEntry.AddChild('Date');         SubLevel.Text                := AccDate;
+  SubLevel := GLEntry.AddChild('DocumentDate'); SubLevel.Text                := AccDate;
+  SubLevel := GLEntry.AddChild('Journal');      SubLevel.Attributes['code']  := TobL.GetString('E_JOURNAL');
+  SubLevel := GLEntry.AddChild('Amount');
+    SubLevel1 := SubLevel.AddChild('Currency'); SubLevel1.Attributes['code'] := TobL.GetString('E_DEVISE');
+    SubLevel1 := SubLevel.AddChild('Value');    SubLevel1.Text               := GetAmount(TobL.GetDouble('E_DEBIT') + TobL.GetDouble('E_CREDIT'), IsInvoice);
+  for Cpt := 0 to pred(TobEcrP.Detail.Count) do
+  begin
+    Inc(LineNumber);
+    TobL := TobEcrP.Detail[Cpt];
+    SubLevel := GLEntry.AddChild('FinEntryLine');              SubLevel.Attributes['number']  := IntToStr(LineNumber);
+                                                               SubLevel.Attributes['type']    := 'N';
+                                                               SubLevel.Attributes['subtype'] := Tools.iif(IsSales, '"K"', '"T"');
+      SubLevel1 := SubLevel.AddChild('Date');                  SubLevel1.Text                 := AccDate;
+      SubLevel1 := SubLevel.AddChild('GLAccount');             SubLevel1.Attributes['code']   := TobL.GetString('E_GENERAL');
+      SubLevel1 := SubLevel.AddChild('Description');           SubLevel1.Text                 := TobL.GetString('G_LIBELLE');
+      SubLevel1 := SubLevel.AddChild('Costcenter');            SubLevel1.Attributes['code']   := '';
+      SubLevel1 := SubLevel.AddChild('Costunit');              SubLevel1.Attributes['code']   := '';
+      SubLevel1 := SubLevel.AddChild(ThirdType);               SubLevel1.Attributes['code']   := ThirdCode;
+                                                               SubLevel1.Attributes['number'] := ThirdCode;
+      SubLevel1 := SubLevel.AddChild('Resource');              SubLevel1.Attributes['number'] := TobL.GetString('E_UTILISATEUR');
+      SubLevel1 := SubLevel.AddChild('Amount');
+        Sublevel2 := SubLevel1.AddChild('Currency');           SubLevel2.Attributes['code']   := TobL.GetString('E_DEVISE');
+        Sublevel2 := SubLevel1.AddChild('Debit');              SubLevel2.Text                 := GetAmount(TobL.GetDouble('E_DEBIT') , True);
+        Sublevel2 := SubLevel1.AddChild('Credit');             SubLevel2.Text                 := GetAmount(TobL.GetDouble('E_CREDIT'), True);
+        Sublevel2 := SubLevel1.AddChild('VAT');                SubLevel2.Attributes['code']   := TobL.GetString('E_TVA');
+      SubLevel1 := SubLevel.AddChild('VATTransaction');        SubLevel2.Attributes['code']   := TobL.GetString('E_TVA');
+        Sublevel2 := SubLevel1.AddChild('VATAmount');          SubLevel2.Text                 := '0';
+        Sublevel2 := SubLevel1.AddChild('VATBaseAmount');      SubLevel2.Text                 := '0';
+      SubLevel1 := SubLevel.AddChild('Payment');
+        if Payment <> '' then
+          SubLevel2 := SubLevel1.AddChild('PaymentCondition'); SubLevel2.Attributes['code']   := Payment;
+        SubLevel2 := SubLevel1.AddChild('Reference');          SubLevel2.Text                 := TobL.GetString('E_REFINTERNE');
+        SubLevel2 := SubLevel1.AddChild('CSSDDate1');          SubLevel2.Text                 := AccDate;
+        SubLevel2 := SubLevel1.AddChild('CSSDDate2');          SubLevel2.Text                 := AccDate;
+      SubLevel1 := SubLevel.AddChild('Delivery');
+        SubLevel2 := SubLevel1.AddChild('Date');               SubLevel2.Text                 := AccDate;
+      SubLevel1 := SubLevel.AddChild('FinReferences');         SubLevel2.Attributes['TransactionOrigin']   := 'N';
+        SubLevel2 := SubLevel1.AddChild('UniquePostingNumber');SubLevel2.Text                 := '0';
+        SubLevel2 := SubLevel1.AddChild('YourRef');            SubLevel2.Text                 := TobL.GetString('E_REFINTERNE');
+        SubLevel2 := SubLevel1.AddChild('DocumentDate');       SubLevel2.Text                 := AccDate;
+  end;
+end;
+
+function TExportEcr.AddThirdToFile(Accounts : IXMLNode; TobData : TOB) : boolean;
+var
+  IsCustomer : boolean;
+  Account    : IXMLNode;
+  SubLevel   : IXMLNode;
+  SubLevel1  : IXMLNode;
+  SubLevel2  : IXMLNode;
+  SubLevel3  : IXMLNode;
+  SubLevel4  : IXMLNode;
+  TobAddress : TOB;
+  TobContact : TOB;
+  TobBank    : TOB;
+  TobL1      : TOB;
+  TobL2      : TOB;
+  Cpt        : integer;
+  ThirdMemo  : string;
+  ThirdType  : string;
+
+
+  function GetBankInformation(Country : string; tType : T_ThirdXmlFileType) : string;
+  begin
+    if Country = 'BE' then
+    begin
+      case tType of
+        txft_BankAccount_Code     : Result := StringReplace(TobL1.GetString('R_NUMEROCOMPTE'), ' ', '', [rfReplaceAll]);
+        txft_BankAccountType_Code : Result := TobL1.GetString('R_PAYS');
+        txft_Bank_Code            : Result := TobL1.GetString('R_PAYS');
+        txft_Bic                  : Result := TobL1.GetString('R_CODEBIC');
+        txft_SwiftCode            : Result := Format('%sXXX', [TobL1.GetString('R_CODEBIC')]) ;
+      end;
+    end else
+    if TobL1.GetString('R_CODEIBAN') = '' then
+    begin
+      case tType of
+        txft_BankAccount_Code     : Result := TobL1.GetString('R_NUMEROCOMPTE');
+        txft_BankAccountType_Code : Result := 'DEF';
+        txft_Bank_Code            : Result := '';
+        txft_Bic                  : Result := TobL1.GetString('R_CODEBIC');
+        txft_SwiftCode            : Result := TobL1.GetString('R_CODEBIC');
+      end;
+    end else
+      case tType of
+        txft_BankAccount_Code     : Result := TobL1.GetString('R_CODEIBAN');
+        txft_BankAccountType_Code : Result := 'IBA';
+        txft_Bank_Code            : Result := '';
+        txft_Bic                  : Result := TobL1.GetString('R_CODEBIC');
+        txft_SwiftCode            : Result := '';
+      end;
+  end;
+
+  function GetTobL2Value(FieldName : string) : string;
+  begin
+    if assigned(TobL2) then
+      Result := TobL2.GetString(FieldName)
+    else
+      Result := '';
+  end;
+
+  function GetTaxSytem : string;
+  begin
+    { L=Assujeti, E=Exempté, N=Non assujeti }
+    case Tools.CaseFromString(TobData.GetString('T_REGIMETVA'), ['COR', 'DTM', 'EXO', 'EXP', 'FRA', 'INT']) of
+      {COR} 0 : Result := 'N';
+      {DTM} 1 : Result := 'N';
+      {EXO} 2 : Result := 'E';
+      {EXP} 3 : Result := 'E';
+      {FRA} 4 : Result := 'L';
+      {INT} 5 : Result := 'L';
+    else
+      Result := 'L';
+    end;
+  end;
+
+begin
+  Result     := True;
+  IsCustomer := (TobData.GetString('T_NATUREAUXI') = 'CLI');
+  TobAddress := TobData.FindFirst(['TYPE'], ['ADRESSES'], True);
+  TobContact := TobData.FindFirst(['TYPE'], ['CONTACT'] , True);
+  TobBank    := TobData.FindFirst(['TYPE'], ['RIB']     , True);
+  ThirdType  := Tools.iif(IsCustomer, 'Debtor', 'Creditor');
+  ThirdMemo  := Tools.iif(TobData.GetString('T_BLOCNOTE') <> '', Tools.BlobToString_(TobData.GetString('T_BLOCNOTE')), '');
+
+  Account  := Accounts.AddChild('Account'); Account.Attributes['code']    := TobData.GetString('T_AUXILIAIRE');
+                                            Account.Attributes['status']  := Tools.iif(TobData.GetBoolean('T_FERME'), 'B', 'A');
+                                            Account.Attributes['type']    := Tools.iif(IsCustomer, 'C', 'S');
+  SubLevel := Account.AddChild('Name');     SubLevel.Text                 := TobData.GetString('T_LIBELLE');
+  SubLevel := Account.AddChild('Phone');    SubLevel.Text                 := TobData.GetString('T_TELEPHONE');
+  SubLevel := Account.AddChild('Fax');      SubLevel.Text                 := TobData.GetString('T_FAX');
+  SubLevel := Account.AddChild('Email');    SubLevel.Text                 := TobData.GetString('T_EMAIL');
+  SubLevel := Account.AddChild('HomePage'); SubLevel.Text                 := TobData.GetString('T_RVA');
+  SubLevel := Account.AddChild('Contacts');
+  if assigned(TobContact) then
+  begin
+    if TobContact.Detail.Count > 0 then
+    begin
+      for Cpt := 0 to pred(TobContact.Detail.Count) do
+      begin
+        TobL1     := TobContact.Detail[Cpt];
+        TobL2     := TobAddress.FindFirst(['ADR_NUMEROCONTACT'], [TobL1.GetInteger('C_NUMEROCONTACT')], True);
+        SubLevel1 := SubLevel.AddChild('Contact');             SubLevel1.Attributes['default']    := Tools.iif(TobL1.GetBoolean('C_PRINCIPAL'), '1', '0');
+                                                               SubLevel1.Attributes['gender']     := 'M';
+                                                               SubLevel1.Attributes['type']       := 'A';
+          SubLevel2 := SubLevel1.AddChild('LastName');         SubLevel2.Text                      := TobL1.GetString('C_NOM');
+          SubLevel2 := SubLevel1.AddChild('FirstName');        SubLevel2.Text                      := TobL1.GetString('C_PRENOM');
+          SubLevel2 := SubLevel1.AddChild('MiddleName');       SubLevel2.Text                      := '';
+          SubLevel2 := SubLevel1.AddChild('Initials');         SubLevel2.Text                      := '';
+          SubLevel2 := SubLevel1.AddChild('Title');            SubLevel2.Attributes['code']       := TobL1.GetString('C_CIVILITE');
+          SubLevel2 := SubLevel1.AddChild('Addresses');
+            SubLevel3 := SubLevel2.AddChild('Address');        SubLevel3.Attributes['type']       := 'V';
+                                                               SubLevel3.Attributes['desc']       := '';
+              SubLevel4 := SubLevel3.AddChild('AddressLine1'); SubLevel4.Text                     := GetTobL2Value('ADR_ADRESSE1');
+              SubLevel4 := SubLevel3.AddChild('AddressLine2'); SubLevel4.Text                     := GetTobL2Value('ADR_ADRESSE2');
+              SubLevel4 := SubLevel3.AddChild('AddressLine3'); SubLevel4.Text                     := GetTobL2Value('ADR_ADRESSE3');
+              SubLevel4 := SubLevel3.AddChild('PostalCode');   SubLevel4.Text                     := GetTobL2Value('ADR_CODEPOSTAL');
+              SubLevel4 := SubLevel3.AddChild('City');         SubLevel4.Text                     := GetTobL2Value('ADR_VILLE');
+              SubLevel4 := SubLevel3.AddChild('State');        SubLevel4.Attributes['code']       := GetTobL2Value('ADR_REGION');
+              SubLevel4 := SubLevel3.AddChild('Country');      SubLevel4.Attributes['code']       := GetTobL2Value('ADR_PAYS');
+              SubLevel4 := SubLevel3.AddChild('Phone');        SubLevel4.Text                     := TobL1.GetString('C_TELEPHONE');
+              SubLevel4 := SubLevel3.AddChild('Fax');          SubLevel4.Text                     := TobL1.GetString('C_FAX');
+          SubLevel2 := SubLevel1.AddChild('Manager');          SubLevel2.Attributes['number']     := '';
+          SubLevel2 := SubLevel1.AddChild('Language');         SubLevel2.Attributes['code']       := TobData.GetString('T_LANGUE');
+          SubLevel2 := SubLevel1.AddChild('JobTitle');         SubLevel2.Attributes['code']       := TobL1.GetString('C_SERVICECODE');
+          SubLevel2 := SubLevel1.AddChild('JobDescription');   SubLevel2.Text                     := TobL1.GetString('C_SERVICE');
+          SubLevel2 := SubLevel1.AddChild('Phone');            SubLevel2.Text                     := TobL1.GetString('C_TELEPHONE');
+          SubLevel2 := SubLevel1.AddChild('Fax');              SubLevel2.Text                     := TobL1.GetString('C_FAX');
+          SubLevel2 := SubLevel1.AddChild('Mobile');           SubLevel2.Text                     := TobL1.GetString('C_TELEX');
+          SubLevel2 := SubLevel1.AddChild('Email');            SubLevel2.Text                     := TobL1.GetString('C_RVA');
+      end;
+    end else
+    begin
+      SubLevel1 := SubLevel.AddChild('Contact');             SubLevel1.Attributes['default']    := '1';
+                                                             SubLevel1.Attributes['gender']     := 'M';
+                                                             SubLevel1.Attributes['type']       := 'A';
+        SubLevel2 := SubLevel1.AddChild('LastName');         SubLevel2.Text                     := 'XXX';
+        SubLevel2 := SubLevel1.AddChild('FirstName');        SubLevel2.Text                     := 'XXX';
+        SubLevel2 := SubLevel1.AddChild('MiddleName');       SubLevel2.Text                     := 'XXX';
+        SubLevel2 := SubLevel1.AddChild('Initials');         SubLevel2.Text                     := 'XXX';
+        SubLevel2 := SubLevel1.AddChild('Title');            SubLevel2.Attributes['code']       := 'XXX';
+    end;
+  end;
+  SubLevel := Account.AddChild('Note');     SubLevel.Text := ThirdMemo;
+  SubLevel := Account.AddChild(ThirdType);  SubLevel.Attributes['number']   := TobData.GetString('T_AUXILIAIRE');
+                                             SubLevel.Attributes['code']     := TobData.GetString('T_AUXILIAIRE');
+    SubLevel1 := SubLevel.AddChild('Currency'); SubLevel1.Attributes['code'] := TobData.GetString('T_DEVISE');
+    SubLevel1 := SubLevel.AddChild('BankAccounts');
+    if (assigned(TobBank)) and (TobBank.Detail.Count > 0) then
+    begin
+      for Cpt := 0 to pred(TobBank.Detail.Count) do
+      begin
+        TobL1 := TobBank.Detail[Cpt];
+        SubLevel2 := SubLevel1.AddChild('BankAccount');     SubLeveL2.Attributes['code']    := GetBankInformation(TobL1.GetString('R_PAYS'), txft_BankAccount_Code);
+                                                            SubLevel2.Attributes['default'] := Tools.iif(TobL1.GetBoolean('R_PRINCIPAL'), '1', '0');
+        SubLevel2 := SubLevel1.AddChild('BankAccountType'); SubLevel2.Attributes['code']    := GetBankInformation(TobL1.GetString('R_PAYS'), txft_BankAccountType_Code);
+        SubLevel2 := SubLevel1.AddChild('Bank');            SubLevel2.Attributes['code']    := GetBankInformation(TobL1.GetString('R_PAYS'), txft_Bank_Code);
+          SubLevel3 := SubLevel2.AddChild('Name');          SubLevel3.Text                  := TobL1.GetString('R_DOMICILIATION');
+          SubLevel3 := SubLevel2.AddChild('Country');       SubLevel3.Attributes['code']    := TobL1.GetString('R_PAYS');
+          if TobL1.GetString('R_CODEIBAN') <> '' then
+            SubLevel3 := SubLevel2.AddChild('IBAN');        SubLevel3.Text                  := TobL1.GetString('R_CODEIBAN');
+          SubLevel3 := SubLevel2.AddChild('BIC');           SubLevel3.Text                  := GetBankInformation(TobL1.GetString('R_PAYS'), txft_Bic);
+          if    (TobL1.GetString('R_PAYS') = 'BE')
+             or (TobL1.GetString('R_CODEIBAN') = '') then
+            SubLevel3 := SubLevel2.AddChild('SwiftCode');   SubLevel3.Text                  := GetBankInformation(TobL1.GetString('R_PAYS'), txft_SwiftCode);
+        SubLevel2 := SubLevel1.AddChild('Address');
+          if TobL1.GetString('R_CODEIBAN') = '' then
+            SubLevel3 := SubLevel2.AddChild('City');        SubLevel3.Text                  := TobL1.GetString('R_VILLE');
+          SubLevel3 := SubLevel2.AddChild('Country');       SubLevel3.Attributes['code']    := TobL1.GetString('R_PAYS');
+      end;
+    end;
+    SubLevel1 := SubLevel.AddChild('GLOffset');         SubLevel1.Attributes['code']   := Tools.iif(IsCustomer, VH_GC.GCCpteHTVTE, VH_GC.GCCpteHTACH);
+    SubLevel1 := SubLevel.AddChild('GLCentralization'); SubLevel1.Attributes['code']   := TobData.GetString('T_COLLECTIF');
+    SubLevel1 := SubLevel.AddChild(Tools.iif(IsCustomer, 'CreditLine', 'ExternalCode')); SubLevel1.Text:= Tools.iif(IsCustomer, GetAmount(TobData.GetDouble('T_CREDITACCORDE'), True), TobData.GetString('YTC_TEXTELIBRE1'));
+  SubLevel := Account.AddChild('VATNumber');           SubLevel.Text                  := TobData.GetString('T_NIF');
+  SubLevel := Account.AddChild('VATLiability');        SubLevel.Text                  := GetTaxSytem;
+  SubLevel := Account.AddChild('PaymentCondition');    SubLevel1.Attributes['code']   := TobData.GetString('T_MODEREGLE');
+  SubLevel := Account.AddChild('CompanySize');         SubLevel1.Attributes['code']   := 'UNKNOWN';
+  SubLevel := Account.AddChild('CompanyOrigin');       SubLevel1.Attributes['code']   := 'P';
+  SubLevel := Account.AddChild('CompanyRating');       SubLevel1.Attributes['code']   := '7';
+  SubLevel := Account.AddChild('Sector');              SubLevel1.Attributes['code']   := 'UNKNOWN';
+  SubLevel := Account.AddChild('AccountCategory');     SubLevel1.Attributes['code']   := 'ME';
+  SubLevel := Account.AddChild('DunsNumber');          SubLevel.Text                  := 'LSE';
+end;
+
+function TExportEcr.ExpTreatment: boolean;
+var
+  MsgConfirm     : string;
+  PathXMLFile    : string;
+  PathXMLTmpFile : string;
+  Msg            : string;
+  TobEcrL        : TOB;
+
+  procedure AddLineToTob;
+  var
+    TobEcrPL   : TOB;
+  begin
+    TobEcrPL := TOB.Create('_LINE', TobEcrP, -1);
+    TobEcrPL.Dupliquer(TobEcrL, True, True);
+  end;
+
+  procedure EntryTreatment(Flow : string);
+  var
+    TobData    : TOB;
+    CurrentPce : integer;
+    XmlDoc     : IXMLDocument;
+    RootNode   : IXMLNode;
+    GLEntries  : IXMLNode;
+    Cpt        : integer;
+
+    procedure AddDocToFile;
+    begin
+      if TobEcrP.Detail.Count > 0 then
+      begin
+        LoadAnalytic;
+        AddEntryToFile(GLEntries);
+        TobEcrP.ClearDetail;
+      end;
+    end;
+
+  begin
+    TobData := Tools.iif(Flow = 'VTE', TobEcrVen, TobEcrAch);
+    InitMoveProgressForm(nil, MsgCaption, Format('Traitement des lignes %s.', [Tools.iif(Flow = 'VTE', 'de vente', 'd''achat')]), pred(TobData.Detail.Count), False, True);
+    CurrentPce := 0;
+    LineNumber := 0;
+    try
+      XmlDoc := NewXMLDocument();
+      try
+        XmlDoc.Options := [doNodeAutoIndent];
+        RootNode := XmlDoc.AddChild('eExact');
+          RootNode.Attributes['xmlns:xsi']                     := 'http://www.w3.org/2001/XMLSchema-instance';
+          RootNode.Attributes['xsi:noNamespaceSchemaLocation'] := 'eExact-Schema.xsd';
+        GLEntries := RootNode.AddChild('GLEntries');
+        for Cpt := 0 to pred(TobData.Detail.Count) do
+        begin
+          MoveCurProgressForm(Format('%s / %s', [IntToStr(Cpt), IntToStr(TobData.Detail.Count)]));
+          TobEcrL := TobData.Detail[Cpt];
+          if CurrentPce <> TobEcrL.GetInteger('E_NUMEROPIECE') then
+          begin
+            AddDocToFile;
+            CurrentPce := TobEcrL.GetInteger('E_NUMEROPIECE');
+            AddLineToTob;
+          end else
+            AddLineToTob;
+        end;
+        AddDocToFile;
+        TobEcrP.ClearDetail;
+        XmlDoc.SaveToFile(Tools.iif(Flow = 'VTE', TempPathXMLFileVTE, TempPathXMLFileACH));
+      finally
+        XmlDoc := nil;
+      end;
+    finally
+      FiniMoveProgressForm;
+    end;
+  end;
+
+  function ThirdTreatment(Flow : string) : boolean;
+  var
+    TobData    : TOB;
+    XmlDoc     : IXMLDocument;
+    RootNode   : IXMLNode;
+    Accounts   : IXMLNode;
+    Cpt        : integer;
+  begin
+    Result  := True;
+    TobData := Tools.iif(Flow = 'VTE', TobCustomer, TobProvider);
+    InitMoveProgressForm(nil, MsgCaption, Format('Traitement des %s.', [Tools.iif(Flow = 'VTE', 'clients', 'fournisseurs')]), pred(TobData.Detail.Count), False, True);
+    try
+      XmlDoc := NewXMLDocument();
+      try
+        XmlDoc.Options := [doNodeAutoIndent];
+        RootNode := XmlDoc.AddChild('eExact');
+          RootNode.Attributes['xmlns:xsi']                     := 'http://www.w3.org/2001/XMLSchema-instance';
+          RootNode.Attributes['xsi:noNamespaceSchemaLocation'] := 'eExact-Schema.xsd';
+        Accounts := RootNode.AddChild('Accounts');
+        for Cpt := 0 to pred(TobData.Detail.Count) do
+        begin
+          MoveCurProgressForm(Format('%s / %s', [IntToStr(Cpt), IntToStr(TobData.Detail.Count)]));
+          AddThirdToFile(Accounts, TobData.Detail[Cpt]);
+        end;
+        TobEcrP.ClearDetail;
+        XmlDoc.SaveToFile(Tools.iif(Flow = 'VTE', TempPathXMLFileCLI, TempPathXMLFileFOU));
+      finally
+        XmlDoc := nil;
+      end;
+    finally
+      FiniMoveProgressForm;
+    end;
+  end;
+
+  function CheckExportEntry(TobE : TOB) : boolean;
+  var
+    Cpt        : integer;
+    TobEL      : TOB;
+    CurrentIdx : string;
+    Sql        : string;
+
+    function GetKey : string;
+    begin
+      Result := TobEL.GetString('E_ENTITY') + ';' + TobEL.GetString('E_EXERCICE') + ';' + TobEL.GetString('E_JOURNAL') + ';' + TobEL.GetString('E_NUMEROPIECE');
+    end;
+
+  begin
+    Result     := True;
+    CurrentIdx := '';
+    for Cpt := 0 to pred(TobE.Detail.Count) do
+    begin
+      TobEL := TobE.Detail[Cpt];
+      if CurrentIdx <> GetKey then
+      begin
+        TslData.Add(Format('%s - %s - %s', [TobEL.GetString('E_EXERCICE'), TobEL.GetString('E_JOURNAL'), TobEL.GetString('E_NUMEROPIECE')]));
+        CurrentIdx := GetKey;
+        Sql        := Format('%s OR (E_ENTITY = %s AND E_EXERCICE = "%s" AND E_JOURNAL = "%s" AND E_NUMEROPIECE = %s)'
+                             , [  Sql
+                                , TobEL.GetString('E_ENTITY')
+                                , TobEL.GetString('E_EXERCICE')
+                                , TobEL.GetString('E_JOURNAL')
+                                , TobEL.GetString('E_NUMEROPIECE')
+                               ]);
+      end;
+    end;
+    if Sql <> '' then
+    begin
+      Sql    := Format('UPDATE ECRITURE SET E_EXPORTE = "X" WHERE %s', [Copy(Sql, 4, length(Sql))]);
+      Result := (ExecuteSql(Sql) = TobE.Detail.Count);
+    end;
+  end;
+
+  function GetFileName(Suffix : string) : string;
+  begin
+    Result := Format('%s_%s.xml', [FormatDateTime('yyyymmdd', NowH), Suffix]);
+  end;
+
+begin                                                                                          
+  Result         := True;
+  MsgCaption     := 'Export écritures';
+  PathXMLFile    := IncludeTrailingBackslash(GetParamSocSecur('SO_EXPXMLDIR', ''));
+  PathXMLTmpFile := IncludeTrailingBackslash(GetEnvironmentVariable('TEMP'));
+  FolderCode     := GetParamSocSecur('SO_EXPXMLDOSSIERCPTA', '');
+  if PathXMLFile = '' then
+    PGIError('Export impossible, le répertoire de stockage des fichiers n''est pas renseigné.', MsgCaption)
+  else if FolderCode = '' then
+    PGIError('Export impossible, le numéro de dossier EXACT n''est pas renseigné.', MsgCaption)
+  else
+  begin
+    MsgConfirm := Format('Ce traitement exporte toutes les écritures%s non exportées du %s au %s et bloque les pièces associées.#13#10 Voulez-vous continuer ?'
+                         , [  Tools.iif(ForceExport, ' déjà exportées et', '')
+                            , DateToStr(StartDate)
+                            , DateToStr(EndDate)
+                           ]);
+    if PGIAsk(MsgConfirm, MsgCaption) = mrYes then
+    begin
+      PathXMLFileVTE     := PathXMLFile    + GetFileName('EcrVTE');
+      PathXMLFileACH     := PathXMLFile    + GetFileName('EcrACH');
+      PathXMLFileCLI     := PathXMLFile    + GetFileName('Clients');
+      PathXMLFileFOU     := PathXMLFile    + GetFileName('Fournisseurs');
+      TempPathXMLFileVTE := PathXMLTmpFile + GetFileName('EcrVTE');
+      TempPathXMLFileACH := PathXMLTmpFile + GetFileName('EcrACH');
+      TempPathXMLFileCLI := PathXMLTmpFile + GetFileName('Clients');
+      TempPathXMLFileFOU := PathXMLTmpFile + GetFileName('Fournisseurs');
+      { Si un des fichiers existe, on ne fait rien }
+      if    (FileExists(PathXMLFileVTE))
+         or (FileExists(PathXMLFileACH))
+         or (FileExists(PathXMLFileCLI))
+         or (FileExists(PathXMLFileFOU))
+      then
+      begin
+        PGIError(Format('Export impossible, un des fichiers à générer existe déjà dans %s', [PathXMLFile]), MsgCaption);
+      end else
+      begin
+        { Supprime les fichiers du répertoire temporaire si existent }
+        DeleteFile(PAnsiChar(TempPathXMLFileVTE));
+        DeleteFile(PAnsiChar(TempPathXMLFileACH));
+        DeleteFile(PAnsiChar(TempPathXMLFileCLI));
+        DeleteFile(PAnsiChar(TempPathXMLFileFOU));
+        if LoadEcr then
+        begin
+          TslData.Add('');
+          TslData.Add('Pièces comptable (Exercice - Journal - N° de pièce) :');
+          BeginTrans;
+          try
+            if TobEcrVen.Detail.Count   > 0 then
+            begin
+              try
+                EntryTreatment('VTE');
+              finally
+                Result := CheckExportEntry(TobEcrVen);
+                if not Result then
+                  PGIError('Erreur lors de la mise à jour des écritures de ventes.', MsgCaption);
+              end;
+            end;
+            if (Result) and (TobEcrAch.Detail.Count   > 0) then
+            begin
+              try
+                EntryTreatment('ACH');
+              finally
+                Result := CheckExportEntry(TobEcrAch);
+                if not Result then
+                  PGIError('Erreur lors de la mise à jour des écritures de ventes.', MsgCaption);
+              end;
+            end;
+            if (Result) and (TobCustomer.Detail.Count > 0) then Result := ThirdTreatment('VTE');
+            if (Result) and (TobProvider.Detail.Count > 0) then Result := ThirdTreatment('ACH');
+          finally
+            if Result then
+              CommitTrans
+            else
+              Rollback;
+          end;
+         if Result then
+          begin
+            MoveFile(PAnsiChar(TempPathXMLFileVTE), PAnsiChar(PathXMLFileVTE));
+            MoveFile(PAnsiChar(TempPathXMLFileACH), PAnsiChar(PathXMLFileACH));
+            MoveFile(PAnsiChar(TempPathXMLFileCLI), PAnsiChar(PathXMLFileCLI));
+            MoveFile(PAnsiChar(TempPathXMLFileFOU), PAnsiChar(PathXMLFileFOU));
+            SetParamSoc('SO_EXPXMLDE', StartDate);
+            SetParamSoc('SO_EXPXMLA' , EndDate);
+          end;
+          Msg := Format('%s des écritures %s de ventes et achats du %s au %s.%s%s%s'
+                        , [  Tools.iif(Result, 'Export', 'Tentative d''export')
+                           , Tools.iif(ForceExport, 'déjà exportées et non exportées', 'non exportées')
+                           , DateTimeToStr(StartDate)
+                           , DateTimeToStr(EndDate)
+                           , #13#10
+                           , #13#10
+                           , TslData.Text
+                          ]);
+          MAJJnalEvent('EPC', Tools.iif(Result, 'OK', 'ERR'), MsgCaption, Msg);
+          PGIBox(Format('Traitement terminé avec %s.', [Tools.iif(Result, 'succès', 'des erreurs')]), MsgCaption);
+        end else
+          PGIBox('Il n''y a pas d''écritures à exporter sur la période demandée.', MsgCaption);
+      end;
+    end;
+  end;
+end;
+{$ENDIF APPSRV}
 
 end.

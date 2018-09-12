@@ -23,6 +23,7 @@ const
   frm_JnalEvent           = 'YYJNALEVENT';
   frm_Contact             = 'YYCONTACT';
   frm_WSAllowedTable      = 'BTWSTABLEAUTO';
+  frm_ExpVerdon           = 'BEXPECRVERDON';
 
 type
   OpenForm = class
@@ -40,6 +41,7 @@ type
       class function RGPDSensibilisation : string;
       class function RGPDWindows(Population : T_RGPDPopulation; TagMother, TagNumber : integer; Action : T_RGPDActions) : string;
       class function WSCreationAllowedTable : string;
+      class function ExpVerdon : string;
     end;
 
 implementation
@@ -54,13 +56,15 @@ uses
   , SysUtils
   , wCommuns
   , uDbxDataSet
+  , CommonTools
+  , UtilGC
   , BRGPDTIERSMUL_TOF
   , BRGPDRESSOURCEMUL_TOF
   , BRGPDUTILISATMUL_TOF
   , BRGPDSUSPECTMUL_TOF
   , BRGPDCONTACTMUL_TOF
   , BTWSTABLEAUTO_TOF
-  , CommonTools
+  , ExpEcrVerdon_TOF
   ;
 
 class function OpenForm.SetArgument(Argument: string): string;
@@ -195,4 +199,14 @@ begin
   Result := BLanceFiche_WSTablesAutorisees('BTP', frm_WSAllowedTable, '', '', SetWindowCaption(-14811, 148906));
 end;
 
+class function OpenForm.ExpVerdon : string;
+begin
+  if EstSpecifVERDON then
+    Result := BTLanceFicheExpEcrVerdon('BTP', frm_ExpVerdon, '', '', '')
+  else
+    Result := '';
+end;
+
+
 end.
+

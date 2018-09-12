@@ -566,7 +566,24 @@ uses
   ConstServices in '..\..\commun\Lib\ConstServices.pas',
   uLkJSON in '..\..\CONNECTWS\uLkJSON.pas',
   BTWSTABLEAUTO_TOF in '..\..\Services\BTPY2\Lib\BTWSTABLEAUTO_TOF.pas',
-  UtilsPdf in '..\UtilPdfTk\UtilsPdf.pas';
+  UtilsPdf in '..\UtilPdfTk\UtilsPdf.pas',
+  BTPARAMWS_TOF in '..\..\CONNECTWS\BTPARAMWS_TOF.pas',
+  uWSDataService in '..\..\Services\BTPY2\Lib\uWSDataService.pas',
+  UtilBTPVerdon in '..\..\Services\BTPVerdon\Lib\UtilBTPVerdon.pas',
+  ExpEcrVerdon_TOF in '..\..\Services\BTPVerdon\Lib\ExpEcrVerdon_TOF.pas',
+  uExecuteService in '..\..\Services\BTPY2\Lib\uExecuteService.pas',
+  uMainService in '..\..\Services\BTPY2\Lib\uMainService.pas' {SvcSyncBTPY2: TService},
+  uThreadExecute in '..\..\Services\BTPY2\Lib\uThreadExecute.pas',
+  tThreadChantiers in '..\..\Services\BTPVerdon\Lib\tThreadChantiers.pas',
+  tThreadDevis in '..\..\Services\BTPVerdon\Lib\tThreadDevis.pas',
+  tThreadLignesBR in '..\..\Services\BTPVerdon\Lib\tThreadLignesBR.pas',
+  tThreadTiers in '..\..\Services\BTPVerdon\Lib\tThreadTiers.pas',
+  uExecuteServiceBtpVerdonImp in '..\..\Services\BTPVerdon\Lib\uExecuteServiceBtpVerdonImp.pas',
+  uMainServiceBtpVerdonImp in '..\..\Services\BTPVerdon\Lib\uMainServiceBtpVerdonImp.pas' {SvcSyncBTPVerdonImp: TService},
+  uExecuteServiceBtpVerdonExp in '..\..\Services\BTPVerdon\Lib\uExecuteServiceBtpVerdonExp.pas',
+  uMainServiceBtpVerdonExp in '..\..\Services\BTPVerdon\Lib\uMainServiceBtpVerdonExp.pas' {SvcSyncBTPVerdonExp: TService},
+  ServicesTest in '..\..\commun\Lib\ServicesTest.pas',
+  TRAFileUtil in '..\..\COMMUN\LIB\TRAFileUtil.pas';
 
 {$R *.RES}
 

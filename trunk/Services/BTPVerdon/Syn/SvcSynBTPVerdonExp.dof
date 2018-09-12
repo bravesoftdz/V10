@@ -91,12 +91,12 @@ ImageBase=4194304
 ExeDescription=
 [Directories]
 OutputDir=$(CBP_ROOT)\Bin
-UnitOutputDir=C:\CBP\CBP7\CBP.7.9.430\DCU\SvcSynBTPVerdon
+UnitOutputDir=C:\CBP\CBP7\CBP.7.9.430\DCU\SvcSynBTPVerdonExport
 PackageDLLOutputDir=
 PackageDCPOutputDir=
 SearchPath=..\..\COMMUN\LIB;..\..\CommunBTP\Batiprix;..\..\CommunBTP\LIB;$(CBP_ROOT)\;$(CBP_ROOT)\Paquets;$(CBP_ROOT)\Sources;$(CBP_ROOT)\Lib;$(CBP_ROOT)\Bin;$(DELPHI)\Lib
 Packages=C
-Conditionals=APPSRV;APPSRVWITHCBP;DBXPRESS;DBXADO
+Conditionals=APPSRV;APPSRVWITHCBP;BTPTOVERDON;DBXPRESS;DBXADO
 DebugSourceDirs=
 UsePackages=1
 [Parameters]
@@ -121,13 +121,13 @@ Locale=1036
 CodePage=1252
 [Version Info Keys]
 CompanyName=LSE
-FileDescription=LSE-Synchronisation des données entre BTP et applications VERDON
+FileDescription=LSE-Synchronisation des données entre BTP et applications VERDON - Export
 FileVersion=10.0.0.159
-InternalName=SvcSynBTPVerdon
+InternalName=SvcSynBTPVerdonExport
 LegalCopyright=LSE 2018
 LegalTrademarks=LSE
 OriginalFilename=
-ProductName=Synchronisation BTP <-> VERDON
+ProductName=Synchronisation BTP <-> VERDON - Export
 ProductVersion=10.00.000.159
 Comments=Service autonome
 [HistoryLists\hlConditionals]

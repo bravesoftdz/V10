@@ -96,6 +96,7 @@ Function TraiteFamilleAffaire ( CodeAffaire:string;  TobAffaire : TOB) : string;
 function PieceModifiableCptaPourRegl (TOBPiece : TOB) : Boolean;
 function GetWSDocumentInfFromTob(TobGP : TOB) : T_WSDocumentInf;
 function GetWSDocumentInfFromRmvt(lRmvt : RMVT) : T_WSDocumentInf;
+procedure LoadAnalyticOnTobEntry(TobEcr : TOB);
 
 implementation
 Uses
@@ -110,6 +111,8 @@ Uses
   , ULiquidTva2014
   , UCumulCollectifs
   , UConnectWSCEGID
+  , CommonTools
+  , UtilGC
   {$IFDEF MODE}
   , FactCptaMode
   {$ENDIF}
@@ -7436,7 +7439,7 @@ begin
         if (TOBECR.Detail[Indice].getValue('E_EXPORTE')='X') and (not GetParamSocSecur('SO_SO_BTAUTOREXPORT',false)) then
         begin
           result := false;
-          PGIInfo(TraduireMemoire('Cette pièce a été exportée (COMSX).'),'ATTENTION');
+          PGIInfo(TraduireMemoire(Format('Cette pièce a été exportée %s.', [Tools.iif(not EstSpecifVERDON, '(COMSX)', '')])),'ATTENTION');
           break;
         end;
       end;
@@ -7527,7 +7530,7 @@ begin
         if (TOBECR.Detail[Indice].getValue('E_EXPORTE')='X') and (not GetParamSocSecur('SO_SO_BTAUTOREXPORT',false)) then
         begin
           result := false;
-          PGIInfo(TraduireMemoire('Cette pièce a été exportée (COMSX).'),'ATTENTION');
+          PGIInfo(TraduireMemoire(Format('Cette pièce a été exportée %s.', [Tools.iif(not EstSpecifVERDON, '(COMSX)', '')])),'ATTENTION');
           break;
         end;
   // mis en commentaire par BRL car pose pb pour les factures passées en compta comme validée par défaut
@@ -7715,6 +7718,34 @@ begin
   Result.dStub   := TobGP.GetString('GP_SOUCHE');
   Result.dNumber := TobGP.GetInteger('GP_NUMERO');
   Result.dIndex  := TobGP.GetInteger('GP_INDICEG');
+end;
+
+procedure LoadAnalyticOnTobEntry(TobEcr : TOB);
+var
+  Sql  : string;
+  TobA : TOB;
+begin
+  if TobEcr.GetBoolean('E_ANA') then
+  begin
+    TobA := TOB.Create('ANALYTIQ', nil, -1);
+    try
+      Sql := 'SELECT *'
+           + ' FROM ANALYTIQ'
+           + ' WHERE Y_ENTITY      = '  + TobEcr.GetString('E_ENTITY')
+           + '   AND Y_JOURNAL     = "' + TobEcr.GetString('E_JOURNAL') + '"'
+           + '   AND Y_EXERCICE    = "' + TobEcr.GetString('E_EXERCICE') + '"'
+           + '   AND Y_NUMEROPIECE = '  + TobEcr.GetString('E_NUMEROPIECE')
+           + '   AND Y_NUMLIGNE    = '  + TobEcr.GetString('E_NUMLIGNE')
+           + ' ORDER BY Y_NUMVENTIL'
+           ;
+      TobA.LoadDetailFromSQL(Sql);
+      repeat
+      	TobA.Detail[0].ChangeParent(TobEcr, -1);
+      until TobA.detail.count = 0 ;
+    finally
+      FreeAndNil(TobA);
+    end;
+  end;
 end;
 
 end.

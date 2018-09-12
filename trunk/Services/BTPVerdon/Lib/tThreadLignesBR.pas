@@ -77,7 +77,7 @@ end;
 destructor ThreadLignesBR.Destroy;
 begin
   inherited;
-  TUtilBTPVerdon.AddLog(lTn, TUtilBTPVerdon.GetMsgStartEnd(lTn, False, TableValues.LastSynchro), LogValues, 0);
+  TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, lTn, TUtilBTPVerdon.GetMsgStartEnd(lTn, False, TableValues.LastSynchro), LogValues, 0);
 end;
 
 procedure ThreadLignesBR.Execute;

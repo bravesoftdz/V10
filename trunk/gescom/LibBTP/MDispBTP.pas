@@ -148,6 +148,8 @@ uses Facture,(*Souche,*)dimension,UTomPiece, Traduc
      , BTWSTABLEAUTO_TOF
      , DB
      , Math
+     , ServicesTest
+     , ed_Tools
      ;
 {$R *.DFM}
 
@@ -248,6 +250,34 @@ begin
     Result := taCreat
   else
     Result := taConsult;
+end;
+
+procedure TestService(Lequel : integer); // Lequel : 1=BTP<->Y2, 2= BTP->VERDON, 3=VERDON-BTP
+{$IFDEF APPSRV}
+var
+  Msg : string;
+{$ENDIF APPSRV}
+begin
+{$IFDEF APPSRV}
+  case Lequel of
+    1 : Msg := 'd''échanges BPT <-> Y2';
+    2 : Msg := 'd''export vers VERDON';
+    3 : Msg := 'd''import depuis VERDON';
+  end;
+  if PGIAsk(Format('Voulez-vous tester le service %s ?', [Msg])) = mrYes then
+  begin
+    InitMoveProgressForm(nil, 'Traitement en cours.', '', 0, false, True);
+    try
+      case Lequel of
+        1 : T_SvcTestExecute.SvcBtpY2;
+        2 : T_SvcTestExecute.SvcBtpToVerdon;
+        3 : T_SvcTestExecute.SvcVerdonToBtp;
+      end;
+    finally
+      FiniMoveProgressForm;
+    end;
+  end;
+{$ENDIF APPSRV}
 end;
 
 // ******************* Dispatch gestion interne + Gestion d'affaire  **********
@@ -1729,6 +1759,7 @@ Cegid,False,False)};
               V_PGI.ZoomOle := false;
               retourforce := True;
              end;
+    145956 : OpenForm.ExpVerdon;
     // ------------------
     // SPIGAO
     145961 : Begin
@@ -2152,6 +2183,9 @@ Cegid,False,False)};
              		 PgiBox('Ce module n''est pas sérialisé. Il ne peut être utilisé.','Récupération des Appels d''Offres');
                end;
              END;
+    60901 : TestService(1);
+    60902 : TestService(2);
+    69903 : TestService(3);
     else HShowMessage('2;?caption?;'+TraduireMemoire('Fonction non disponible : ')+';W;O;O;O;',TitreHalley,IntToStr(Num)) ;
      end ;
 END ;
@@ -2488,7 +2522,9 @@ Case NumModule of
         		FMenuG.RemoveItem (145968); // Clôture d'exercice
           end;
         end;
-          if (VH_GC.BTCODESPECIF <> '001') then FMenuG.RemoveItem(147163);
+        if (VH_GC.BTCODESPECIF <> '001') then FMenuG.RemoveItem(147163);
+        if not EstSpecifVERDON then
+           FMenuG.RemoveItem(145956);
        END;
 //
   146 : BEGIN
@@ -2645,6 +2681,12 @@ Case NumModule of
          FMenuG.removeItem (219050); // Bascule tarif en mode Gescom
          FMenuG.removeItem (60206); // restrictions
          FMenuG.removeItem (60207); // restrictions
+         {$IFDEF APPSRV}
+         if not DelphiRunning then
+           FMenuG.RemoveGroup(60900, True);
+         {$ELSE APPSRV}
+         FMenuG.RemoveGroup(60900, True);
+         {$ENDIF APPSRV}
    			END;
     71:  BEGIN
          if Not(VH_GC.AFGestionCom) then FMenuG.removeItem (71501);

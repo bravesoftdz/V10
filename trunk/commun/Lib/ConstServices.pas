@@ -21,13 +21,12 @@ type
     class procedure WriteLog(TypeDebug: T_SvcTypeLog; Text, ServiceName: string; LogValues : T_WSLogValues; LineLevel: integer; WithoutDateTime: Boolean=true; AddFileName : string='');
   end;
 
-
 const
-  ServiceName_BTPY2     = 'SvcSynBTPY2';
-  ServiceName_BTPVerdon = 'SvcSynBTPVerdon';
-  WSCDS_ErrorMsg        = '##### ERREUR';
-  WSCDS_DebugMsg        = '***** DEBUG : ';
-
+  ServiceName_BTPY2        = 'SvcSynBTPY2';
+  ServiceName_BTPVerdonImp = 'SvcSynBTPVerdonImp';
+  ServiceName_BTPVerdonExp = 'SvcSynBTPVerdonExp';
+  WSCDS_ErrorMsg           = '##### ERREUR';
+  WSCDS_DebugMsg           = '***** DEBUG : ';
 
 implementation
 

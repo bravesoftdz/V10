@@ -1,6 +1,6 @@
-object SvcSyncBTPVerdon: TSvcSyncBTPVerdon
+object SvcSyncBTPVerdonImp: TSvcSyncBTPVerdonImp
   OldCreateOrder = False
-  DisplayName = 'Synchronisation BTP VERDON'
+  DisplayName = 'Synchronisation BTP VERDON - Import'
   AfterInstall = ServiceAfterInstall
   OnExecute = ServiceExecute
   OnStart = ServiceStart

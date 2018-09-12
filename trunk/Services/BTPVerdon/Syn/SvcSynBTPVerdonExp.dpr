@@ -1,12 +1,12 @@
-program SvcSynBTPVerdon;
+program SvcSynBTPVerdonExp;
 
 uses
   SvcMgr,
-  uMainService in '..\Lib\uMainService.pas' {SvcSyncBTPVerdon: TService},              
+  uMainServiceBtpVerdonExp in '..\Lib\uMainServiceBtpVerdonExp.pas' {SvcSyncBTPVerdonImp: TService},
   CommonTools in '..\..\..\commun\Lib\CommonTools.pas',
   Zip in '..\..\..\commun\Lib\Zip.pas',
   ZipDlls in '..\..\..\commun\Lib\ZipDlls.pas',
-  uExecuteService in '..\Lib\uExecuteService.pas',
+  uExecuteServiceBtpVerdonExp in '..\Lib\uExecuteServiceBtpVerdonExp.pas',
   Ulog in '..\..\..\commun\Lib\Ulog.pas',
   ConstServices in '..\..\..\commun\Lib\ConstServices.pas',
   UtilBTPVerdon in '..\Lib\UtilBTPVerdon.pas',
@@ -17,13 +17,12 @@ uses
   uLkJSON in '..\..\..\CONNECTWS\uLkJSON.pas',
   tThreadChantiers in '..\Lib\tThreadChantiers.pas',
   tThreadDevis in '..\Lib\tThreadDevis.pas',
-  tThreadLignesBR in '..\Lib\tThreadLignesBR.pas'
-  ;
+  tThreadLignesBR in '..\Lib\tThreadLignesBR.pas';
 
 {$R *.RES}
 
 begin
   Application.Initialize;
-  Application.CreateForm(TSvcSyncBTPVerdon, SvcSyncBTPVerdon);
+  Application.CreateForm(TSvcSyncBTPVerdonExp, SvcSyncBTPVerdonExp);
   Application.Run;
 end.

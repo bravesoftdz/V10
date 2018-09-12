@@ -1,4 +1,4 @@
-unit uMainService;
+unit uMainServiceBtpVerdonExp;
 
 interface
 
@@ -7,7 +7,7 @@ uses
   , Messages
   , SysUtils
   , Classes
-  , Graphics
+  , Graphics                                  
   , Controls
   , SvcMgr
   , Dialogs
@@ -20,7 +20,7 @@ uses
   ;
 
 type
-  TSvcSyncBTPVerdon = class(TService)
+  TSvcSyncBTPVerdonExp = class(TService)
     procedure ServiceAfterInstall(Sender: TService);
     procedure ServiceExecute(Sender: TService);
     procedure ServiceStop(Sender: TService; var Stopped: Boolean);
@@ -48,7 +48,7 @@ type
   end;
 
 var
-  SvcSyncBTPVerdon: TSvcSyncBTPVerdon;
+  SvcSyncBTPVerdonExp: TSvcSyncBTPVerdonExp;
 
 implementation
 
@@ -67,10 +67,10 @@ uses
 
 procedure ServiceController(CtrlCode: DWord); stdcall;
 begin
-  SvcSyncBTPVerdon.Controller(CtrlCode);
+  SvcSyncBTPVerdonExp.Controller(CtrlCode);
 end;
 
-procedure TSvcSyncBTPVerdon.ClearTablesValues;
+procedure TSvcSyncBTPVerdonExp.ClearTablesValues;
 begin
   TiersValues.FirstExec    := True;
   TiersValues.Count        := 0;
@@ -86,7 +86,7 @@ begin
   LignesBRValues.TimeOut   := 0;
 end;
 
-function TSvcSyncBTPVerdon.ReadSettings : boolean;
+function TSvcSyncBTPVerdonExp.ReadSettings : boolean;
 var
   SettingFile : TInifile;
   Section     : string;
@@ -117,17 +117,17 @@ begin
     FolderValues.BTPDataBase  := SettingFile.ReadString(Section, 'BTPFolder'   , '');
     FolderValues.TMPServer    := SettingFile.ReadString(Section, 'Server'      , '');
     FolderValues.TMPDataBase  := SettingFile.ReadString(Section, 'TMPBDDFolder', '');
-    Section := 'TABLESTRIGGERTIME';
+    Section := 'EXPTABLESTRIGGERTIME';
     TiersValues.TimeOut    := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnTiers)   , 0);
     ChantierValues.TimeOut := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnChantier), 0);
     DevisValues.TimeOut    := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnDevis), 0);
     LignesBRValues.TimeOut := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnLignesBR), 0);
-    Section := 'TABLESLASTSYNCHRO';
+    Section := 'EXPTABLESLASTSYNCHRO';
     TiersValues.LastSynchro    := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnTiers)   , '');
     ChantierValues.LastSynchro := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnChantier), '');
     DevisValues.LastSynchro    := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnDevis), '');
     LignesBRValues.LastSynchro := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnLignesBR), '');
-    Section := 'TABLESISACTIVE';
+    Section := 'EXPTABLESISACTIVE';
     TiersValues.IsActive    := IsActive(tnTiers);
     ChantierValues.IsActive := IsActive(tnChantier);
     DevisValues.IsActive    := IsActive(tnDevis);
@@ -137,12 +137,12 @@ begin
   end;
 end;
 
-function TSvcSyncBTPVerdon.GetServiceController: TServiceController;
+function TSvcSyncBTPVerdonExp.GetServiceController: TServiceController;
 begin
   Result := ServiceController;
 end;
 
-procedure TSvcSyncBTPVerdon.ServiceAfterInstall(Sender: TService);
+procedure TSvcSyncBTPVerdonExp.ServiceAfterInstall(Sender: TService);
 var
   Reg : TRegistry;
 begin                                                                               
@@ -151,7 +151,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     if Reg.OpenKey('\SYSTEM\CurrentControlSet\Services\' + Sender.Name, false) then
     try
-      Reg.WriteString('Description', 'LSE-Synchronisation des données entre BTP et VERDON.');
+      Reg.WriteString('Description', 'LSE-Synchronisation des données entre BTP et VERDON - Export.');
     finally
       Reg.CloseKey;
     end;
@@ -160,18 +160,18 @@ begin
   end;
 end;
 
-procedure TSvcSyncBTPVerdon.ServiceExecute(Sender: TService);
+procedure TSvcSyncBTPVerdonExp.ServiceExecute(Sender: TService);
 
   procedure StartLog(lTn : T_TablesName; LastSynchro : string);
   begin
-    TUtilBTPVerdon.AddLog(lTn, '', LogValues, 0);
-    TUtilBTPVerdon.AddLog(lTn, DupeString('*', 50), LogValues, 0);
-    TUtilBTPVerdon.AddLog(lTn, TUtilBTPVerdon.GetMsgStartEnd(lTn, True, LastSynchro), LogValues, 0);
+    TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, lTn, '', LogValues, 0);
+    TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, lTn, DupeString('*', 50), LogValues, 0);
+    TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, lTn, TUtilBTPVerdon.GetMsgStartEnd(lTn, True, LastSynchro), LogValues, 0);
   end;
 
   procedure CallThreadTiers;
   begin
-    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(tnTiers, Format('%sWith Thread', [WSCDS_DebugMsg]), LogValues, 0);
+    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, tnTiers, Format('%sWith Thread', [WSCDS_DebugMsg]), LogValues, 0);
     StartLog(tnTiers, TiersValues.LastSynchro);
     TiersValues.FirstExec := False;
     TiersValues.Count     := 0;
@@ -182,7 +182,7 @@ procedure TSvcSyncBTPVerdon.ServiceExecute(Sender: TService);
     uThreadTiers.TableValues     := TiersValues;
     uThreadTiers.LogValues       := LogValues;
     uThreadTiers.FolderValues    := FolderValues;
-    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(tnTiers, Format('%sBefore Call uThreadTiers.Resume', [WSCDS_DebugMsg]), LogValues, 0);
+    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, tnTiers, Format('%sBefore Call uThreadTiers.Resume', [WSCDS_DebugMsg]), LogValues, 0);
     try
       uThreadTiers.Resume;
     except
@@ -193,7 +193,7 @@ procedure TSvcSyncBTPVerdon.ServiceExecute(Sender: TService);
 
   procedure CallThreadChantiers;
   begin
-    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(tnChantier, Format('%sWith Thread', [WSCDS_DebugMsg]), LogValues, 0);
+    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, tnChantier, Format('%sWith Thread', [WSCDS_DebugMsg]), LogValues, 0);
     StartLog(tnChantier, ChantierValues.LastSynchro);
     ChantierValues.FirstExec := False;
     ChantierValues.Count     := 0;
@@ -204,7 +204,7 @@ procedure TSvcSyncBTPVerdon.ServiceExecute(Sender: TService);
     uThreadChantier.TableValues     := ChantierValues;
     uThreadChantier.LogValues       := LogValues;
     uThreadChantier.FolderValues    := FolderValues;
-    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(tnChantier, Format('%sBefore Call uThreadChantier.Resume', [WSCDS_DebugMsg]), LogValues, 0);
+    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, tnChantier, Format('%sBefore Call uThreadChantier.Resume', [WSCDS_DebugMsg]), LogValues, 0);
     try
       uThreadChantier.Resume;
     except
@@ -215,7 +215,7 @@ procedure TSvcSyncBTPVerdon.ServiceExecute(Sender: TService);
 
   procedure CallThreadDevis;
   begin
-    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(tnDevis, Format('%sWith Thread', [WSCDS_DebugMsg]), LogValues, 0);
+    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, tnDevis, Format('%sWith Thread', [WSCDS_DebugMsg]), LogValues, 0);
     StartLog(tnDevis, DevisValues.LastSynchro);
     DevisValues.FirstExec := False;
     DevisValues.Count     := 0;
@@ -226,7 +226,7 @@ procedure TSvcSyncBTPVerdon.ServiceExecute(Sender: TService);
     uThreadDevis.TableValues     := DevisValues;
     uThreadDevis.LogValues       := LogValues;
     uThreadDevis.FolderValues    := FolderValues;
-    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(tnDevis, Format('%sBefore Call uThreadDevis.Resume', [WSCDS_DebugMsg]), LogValues, 0);
+    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, tnDevis, Format('%sBefore Call uThreadDevis.Resume', [WSCDS_DebugMsg]), LogValues, 0);
     try
       uThreadDevis.Resume;
     except
@@ -237,7 +237,7 @@ procedure TSvcSyncBTPVerdon.ServiceExecute(Sender: TService);
 
   procedure CallThreadLignesBR;
   begin
-    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(tnLignesBR, Format('%sWith Thread', [WSCDS_DebugMsg]), LogValues, 0);
+    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, tnLignesBR, Format('%sWith Thread', [WSCDS_DebugMsg]), LogValues, 0);
     StartLog(tnLignesBR, DevisValues.LastSynchro);
     LignesBRValues.FirstExec := False;
     LignesBRValues.Count     := 0;
@@ -248,7 +248,7 @@ procedure TSvcSyncBTPVerdon.ServiceExecute(Sender: TService);
     uThreadLignesBR.TableValues     := LignesBRValues;
     uThreadLignesBR.LogValues       := LogValues;
     uThreadLignesBR.FolderValues    := FolderValues;
-    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(tnLignesBR, Format('%sBefore Call uThreadLignesBR.Resume', [WSCDS_DebugMsg]), LogValues, 0);
+    if (LogValues.DebugEvents > 0) then TUtilBTPVerdon.AddLog(ServiceName_BTPVerdonExp, tnLignesBR, Format('%sBefore Call uThreadLignesBR.Resume', [WSCDS_DebugMsg]), LogValues, 0);
     try
       uThreadLignesBR.Resume;
     except
@@ -258,12 +258,12 @@ procedure TSvcSyncBTPVerdon.ServiceExecute(Sender: TService);
   end;
 
 begin
-  IniPath := TServicesLog.GetFilePath(ServiceName_BTPVerdon, 'ini');
-  AppPath := TServicesLog.GetFilePath(ServiceName_BTPVerdon, 'exe');
-  LogPath := TServicesLog.GetFilePath(ServiceName_BTPVerdon, 'log');
+  IniPath := TServicesLog.GetFilePath(ServiceName_BTPVerdonExp, 'ini');
+  AppPath := TServicesLog.GetFilePath(ServiceName_BTPVerdonExp, 'exe');
+  LogPath := TServicesLog.GetFilePath(ServiceName_BTPVerdonExp, 'log');
   if not FileExists(IniPath) then
   begin
-    LogMessage(Format('Impossible d''initialiser le service %s. Le fichier de configuration "%s" est inexistant.', [ServiceName_BTPVerdon, IniPath]), EVENTLOG_ERROR_TYPE);
+    LogMessage(Format('Impossible d''initialiser le service %s. Le fichier de configuration "%s" est inexistant.', [ServiceName_BTPVerdonExp, IniPath]), EVENTLOG_ERROR_TYPE);
   end else
   begin
     ClearTablesValues;                         
@@ -284,18 +284,18 @@ begin
   end;
 end;
 
-procedure TSvcSyncBTPVerdon.ServiceStop(Sender: TService; var Stopped: Boolean);
+procedure TSvcSyncBTPVerdonExp.ServiceStop(Sender: TService; var Stopped: Boolean);
 begin
   FreeAndNil(uThreadTiers);
   FreeAndNil(uThreadChantier);
   FreeAndNil(uThreadDevis);
   FreeAndNil(uThreadLignesBR);
-  LogMessage(Format('Arrêt de %s.', [ServiceName_BTPVerdon]), EVENTLOG_INFORMATION_TYPE);
+  LogMessage(Format('Arrêt de %s.', [ServiceName_BTPVerdonExp]), EVENTLOG_INFORMATION_TYPE);
 end;
 
-procedure TSvcSyncBTPVerdon.ServiceStart(Sender: TService; var Started: Boolean);
+procedure TSvcSyncBTPVerdonExp.ServiceStart(Sender: TService; var Started: Boolean);
 begin
-  LogMessage(Format('Démarrage de de %s.', [ServiceName_BTPVerdon]), EVENTLOG_INFORMATION_TYPE);
+  LogMessage(Format('Démarrage de de %s.', [ServiceName_BTPVerdonExp]), EVENTLOG_INFORMATION_TYPE);
 end;
 
 end.
