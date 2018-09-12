@@ -460,7 +460,11 @@ begin
       MoveCurProgressForm('Traitement des données du fichier ' + sr.Name);
       try
         T2 := T.FindFirst(['DT_NOMTABLE'], [ T1.GetValue('TABLE')], FALSE);
-        if T2 = nil then continue; // la table n''existe pas dans la destination....
+        if T2 = nil then
+        begin
+          ret := FindNext(sr);
+          continue; // la table n''existe pas dans la destination....
+        end;
         if (T1.getString('VIDAGE')='X') then
         begin
           if (T2.GetString('REINIT')<> 'X') then
@@ -468,11 +472,11 @@ begin
             ExecuteSql('DELETE FROM '+T1.GetValue('TABLE'));
             T2.SetString('REINIT','X');
           end;
-          T_Mere.SetAllModifie(true); 
+          T_Mere.SetAllModifie(true);
           OkOk := T_Mere.InsertDBByNivel(TRUE);
         end else
         begin
-          T_Mere.SetAllModifie(true); 
+          T_Mere.SetAllModifie(true);
           OkOk := T_Mere.InsertOrUpdateDB(TRUE);
         end;
         Trace.Items.add('Traitement du fichier ' + sr.Name + ' OK');

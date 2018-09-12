@@ -19,7 +19,7 @@ object FexpImpCegid: TFexpImpCegid
   TextHeight = 13
   object Dock971: TDock97
     Left = 0
-    Top = 520
+    Top = 519
     Width = 535
     Height = 39
     AllowDrag = False
@@ -118,7 +118,7 @@ object FexpImpCegid: TFexpImpCegid
     Left = 0
     Top = 0
     Width = 535
-    Height = 520
+    Height = 519
     ActivePage = TPSHTCAR
     Align = alClient
     TabOrder = 1
