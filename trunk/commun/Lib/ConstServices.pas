@@ -19,6 +19,7 @@ type
     class function GetFilePath(ServiceName, Extension: string): string;
     class function CreateLog(LogValues : T_WSLogValues; ServiceName : string): string;
     class procedure WriteLog(TypeDebug: T_SvcTypeLog; Text, ServiceName: string; LogValues : T_WSLogValues; LineLevel: integer; WithoutDateTime: Boolean=true; AddFileName : string='');
+    class function GetAppDataFileName (ServiceName, Extension: string): string;
   end;
 
 
@@ -37,9 +38,16 @@ uses
   , SysUtils
   , Windows
   , CommonTools
+  , UWinSystem
   ;
 
 { TServicesLgo }
+
+
+class function TServicesLog.GetAppDataFileName(ServiceName, Extension: string): string;
+begin
+  Result := Format('%s%s.%s', [TWinSystem.GetAppDataPath, ServiceName, Extension]);
+end;
 
 class function TServicesLog.GetFilePath(ServiceName, Extension: string): string;
 begin

@@ -11,6 +11,7 @@ uses
   , Controls
   , SvcMgr
   , Dialogs
+  , UWinSystem
   ;
 
 type
@@ -78,11 +79,11 @@ var
   IniPath   : string;
   AppPath   : string;
   LogPath   : string;
-  FirstExec : boolean;  
+  FirstExec : boolean;
 begin
-  IniPath := TServicesLog.GetFilePath(ServiceName_BTPY2, 'ini');
+  IniPath := TServicesLog.GetAppDataFileName(ServiceName_BTPY2, 'ini');
   AppPath := TServicesLog.GetFilePath(ServiceName_BTPY2, 'exe');
-  LogPath := TServicesLog.GetFilePath(ServiceName_BTPY2, 'log');
+  LogPath := TServicesLog.GetAppDataFileName(ServiceName_BTPY2, 'log');
   if not FileExists(IniPath) then
   begin
     LogMessage(Format('Impossible d''initialiser le service %s. Le fichier de configuration "%s" est inexistant.', [ServiceName_BTPY2, TServicesLog.GetFilePath(ServiceName_BTPY2, 'ini')]), EVENTLOG_ERROR_TYPE);

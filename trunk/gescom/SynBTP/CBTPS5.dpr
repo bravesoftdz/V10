@@ -1126,7 +1126,10 @@ uses
   BTPARAMWS_TOF in '..\..\CONNECTWS\BTPARAMWS_TOF.pas',
   uWSDataService in '..\..\Services\BTPY2\Lib\uWSDataService.pas',
   UTOF_BTCODECPTA_MUL in '..\LibBTP\UTOF_BTCODECPTA_MUL.pas',
-  UTOF_BTCODECPTA in '..\LibBTP\UTOF_BTCODECPTA.pas';
+  UTOF_BTCODECPTA in '..\LibBTP\UTOF_BTCODECPTA.pas',
+  UtilBSV in '..\LibBTP\UtilBSV.pas',
+  UDefGlobals in '..\LibBTP\UDefGlobals.pas';
+
 //
 
 // FIN NEW

@@ -566,7 +566,9 @@ uses
   ConstServices in '..\..\commun\Lib\ConstServices.pas',
   uLkJSON in '..\..\CONNECTWS\uLkJSON.pas',
   BTWSTABLEAUTO_TOF in '..\..\Services\BTPY2\Lib\BTWSTABLEAUTO_TOF.pas',
-  UtilsPdf in '..\UtilPdfTk\UtilsPdf.pas';
+  UtilsPdf in '..\UtilPdfTk\UtilsPdf.pas',
+  UtilBSV in '..\LibBTP\UtilBSV.pas',
+  UDefGlobals in '..\LibBTP\UDefGlobals.pas';
 
 {$R *.RES}
 

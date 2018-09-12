@@ -2,7 +2,7 @@ program SvcSynBTPVerdon;
 
 uses
   SvcMgr,
-  uMainService in '..\Lib\uMainService.pas' {SvcSyncBTPVerdon: TService},              
+  uMainService in '..\Lib\uMainService.pas' {SvcSyncBTPVerdon: TService},
   CommonTools in '..\..\..\commun\Lib\CommonTools.pas',
   Zip in '..\..\..\commun\Lib\Zip.pas',
   ZipDlls in '..\..\..\commun\Lib\ZipDlls.pas',
@@ -17,8 +17,8 @@ uses
   uLkJSON in '..\..\..\CONNECTWS\uLkJSON.pas',
   tThreadChantiers in '..\Lib\tThreadChantiers.pas',
   tThreadDevis in '..\Lib\tThreadDevis.pas',
-  tThreadLignesBR in '..\Lib\tThreadLignesBR.pas'
-  ;
+  tThreadLignesBR in '..\Lib\tThreadLignesBR.pas',
+  UWinSystem in '..\..\..\COMMUN\LIB\UWinSystem.pas';
 
 {$R *.RES}
 

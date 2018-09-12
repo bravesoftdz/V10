@@ -6,7 +6,8 @@ uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   StdCtrls, ExtCtrls, DB, Hctrls, ComCtrls, Buttons, Ent1, HEnt1, hmsgbox,
   {$IFNDEF DBXPRESS}dbtables{BDE},{$ELSE}uDbxDataSet,{$ENDIF}
-  MajTable, HStatus, HSysMenu,LicUtil,hCRC, Hqry, ADODB ;
+  MajTable, HStatus, HSysMenu,LicUtil,hCRC, Hqry, ADODB, TntButtons,
+  TntStdCtrls ;
 
 type
   TFInitSoc = class(TForm)
