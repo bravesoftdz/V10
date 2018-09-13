@@ -1,8 +1,8 @@
 object MonPlanning: TMonPlanning
-  Left = 408
-  Top = 265
-  Width = 1081
-  Height = 573
+  Left = 3
+  Top = 2
+  Width = 738
+  Height = 492
   Caption = '='
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -20,8 +20,8 @@ object MonPlanning: TMonPlanning
   OnKeyUp = FormKeyUp
   OnShow = FormShow
   DesignSize = (
-    1065
-    534)
+    722
+    453)
   PixelsPerInch = 96
   TextHeight = 13
   object MonthCalendar1: TMonthCalendar
@@ -29,22 +29,22 @@ object MonPlanning: TMonPlanning
     Top = 64
     Width = 289
     Height = 201
-    Date = 36791.455511585650000000
+    Date = 36791.415419131950000000
     TabOrder = 0
   end
   object PageOnglet: TPageControl
     Left = 0
     Top = 0
-    Width = 1065
-    Height = 453
+    Width = 722
+    Height = 372
     Align = alClient
     TabOrder = 1
     OnChange = PageOngletChange
   end
   object Dock972: TDock97
     Left = 0
-    Top = 453
-    Width = 1065
+    Top = 372
+    Width = 722
     Height = 81
     AllowDrag = False
     Position = dpBottom
@@ -52,15 +52,15 @@ object MonPlanning: TMonPlanning
       Left = 0
       Top = 0
       ClientHeight = 77
-      ClientWidth = 1065
+      ClientWidth = 722
       Caption = 'Outils Planning'
       ClientAreaHeight = 77
-      ClientAreaWidth = 1065
+      ClientAreaWidth = 722
       DockPos = 0
       FullSize = True
       TabOrder = 0
       DesignSize = (
-        1065
+        722
         77)
       object BPagePrec: TToolbarButton97
         Left = 3
@@ -93,7 +93,7 @@ object MonPlanning: TMonPlanning
         GlobalIndexImage = 'Z0665_S16G1'
       end
       object BRecharger: TToolbarButton97
-        Left = 885
+        Left = 542
         Top = 5
         Width = 30
         Height = 27
@@ -107,7 +107,7 @@ object MonPlanning: TMonPlanning
         GlobalIndexImage = 'Z0050_S16G1'
       end
       object BChercher: TToolbarButton97
-        Left = 915
+        Left = 572
         Top = 5
         Width = 30
         Height = 27
@@ -121,7 +121,7 @@ object MonPlanning: TMonPlanning
         GlobalIndexImage = 'Z0077_S16G1'
       end
       object Bimprimer: TToolbarButton97
-        Left = 1005
+        Left = 662
         Top = 5
         Width = 30
         Height = 27
@@ -135,7 +135,7 @@ object MonPlanning: TMonPlanning
         GlobalIndexImage = 'Z0369_S16G1'
       end
       object BQuitter: TToolbarButton97
-        Left = 1035
+        Left = 692
         Top = 5
         Width = 30
         Height = 27
@@ -148,7 +148,7 @@ object MonPlanning: TMonPlanning
         GlobalIndexImage = 'Z0021_S16G1'
       end
       object Excelexport: TToolbarButton97
-        Left = 975
+        Left = 632
         Top = 5
         Width = 30
         Height = 27
@@ -220,7 +220,7 @@ object MonPlanning: TMonPlanning
       end
       object BLegende: TToolbarButton97
         Tag = 1
-        Left = 945
+        Left = 602
         Top = 5
         Width = 31
         Height = 27
@@ -304,7 +304,7 @@ object MonPlanning: TMonPlanning
       end
       object BAffAppel: TToolbarButton97
         Tag = 1
-        Left = 851
+        Left = 508
         Top = 5
         Width = 30
         Height = 27
@@ -406,7 +406,7 @@ object MonPlanning: TMonPlanning
       end
       object BCREAPPEL: TToolbarButton97
         Tag = 1
-        Left = 821
+        Left = 478
         Top = 5
         Width = 30
         Height = 27
@@ -674,7 +674,7 @@ object MonPlanning: TMonPlanning
       end
       object BAffAppel1: TToolbarButton97
         Tag = 1
-        Left = 851
+        Left = 508
         Top = 5
         Width = 30
         Height = 27
@@ -831,7 +831,7 @@ object MonPlanning: TMonPlanning
       end
       object BAffAppel2: TToolbarButton97
         Tag = 1
-        Left = 851
+        Left = 508
         Top = 5
         Width = 30
         Height = 27
@@ -988,7 +988,7 @@ object MonPlanning: TMonPlanning
         IsControl = True
       end
       object BTMail: TToolbarButton97
-        Left = 701
+        Left = 358
         Top = 5
         Width = 30
         Height = 27
@@ -1003,7 +1003,7 @@ object MonPlanning: TMonPlanning
         GlobalIndexImage = 'Z0721_S16G1'
       end
       object BTEditEvt: TToolbarButton97
-        Left = 736
+        Left = 393
         Top = 5
         Width = 30
         Height = 27
@@ -1094,7 +1094,7 @@ object MonPlanning: TMonPlanning
   end
   object TheParamPlanning: THCritMaskEdit
     Left = 290
-    Top = 209
+    Top = 128
     Width = 83
     Height = 21
     Anchors = [akLeft, akBottom]
@@ -1161,6 +1161,7 @@ object MonPlanning: TMonPlanning
         '{\rtf1\ansi\deff0\nouicompat{\fonttbl{\f0\fnil Arial;}}'
         '{\*\generator Riched20 6.3.9600}\viewkind4\uc1 '
         '\pard\f0\fs16\lang1036 DESCRIPTIF'
+        '\par '
         '\par '
         '\par '
         '\par '

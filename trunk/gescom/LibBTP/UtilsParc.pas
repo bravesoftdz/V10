@@ -1362,14 +1362,14 @@ begin
     if (NoEnCours = 0) then
     begin
       pgiInfo ('Impossible : Un évènement est déjà prévu sur cette période pour ce matériel');
-      Result := True;
+      Result := false;
     end
     else
     begin
       if (QQ.FindField('BEM_IDEVENTMAT').AsInteger <> NoEnCours) then
       begin
         pgiInfo ('Impossible : Un évènement est déjà prévu sur cette période pour ce matériel');
-        Result := True;
+        Result := false;
       end;
     end;
   end;

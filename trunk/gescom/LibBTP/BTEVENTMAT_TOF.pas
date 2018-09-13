@@ -288,16 +288,30 @@ begin
       Ecran.ModalResult := 0;
       LaTob.PutValue('RETOUR',            0);
       exit;
-    end;
+    end
+    else Ecran.ModalResult := 0
   end;
 
 end;
 
 
 Function TOF_BTEVENTMAT.ControleSaisie : Boolean;
+Var DDeb : TDateTime;
+    DFin : TDateTime;
+    Duree: Double;
 begin
 
+  DDeb := StrToDate(DateDeb.text);
+  DFin := StrToDate(DateFin.text);
+  Duree:= StrToFloat(Nbheure.Text);
+
   Result := False;
+
+  if not ControleCoherence(ddeb,DFin,Duree, CodeMateriel.Text, StrToInt(NumEventMat.caption)) then
+  Begin
+    DateDeb.SetFocus;
+    exit;
+  end;
 
   if not CodeMaterielExist(CodeMateriel.Text, '') then
   begin
