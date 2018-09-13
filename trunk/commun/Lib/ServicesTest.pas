@@ -9,7 +9,7 @@ type
     class procedure SvcBtpToVerdon;
     class procedure SvcVerdonToBtp;
   end;
- {$ENDIF APPSRV}
+ {$ENDIF APPSRV}                                                          
 
 implementation
 

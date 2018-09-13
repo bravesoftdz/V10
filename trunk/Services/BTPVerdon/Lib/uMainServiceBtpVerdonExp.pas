@@ -117,7 +117,7 @@ begin
     FolderValues.BTPDataBase  := SettingFile.ReadString(Section, 'BTPFolder'   , '');
     FolderValues.TMPServer    := SettingFile.ReadString(Section, 'Server'      , '');
     FolderValues.TMPDataBase  := SettingFile.ReadString(Section, 'TMPBDDFolder', '');
-    Section := 'EXPTABLESTRIGGERTIME';
+    Section := 'EXPTABLESEXECTIME';
     TiersValues.TimeOut    := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnTiers)   , 0);
     ChantierValues.TimeOut := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnChantier), 0);
     DevisValues.TimeOut    := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnDevis), 0);
@@ -161,6 +161,8 @@ begin
 end;
 
 procedure TSvcSyncBTPVerdonExp.ServiceExecute(Sender: TService);
+var
+  AppPath : string;
 
   procedure StartLog(lTn : T_TablesName; LastSynchro : string);
   begin
@@ -258,30 +260,35 @@ procedure TSvcSyncBTPVerdonExp.ServiceExecute(Sender: TService);
   end;
 
 begin
-  IniPath := TServicesLog.GetFilePath(ServiceName_BTPVerdonExp, 'ini');
-  AppPath := TServicesLog.GetFilePath(ServiceName_BTPVerdonExp, 'exe');
-  LogPath := TServicesLog.GetFilePath(ServiceName_BTPVerdonExp, 'log');
-  if not FileExists(IniPath) then
+  AppPath := TServicesLog.GetServicesAppDataPath(True, 'VERDON');
+  if AppPath <> '' then
   begin
-    LogMessage(Format('Impossible d''initialiser le service %s. Le fichier de configuration "%s" est inexistant.', [ServiceName_BTPVerdonExp, IniPath]), EVENTLOG_ERROR_TYPE);
-  end else
-  begin
-    ClearTablesValues;                         
-    ReadSettings;
-    while not Terminated do
+    IniPath := Format('%s\%s.%s', [AppPath, ServiceName_BTPVerdonIniFile, 'ini']);
+    LogPath := Format('%s\%s.%s', [AppPath, ServiceName_BTPVerdonExp, 'log']);
+    AppPath := TServicesLog.GetFilePath(ServiceName_BTPVerdonExp, 'exe');
+    if not FileExists(IniPath) then
     begin
-      Inc(TiersValues.Count);
-      Inc(ChantierValues.Count);
-      Inc(DevisValues.Count);
-      Inc(LignesBRValues.Count);
-      if (TiersValues.IsActive)    and ((TiersValues.Count    >= TiersValues.TimeOut)    or (TiersValues.FirstExec))    then CallThreadTiers;
-      if (ChantierValues.IsActive) and ((ChantierValues.Count >= ChantierValues.TimeOut) or (ChantierValues.FirstExec)) then CallThreadChantiers;
-      if (DevisValues.IsActive)    and ((DevisValues.Count    >= DevisValues.TimeOut)    or (DevisValues.FirstExec))    then CallThreadDevis;
-      if (LignesBRValues.IsActive) and ((LignesBRValues.Count >= LignesBRValues.TimeOut) or (LignesBRValues.FirstExec)) then CallThreadLignesBR;
-      Sleep(1000);
-      ServiceThread.ProcessRequests(False);
+      LogMessage(Format('Impossible d''initialiser le service %s. Le fichier de configuration "%s" est inexistant.', [ServiceName_BTPVerdonExp, IniPath]), EVENTLOG_ERROR_TYPE);
+    end else
+    begin
+      ClearTablesValues;                         
+      ReadSettings;
+      while not Terminated do
+      begin
+        Inc(TiersValues.Count);
+        Inc(ChantierValues.Count);
+        Inc(DevisValues.Count);
+        Inc(LignesBRValues.Count);
+        if (TiersValues.IsActive)    and ((TiersValues.Count    >= TiersValues.TimeOut)    or (TiersValues.FirstExec))    then CallThreadTiers;
+        if (ChantierValues.IsActive) and ((ChantierValues.Count >= ChantierValues.TimeOut) or (ChantierValues.FirstExec)) then CallThreadChantiers;
+        if (DevisValues.IsActive)    and ((DevisValues.Count    >= DevisValues.TimeOut)    or (DevisValues.FirstExec))    then CallThreadDevis;
+        if (LignesBRValues.IsActive) and ((LignesBRValues.Count >= LignesBRValues.TimeOut) or (LignesBRValues.FirstExec)) then CallThreadLignesBR;
+        Sleep(1000);
+        ServiceThread.ProcessRequests(False);
+      end;
     end;
-  end;
+  end else
+    LogMessage(Format('Impossible de créer le répertoire %s.', [TServicesLog.GetServicesAppDataPath(False, 'VERDON')]), EVENTLOG_ERROR_TYPE);
 end;
 
 procedure TSvcSyncBTPVerdonExp.ServiceStop(Sender: TService; var Stopped: Boolean);
