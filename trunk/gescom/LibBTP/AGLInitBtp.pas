@@ -364,6 +364,7 @@ Begin
     // Modif sur la fiche affaire du devis accepté
     TOBAff.PutValue('AFF_ETATAFFAIRE', 'ACP');
     TOBAff.PutValue('AFF_DATESIGNE', NowH);
+    TOBAff.PutValue('AFF_DATEMODIF', NowH);
 
     TOBAff.UpdateDB(false);
     if VH_GC.BTCODESPECIF <> '002' then // Pour VERDON Cette option est désactivée
