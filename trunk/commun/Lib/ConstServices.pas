@@ -58,14 +58,38 @@ end;
 class function TServicesLog.GetServicesAppDataPath(CreatIfNotExist : Boolean; SubDirectory : string='') : string;
 var
   DataPrg : string;
+
+  function CreateDirIfNotExist(Path : string) : boolean;
+  begin
+    if (CreatIfNotExist) and (not DirectoryExists(Path)) then
+      Result := (CreateDir(Path))
+    else
+      Result := True;
+  end;
+
 begin
   DataPrg := TWinSystem.GetAppDataPath;
   DataPrg := StringReplace(DataPrg, '%SystemDrive%', GetEnvironmentVariable('systemdrive'), [rfReplaceAll]);
-  Result := Format('%s\LSE\Services\%s', [DataPrg, SubDirectory]);
-  if (CreatIfNotExist) and (not DirectoryExists(Result)) then
+  DataPrg := Format('%s\LSE', [DataPrg]);
+  if not CreateDirIfNotExist(DataPrg) then
+    Result := ''
+  else
+    Result := DataPrg;
+  if Result <> '' then
   begin
-    if not CreateDir(Result) then
-      Result := '';
+    DataPrg := Format('%s\Services', [DataPrg]);
+    if not CreateDirIfNotExist(DataPrg) then
+      Result := ''
+    else
+      Result := DataPrg;
+  end;
+  if (Result <> '') and (SubDirectory <> '') then
+  begin
+    DataPrg := Format('%s\%s', [DataPrg, SubDirectory]);
+    if not CreateDirIfNotExist(DataPrg) then
+      Result := ''
+    else
+      Result := DataPrg;
   end;
 end;
   
