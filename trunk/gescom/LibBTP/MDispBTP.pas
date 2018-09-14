@@ -532,6 +532,8 @@ BEGIN
 				{ Mng 05/03/2007 - Finalisation interface CTI  }
         FMenuDisp.TerminateCTI;
         end;
+	 14 : begin
+   			end;
 	 15 : begin
    			end;
    16 : begin
@@ -3051,6 +3053,7 @@ begin
 end;
 
 initialization
+
 Apalatys:='LSE';
 V_PGI.PGIContexte:=[ctxGescom,ctxAffaire,ctxBTP,ctxGRC];
 V_PGI.StandardSurDp := False;  // indispensable pour l'aiguillage entre le DP et les bases dossiers (gamme Expert), voir SQL025

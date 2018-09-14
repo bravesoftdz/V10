@@ -38,6 +38,17 @@ begin
   FreeMem(WindowsDir, dwLength);
 end;
 
+function ExisteMajLse : Boolean;
+begin
+  if (DelphiRunning) or (V_PGI.SAV) then
+  begin
+    Result := True;
+  end else
+  begin
+    result := FileExists(IncludeTrailingBackslash(TCbpPath.GetCegid)+'LSE Live Update\App\LSEClientMaj.exe');
+  end;
+end;
+
 function FindPGIIniFile : string;
   var Localrepert : string;
   		Iexist : integer;
@@ -81,18 +92,18 @@ begin
   END;
 end;
 
-procedure  ControleDriverVers (lesSection : TStringList; IniPgiFile : Tinifile);
+procedure  ControleShare (lesSection : TStringList; IniPgiFile : Tinifile);
 var Indice : integer;
     LaSection,LeDriver : string;
 begin
 	For Indice:= 0 to lesSection.Count -1 do
   begin
     laSection := lesSection.Strings [Indice];
-    LeDriver := IniPgiFile.ReadString(LaSection,'Driver','');
-		if UpperCase(leDriver) = DRIVER2008 then
+    LeDriver := IniPgiFile.ReadString(LaSection,'Share','');
+		if UpperCase(leDriver) <> '' then
     begin
-      IniPgiFile.DeleteKey(LaSection, 'Driver');
-      IniPgiFile.WriteString(LaSection,'Driver',DRIVER2005);
+      IniPgiFile.DeleteKey(LaSection, 'Share');
+      IniPgiFile.WriteString(LaSection,'Share','');
     end;
   end;
 end;
@@ -106,6 +117,8 @@ var	lesSections : Tstringlist;
 {$ENDIF}
 begin
 	INIFILE := HalSocIni;
+  if not ExisteMajLse
+   then Exit;
 {$IFNDEF EAGLCLIENT}
 	lesSections := TStringList.Create;
 	RepertIniFile :=  FindPGIIniFile;
@@ -113,19 +126,8 @@ begin
   if RepertIniFile <> '' then
   begin
     IniPgiFile := TiniFile.create (IncludeTrailingBackslash (RepertInifile)+INIFILE);
-    (*
-    PreDbffile := IniPgiFile.ReadString('Reference','Database','');
-    PreDbfName := ExtractFileName(preDbffile);
-    if (LowerCase (PreDbfName) = PRESOCREF) then
-    begin
-    	NewDbffile := IncludeTrailingBackslash(ExtractFilePath(PreDbffile))+NEWSOCREF;
-      if not FileExists (NewDbffile) then  RenameFile(PreDbffile,NewDbffile);
-      IniPgiFile.DeleteKey('Reference', 'Database');
-      IniPgiFile.WriteString('Reference','Database',NewDbffile);
-    end;
-    *)
     IniPGIFile.ReadSections(lesSections);
-//    ControleDriverVers (lesSections,IniPgiFile);
+    ControleShare (lesSections,IniPgiFile);
     IniPGIFile.Free;
   end;
   lesSections.free;

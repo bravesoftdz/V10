@@ -586,12 +586,14 @@ uses
   uMainServiceBtpVerdonExp in '..\..\Services\BTPVerdon\Lib\uMainServiceBtpVerdonExp.pas' {SvcSyncBTPVerdonExp: TService},
   ServicesTest in '..\..\commun\Lib\ServicesTest.pas',
   TRAFileUtil in '..\..\COMMUN\LIB\TRAFileUtil.pas',
-  UWinSystem in '..\..\COMMUN\LIB\UWinSystem.pas';
+  UWinSystem in '..\..\COMMUN\LIB\UWinSystem.pas',
+  ControlIniFile in '..\LibBTP\ControlIniFile.pas';
 
 {$R *.RES}
 
 begin
 	GetInfoMajApplication;
+	ControlPGIINI;
   //
   Application.Initialize;
   InitAgl;
