@@ -1,6 +1,6 @@
-object SVCENREGBASTGED: TSVCENREGBASTGED
+object LSESVCENVOIBAST: TLSESVCENVOIBAST
   OldCreateOrder = False
-  DisplayName = 'Service d'#39'enregistrement des BAST dans GED'
+  DisplayName = 'LSE enregistrement des BAST dans GED'
   AfterInstall = ServiceAfterInstall
   OnExecute = ServiceExecute
   OnStart = ServiceStart

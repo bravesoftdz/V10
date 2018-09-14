@@ -3,10 +3,10 @@ unit UMain;
 interface
 
 uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, SvcMgr, Dialogs;
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, SvcMgr, Dialogs,UTob;
 
 type
-  TSVCENREGBASTGED = class(TService)
+  TLSESVCENVOIBAST = class(TService)
     procedure ServiceAfterInstall(Sender: TService);
     procedure ServiceExecute(Sender: TService);
     procedure ServiceStart(Sender: TService; var Started: Boolean);
@@ -19,8 +19,8 @@ type
   end;
 
 var
-  SVCENREGBASTGED: TSVCENREGBASTGED;
-
+  LSESVCENVOIBAST: TLSESVCENVOIBAST;
+  
 implementation
 
 uses
@@ -30,22 +30,26 @@ uses
   , WinSVC
   , ShellAPI
   , ConstServices
-  , HEnt1, Hdb
+  , HEnt1
+  , Hdb
+  , UtilEnvEnvoiGed
+  , Ulog
+  , UconnectBSV
   ;
 
 {$R *.DFM}
 
 procedure ServiceController(CtrlCode: DWord); stdcall;
 begin
-  SVCENREGBASTGED.Controller(CtrlCode);
+  LSESVCENVOIBAST.Controller(CtrlCode);
 end;
 
-function TSVCENREGBASTGED.GetServiceController: TServiceController;
+function TLSESVCENVOIBAST.GetServiceController: TServiceController;
 begin
   Result := ServiceController;
 end;
 
-procedure TSVCENREGBASTGED.ServiceAfterInstall(Sender: TService);
+procedure TLSESVCENVOIBAST.ServiceAfterInstall(Sender: TService);
 var
   Reg : TRegistry;
 begin                                                                               
@@ -54,7 +58,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     if Reg.OpenKey('\SYSTEM\CurrentControlSet\Services\' + Sender.Name, false) then
     try
-      Reg.WriteString('Description', 'LSE-Enregistrement des BAST dans GED BSV');
+      Reg.WriteString('Description', 'LSE Enregistrement des BAST dans GED BSV');
     finally
       Reg.CloseKey;
     end;
@@ -63,75 +67,84 @@ begin
   end;
 end;
 
-procedure TSVCENREGBASTGED.ServiceExecute(Sender: TService);
+procedure TLSESVCENVOIBAST.ServiceExecute(Sender: TService);
 var
   Count     : Integer;
-//  BTPY2Exec : TSvcSyncBTPY2Execute;
+  EnvEnvoiGed : TEnvEnvoiGed;
   IniPath   : string;
   AppPath   : string;
   LogPath   : string;
   FirstExec : boolean;
-  TimeOut : Integer;
+  TOBFILES : TOB;
+  TOBFields : TOB;
 begin
-  TimeOut := 10;
-  IniPath := TServicesLog.GetAppDataFileName(ServiceName_BTPY2, 'ini');
-  AppPath := TServicesLog.GetFilePath(ServiceName_BTPY2, 'exe');
-  LogPath := TServicesLog.GetAppDataFileName(ServiceName_BTPY2, 'log');
+  IniPath := IncludeTrailingBackslash(TServicesLog.GetServicesAppDataPath(True,ServiceName_BASTVERSGED))+ServiceName_BASTVERSGED+'.ini';
+  AppPath := TServicesLog.GetFilePath(ServiceName_BASTVERSGED, 'exe');
+  LogPath := IncludeTrailingBackslash(TServicesLog.GetServicesAppDataPath(True,ServiceName_BASTVERSGED))+ServiceName_BASTVERSGED+'.log';
   if not FileExists(IniPath) then
   begin
-    LogMessage(Format('Impossible d''initialiser le service %s. Le fichier de configuration "%s" est inexistant.', [ServiceName_BTPY2, TServicesLog.GetFilePath(ServiceName_BTPY2, 'ini')]), EVENTLOG_ERROR_TYPE);
+    LogMessage(Format('Impossible d''initialiser le service %s. Le fichier de configuration "%s" est inexistant.', [ServiceName_BASTVERSGED,IniPath]), EVENTLOG_ERROR_TYPE);
   end else
   begin
     FirstExec := True;
-//    BTPY2Exec := TSvcSyncBTPY2Execute.Create;
+    EnvEnvoiGed := TEnvEnvoiGed.create (IniPath);
     try
-//      BTPY2Exec.CreateObjects;
+      if not EnvEnvoiGed.Status then
+      begin
+        LogMessage(Format('Impossible d''exécuter le service %s. Le fichier de configuration "%s" est incorrect.', [ServiceName_BASTVERSGED, IniPath]), EVENTLOG_ERROR_TYPE);
+        Exit;
+      end;
       try
-//        BTPY2Exec.IniFilePath := IniPath;
-//        BTPY2Exec.AppFilePath := AppPath;
-//        BTPY2Exec.LogFilePath := LogPath;
-//        BTPY2Exec.InitApplication;
-        try
-          Count := 0;
-          while not Terminated do
+        Count := 0;
+        TOBFILES := TOB.create('LES FICHIERS',nil,-1);
+        TOBFields := TOB.create('LES PARAMS',nil,-1);
+        GetParamStockageBSV (TOBFields,'XBT',EnvEnvoiGed.Server,EnvEnvoiGed.Database,EnvEnvoiGed.ModeDebug,LogPath);
+        if TOBFields.Detail.count = 0 then
+        begin
+          LogMessage('Veuillez parametrer le BAST pour la liaison avec BSV', EVENTLOG_ERROR_TYPE);
+          Exit;
+        end;
+        //
+        if Tools.getPara
+        while not Terminated do
+        begin
+          TOBFILES := TOB.create('LES FICHIERS',nil,-1);
+          Inc(Count);
+          if (Count >= EnvEnvoiGed.delay) or (FirstExec) then
           begin
-            Inc(Count);
-            if (Count >= Timeout) or (FirstExec) then
-            begin
-              FirstExec := False;
-              Count     := 0;
+            FirstExec := False;
+            Count     := 0;
+            try
+              if EnvEnvoiGed.ModeDebug > 0 then  EcritLogs(LogPath,'4. Début d''exécution du service.');
               try
-                LogMessage('Début d''exécution du service.', EVENTLOG_INFORMATION_TYPE);
-//                BTPY2Exec.ServiceExecute;
-                try
-//                  BTPY2Exec.LogFilePath := LogPath;
-                finally
-                  LogMessage('Fin d''exécution du service.', EVENTLOG_INFORMATION_TYPE);
-                end;
-              except
-                on E: Exception do
-                  LogMessage(Format('Fin exécution du service avec erreur : %s', [E.Message]), EVENTLOG_ERROR_TYPE);
+              finally
+                if EnvEnvoiGed.ModeDebug > 0 then EcritLogs(LogPath,'5. Fin d''exécution du service.');
               end;
+            except
+              on E: Exception do
+                LogMessage(Format('Fin exécution du service avec erreur : %s', [E.Message]), EVENTLOG_ERROR_TYPE);
             end;
-            Sleep(1000);
           end;
-        finally
+          ServiceThread.ProcessRequests(True);
+          Sleep(1000);
         end;
       finally
-//        BTPY2Exec.FreeObjects;
+        TOBFILES.free;
+        TOBFields.free;
       end;
     finally
-//      BTPY2Exec.Free;
+      LogMessage('Deconnexion fin Service.',EVENTLOG_INFORMATION_TYPE);
     end;
   end;
 end;
 
-procedure TSVCENREGBASTGED.ServiceStart(Sender: TService;var Started: Boolean);
+procedure TLSESVCENVOIBAST.ServiceStart(Sender: TService;var Started: Boolean);
 begin
   LogMessage('Démarrage du service d''envoi des BAST dans GED.', EVENTLOG_INFORMATION_TYPE);
+  Coinitialize(nil);
 end;
 
-procedure TSVCENREGBASTGED.ServiceStop(Sender: TService;var Stopped: Boolean);
+procedure TLSESVCENVOIBAST.ServiceStop(Sender: TService;var Stopped: Boolean);
 begin
   CoUnInitialize;
   LogMessage('Arrêt du service d''envoi des BAST dans GED.', EVENTLOG_INFORMATION_TYPE);

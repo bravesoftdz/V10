@@ -2,7 +2,8 @@ program SVCEnvoiBASTGed;
 
 uses
   SvcMgr,
-  UMain in '..\ServicesPOC\SVCENVOIEGED\UMain.pas' {SVCENREGBASTGED: TService},
+  Hent1,  
+  UMain in '..\ServicesPOC\SVCENVOIEGED\UMain.pas' {LSESVCENVOIBAST: TService},
   CommonTools in '..\..\commun\Lib\CommonTools.pas',
   Zip in '..\..\commun\Lib\Zip.pas',
   ZipDlls in '..\..\COMMUN\LIB\ZipDlls.pas',
@@ -15,13 +16,14 @@ uses
   UtilBSV in '..\LibBTP\UtilBSV.pas',
   UDefGlobals in '..\LibBTP\UDefGlobals.pas',
   UWinSystem in '..\..\COMMUN\LIB\UWinSystem.pas',
-  ConstServices in '..\..\commun\Lib\ConstServices.pas';
+  UtilEnvEnvoiGed in '..\ServicesPOC\SVCENVOIEGED\UtilEnvEnvoiGed.pas',
+  Ulog in '..\..\commun\Lib\Ulog.pas';
 
 {$R *.RES}
 
 begin
   Application.Initialize;
   Application.Title := 'Service envoie BAST dans GED POC';
-  Application.CreateForm(TSVCENREGBASTGED, SVCENREGBASTGED);
+  Application.CreateForm(TLSESVCENVOIBAST, LSESVCENVOIBAST);
   Application.Run;
 end.

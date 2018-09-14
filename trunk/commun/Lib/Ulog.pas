@@ -1,9 +1,11 @@
 unit Ulog;
 
 interface
-uses SysUtils;
+uses SysUtils
+;
 
-procedure ecritLog (const Emplacement : string; const SMessage : string; Nomfic : string='');
+procedure ecritLog (const Emplacement : string; const SMessage : string; Nomfic : string=''); overload;
+procedure ecritLogS (const LogFile : string; const SMessage : string); overload;
 implementation
 
 procedure ecritLog (const Emplacement : string; const SMessage : string; Nomfic : string='');
@@ -16,7 +18,7 @@ begin
 
   if not FileExists(nomLog) then
   begin
-    AssignFile(f, nomLog); 
+    AssignFile(f, nomLog);
     ReWrite(f);
     closeFile(f);
   end;
@@ -28,5 +30,24 @@ begin
   CloseFile(f);
 end;
 
+procedure ecritLogS (const LogFile : string; const SMessage : string); overload;
+var f : TextFile;
+begin
+  if not FileExists(LogFile) then
+  begin
+    AssignFile(f, LogFile);
+    ReWrite(f);
+    closeFile(f);
+  end;
+
+  AssignFile(f, LogFile);
+  Append (f);
+  writeln ( f, format('%s : %s',[FormatDateTime('dd/mm/yyyy hh:nn:ss',Now),SMessage]));
+  Flush(f);
+  CloseFile(f);
+
+end;
+
 end.
+
 

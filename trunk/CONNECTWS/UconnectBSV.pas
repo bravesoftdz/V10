@@ -107,14 +107,18 @@ procedure GetParamsUploadBSV (TOBParamsBSV : TOB; ZeXX : TconnectBSV = nil);
 function SetFactureRegleBSV (BSVDocumentID : string) : boolean;
 procedure VisuDocumentBSV (TOBPiece : TOB);
 function StoreDocumentBSV (FileName : string; TOBFields : TOB;StoreWF : boolean=true) : WideString;
-procedure GetParamStockageBSV (TOBFIelds : TOB; NaturePiece : string);
+procedure GetParamStockageBSV (TOBFIelds : TOB; NaturePiece : string {$IFDEF APPSRVWITHCBP} ;ServerName : string; Database : string; ModeDebug : Integer; LogFile : string{$ENDIF});
 function EcraseDocumentBSV (FileName : string; TOBFields : TOB; IDZeDoc : string) : boolean;
 function FindDocumentBSV (SousTraitant,NumFacture,DateFacture : string) : string;
 
 implementation
 
 uses Hctrls,Aglinit,Hent1,db, {$IFNDEF DBXPRESS} dbtables {$ELSE} uDbxDataSet,{FactComm,}
-  XeroBase64 {$ENDIF}, UdefServices, UCryptage,LicUtil;
+      XeroBase64 {$ENDIF}, UdefServices, UCryptage,LicUtil
+    {$IFDEF APPSRVWITHCBP}
+     ,CommonTools
+    {$ENDIF}
+      ;
 
 function GetEmail (CodeUser : string;Server: string='';Database : string = '') : string;
 var QQ: TQuery;
@@ -128,15 +132,21 @@ begin
   Ferme(QQ);
 end;
 
-procedure GetParamStockageBSV (TOBFIelds : TOB; NaturePiece : string);
+procedure GetParamStockageBSV (TOBFIelds : TOB; NaturePiece : string {$IFDEF APPSRVWITHCBP} ;ServerName : string; Database : string; ModeDebug : Integer; LogFile : string{$ENDIF}  );
+{$IFNDEF APPSRVWITHCBP}
 var QQ : Tquery;
+{$ENDIF}
 begin
+{$IFNDEF APPSRVWITHCBP}
   QQ := OpenSql('SELECT * FROM BSVPARPIECE WHERE BP3_NATUREPIECEG="'+NaturePiece+'"',True,-1,'',True);
   if not QQ.Eof then
   begin
     TOBFIelds.LoadDetailDB('BSVPARPIECE','','',QQ,false);
   end;
   ferme (QQ);
+{$ELSE}
+  Tools.LoadDetailDB ('SELECT * FROM BSVPARPIECE WHERE BP3_NATUREPIECEG="'+NaturePiece+'"',TOBFIelds,ServerName,Database,ModeDebug,LogFile);
+{$ENDIF}
 end;
 
 function EcraseDocumentBSV (FileName : string; TOBFields : TOB; IDZeDoc : string) : boolean;

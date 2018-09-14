@@ -6,6 +6,7 @@ uses
   Classes
   , ConstServices
   , ADODB
+  ,Ulog
   {$IFNDEF APPSRV}
   , UTob
   , HEnt1
@@ -115,6 +116,7 @@ type
     class function EvalueDateJJMMYYY(sDate : string) : TDateTime;
     class procedure DecodeAccDocReferency(DocReferency : string; var DocType : string; var Stump : string; var DocDate : TDateTime; var DocNumber : integer; var Index : integer);
     class function GetParamSocSecur_(PSocName : string; DefaultValue : string{$IFDEF APPSRV}; ServerName, FolderName : string{$ENDIF APPSRV}) : string;
+    class function GetConnectionString(ServerName, DBName: string): string;
     class function CastDateTimeForQry(lDate : TDateTime) : string;
     class function CastDateForQry(lDate : TDateTime) : string;
     class function UsDateTime_(dDateTime : TDateTime) : string;
@@ -131,7 +133,11 @@ type
     {$IFEND}
     class function ExtractFieldName(Value : string) : string;
     class function ExtractFieldType(Value : string) : string;
-
+    {$IFDEF APPSRVWITHCBP}
+    class function SelectDB (SQL: string; TOBD: TOB {$IFDEF APPSRV} ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string='' {$ENDIF APPSRV}) : boolean;
+    class function LoadDetailDB(SQL: string; TOBD : TOB {$IFDEF APPSRV} ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string='' {$ENDIF APPSRV}): boolean;
+    class function GetparamSocSecur(Paramsoc: string  ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string=''): string;
+    {$ENDIF}
   end;
 
 implementation
@@ -1128,7 +1134,7 @@ end;
 
 class function Tools.GetKoFromMo(Mo : integer) : Integer;
 begin
-  Result := Mo * 1048576;
+  Result := Mo * 1024;
 end;
 
 class function Tools.DeleteDirectroy(Path : string) : boolean;
@@ -1248,6 +1254,23 @@ begin
     DocNumber := StrToInt(Tools.ReadTokenSt_(DocReferency, ';'));
     Index     := StrToInt(Tools.ReadTokenSt_(DocReferency, ';'));
   end;
+end;
+
+class function Tools.GetConnectionString (ServerName ,DBName : string) : string;
+begin
+  Result := 'Provider=SQLOLEDB.1'
+          + ';Password=ADMIN'
+          + ';Persist Security Info=True'
+          + ';User ID=ADMIN'
+          + ';Initial Catalog=' + DBName
+          + ';Data Source=' + ServerName
+          + ';Use Procedure for Prepare=1'
+          + ';Auto Translate=True'
+          + ';Packet Size=4096'
+          + ';Workstation ID=LOCALST'
+          + ';Use Encryption for Data=False'
+          + ';Tag with column collation when possible=False'
+          ;
 end;
 
 class function Tools.GetParamSocSecur_(PSocName : string; DefaultValue : string{$IFDEF APPSRV}; ServerName, FolderName : string{$ENDIF APPSRV}) : string;
@@ -1388,5 +1411,133 @@ class function Tools.ExtractFieldType(Value : string) : string;
 begin
   Result := copy(Value, pos(';', Value) +1,length(Value));
 end;
+
+{$IFDEF APPSRVWITHCBP}
+class function Tools.LoadDetailDB(SQL: string; TOBD : TOB {$IFDEF APPSRV} ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string='' {$ENDIF APPSRV}): boolean;
+var
+{$IFNDEF APPSRV}
+  Qry : Tquery;
+{$ELSE}
+  Qry : TADOQuery;
+  II : Integer;
+  TOBJ : TOB;
+  Name : string;
+  Value : Variant;
+{$ENDIF}
+begin
+{$IFNDEF APPSRV}
+  Qry := OpenSql(Sql, False);
+  if not Qry.eof then
+  begin
+    TOBD.LoadDetailDb ('ONE TABLE','','',Qry,false);
+  end;
+  Ferme(Qry);
+{$ELSE !APPSRV}
+  Qry := TADOQuery.Create(nil);
+  Qry.ConnectionString := Tools.GetConnectionString (Servername,DbName);
+  Qry.SQL.Text := SQL;
+  Qry.Prepared := True;
+  TRY
+    Qry.Open;
+    QRY.first;
+    repeat
+      TOBJ := TOB.Create ('UNE LIGNE',TOBD,-1);
+      if (LogFile <> '') and (ModeDebug >1) then
+      begin
+        ecritLogS (LogFile, '----- Ligne Resultat -------');
+      end;
+      For II := 0 to Qry.FieldCount -1 do
+      begin
+        Name := QRy.Fields [II].FieldName;
+        Value := Qry.Fields[II].Value;
+        TOBD.AddChampSupValeur(Name, Value);
+        if (LogFile <> '') and (ModeDebug >1) then
+        begin
+          ecritLogS (LogFile, Format('%s = %s',[Name,Value]));
+        end;
+      end;
+      Qry.Next;
+      if (LogFile <> '') and (ModeDebug >1) then
+      begin
+        ecritLogS (LogFile, '----- Fin Ligne Resultat -------');
+      end;
+    until QRY.Eof;
+  FINALLY
+    Qry.Free;
+  end;
+{$ENDIF !APPSRV}
+end;
+
+class function Tools.SelectDB(SQL: string; TOBD: TOB {$IFDEF APPSRV} ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string='' {$ENDIF APPSRV}  ): boolean;
+var
+{$IFNDEF APPSRV}
+  Qry : Tquery;
+{$ELSE}
+  Qry : TADOQuery;
+  II : Integer;
+  Name : string;
+  Value : Variant;
+{$ENDIF}
+begin
+  Result := false;
+{$IFNDEF APPSRV}
+  Qry := OpenSql(Sql, False);
+  if not Qry.eof then
+  begin
+    TOBD.SelectDB ('',Qry);
+    result := true;
+  end;
+  Ferme(Qry);
+{$ELSE !APPSRV}
+  SQL := StringReplace(SQL, '"', '''', [rfReplaceAll]);
+  //
+  Qry := TADOQuery.Create(nil);
+  Qry.ConnectionString := Tools.GetConnectionString (Servername,DbName);
+  Qry.SQL.Text := SQL;
+  Qry.Prepared := True;
+  TRY
+    Qry.Open;
+    Qry.First;
+    if not Qry.eof then
+    begin
+      result := True;
+      For II := 0 to Qry.FieldCount -1 do
+      begin
+        Name := QRy.Fields [II].FieldName;
+        Value := Qry.Fields[II].Value;
+        if (LogFile <> '') and (ModeDebug >1) then
+        begin
+          ecritLogS (LogFile, '----- Resultat -------');
+          ecritLogS (LogFile, Format('%s = %s',[Name,Value]));
+          ecritLogS (LogFile, '----- Fin Resultat -------');
+        end;
+        TOBD.AddChampSupValeur(Name, Value);
+      end;
+    end;
+  FINALLY
+    Qry.Free;
+  end;
+{$ENDIF !APPSRV}
+
+end;
+
+class function ToolS.GetparamSocSecur(Paramsoc: string; Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string=''): string;
+var SQL : string;
+    TOBR  :TOB;
+begin
+  Result := '';
+  TOBR := TOB.Create ('UN PARAMSOC',nil,-1);
+  TRY
+  SQL := 'SELECT SOC_DATA FROM PARAMSOC WHERE SOC_NOM="'+Paramsoc+'"';
+  if Tools.SelectDB (SQL,TOBR,Servername,DBName,ModeDebug,LogFile) then
+  begin
+    Result := TOBR.GetString('SOC_DATA');
+  end;
+  FINALLY
+    TOBR.free;
+  END;
+end;
+
+{$ENDIF APPSRVWITHCBP}
 
 end.
