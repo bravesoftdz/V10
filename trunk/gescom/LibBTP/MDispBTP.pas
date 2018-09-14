@@ -2471,6 +2471,10 @@ Var i       : Integer;
     QQ			: TQuery;
     UneTOB	: TOB;
     OkReglCpta : boolean;
+{$IFDEF TSTSRV}
+    TobModules : TOB;
+    Cpt        : integer;
+{$ENDIF TSTSRV}
 BEGIN
 
 /// Menu Pop général
@@ -2484,7 +2488,20 @@ ChargeMenuPop(16,FMenuG.DispatchX);
 
   //uniquement en line
 	if TobParamSoc <> nil then TobParamSoc.ClearDetail;
-
+{ Si application de test des services, supprime tout sauf administration }
+{$IFDEF TSTSRV}
+  TobModules := TOB.Create('MENU', nil, -1);
+  try
+    TobModules.LoadDetailFromSQL(Format('SELECT * FROM MENU WHERE MN_1= %s AND MN_3 = 0', [IntToStr(NumModule)]));
+    for Cpt := 0 to pred(TobModules.Detail.Count) do
+    begin
+      if (NumModule <> 60) or ((NumModule = 60) and (TobModules.Detail[Cpt].GetInteger('MN_TAG') <> 60900)) then
+        FMenuG.RemoveGroup(TobModules.Detail[Cpt].GetInteger('MN_TAG'), True)
+    end;
+  finally
+    FreeAndNil(TobModules);
+  end;
+{$ELSE TSTSRV}
 Case NumModule of
 
   145 : BEGIN
@@ -2870,11 +2887,11 @@ Begin
    FmenuG.removeItem (304561); //FV1 : 25/07/2013 ==> FS#298 - ESPACS : Ne pas faire apparaître "modification de factures" si pas de gestion factures provisoires
 end;
 {$ENDIF}
-
 {$IFDEF GRC}
 if (GetParamSoc('SO_RTAFFICHEINFOS')=False) then
      FMenuG.RemovePopupItem(92296) ;
 {$ENDIF GRC}
+{$ENDIF TSTSRV}
 END;
 
 procedure AppelTitreLibre (Name : string;PRien : THPanel; Prefixe : string );
