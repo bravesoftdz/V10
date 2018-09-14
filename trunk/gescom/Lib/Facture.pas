@@ -15743,27 +15743,27 @@ end;
 
 procedure TFFacture.ZoomOuChoixArt(ACol, ARow: integer);
 
-procedure SaveCatalogu (TOBC,TOBA : TOB);
-var j : integer;
-	  Nam : string;
-begin
-  for j := 1 to TOBC.NbChamps do
+  procedure SaveCatalogu (TOBC,TOBA : TOB);
+  var j : integer;
+      Nam : string;
   begin
-    Nam := TOBC.GetNomChamp(j);
-    if TOBA.FieldExists(Nam) then TOBC.PutValue(Nam, TOBA.GetValue(Nam));
+    for j := 1 to TOBC.NbChamps do
+    begin
+      Nam := TOBC.GetNomChamp(j);
+      if TOBA.FieldExists(Nam) then TOBC.PutValue(Nam, TOBA.GetValue(Nam));
+    end;
   end;
-end;
 
-procedure RestitueCatalogu (TOBC,TOBA : TOB);
-var j : integer;
-	  Nam : string;
-begin
-  for j := 1 to TOBC.NbChamps do
+  procedure RestitueCatalogu (TOBC,TOBA : TOB);
+  var j : integer;
+      Nam : string;
   begin
-    Nam := TOBC.GetNomChamp(j);
-    if TOBA.FieldExists(Nam) then TOBA.PutValue(Nam, TOBC.GetValue(Nam));
+    for j := 1 to TOBC.NbChamps do
+    begin
+      Nam := TOBC.GetNomChamp(j);
+      if TOBA.FieldExists(Nam) then TOBA.PutValue(Nam, TOBC.GetValue(Nam));
+    end;
   end;
-end;
 
 var RefUnique, RefCata, RefFour: string;
   Cancel, OkArt: boolean;

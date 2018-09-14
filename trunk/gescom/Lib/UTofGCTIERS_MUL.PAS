@@ -80,6 +80,9 @@ procedure TOF_GCTIERS_MUL.Onload;
 begin
   inherited;
   RenommageEnteteColonnes;
+  //
+  THEdit(GetControl('T_TIERS')).setFocus;
+  //
 end;
 
 procedure TOF_GCTIERS_MUL.OnUpdate;

@@ -104,12 +104,14 @@ begin
   if TypePlanning = 'PMA' then
   begin
     ChxTypeRessource.DataType := 'BTFAMILLEMAT';
+    ChxTypeRessource.Plus     := ' BFM_NONGEREPLANNING="X"';
     ChxCadencement.Plus       := ' AND CO_LIBRE="PMA"';
     StTypeRessource.Caption   := 'Famille Matériel :';
   end
   else
   begin
     ChxTypeRessource.DataType := 'BTFAMRES';
+    ChxTypeRessource.Plus     := '';
     StTypeRessource.Caption   := 'Famille Ressource :';
   end
 
