@@ -597,7 +597,7 @@ begin
   //
   Application.Initialize;
   InitAgl;
-  Application.Title := 'Administration Soci�t� BTP';
+  Application.Title := 'Administration Société BTP';
   Application.CreateForm(TFMenuG, FMenuG);
   InitApplication ;
   SplashScreen:=NIL  ;
