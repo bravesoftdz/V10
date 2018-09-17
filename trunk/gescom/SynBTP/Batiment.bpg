@@ -9,7 +9,7 @@ MAKE = $(ROOT)\bin\make.exe -$(MAKEFLAGS) -f$**
 DCC = $(ROOT)\bin\dcc32.exe $**
 BRCC = $(ROOT)\bin\brcc32.exe $**
 #------------------------------------------------------------------------------
-PROJECTS = BuildNewCptx.exe UtilsBTP.exe TestServices.exe \
+PROJECTS = BuildNewCptx.exe UtilsBTP.exe TestServices.exe SetupLSE.exe \
   SvcSynBTPVerdonImp.exe SvcSynBTPVerdonExp.exe SvcSynBTPY2.exe \
   SVCEnvoiBASTGed.exe ImportExportCegid.exe MajVerBTP.exe CBTPS3.exe CBTPS5.exe
 #------------------------------------------------------------------------------
@@ -47,6 +47,9 @@ SVCEnvoiBASTGed.exe: SVCEnvoiBASTGed.dpr
   $(DCC)
 
 TestServices.exe: TestServices.dpr
+  $(DCC)
+
+SetupLSE.exe: ..\..\Lanceur Install\SetupLSE.dpr
   $(DCC)
 
 
