@@ -8935,7 +8935,10 @@ begin
     //FV1 - 28/02/2018 : FS#2970 - RESINA - Problème de relation articles / dépots dans l'affichage de la liste des articles
     if  GP_DEPOT.Value <> '' then
     begin
-      StWhere := ' ((GA_TENUESTOCK="-") OR (GQ_DEPOT="' + GP_DEPOT.Value + '" AND GA_TENUESTOCK="X"))'
+      if VenteAchat = 'ACH' then
+        StWhere := ' ((GA_TENUESTOCK="-") OR (GQ_DEPOT="' + GP_DEPOT.Value + '" AND GA_TENUESTOCK="X"))'
+      else
+        StWhere := '';
     end
     else
       StWhere := '';
