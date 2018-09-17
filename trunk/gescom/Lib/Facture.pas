@@ -2188,6 +2188,7 @@ var CleDoc: R_CleDoc;
   laDate : String;
   SaisieStock   : boolean;
 begin
+  SaisieStock := false;
   FillChar(CleDoc, Sizeof(CleDoc), #0);
   StA := string(Parms[0]);
   StM := string(Parms[1]);
@@ -2198,7 +2199,7 @@ begin
   begin
   	laDate := Parms[3];
   end;
-  SaisieStock := Tools.iif(nb > 4, Parms[4], False);
+  if nb > 4 then SaisieStock := Parms[4];
   if CleDoc.NaturePiece <> '' then
     TransformePiece(CleDoc, NewNat, SaisieAveugle,LaDate,SaisieStock);
 end;
