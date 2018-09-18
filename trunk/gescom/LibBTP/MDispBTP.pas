@@ -1090,7 +1090,7 @@ BEGIN
 Cegid,False,False)};
 
    // MODIF LS Confidentialité
-   60208 : GCLanceFiche_Confidentialite( 'YY','YYCONFIDENTIALITE','','','26;27;60;92;111;145;146;147;148;149;150;160;279;283;284;285;304;319;320;321;322;323;325;327;328;329;331;280');
+   60208 : GCLanceFiche_Confidentialite( 'YY','YYCONFIDENTIALITE','','','26;27;60;92;111;145;146;147;148;149;150;160;279;283;284;285;304;319;320;321;322;323;325;327;328;329;331;280;281');
    // --
    60203 : ReseauUtilisateurs(False) ;      // utilisateurs connectés
    60204 : VisuLog ;                        // Suivi d'activité
