@@ -1,11 +1,12 @@
 object FControlInstall: TFControlInstall
   Left = 614
   Top = 301
-  BorderStyle = bsNone
-  Caption = 'FControlInstall'
+  BorderIcons = []
+  BorderStyle = bsSingle
+  Caption = 'V'#233'rification pr'#233'liminaire'
   ClientHeight = 340
   ClientWidth = 751
-  Color = clGradientActiveCaption
+  Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
@@ -37,7 +38,7 @@ object FControlInstall: TFControlInstall
     Alignment = taCenter
     AutoSize = False
     Caption = 'AVEC LA VERSION'
-    Color = clGradientActiveCaption
+    Color = clBtnFace
     Font.Charset = ANSI_CHARSET
     Font.Color = clRed
     Font.Height = -24
@@ -54,7 +55,7 @@ object FControlInstall: TFControlInstall
     Alignment = taCenter
     AutoSize = False
     Caption = 'INSTALLE SUR VOTRE SYSTEME'
-    Color = clGradientActiveCaption
+    Color = clBtnFace
     Font.Charset = ANSI_CHARSET
     Font.Color = clRed
     Font.Height = -24
@@ -71,7 +72,7 @@ object FControlInstall: TFControlInstall
     Alignment = taCenter
     AutoSize = False
     Caption = 'CONTACTEZ VOTRE COMMERCIAL'
-    Color = clGradientActiveCaption
+    Color = clBtnFace
     Font.Charset = ANSI_CHARSET
     Font.Color = clRed
     Font.Height = -24
@@ -88,7 +89,7 @@ object FControlInstall: TFControlInstall
     Alignment = taCenter
     AutoSize = False
     Caption = 'CETTE VERSION N'#39'EST PAS COMPATIBLE'
-    Color = clGradientActiveCaption
+    Color = clBtnFace
     Font.Charset = ANSI_CHARSET
     Font.Color = clRed
     Font.Height = -24
