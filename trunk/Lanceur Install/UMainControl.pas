@@ -62,31 +62,25 @@ begin
   TempPath := format('%s',[buffer]);
   CurrentPath := ExtractFilePath(Application.ExeName); CurrentPath := Copy(CurrentPath,1,Length(CurrentPath)-1);
   Drive := ExtractFileDrive(Application.ExeName); DriveType := GetDriveType(PAnsiChar(Drive));
+  TmpExefile := Format('%s\SetupCegid.exe',[buffer]);
+  TmpXmlfile := Format('%s\Setup.xml',[buffer]);
+  //
+  FromExefile := 'System\LSE\SetupCegid.exe';
+  FromXmlfile := 'Setup.xml';
+  if FileExists(TmpExefile) then DeleteFile(TmpExefile);
+  if FileExists(TmpXmlfile) then DeleteFile(TmpXmlfile);
+  //
+  CopyFile(PAnsiChar(FromExefile),PAnsiChar(TmpExefile),false);
+  CopyFile(PAnsiChar(FromXmlfile),PAnsiChar(TmpXmlfile),false);
+  //
   if (DriveType = DRIVE_FIXED)  then
   begin
     Params := '/z"'+CurrentPath+'"';
-    TmpExefile := Format('%s\SetupCegid.exe',[buffer]);
-    TmpXmlfile := Format('%s\Setup.xml',[buffer]);
-    //
-    FromExefile := 'System\LSE\SetupCegid.exe';
-    FromXmlfile := 'Setup.xml';
-    if FileExists(TmpExefile) then DeleteFile(TmpExefile);
-    if FileExists(TmpXmlfile) then DeleteFile(TmpXmlfile);
-    //
-    CopyFile(PAnsiChar(FromExefile),PAnsiChar(TmpExefile),false);
-    CopyFile(PAnsiChar(FromXmlfile),PAnsiChar(TmpXmlfile),false);
-    //
     if ModeDebug then ShowParams (Drive,DriveType,CurrentPath,TempPath,Params);
     ShellExecute(Application.Handle,'open',PAnsiChar(TmpExefile),PAnsiChar(Params),nil,SW_SHOW);
   end else
   begin
     Params := '/z"'+CurrentPath+'"';
-    TmpExefile := Format('%s\SetupCegid.exe',[buffer]);
-    //
-    FromExefile := 'System\LSE\SetupCegid.exe';
-    if FileExists(TmpExefile) then DeleteFile(TmpExefile);
-    //
-    CopyFile(PAnsiChar(FromExefile),PAnsiChar(TmpExefile),false);
     //
     if ModeDebug then ShowParams (DRIVE,DriveType,CurrentPath,TempPath,Params);
     ShellExecute(Application.Handle,'open',PAnsiChar(TmpExefile),PAnsiChar(Params),nil,SW_SHOW);
