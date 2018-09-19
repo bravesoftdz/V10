@@ -565,7 +565,7 @@ begin
   else
   begin
     RecupCompteAuxiFrs(CodeFournisseur);
-    AGLLanceFiche('GC','GCTIERS','',CodeFournisseur,'ACTION=CONSULTATION;T_NATUREAUXI=FOU');
+    AGLLanceFiche('GC','GCFOURNISSEUR','',CodeFournisseur,'ACTION=CONSULTATION;T_NATUREAUXI=FOU');
   end;
 
 end;
