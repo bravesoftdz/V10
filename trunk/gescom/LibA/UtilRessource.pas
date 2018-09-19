@@ -343,10 +343,8 @@ begin
     CodeRes := AGLLanceFiche('RT', 'RTRessource_MUL', stWhere, '', stRange)
   else
     //mcd 12/06/02CodeRes := AGLLanceFiche ('AFF', 'RessourceRECH_MUL', stWhere, '', stRange);
-    //CodeRes := AFLanceFiche_Rech_Ressource(stRange,stWhere);
-    CodeRes := AGLLanceFiche('BTP','BTRESSRECH_Mul',StWhere,'',StRange);
-
-  //
+    CodeRes := AFLanceFiche_Rech_Ressource(stRange, stWhere, 'ToArgument', stRange);
+    //CodeRes := AGLLanceFiche('BTP','BTRESSRECH_Mul',StWhere,'',StRange);
   if CodeRes <> '' then // Coderes pour laisser la valeur initiale si pas de selection
   begin
     G_CodeRessource.Text := CodeRes;

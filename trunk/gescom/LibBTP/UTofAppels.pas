@@ -3619,7 +3619,7 @@ begin
     //FV1 : 25/06/2018 - FS#3136 - SCETEC - ne proposer que les intervenants qui sont cochés en SAV en affectation d'un appel
     If Ok_GereSAV then StArgument := 'GERESAV=X';
   end;         
-  StArgument := Format('%s%sRESTRTYPERESSOURCE=INT|SAL', [StArgument, Tools.iif(StArgument <> '', ';', '')]);
+  StArgument := Format('%s%sRESTRTYPERESSOURCE=INT|SAL;RESTRGERESAV=X', [StArgument, Tools.iif(StArgument <> '', ';', '')]);
   //FV1 : 20/11/2015 - FS#1732 - ESPACS : Ne pas afficher les ressources fermées dans fiche Appel
   StWhere := ' AND (ARS_TYPERESSOURCE="SAL" OR ARS_TYPERESSOURCE="ST" OR ARS_TYPERESSOURCE="INT") AND ARS_FERME="-" ';
   DispatchRecherche(Responsable, 3, stwhere, StArgument, '');

@@ -60,7 +60,7 @@ Type
 Function AGLRameneListeRessources(parms:array of variant; nb: integer ) : variant ;
 Procedure AFLanceFiche_Mul_Ressource;
 Procedure AFLanceFiche_Mul_RessourceLine(Argument : String);
-Function AFLanceFiche_Rech_Ressource(Range,Argument:string):variant;
+Function AFLanceFiche_Rech_Ressource(Range,Argument:string; ActionOnNewParam : string=''; NewParam : string=''):variant;
 //
 
 
@@ -188,7 +188,9 @@ end;
         begin
           TypeMultiRess.Text    := StringReplace(Valeur, '|', ';', [rfReplaceAll]);
           TypeMultiRess.Enabled := (Champ <> 'RESTRTYPERESSOURCE');
-        end;
+        end else
+        if (Champ = 'RESTRGERESAV') and (Valeur = 'X') and  (assigned(Getcontrol('BRS_GERESAV'))) then
+          SetControlProperty('BRS_GERESAV', 'State', cbChecked);
 {$ENDIF}
         END;
      Critere:=(Trim(ReadTokenSt(stArgument)));
@@ -430,14 +432,11 @@ AGLLanceFiche('AFF','RESSOURCE_Mul','','',Argument);
 {$ENDIF}
 end;
 
-Function AFLanceFiche_Rech_Ressource(Range,Argument:string):variant;
+Function AFLanceFiche_Rech_Ressource(Range,Argument:string; ActionOnNewParam : string=''; NewParam : string=''):variant;
 begin
-{$IFDEF BTP}
-result:=AGLLanceFiche('BTP','BTRESSRECH_Mul',Range,'',Argument);
-//result:=AGLLanceFiche('BTP','BTRESSOURCE_Mul',Range,'',Argument);
-{$ELSE}
-result:=AGLLanceFiche('AFF','RESSOURCERECH_Mul',Range,'',Argument);
-{$ENDIF}
+  if (ActionOnNewParam = 'ToArgument') and (NewParam <> '') then
+    Argument := NewParam;
+  Result := AGLLanceFiche('BTP', 'BTRESSRECH_Mul', Range, '', Argument);
 end;
 
 procedure TOF_RESSOURCE_MUL.FlisteDblClick(Sender: TObject);
