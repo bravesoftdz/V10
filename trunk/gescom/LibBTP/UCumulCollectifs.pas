@@ -252,18 +252,21 @@ end;
 
 procedure CumuleCollectifs(TOBL,TOBTaxesL,TOBVTECOLL,TOBSSTRAIT,TOBARTICLES,TOBTiers,TOBAFFAIRE : TOB);
 var TOBT,TOBV : TOB;
-    RegimeTaxe,FamilleTaxe,Prefixe,COLLECTIF : string;
+    RegimeTaxe,FamilleTaxe,Prefixe,COLLECTIF,VenteAchat : string;
     II : Integer;
 begin
   COLLECTIF := '';
   prefixe := GetPrefixeTable (TOBL);
+  VenteAchat := GetInfoParPiece(prefixe+'_NATUREPIECEG', 'GPP_VENTEACHAT');
+
   FamilleTaxe:=TOBL.GetValue(prefixe+'_FAMILLETAXE1');
   RegimeTaxe:=TOBL.GetValue(prefixe+'_REGIMETAXE') ;
   // on ne prends pas en compte les paiements direct
   if (TOBL.GetString('GL_FOURNISSEUR')<>'') and (GetPaiementSSTrait (TOBSSTRAIT,TOBL.GetString('GL_FOURNISSEUR'))='001') then exit;
   // -----
   Collectif := FindCollectifPlusPlus(TOBARTICLES,TOBTiers,TOBaffaire,TOBL);
-  if Collectif = '' then
+  if (Collectif = '') and (VenteAchat <> 'VEN') then Exit; 
+  if (Collectif = '') then
   begin
     TOBT:=VH^.LaTOBTVA.FindFirst(['TV_TVAOUTPF','TV_REGIME','TV_CODETAUX'],['TX1',RegimeTaxe,FamilleTaxe],False) ;
     if TOBT<>Nil then
@@ -271,6 +274,7 @@ begin
       COLLECTIF:= TOBT.GetString('TV_COLLECTIF');
     END;
   end;
+
   TOBV := TOBVTECOLL.FindFirst(['BPB_COLLECTIF'],[COLLECTIF],true);
   if TOBV = nil then
   begin

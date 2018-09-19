@@ -364,7 +364,7 @@ begin
   end;
 end;
 
-
+                       
 procedure TransfertGED (Rapport : THMemo);
 var RepIn,RepBase,RepSav,RepErr : string;
     MySearchRec   : TSearchRec;

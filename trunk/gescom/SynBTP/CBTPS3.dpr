@@ -1144,7 +1144,8 @@ uses
   uMainServiceBtpVerdonExp in '..\..\Services\BTPVerdon\Lib\uMainServiceBtpVerdonExp.pas' {SvcSyncBTPVerdonExp: TService},
   ServicesTest in '..\..\commun\Lib\ServicesTest.pas',
   UtilBSV in '..\LibBTP\UtilBSV.pas',
-  UDefGlobals in '..\LibBTP\UDefGlobals.pas';
+  UDefGlobals in '..\LibBTP\UDefGlobals.pas',
+  ControlIniFile in '..\LibBTP\ControlIniFile.pas';
 
 //
 // FIN NEW
@@ -1157,6 +1158,7 @@ begin
   MemChk;
 {$endif}
   GetInfoApplication;
+	ControlPGIINI;
   Application.Initialize;
   InitAgl;
   Application.Title := 'LSE BUSINESS BTP';

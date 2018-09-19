@@ -105,7 +105,7 @@ begin
           Exit;
         end;
         //
-        if Tools.getPara
+//        if Tools.GetparamSocSecur ('
         while not Terminated do
         begin
           TOBFILES := TOB.create('LES FICHIERS',nil,-1);

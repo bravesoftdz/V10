@@ -4499,7 +4499,7 @@ begin
     if QteDispo < 0 then QteDispo := 0;
     // Passage US - UV
     if (QteLivrable > QteDispo) then QteLivrable := QteDispo;
-    PUA := TOBdepot.GetValue('GQ_PMAP') * CoefUSUV;
+    PUA := TOBdepot.GetValue('GQ_PMAP') / CoefUSUV;
     if (not FromDispoGlob) and (not FromDispoArt) then
     begin
     	TOBDepot.free;

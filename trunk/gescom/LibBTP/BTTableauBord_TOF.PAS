@@ -2570,12 +2570,15 @@ begin
   if (OptDetailETU in OptionChoixPrevuAvanc) then  SetPrevuAvance (TOBTMP,'ETU',OptionChoixPrevuAvanc);
   if (OptDetailBCE in OptionChoixPrevuAvanc) then  SetPrevuAvance (TOBTMP,'BCE',OptionChoixPrevuAvanc);
 
-  if TOBTMP.GetValue('BCO_AFFAIRE0')='A' then
-// MODIF LS
-     WherePiece := ' (GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","DAC","FBC","B00") OR (GP_NATUREPIECEG In ("FBP","DAP") AND (GP_VIVANTE="X")))  '
-//     WherePiece := ' GP_NATUREPIECEG IN ("FBT") '
-  else
-     WherePiece := ' GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","FBC") ';
+  //if TOBTMP.GetValue('BCO_AFFAIRE0')='A' then
+  //Begin
+    // MODIF LS
+  WherePiece := ' (GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","FBC","ABC") OR (GP_NATUREPIECEG In ("FBP","FPR","DAC","DAP") AND (GP_VIVANTE="X"))) ';
+    //WherePiece := ' GP_NATUREPIECEG IN ("FBT") '
+  //end
+  //else
+  //  WherePiece := ' GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","FBC") ';
+
 
   // Récupération du facturé
   Req := 'SELECT GP_NATUREPIECEG,GP_SOUCHE,GP_NUMERO,GP_INDICEG,GP_AFFAIREDEVIS,GP_DATEPIECE,GP_TOTALHTDEV AS FACTUREHT, GP_TOTALTTCDEV AS FACTURE ';

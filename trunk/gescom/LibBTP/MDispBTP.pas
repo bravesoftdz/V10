@@ -532,6 +532,8 @@ BEGIN
 				{ Mng 05/03/2007 - Finalisation interface CTI  }
         FMenuDisp.TerminateCTI;
         end;
+	 14 : begin
+   			end;
 	 15 : begin
    			end;
    16 : begin
@@ -1088,7 +1090,7 @@ BEGIN
 Cegid,False,False)};
 
    // MODIF LS Confidentialité
-   60208 : GCLanceFiche_Confidentialite( 'YY','YYCONFIDENTIALITE','','','26;27;60;92;111;145;146;147;148;149;150;160;279;283;284;285;304;319;320;321;322;323;325;327;328;329;331;280');
+   60208 : GCLanceFiche_Confidentialite( 'YY','YYCONFIDENTIALITE','','','26;27;60;92;111;145;146;147;148;149;150;160;279;283;284;285;304;319;320;321;322;323;325;327;328;329;331;280;281');
    // --
    60203 : ReseauUtilisateurs(False) ;      // utilisateurs connectés
    60204 : VisuLog ;                        // Suivi d'activité
@@ -3051,6 +3053,7 @@ begin
 end;
 
 initialization
+
 Apalatys:='LSE';
 V_PGI.PGIContexte:=[ctxGescom,ctxAffaire,ctxBTP,ctxGRC];
 V_PGI.StandardSurDp := False;  // indispensable pour l'aiguillage entre le DP et les bases dossiers (gamme Expert), voir SQL025
@@ -3064,9 +3067,9 @@ V_PGI.MenuCourant:=0 ;
 V_PGI.VersionReseau:=True ;
 V_PGI.NumVersion:='10.0.0' ;
 V_PGI.NumVersionBase:=998 ;
-V_PGI.NumBuild:='000.159';
+V_PGI.NumBuild:='000.160';
 V_PGI.CodeProduit:='034' ;
-V_PGI.DateVersion:=EncodeDate(2018,08,23);
+V_PGI.DateVersion:=EncodeDate(2018,09,18);
 V_PGI.ImpMatrix := True ;
 V_PGI.OKOuvert:=FALSE ;
 V_PGI.Halley:=TRUE ;

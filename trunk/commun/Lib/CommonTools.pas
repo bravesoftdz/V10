@@ -4,7 +4,7 @@ interface
 
 uses
   Classes
-  , ConstServices
+  , ConstServices    
   , ADODB
   ,Ulog
   {$IFNDEF APPSRV}
@@ -136,7 +136,7 @@ type
     {$IFDEF APPSRVWITHCBP}
     class function SelectDB (SQL: string; TOBD: TOB {$IFDEF APPSRV} ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string='' {$ENDIF APPSRV}) : boolean;
     class function LoadDetailDB(SQL: string; TOBD : TOB {$IFDEF APPSRV} ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string='' {$ENDIF APPSRV}): boolean;
-    class function GetparamSocSecur(Paramsoc: string  ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string=''): string;
+    class function GetparamSocSecur(Paramsoc,ValeurDefaut: string  ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string=''): string;
     {$ENDIF}
   end;
 
@@ -1521,7 +1521,7 @@ begin
 
 end;
 
-class function ToolS.GetparamSocSecur(Paramsoc: string; Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string=''): string;
+class function ToolS.GetparamSocSecur(Paramsoc,ValeurDefaut: string; Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string=''): string;
 var SQL : string;
     TOBR  :TOB;
 begin

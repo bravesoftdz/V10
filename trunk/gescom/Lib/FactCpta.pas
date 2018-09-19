@@ -2804,8 +2804,10 @@ Var TOBTTC,TOBG,TOBH,TOBL : TOB ;
     TOBEchesRG : TOB;
     XXD,XXP : double;
     LastDate : TdateTime;
+    Traited : boolean;
 BEGIN
   //
+  Traited := false;
   Result:=rcOk ;
   NbAcc:=0 ;
   {Etude du compte g�n�ral collectif}
@@ -2839,6 +2841,7 @@ BEGIN
       ReajusteCollectifs (TOBVTECOLL,TOBH.GetDouble('GPE_MONTANTECHE'),TOBH.GetDouble('GPE_MONTANTDEV'));
       for II := 0 to TOBVTECOLL.detail.count -1 do
       begin
+        Traited := true;
         inc(cpt);
         TOBl:= TOBVTECOLL.detail[II];
         TOBTTC:=TOB.Create('ECRITURE',TOBEcr,-1) ;
@@ -2899,7 +2902,8 @@ BEGIN
           TOBTTC.PutValue('E_TABLE0', TOBPiece.GetValue('GP_LIBREPIECE3'));
         END;
       end;
-    end else
+    end;
+    if not Traited then
     begin
       inc(cpt);
       TOBTTC:=TOB.Create('ECRITURE',TOBEcr,-1) ;
