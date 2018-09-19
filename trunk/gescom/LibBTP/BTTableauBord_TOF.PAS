@@ -122,7 +122,6 @@ type
     CHKREVISION   : TCheckBox;
     CFactHorsDevis: TCheckBox;
     CTotauxAvoir  : TCheckBox;
-    AcompteSurFact: TcheckBox;
     //
     THAffaire     : THEdit;
     THAffaire0    : THEdit;
@@ -411,7 +410,6 @@ begin
   CHKREVISION    := ThCheckBox(ecran.FindComponent('CHKREVISION'));
   CFactHorsDevis := ThCheckBox(ecran.FindComponent('CHKFACTHORSDEVIS'));
   CTotauxAvoir   := ThCheckBox(ecran.FindComponent('CHKTOTAUXAVOIR'));
-  AcompteSurFact := ThCheckBox(ecran.FindComponent('CACOMPTESURFACT'));
   //
   T_Affaire :=  THLabel (GetControl('TBTB_AFFAIRE'));
   //
@@ -2572,23 +2570,14 @@ begin
   if (OptDetailETU in OptionChoixPrevuAvanc) then  SetPrevuAvance (TOBTMP,'ETU',OptionChoixPrevuAvanc);
   if (OptDetailBCE in OptionChoixPrevuAvanc) then  SetPrevuAvance (TOBTMP,'BCE',OptionChoixPrevuAvanc);
 
-  if TOBTMP.GetValue('BCO_AFFAIRE0')='A' then
-  Begin
+  //if TOBTMP.GetValue('BCO_AFFAIRE0')='A' then
+  //Begin
     // MODIF LS
-    if assigned (AcompteSurFact) then
-    begin
-      //FV1 - 18/09/2018 - FS#3247 - GUINIER - Les factures d'acompte se cumulent dans le Facturé HT en tableau de bord/Résultat Chantier
-      if AcompteSurFact.Checked then
-        WherePiece := ' (GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","DAC","FBC","B00") OR (GP_NATUREPIECEG In ("FBP","DAP") AND (GP_VIVANTE="X"))) '
-      else
-        WherePiece := ' (GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","DAC","FBC") OR (GP_NATUREPIECEG In ("FBP","DAP") AND (GP_VIVANTE="X"))) ';
-    end
-    else
-      WherePiece := ' (GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","DAC","FBC","B00") OR (GP_NATUREPIECEG In ("FBP","DAP") AND (GP_VIVANTE="X"))) ';
+  WherePiece := ' (GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","FBC","ABC") OR (GP_NATUREPIECEG In ("FBP","FPR","DAC","DAP") AND (GP_VIVANTE="X"))) ';
     //WherePiece := ' GP_NATUREPIECEG IN ("FBT") '
-  end
-  else
-    WherePiece := ' GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","FBC") ';
+  //end
+  //else
+  //  WherePiece := ' GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","FBC") ';
 
 
   // Récupération du facturé

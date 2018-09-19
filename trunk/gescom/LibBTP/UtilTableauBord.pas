@@ -1083,11 +1083,13 @@ begin
   begin
     if NaturePiece = 'FBT' then
     begin
-  	  WherePiece := ' ((GP_NATUREPIECEG="'+NaturePiece+'") OR (GP_NATUREPIECEG="B00") OR ((GP_NATUREPIECEG="FBP") AND (GP_VIVANTE="X"))) '+
+      WherePiece := '(GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","FBC","ABC") OR (GP_NATUREPIECEG In ("FBP","FPR","DAC","DAP") AND (GP_VIVANTE="X"))) ' +
       'AND GP_AFFAIRE="'+TOBTMP.GetValue('BCO_AFFAIRE') + '"';
+  	  //WherePiece := ' ((GP_NATUREPIECEG="'+NaturePiece+'") OR (GP_NATUREPIECEG="B00") OR ((GP_NATUREPIECEG="FBP") AND (GP_VIVANTE="X"))) '+
+      //'AND GP_AFFAIRE="'+TOBTMP.GetValue('BCO_AFFAIRE') + '"';
     end else
     begin
-  	WherePiece := ' GP_NATUREPIECEG="'+NaturePiece+'" '+'AND GP_AFFAIRE="'+TOBTMP.GetValue('BCO_AFFAIRE') + '"';
+      WherePiece := ' GP_NATUREPIECEG="'+NaturePiece+'" '+'AND GP_AFFAIRE="'+TOBTMP.GetValue('BCO_AFFAIRE') + '"';
     end;
   end;
 
@@ -1111,6 +1113,7 @@ begin
   end;
 
   TOBPIeces.free;
+  
 end;
 
 procedure SetprevuAvance (TOBTMP : TOB; NaturePiece : string ; OptionChoixPrevuAvanc : TChoixPrevuAvanc; WherePiece : string='');
