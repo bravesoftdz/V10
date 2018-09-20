@@ -4544,7 +4544,7 @@ BEGIN
   NumL:=TOBEcr.Detail.Count-NbEches+1 ; TOBE.PutValue('E_NUMLIGNE',NumL) ;
   if OkVent then TOBE.PutValue('E_ANA','X') ;
 
-  if TOBG.GetValue('G_LETTRABLE')='X' then
+//  if TOBG.GetValue('G_LETTRABLE')='X' then
   BEGIN
     TOBE.PutValue('E_ECHE','X') ; TOBE.PutValue('E_NUMECHE',1) ; TOBE.PutValue('E_ETATLETTRAGE','AL') ;
     TOBE.PutValue('E_ETAT','0000000000') ;
