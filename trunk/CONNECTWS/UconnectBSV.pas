@@ -2830,8 +2830,8 @@ procedure TconnectBSV.AddFileToWorkFlow(TheWorkFlowId: Integer; DocumentId: Wide
 
   function GetResponse (HTTPresponse : WideString) : boolean ;
   var XmlDoc : IXMLDocument ;
-      NodeFolder,OneNode,OneErr : IXMLNode;
-      II,JJ,KK : Integer;
+      NodeFolder,OneNode,OneErr,OneResp : IXMLNode;
+      II,JJ,KK,LL : Integer;
   begin
     Result := false;
     XmlDoc := NewXMLDocument();
@@ -2861,7 +2861,15 @@ procedure TconnectBSV.AddFileToWorkFlow(TheWorkFlowId: Integer; DocumentId: Wide
                   OneErr := OneNode.ChildNodes [KK];
                   if OneErr.NodeName = 'AddFileToBpmnProcessResult' then
                   begin
-                    result := (OneErr.NodeValue='true');
+                    for LL := 0 to OneErr.ChildNodes.Count -1 do
+                    begin
+                      OneResp := OneErr.ChildNodes[LL];
+                      if OneResp.NodeName = 'Id' then
+                      begin
+                        result := (StrToInt(Oneresp.NodeValue)<>0);
+                        break;
+                      end;
+                    end;
                   end;
                 end;
               end;

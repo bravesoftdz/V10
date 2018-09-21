@@ -180,6 +180,7 @@ var TOBI,TT,TOBE,TOBAFF : TOB;
 begin
   LibDoc := '';
   Result := 0;
+  ResultFile := '';
   TOBI := TOB.create('LES CHAMPS',nil,-1);
   TOBE := TOB.Create ('BASTENT',nil,-1);
   TOBAFF := TOB.Create ('AFFAIRE',nil,-1);
@@ -325,24 +326,31 @@ begin
       if FileExists(ResultFile) then
       begin
         DeleteFile(PChar(FactFourn));
-        DeleteFile(PChar(TF));
         TF := ResultFile;
       end;
     end;
     IF TOBE.GetString('BM4_IDZEDOC') = '0' then
     begin
       // nouveau BAST
-      TheResultID := StoreDocumentBSV(TF,TOBI,true);
-      if TheResultId <> '' then
-      begin
-        TOBE.setString('BM4_IDZEDOC',TheResultId);
-        TOBE.updateDB(false);
-        Rapport.lines.Add('BAST stocké dans la GED : Fournisseur : '+SousTraitant+' Code Marché : '+CodeMarche+' Situation : '+NumSituation);
-      end else
-      begin
-        Rapport.lines.Add('Erreur d''envoi dans la GED : Fournisseur : '+SousTraitant+' Code Marché : '+CodeMarche+' Situation : '+NumSituation);
-        Result := -1;
-      end;
+      TRY
+        TheResultID := StoreDocumentBSV(TF,TOBI,true);
+        if TheResultId <> '' then
+        begin
+          TOBE.setString('BM4_IDZEDOC',TheResultId);
+          TOBE.updateDB(false);
+          Rapport.lines.Add('BAST stocké dans la GED : Fournisseur : '+SousTraitant+' Code Marché : '+CodeMarche+' Situation : '+NumSituation);
+        end else
+        begin
+          Rapport.lines.Add('Erreur d''envoi dans la GED : Fournisseur : '+SousTraitant+' Code Marché : '+CodeMarche+' Situation : '+NumSituation);
+          Result := -1;
+        end;
+      EXCEPT
+        ON E:Exception do
+        begin
+          Rapport.lines.Add('Erreur d''envoi dans la GED : '+E.message);
+          Result := -1;
+        end;
+      END;
     end else
     begin
       // Réécriture BAST
@@ -361,6 +369,7 @@ begin
     TOBE.free;
     TOBAFF.Free;
     XmlDoc := nil;
+    if resultFile <> '' then DeleteFile(PChar(resultFile));
   end;
 end;
 
