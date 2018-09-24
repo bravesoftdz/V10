@@ -370,7 +370,7 @@ Begin
     if VH_GC.BTCODESPECIF <> '002' then // Pour VERDON Cette option est désactivée
     begin
       //maj fiche affaire reference
-      Sql := 'UPDATE AFFAIRE SET AFF_ETATAFFAIRE = "ACP" WHERE AFF_AFFAIRE="'+AffaireRef+'"';
+      Sql := 'UPDATE AFFAIRE SET AFF_ETATAFFAIRE = "ACP",AFF_DATEMODIF="'+USDATETIME(NowH)+'" WHERE AFF_AFFAIRE="'+AffaireRef+'"';
       ExecuteSQL(Sql);
     end;
   end else
