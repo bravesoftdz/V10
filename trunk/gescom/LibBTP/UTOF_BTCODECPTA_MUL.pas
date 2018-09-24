@@ -216,10 +216,10 @@ begin
   end
   else
   begin
-    if Rang = 0 then
-      Argument := 'ACTION=CREATION'
-    else
-      Argument := 'RANG=' + IntToStr(Rang) + ';ACTION=MODIFICATION';
+    //if Rang = 0 then
+    //  Argument := 'ACTION=CREATION'
+    //else
+    Argument := 'RANG=' + IntToStr(Rang) + ';ACTION=MODIFICATION';
 
     AGLLanceFiche('BTP','BTCODECPTA','','',Argument);
 
