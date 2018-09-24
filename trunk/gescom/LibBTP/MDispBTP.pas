@@ -148,7 +148,6 @@ uses Facture,(*Souche,*)dimension,UTomPiece, Traduc
      , BTWSTABLEAUTO_TOF
      , DB
      , Math
-     , ServicesTest
      , ed_Tools
      ;
 {$R *.DFM}
