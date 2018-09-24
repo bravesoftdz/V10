@@ -4791,6 +4791,8 @@ Begin
   if PrioContrat.Value <> '' then
      StSql := StSQL + ' AND AFF_PRIOCONTRAT="'+ PrioContrat.Value +'"';
 
+  StSql := StSql + ' AND LO_TABLEBLOB = "APP" AND LO_QUALIFIANTBLOB="MOT" AND LO_EMPLOIBLOB="REA" AND LO_RANGBLOB=1';
+
   if GestGrille.TriGapp <> '' then  StSQL := StSQL + ' ORDER BY ' + GestGrille.TriGapp;
 
   QAppel := OpenSQL(StSQL, True);

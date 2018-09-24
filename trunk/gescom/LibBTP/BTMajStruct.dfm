@@ -1,6 +1,6 @@
 object fbtMajStructure: TfbtMajStructure
-  Left = 526
-  Top = 328
+  Left = 529
+  Top = 329
   Width = 323
   Height = 151
   Caption = 'Mise '#224' jour de structure'

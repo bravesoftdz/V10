@@ -43,10 +43,38 @@ Type
     procedure OnCancel                 ; override ;
   private
     TOBAPP : TOB;
+    //
+    Action      : TActionFiche;
+    //
+    Appel       : THEdit;
+    Appel0      : THEdit;
+    Appel1      : THEdit;
+    Appel2      : THEdit;
+    Appel3      : THEdit;
+    Avenant     : THEdit;
+    //
+    CodeTiers   : THLabel;
+    NomTiers    : THLabel;
+    DateSouhait : THLabel;
+    //
+    Descriptif  : THRichEditOLE;
+    //
+    BSelect     : TToolbarButton97;
+    BEfface     : TToolbarButton97;
+    //
+    procedure AffEffaceOnClick(Sender: TObject);
+    procedure AffSelectOnClick(Sender: TObject);
+    procedure AppelOnExit(Sender: TObject);
+    procedure ChargeZoneEcran;
+    procedure CreateTOB;
+    procedure GetObjects;
+    procedure SetScreenEvents;
+    procedure ChargeZoneTOB;
+    //
   end ;
 
 Implementation
-uses AffaireUtil,AppelsUtil;
+uses AffaireUtil,AppelsUtil,FACTUtil;
 
 procedure TOF_BTSAISIEAPP.OnNew ;
 begin
@@ -61,13 +89,16 @@ end ;
 procedure TOF_BTSAISIEAPP.OnUpdate ;
 begin
   Inherited ;
-  if not ControleSaisieOK (THEdit(getControl('AFF_APPEL1')).text, THEdit(getControl('AFF_APPEL2')).text, THEdit(getControl('AFF_APPEL3')).text) then
+  
+  if not ControleSaisieOK (Appel1.text, Appel2.text, Appel3.text) then
   begin
     PgiInfo('Merci de renseigner le code intervention');
     ecran.ModalResult := mrNone;
     exit;
   end;
-  TOBAPP.setString('SAISIEOK','X')
+
+  ChargeZoneTob;
+
 end ;
 
 procedure TOF_BTSAISIEAPP.OnLoad ;
@@ -76,15 +107,21 @@ begin
 end ;
 
 procedure TOF_BTSAISIEAPP.OnArgument (S : String ) ;
-var TheAffaire : string;
 begin
   Inherited ;
-  TOBAPP := LaTOB;
+
+  //Chargement des zones ecran dans des zones programme
+  GetObjects;
+  SetScreenEvents;
+
   SetControlText('AFF_APPEL0','A');
-  ChargeCleAffaire(THEdit(getControl('AFF_APPEL0')), THEdit(getControl('AFF_APPEL1')), THEdit(getControl('AFF_APPEL2')), THEdit(getControl('AFF_APPEL3')), THEdit(getControl('APP_AVENANT')), TToolBarButton97(getControl('BEFFACEAPP')), TaCreat, TheAffaire, True);
-  SetControlText('AFF_APPEL0','W');
-  TOBAPP.PutEcran(ecran);
-  StringToRich(THricheditOle(GetCOntrol('MEMO')), TOBAPP.GetValue('BAA_DESCRIPTIF'));
+
+  CreateTOB;
+
+  ChargeZoneEcran;
+
+  ChargeCleAffaire (Appel0,Appel1,Appel2,Appel3,Avenant, BSelect, Action, Appel.text, False);
+
 end ;
 
 procedure TOF_BTSAISIEAPP.OnClose ;
@@ -102,6 +139,108 @@ begin
   Inherited ;
 end ;
 
+procedure TOF_BTSAISIEAPP.GetObjects;
+begin
+
+  Appel   := THEdit(Getcontrol('AFF_APPEL'));
+  Appel0  := THEdit(Getcontrol('AFF_APPEL0'));
+  Appel1  := THEdit(Getcontrol('AFF_APPEL1'));
+  Appel2  := THEdit(Getcontrol('AFF_APPEL2'));
+  Appel3  := THEdit(Getcontrol('AFF_APPEL3'));
+  Avenant := THEdit(Getcontrol('AFF_AVENANT'));
+  //
+  Descriptif  := THRichEditOLE(GetControl('BAA_DESCRIPTIF'));
+  //
+  CodeTiers   := THLabel(Getcontrol('CODETIERS'));
+  NomTiers    := THLabel(Getcontrol('NOMTIERS'));
+  DateSouhait := THLabel(Getcontrol('DATYESQOUHAIT'));
+  //
+  BSelect     := TToolbarButton97(Getcontrol('BSELECT'));
+  BEfface     := TToolbarButton97(Getcontrol('BEFFACE'));
+
+end;
+
+Procedure TOF_BTSAISIEAPP.CreateTOB;
+begin
+
+  TOBAPP := LaTOB;
+
+end;
+
+procedure TOF_BTSAISIEAPP.SetScreenEvents;
+begin
+  //
+  Appel1.Onexit   := AppelOnExit;
+  Appel2.OnExit   := AppelOnExit;
+  Appel3.OnExit   := AppelOnExit;
+  //
+  BSelect.OnClick := AffSelectOnClick;
+  BEfface.OnClick := AffEffaceOnclick;
+  //
+end;
+
+Procedure TOF_BTSAISIEAPP.ChargeZoneEcran;
+begin
+
+  Appel0.Text   := 'W';
+  Appel1.Text   := '';
+  Appel2.Text   := '';
+  Appel3.Text   := '';
+  Avenant.Text  := '';
+
+  CodeTiers.caption   := 'Code tiers : ' +  TOBAPP.GetString('BAA_TIERS');
+  NomTiers.Caption    := 'Nom Tiers : ' + TOBAPP.GetString('BAA_LIBADR');
+  DateSouhait.Caption := 'Date Souhaitée : ' + TOBAPP.GetString('BAA_DATESOUHAIT');
+  //
+  //StringToRich(Descriptif, TOBAPP.GetValue('BAA_DESCRIPTIF'));
+  Descriptif.text     := TOBAPP.GetString('BAA_DESCRIPTIF');
+  //
+end;
+
+Procedure TOF_BTSAISIEAPP.ChargeZoneTOB;
+begin
+
+  TOBAPP.PutValue('AFFAIRE',  Appel.text);
+  TOBAPP.PutValue('AFF_AFFAIRE0', Appel0.text);
+  TOBAPP.PutValue('AFF_AFFAIRE1', Appel1.text);
+  TOBAPP.PutValue('AFF_AFFAIRE2', Appel2.text);
+  TOBAPP.PutValue('AFF_AFFAIRE3', Appel3.text);
+  TOBAPP.PutValue('AFF_AVENANT',  Avenant.text);
+
+  TOBAPP.SetString('SAISIEOK','X')
+
+end;
+
+Procedure TOF_BTSAISIEAPP.AppelOnExit(Sender : TObject);
+var IP      : Integer;
+begin
+
+  Appel.text := DechargeCleAffaire(Appel0, Appel1, Appel2, Appel3, Avenant, '', Action, False, True, false, IP);
+
+end;
+
+Procedure TOF_BTSAISIEAPP.AffEffaceOnClick(Sender : TObject);
+begin
+
+  Appel0.Text := 'W';
+  Appel1.Text := '';
+  Appel2.Text := '';
+  Appel3.Text := '';
+  Avenant.Text  := '';
+
+end;
+Procedure TOF_BTSAISIEAPP.AffSelectOnClick(Sender : TObject);
+Var StChamps  : String;
+begin
+
+  StChamps  := Appel.text;
+
+  if GetAffaireEnteteSt(Appel0, Appel1, Appel2, Appel3, Avenant, nil, StChamps, false, false, false, True, true,'') then Appel.text := StChamps;
+
+  ChargeCleAffaire (Appel0,Appel1,Appel2,Appel3,Avenant, BSelect, Action, Appel.text, False);
+
+end;
+
 Initialization
-  registerclasses ( [ TOF_BTSAISIEAPP ] ) ; 
+  registerclasses ( [ TOF_BTSAISIEAPP ] ) ;
 end.

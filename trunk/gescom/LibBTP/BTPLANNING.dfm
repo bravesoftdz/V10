@@ -1,6 +1,6 @@
 object MonPlanning: TMonPlanning
-  Left = 3
-  Top = 2
+  Left = 8
+  Top = 6
   Width = 738
   Height = 492
   Caption = '='
@@ -29,7 +29,7 @@ object MonPlanning: TMonPlanning
     Top = 64
     Width = 289
     Height = 201
-    Date = 36791.415419131950000000
+    Date = 36791.380174907400000000
     TabOrder = 0
   end
   object PageOnglet: TPageControl
@@ -1161,6 +1161,9 @@ object MonPlanning: TMonPlanning
         '{\rtf1\ansi\deff0\nouicompat{\fonttbl{\f0\fnil Arial;}}'
         '{\*\generator Riched20 6.3.9600}\viewkind4\uc1 '
         '\pard\f0\fs16\lang1036 DESCRIPTIF'
+        '\par '
+        '\par '
+        '\par '
         '\par '
         '\par '
         '\par '

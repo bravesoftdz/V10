@@ -9,9 +9,7 @@ MAKE = $(ROOT)\bin\make.exe -$(MAKEFLAGS) -f$**
 DCC = $(ROOT)\bin\dcc32.exe $**
 BRCC = $(ROOT)\bin\brcc32.exe $**
 #------------------------------------------------------------------------------
-PROJECTS = BuildNewCptx.exe UtilsBTP.exe TestServices.exe SetupLSE.exe \
-  SvcSynBTPVerdonImp.exe SvcSynBTPVerdonExp.exe SvcSynBTPY2.exe \
-  SVCEnvoiBASTGed.exe ImportExportCegid.exe MajVerBTP.exe CBTPS3.exe CBTPS5.exe
+PROJECTS = BuildNewCptx.exe UtilsBTP.exe MajVerBTP.exe CBTPS3.exe CBTPS5.exe
 #------------------------------------------------------------------------------
 default: $(PROJECTS)
 #------------------------------------------------------------------------------
@@ -25,31 +23,10 @@ CBTPS3.exe: CBTPS3.dpr
 CBTPS5.exe: CBTPS5.dpr
   $(DCC)
 
-ImportExportCegid.exe: ImportExportCegid.dpr
-  $(DCC)
-
 UtilsBTP.exe: UtilsBTP.dpr
   $(DCC)
 
 BuildNewCptx.exe: ..\..\BuildCPTX\Syn\BuildNewCptx.dpr
-  $(DCC)
-
-SvcSynBTPVerdonImp.exe: ..\..\Services\BTPVerdon\Syn\SvcSynBTPVerdonImp.dpr
-  $(DCC)
-
-SvcSynBTPVerdonExp.exe: ..\..\Services\BTPVerdon\Syn\SvcSynBTPVerdonExp.dpr
-  $(DCC)
-
-SvcSynBTPY2.exe: ..\..\Services\BTPY2\Syn\SvcSynBTPY2.dpr
-  $(DCC)
-
-SVCEnvoiBASTGed.exe: SVCEnvoiBASTGed.dpr
-  $(DCC)
-
-TestServices.exe: TestServices.dpr
-  $(DCC)
-
-SetupLSE.exe: ..\..\Lanceur Install\SetupLSE.dpr
   $(DCC)
 
 

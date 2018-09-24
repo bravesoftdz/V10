@@ -2612,7 +2612,9 @@ Begin
   TRY
     if QQ.eof then
     Begin
-      StSql := 'UPDATE AFFAIRE SET AFF_RESPONSABLE="", AFF_ETATAFFAIRE="ECO", AFF_DATEREPONSE=' + DateTimeToStr(iDate2099) + ' WHERE AFF_AFFAIRE ="' + NumAppel + '"';
+      StSql := 'UPDATE AFFAIRE SET AFF_RESPONSABLE="", AFF_ETATAFFAIRE="ECO", AFF_DATEREPONSE=' + DateTimeToStr(iDate2099);
+      StSQL := StSQL + ', AFF_DATEMODIF="' + USDATETIME(NowH) + '" ';
+      StSQL := StSQL + ' WHERE AFF_AFFAIRE ="' + NumAppel + '"';
       ExecuteSQL(StSql);
       exit;
     end;
@@ -2622,7 +2624,9 @@ Begin
       begin
       if QQ.FindField('BEP_RESPRINCIPAL').AsString = 'X' then
       Begin
-        StSql := 'UPDATE AFFAIRE SET AFF_RESPONSABLE="' + CodeRes + '", AFF_ETATAFFAIRE="AFF", AFF_DATEREPONSE=' + USDateTime(DatePlanDeb) + ' WHERE AFF_AFFAIRE ="' + NumAppel + '"';
+        StSql := 'UPDATE AFFAIRE SET AFF_RESPONSABLE="' + CodeRes + '", AFF_ETATAFFAIRE="AFF", AFF_DATEREPONSE=' + USDateTime(DatePlanDeb);
+        StSQL := StSQL + ', AFF_DATEMODIF="' + USDATETIME(NowH) + '" ';
+        StSQL := StSQL + ' WHERE AFF_AFFAIRE ="' + NumAppel + '"';
         ExecuteSQL(StSql);
         exit;
       end;
@@ -2631,7 +2635,9 @@ Begin
       Begin
         if QQ.FindField('BEP_RESPRINCIPAL').AsString = 'X' then
         Begin
-          StSql := 'UPDATE AFFAIRE SET AFF_RESPONSABLE="' + QQ.FindField('BEP_RESPRINCIPAL').AsString + '", AFF_ETATAFFAIRE="AFF", AFF_DATEREPONSE=' + UsDateTime(DatePlanDeb) + ' WHERE AFF_AFFAIRE ="' + NumAppel + '"';
+          StSql := 'UPDATE AFFAIRE SET AFF_RESPONSABLE="' + QQ.FindField('BEP_RESPRINCIPAL').AsString + '", AFF_ETATAFFAIRE="AFF", AFF_DATEREPONSE=' + UsDateTime(DatePlanDeb);
+          StSQL := StSQL + ', AFF_DATEMODIF="' + USDATETIME(NowH) + '" ';
+          StSQL := StSQL + ' WHERE AFF_AFFAIRE ="' + NumAppel + '"';
           ExecuteSQL(StSql);
           exit;
         end;
@@ -3951,6 +3957,8 @@ begin
       StSQL := 'UPDATE AFFAIRE SET AFF_RESPONSABLE="' + TOBL.GetString('BEP_RESSOURCE') + '", AFF_DATEREPONSE="' + USDATETIME(TOBL.GetDateTime('BEP_DATEDEB')) + '", AFF_ETATAFFAIRE="AFF" '
     end;
   end;
+
+  StSQL := StSQL + ', AFF_DATEMODIF="' + USDATETIME(NowH) + '" ';
 
   StSQL := StSQL + ' WHERE AFF_AFFAIRE ="' + Affaire + '"';
 

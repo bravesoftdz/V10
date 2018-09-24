@@ -1143,7 +1143,7 @@ begin
 
   If TypeSaisie = 'INTERVENTION' then
   begin
-     if not OkSCETEC then Choix_Appel.Checked := True
+     Choix_Appel.Checked := True
   end
   else
   begin
@@ -1151,7 +1151,7 @@ begin
      CHOIX_CHANTIERClick(Self);
   end;
   //
-  if OkSCETEC then THPanel(GetControl('PANELAPPEL')).Visible := False;
+  //if OkSCETEC then THPanel(GetControl('PANELAPPEL')).Visible := False;
   //
   TToolBarButton97(GetControl('BDUPLICCONSO')).visible := false;
 
@@ -2108,10 +2108,12 @@ var Cancel : boolean;
 begin
   //
   BChangeEtat.visible := False;
-
+  PHEURES.Enabled     := True;
+     
   if (GetActiveTabSheet('PGTEMPS').Name = 'THEURES') then
   	 begin
 		 ControleChangeOnglet(GHeures, cancel);
+     PHEURES.Enabled := not OkSCETEC;
      //if (CHOIX_MO.checked) Or (CHOIX_RESSOURCE.checked) Or CHOIX_MOEXT.checked then BChangeEtat.visible := True;
   	 end
   else if (GetActiveTabSheet('PGTEMPS').Name = 'TFRAIS') then
@@ -2613,6 +2615,9 @@ begin
   CH_CHANTIER.text := 'W';
   CH_CHANTIER0.text := 'W';
 
+  GHeures.Enabled := not OkSCETEC;
+  PHEURES.Enabled := not OkSCETEC;
+
   If Assigned(Getcontrol('BDuplicSemaine')) then BDuplicSemaine.visible := False;
 
   setcontroltext('TCHANTIER', 'Appel : ');
@@ -2631,6 +2636,9 @@ end;
 procedure TOF_BTSAISIECONSO.CHOIX_RESSOURCEClick (Sender : TObject);
 begin
   //
+  GHeures.Enabled := True;
+  PHEURES.Enabled := True;
+
   //Déselection des autre choix
   CHOIX_CHANTIER.Checked := False;
   CHOIX_MO.Checked := False;
@@ -2666,6 +2674,10 @@ end;
 
 procedure TOF_BTSAISIECONSO.CHOIX_MOClick(Sender : TOBject);
 begin
+  //
+  GHeures.Enabled := True;
+  PHEURES.Enabled := True;
+
   //Déselection des autre choix
   CHOIX_CHANTIER.Checked  := False;
   CHOIX_MO.Checked        := True;
@@ -2711,6 +2723,9 @@ end;
 procedure TOF_BTSAISIECONSO.CHOIX_MOEXTClick(Sender : TOBject);
 begin
 	//
+  GHeures.Enabled := True;
+  PHEURES.Enabled := True;
+
   //Déselection des autre choix
   CHOIX_CHANTIER.Checked := False;
   CHOIX_MO.Checked := False;
@@ -2741,6 +2756,10 @@ end;
 
 procedure TOF_BTSAISIECONSO.CHOIX_MATERIAUXClick(Sender : TObject);
 begin
+  //
+  GHeures.Enabled := True;
+  PHEURES.Enabled := True;
+
   //Déselection des autre choix
   CHOIX_CHANTIER.Checked := False;
   CHOIX_MO.Checked := False;
