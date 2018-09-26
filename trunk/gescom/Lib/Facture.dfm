@@ -1,8 +1,8 @@
 object FFacture: TFFacture
-  Left = 3
+  Left = 2
   Top = 2
-  Width = 1374
-  Height = 814
+  Width = 798
+  Height = 558
   HelpContext = 119000017
   ActiveControl = GP_DATEPIECE
   BorderIcons = [biSystemMenu, biMaximize]
@@ -38,7 +38,7 @@ object FFacture: TFFacture
   object PEntete: THPanel
     Left = 0
     Top = 0
-    Width = 1358
+    Width = 782
     Height = 125
     Align = alTop
     FullRepaint = False
@@ -1201,8 +1201,8 @@ object FFacture: TFFacture
   end
   object PPiedTot: TPanel
     Left = 0
-    Top = 629
-    Width = 1358
+    Top = 373
+    Width = 782
     Height = 24
     Align = alBottom
     BevelOuter = bvNone
@@ -1210,7 +1210,7 @@ object FFacture: TFFacture
     object PGTG: TPanel
       Left = 0
       Top = -56
-      Width = 1358
+      Width = 782
       Height = 80
       Align = alBottom
       BevelOuter = bvNone
@@ -1218,7 +1218,7 @@ object FFacture: TFFacture
       object GTG: THGrid
         Left = 0
         Top = 0
-        Width = 1358
+        Width = 782
         Height = 80
         Align = alClient
         ColCount = 9
@@ -1244,7 +1244,7 @@ object FFacture: TFFacture
     object PGT: TPanel
       Left = 0
       Top = 0
-      Width = 1358
+      Width = 782
       Height = 21
       Align = alTop
       BevelOuter = bvNone
@@ -1252,7 +1252,7 @@ object FFacture: TFFacture
       object GT: THGrid
         Left = 0
         Top = 0
-        Width = 1358
+        Width = 782
         Height = 22
         Align = alTop
         DefaultRowHeight = 18
@@ -1337,8 +1337,8 @@ object FFacture: TFFacture
   end
   object PGlobPied: THPanel
     Left = 0
-    Top = 653
-    Width = 1358
+    Top = 397
+    Width = 782
     Height = 122
     Align = alBottom
     BevelOuter = bvNone
@@ -1352,7 +1352,7 @@ object FFacture: TFFacture
     object PPied: THPanel
       Left = 0
       Top = 0
-      Width = 1358
+      Width = 782
       Height = 87
       Align = alTop
       BevelOuter = bvNone
@@ -1366,7 +1366,7 @@ object FFacture: TFFacture
       TextEffect = tenone
       AutoResize = True
       DesignSize = (
-        1358
+        782
         87)
       object HGP_ESCOMPTE: THLabel
         Left = 222
@@ -1447,7 +1447,7 @@ object FFacture: TFFacture
         Visible = False
       end
       object BLanceCalc: TToolbarButton97
-        Left = 960
+        Left = 384
         Top = 2
         Width = 405
         Height = 101
@@ -2533,7 +2533,7 @@ object FFacture: TFFacture
     object PButtons: TPanel
       Left = 0
       Top = 86
-      Width = 1358
+      Width = 782
       Height = 36
       Align = alBottom
       BevelOuter = bvNone
@@ -2541,7 +2541,7 @@ object FFacture: TFFacture
       object DockBottom: TDock97
         Left = 0
         Top = 5
-        Width = 1358
+        Width = 782
         Height = 31
         BackgroundTransparent = True
         Position = dpBottom
@@ -2597,7 +2597,6 @@ object FFacture: TFFacture
             Font.Name = 'MS Sans Serif'
             Font.Style = []
             Layout = blGlyphTop
-            NumGlyphs = 2
             Opaque = False
             ParentFont = False
             ParentShowHint = False
@@ -3515,6 +3514,8 @@ object FFacture: TFFacture
       '\par '
       '\par '
       '\par '
+      '\par '
+      '\par '
       '\par }')
   end
   object BZoomRessource: THBitBtn
@@ -3537,8 +3538,8 @@ object FFacture: TFFacture
   object PGS: TPanel
     Left = 0
     Top = 125
-    Width = 1358
-    Height = 504
+    Width = 782
+    Height = 248
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 2
@@ -3547,8 +3548,8 @@ object FFacture: TFFacture
       Tag = 1
       Left = 0
       Top = 0
-      Width = 1358
-      Height = 504
+      Width = 782
+      Height = 248
       Align = alClient
       BorderStyle = bsNone
       ColCount = 8
@@ -4378,6 +4379,8 @@ object FFacture: TFFacture
         '\par '
         '\par '
         '\par '
+        '\par '
+        '\par '
         '\par }')
     end
   end
@@ -5053,7 +5056,8 @@ object FFacture: TFFacture
       'Z0885_S16G1'
       'Z1439_S16G1'
       'Z0284_S16G1')
-    Width = 17
+    Height = 18
+    Width = 18
     Left = 651
     Top = 152
   end
@@ -5142,6 +5146,8 @@ object FFacture: TFFacture
       'Z0415_S16G1'
       'Z0397_S16G1')
     DrawingStyle = dsTransparent
+    Height = 18
+    Width = 18
     Left = 725
     Top = 150
   end

@@ -101,7 +101,8 @@ uses {$IFDEF VER150} variants,{$ENDIF}
   FactRemplTypeLigne,UfactGestionAff,UAuditPerf,UtilsRapport, TntButtons,
   TntExtCtrls, TntGrids, TntComCtrls,
   UtilNumParag,UrectifSituations, TntMenus,
-  UtilsMetresXLS,StrUtils,UFactListes,UTransferts
+  UtilsMetresXLS,StrUtils,UFactListes,UTransferts,UspecifVerdon
+
   ;
 type
 	TmsFrais = (TmsFValide,TmsFAnul,TmsSuppr,TmsNone); // les 3 seuls mode de gestion
@@ -858,6 +859,7 @@ type
     TheMetreDoc     : TMetreArt;
     //TheMetreShare   : TMetreArt;
 {$ENDIF}
+    TOptionVerdon : TOptionVerdonSais;
     TOBLigneDel,TOBLBasesDEL,TOBCONSODEL : TOB;
     // --
     {$IFDEF BTP}
@@ -1521,10 +1523,11 @@ type
     procedure TraitementReajustement;
 	  function IsEcritLesOuvPlat : boolean;
     procedure BeforeEnreg;
-    procedure RecalculeEcheances; 
+    procedure RecalculeEcheances;
     procedure CalculeThisLigne (TOBL : TOB);
     procedure AfficheLaGrille;
     procedure  RefreshGrid (ACol,Arow : Integer);
+    procedure VerdonVoirStockClick(Sender: TObject);
   end;
 
 implementation
@@ -1582,7 +1585,6 @@ uses
   UspecifPOC
   , UConnectWSCEGID
   , CommonTools
-  , UspecifVerdon
   , SelectPhase
   ;
 
@@ -4597,7 +4599,9 @@ begin
   FClosing := False;
   // Modif BTP
 //  NbLignesGrille := 10;
+  TOptionVerdon := TOptionVerdonSais.create(Self);
   TTransfertPOC := TGestTransfert.create (self);
+
   CopierColler := TCopieColleDoc.create(Self);
   with CopierColler do
   begin
@@ -5968,7 +5972,7 @@ begin
       GP_AFFAIRE2.OnExit := nil;
       GP_AFFAIRE3.OnExit := nil;
       GP_AVENANT.OnExit := nil;
-      if Action= taCreat then
+      if (Action= taCreat) and (GP_AFFAIRE.Text='') then
       begin
         LDESCAFFAIRE.Visible := True;
         TDESCAFFAIRE.Visible := True;
@@ -6630,6 +6634,7 @@ begin
   LibereParamTimbres;
   fGestionAff.free;
   LibereMemContratST;
+  TOptionVerdon.Free;
 end;
 
 {==============================================================================================}
@@ -21795,7 +21800,7 @@ begin
     GS.setFocus;
   end;
 
-  if (VH_GC.BTCODESPECIF = '002') and (TOBPiece.getString('GP_NATUREPIECEG')='DBT') and (Action=taCreat) then
+  if (VH_GC.BTCODESPECIF = '002') and (TOBPiece.getString('GP_NATUREPIECEG')='DBT') and (Action=taCreat) and (GP_AFFAIRE.Text='') then
   begin
     if TDESCAFFAIRE.Text = '' then
     begin
@@ -30274,6 +30279,37 @@ begin
   begin
   	 GS.Cells[Acol,Arow] := Code;
   end;
+end;
+
+procedure TFFacture.VerdonVoirStockClick(Sender: TObject);
+
+  function IsSlashDelimiter(const S: string; Index: Integer): Boolean;
+  begin
+    Result := (Index > 0) and (Index <= Length(S)) and (S[Index] = '/')
+      and (ByteType(S, Index) = mbSingleByte);
+  end;
+
+  function IncludeTrailingSlashDelimiter(const S: string): string;
+  begin
+    Result := S;
+    if not IsSlashDelimiter(Result, Length(Result)) then
+      Result := Result + PathDelim;
+  end;
+
+var TheParamWTT,TheAccesWTT : string;
+    TOBL : TOB;
+begin
+  TheParamWTT := GetparamSocSecur('SO_BPARAMACCESWTT','http://ver-intra01/Wtt');
+  if TheParamWTT = '' then
+  begin
+    PGIInfo('Vous devez renseigner l''adresse de consultation su serveur WTT');
+    exit;
+  end;
+  TOBL := GetTOBLigne(TOBPiece,GS.row); if TOBL = nil then Exit;
+  TheAccesWTT := IncludeTrailingSlashDelimiter(TheParamWTT)+TOBL.getString('GL_CODEARTICLE');
+  ShellExecute (0, 'open', pchar (TheAccesWTT), nil, nil, SW_SHOWNORMAL);
+
+//
 end;
 
 initialization

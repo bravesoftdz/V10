@@ -13,9 +13,28 @@ uses
   uEntCommun,
   UtilConso,
   forms,
+  Menus,
   Db, {$IFNDEF DBXPRESS} dbTables, {$ELSE} uDbxDataSet, {$ENDIF}
   affaireutil,FE_Main,Paramsoc
   ;
+
+type
+  TOptionVerdonSais = class (TObject)
+    private
+      fActif : Boolean;
+      FF : TForm;
+      POPGS : TPopupMenu;
+      fMaxItems : Integer;
+      fCreatedPop : Boolean;
+      MesMenuItem : array[0..2] of TMenuItem;
+      //
+      procedure DefiniMenuPop(Parent: Tform);
+    procedure VerdonVoirStockWTT(Sender: TObject);
+    public
+      constructor create (Parent : Tform);
+      Destructor destroy; override;
+  end;
+
 
 
 procedure ConstitueAffaireVerdon(FF : TForm);
@@ -26,16 +45,22 @@ uses Facture,
      FactTOB
      ;
 
+
 procedure ConstitueAffaireVerdon(FF : TForm );
 var XX : TFFacture;
     P0,P1,P2,P3,Av,CodeAffaire : string;
     TOBAFFaire,TOBpiece : TOB;
+    LgCodeAffaire1 : integer;
+    FormatAff1 : string;
 begin
   XX := TFFacture(FF);
+  if XX.GP_AFFAIRE.Text <> ''  then exit;  // si c'est un avenant et donc que le code affaire est déjà affecté --> on ne fait rien de plus
   TOBAFFaire := XX.TheTOBAffaire;
   TOBPiece := XX.LaPieceCourante;
   //
-  P0 := 'A'; P1 := Format('%0.8d',[TOBPiece.GetInteger('GP_NUMERO')]); P2 := ''; P3 := ''; Av := '';
+  LgCodeAffaire1 := GetParamSocSecur('SO_AFFCO1LNG',8);
+  FormatAff1 := '%0.'+InttoStr(LgCodeAffaire1)+'d';
+  P0 := 'A'; P1 := Format(FormatAff1,[TOBPiece.GetInteger('GP_NUMERO')]); P2 := ''; P3 := ''; Av := '';
   CodeAffaire := CodeAffaireRegroupe (P0,P1,P2,P3,Av,taCreat,False,False,false);
   TOBAFFaire.InitValeurs(false);
   TOBAFFaire.SetString('AFF_AFFAIRE',CodeAffaire);
@@ -120,6 +145,83 @@ begin
     TOBPiece.SetString('GP_AFFAIRE3',TOBAFFaire.GetString('AFF_AFFAIRE3'));
     TOBPiece.SetString('GP_AVENANT',TOBAFFaire.GetString('AFF_AVENANT'));
   end;
+end;
+
+constructor TOptionVerdonSais.create(Parent: Tform);
+var ThePop : Tcomponent;
+begin
+  fActif := false;
+  if VH_GC.BTCODESPECIF = '002' then
+  begin
+    fActif := True;
+    FF := Parent;
+    ThePop := Parent.Findcomponent  ('POPBTP');
+    if ThePop = nil then
+    BEGIN
+      // pas de menu BTP trouve ..on le cree
+      POPGS := TPopupMenu.Create(Parent);
+      POPGS.Name := 'POPBTP';
+      fCreatedPop := true;
+    END else
+    BEGIN
+      fCreatedPop := false;
+      POPGS := TPopupMenu(thePop);
+    END;
+    DefiniMenuPop(Parent);
+  end;
+end;
+
+procedure TOptionVerdonSais.DefiniMenuPop (Parent : Tform);
+var Indice : integer;
+
+begin
+  fMaxItems := 0;
+  if not fcreatedPop then
+  begin
+    MesMenuItem[fMaxItems] := TmenuItem.Create (parent);
+    with MesMenuItem[fMaxItems] do
+      begin
+      Caption := '-';
+      end;
+    inc (fMaxItems);
+  end;
+  MesMenuItem[fMaxItems] := TmenuItem.Create (parent);
+  with MesMenuItem[fMaxItems] do
+    begin
+    Name := 'VERDONVOIRSTOCK';
+    Caption := TraduireMemoire ('Voir le stock(WTT)');
+    OnClick := VerdonVoirStockWTT;
+    end;
+  inc (fMaxItems);
+  MesMenuItem[fMaxItems] := TmenuItem.Create (parent);
+  with MesMenuItem[fMaxItems] do
+    begin
+    Caption := '-';
+    end;
+  inc (fMaxItems);
+
+  for Indice := 0 to fMaxItems -1 do
+    begin
+      if MesMenuItem [Indice] <> nil then POPGS.Items.Add (MesMenuItem[Indice]);
+    end;
+end;
+
+destructor TOptionVerdonSais.destroy;
+var Indice : integer;
+begin
+  if not fActif then Exit;
+  for Indice := 0 to fMaxItems -1 do
+  begin
+    MesMenuItem[Indice].Free;
+  end;
+  if fcreatedPop then POPGS.free;
+  //
+  inherited;
+end;
+
+procedure TOptionVerdonSais.VerdonVoirStockWTT (Sender : TObject);
+begin
+  TFFacture(FF).VerdonVoirStockClick(Sender); 
 end;
 
 end.
