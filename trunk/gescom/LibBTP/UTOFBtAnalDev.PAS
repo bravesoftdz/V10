@@ -513,8 +513,40 @@ begin
 
   if PrixPourQte = valeur('0') then PrixPourQte := Valeur ('1');
 
-  Qte := (QtePrec * TOBDetOuv.getValue('BLO_QTEFACT')) /(PrixPourQte * QteDUdetail * QteDuDetailPrec);
-  Ratio := (QtePrec) /(PrixPourQte * QteDUdetail * QteDuDetailPrec);
+  //FV1 - 28/09/2018 : FS#3266 - 
+  If TobDetOuv.FieldExists('BLF_NATUREPIECEG') then
+  begin
+    if TobDetOuv.getValue('BLF_NATUREPIECEG') <> '' then
+    begin
+      if (TOBDetOuv.GetValue('BLF_NATUREPIECEG') = 'FBT') or
+         (TOBDetOuv.GetValue('BLF_NATUREPIECEG') = 'FBP') or
+         (TOBDetOuv.GetValue('BLF_NATUREPIECEG') = 'DAC') then
+      begin
+        if TOBDetOuv.GetValue('BLF_QTESITUATION') <> 0 then
+        begin
+          Qte   := TOBDetOuv.GetValue('BLF_QTESITUATION');
+          Ratio := TOBDetOuv.GetValue('BLF_QTESITUATION');
+        end
+        else
+          Exit;
+      end
+      else
+      begin
+        Qte := (QtePrec * TOBDetOuv.getValue('BLO_QTEFACT')) /(PrixPourQte * QteDUdetail * QteDuDetailPrec);
+        Ratio := (QtePrec) /(PrixPourQte * QteDUdetail * QteDuDetailPrec);
+      end;
+    end
+    else
+    begin
+      Qte := (QtePrec * TOBDetOuv.getValue('BLO_QTEFACT')) /(PrixPourQte * QteDUdetail * QteDuDetailPrec);
+      Ratio := (QtePrec) /(PrixPourQte * QteDUdetail * QteDuDetailPrec);
+    end;
+  end
+  else
+  begin
+    Qte := (QtePrec * TOBDetOuv.getValue('BLO_QTEFACT')) /(PrixPourQte * QteDUdetail * QteDuDetailPrec);
+    Ratio := (QtePrec) /(PrixPourQte * QteDUdetail * QteDuDetailPrec);
+  end;
 
   //Modif FV : Dev. prioritaire DSL le 05/06/2012
   if (TOBDetOuv.GetString('BNP_TYPERESSOURCE') = 'SAL') AND (CoefFG_Param <> 0) then
