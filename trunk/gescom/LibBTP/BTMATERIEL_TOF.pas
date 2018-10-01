@@ -1597,7 +1597,6 @@ begin
 
   title := 'Recherche Ressource Matériel';
 
-  //stWhere := 'AND ARS_TYPERESSOURCE IN ("OUT","MAT","LOC","AUT")';
   if (VH_GC.AFRechResAv) then
   begin
     stWhere := 'TYPERESSOURCE:OUT,MAT,LOC,AUT';
@@ -1610,9 +1609,7 @@ begin
   end;
 
   StChamp  := CodeRessource.Text;
-
-  
-
+    
   ChargeInfoRessource;
 
 end;
