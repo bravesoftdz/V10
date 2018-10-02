@@ -771,6 +771,7 @@ begin
     LCUMUL :=Copy(CurDef,8,1);
     // ---
     IndElt := LCHAMPS.Items.IndexOf(CurChps);
+    if IndElt < 0 then break;
     TheItem := TChps(LCHAMPS.Items.Objects[Indelt]);
     IndBis := LLIBELLES.Items.IndexOf(TheItem.LibelleINI);
     TheItem.Designation := CurLib;

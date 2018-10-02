@@ -1133,7 +1133,8 @@ uses
   ExpEcrVerdon_TOF in '..\..\Services\BTPVerdon\Lib\ExpEcrVerdon_TOF.pas',
   UtilBSV in '..\LibBTP\UtilBSV.pas',
   UDefGlobals in '..\LibBTP\UDefGlobals.pas',
-  ControlIniFile in '..\LibBTP\ControlIniFile.pas';
+  ControlIniFile in '..\LibBTP\ControlIniFile.pas',
+  BTBIMEXPORT_TOF in '..\BIM\BTBIMEXPORT_TOF.PAS';
 
 //
 // FIN NEW
