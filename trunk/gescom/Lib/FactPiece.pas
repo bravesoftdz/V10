@@ -443,7 +443,7 @@ begin
       else                                          // Compteur exo dans tout les autres cas
         NumDef := GetCptAnnuel(SoucheG);
     end;
-    if NumDef > 0 then
+    if NumDef >= 0 then
     begin
       NewNum := NumDef + NbPiece;
       DecodeDate(DatePiece, Year, Month, Day);
