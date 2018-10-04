@@ -2566,12 +2566,14 @@ Case NumModule of
 //
   146 : BEGIN
 
-          if not (VH_GC.BTCODESPECIF = '001') then
+          if (VH_GC.BTCODESPECIF <> '001') then
           begin
             FMenuG.RemoveItem(146241);
             FMenuG.RemoveItem(146641);
             FMenuG.RemoveItem(146644);
+            FMenuG.RemoveItem(146291);
             FMenuG.RemoveGroup(-146290,True);
+            FMenuG.RemoveItem(-146290);
           end;
 
           if not GetParamSocSecur('SO_CHANTIEROBLIGATOIRE',false) then
@@ -2586,9 +2588,14 @@ Case NumModule of
           if not V_PGI.Sav then
           begin
             FMenuG.removeItem (147610);
-            FMenuG.removeItem (147620);
           end;
           if (VH_GC.BTCODESPECIF = '001') then FMenuG.RemoveItem(147130);
+          if (VH_GC.BTCODESPECIF <> '001') then
+          begin
+            FMenuG.RemoveItem(147661);
+            FMenuG.RemoveGroup(-147660,True);
+            FMenuG.RemoveItem(-147660);
+          end;
         end;
   149 : begin
          {Categories de dimensions }
