@@ -1131,7 +1131,9 @@ uses
   UDefGlobals in '..\LibBTP\UDefGlobals.pas',
   ExpEcrVerdon_TOF in '..\..\Services\BTPVerdon\Lib\ExpEcrVerdon_TOF.pas',
   UtilBTPVerdon in '..\..\Services\BTPVerdon\Lib\UtilBTPVerdon.pas',
-  ControlIniFile in '..\LibBTP\ControlIniFile.pas';
+  ControlIniFile in '..\LibBTP\ControlIniFile.pas',
+  BTVERDDESTMAIL_TOF in '..\Verdon\BTVERDDESTMAIL_TOF.PAS',
+  BTBIMEXPORT_TOF in '..\BIM\BTBIMEXPORT_TOF.PAS';
 
 //
 

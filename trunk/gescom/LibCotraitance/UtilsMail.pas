@@ -49,12 +49,14 @@ type
     fQualifMail: string;   //DDE : Demande de prix; COT : Cotraitance; SST : Ss-Traitance; MOE : Maitre d'Oeuvre; PLA : Planning
     fGestionParam: Boolean;
     fTobRapport: TOB;      //Tob de transfert avec l'ensemble des zones à vérifier
+    fTobListDest : TOB;
     //
     RechContact: TGestionContact;
     //
     function ControleExistFile: boolean;
     function GetEmail: string;
     function RecupZoneTravail(ZoneChaine: string; TOBTravail: TOB): string;
+    function ConstitueDestinatairesVerdon : string;
     //
   public
     constructor Create(Sender: Tobject);
@@ -78,22 +80,23 @@ type
     property QualifMail: string read fQualifMail write fQualifMail;
     property GestionParam: Boolean read fGestionParam write fGestionParam;
     property TobRapport: TOB read fTOBRapport write fTobRapport;
+    property ListeDestinataires : TOB read fTobListDest write fTobListDest;
       //
     procedure CopySourcesurTempo;
-    procedure AppelEnvoiMail;
+    procedure AppelEnvoiMail (WithUi : Boolean=True; WithLetterEnding :boolean=true);
       //
   end;
 
 implementation
 
 uses
-  StrUtils;
+  StrUtils,EntGC;
 
 
 //création de la classe et création
 constructor TGestionMail.Create(sender: Tobject);
 begin
-
+  fTobListDest := nil;
   fSujet := Sujet;
   fCorps := Corps;
   fResultMailForm := ResultMailForm;
@@ -110,7 +113,7 @@ begin
   fGestionParam := False;
   fAffaire := Affaire;
   fQualifMail := QualifMail;
-  fTobRapport := TobRapport;
+  fTobRapport := nil;
 
 end;
 
@@ -143,7 +146,7 @@ begin
 
 end;
 
-procedure TGestionMail.AppelEnvoiMail;
+procedure TGestionMail.AppelEnvoiMail (WithUi : Boolean=True; WithLetterEnding :boolean=true);
 var
   Rapport: TGestionRapport;
   ecran: Tform;
@@ -160,9 +163,13 @@ begin
 
   MsgErreur := '';
   TitreMsg := '';
-
-  if Destinataire = '' then
-    Destinataire := GetEmail;
+  
+  if (VH_GC.BTCODESPECIF = '002') and (fTobListDest <> nil) and (fTobListDest.Detail.count > 0) then
+  begin
+    Destinataire := ConstitueDestinatairesVerdon;
+  end;
+  
+  if Destinataire = '' then Destinataire := GetEmail;
 
   //recherche des mails paramétrés !!!!!!!!!!
   Rapport := TGestionRapport.Create(ecran);
@@ -204,6 +211,16 @@ begin
     TitreMsg := TraduireMemoire('Envoi Intervention Planning');
     Rapport.Qualif := 'PLA';
     Rapport.IDLienOLE := '{???}';
+  end else if QualifMail = 'VVM' then
+  begin
+    TitreMsg := TraduireMemoire('Information Acceptation - Montant');
+    Rapport.Qualif := 'VVM';
+    Rapport.IDLienOLE := '{732DC75E-13F2-4D31-8081-7728924CFE55}';
+  end else if QualifMail = 'VVS' then
+  begin
+    TitreMsg := TraduireMemoire('Information Acceptation - Sous Traitant');
+    Rapport.Qualif := 'VVS';
+    Rapport.IDLienOLE := '{1F6AB88D-EBFB-4A06-8EBA-579D9524B261}';
   end;
 
   if MsgErreur <> '' then
@@ -246,20 +263,30 @@ begin
     end;
   end;
 
-  if ((Length(Corps.Text) = 0) or (Corps.Text = '')) or (Corps.Text = #$D#$A) then
+  if WithLetterEnding then
   begin
-    Corps.Clear;
-    Corps.add('Bonjour');
-    Corps.add('');
-    Corps.add('');
-    Corps.add('');
-    Corps.add('Cordialement');
+    if ((Length(Corps.Text) = 0) or (Corps.Text = '')) or (Corps.Text = #$D#$A) then       // ??????
+    begin
+      Corps.Clear;
+      Corps.add(TraduireMemoire('Bonjour'));
+      Corps.add('');
+      Corps.add('');
+      Corps.add('');
+      Corps.add(TraduireMemoire('Cordialement'));
+    end;
   end;
 
-  ResultMailForm := AglMailForm(fSujet, fdestinataire, fcopie, Corps, ffichiers, false);
+  if WithUi then
+  begin
+    // Avec interface utilisateur
+    ResultMailForm := AglMailForm(fSujet, fdestinataire, fcopie, Corps, ffichiers, false);
 
-  if ResultMailForm = rmfOkButNotSend then
+    if ResultMailForm = rmfOkButNotSend then
+      SendMail(fSujet, fdestinataire, fCopie, Corps, ffichiers, True, 1, '', '');
+  end else
+  begin
     SendMail(fSujet, fdestinataire, fCopie, Corps, ffichiers, True, 1, '', '');
+  end;
 
   corps.Clear;
 
@@ -340,8 +367,38 @@ end;
 
 destructor TGestionMail.Destroy;
 begin
-
   inherited;
+end;
+
+function TGestionMail.ConstitueDestinatairesVerdon: string;
+var II,Nb : Integer;
+    QQ : TQuery;
+    ErrorIn : Boolean;
+begin
+  ErrorIn := false;
+  Result := '';
+  Nb := 0;
+  for II := 0 to fTobListDest.detail.count -1 do
+  begin
+    if Nb=0 then
+    begin
+      if fTobListDest.detail[II].GetString('US_EMAIL') <> '' then
+      begin
+        Result := fTobListDest.detail[II].GetString('US_EMAIL');
+        inc(nb); 
+      end else Errorin := True;
+    end else
+    begin
+      if fTobListDest.detail[II].GetString('US_EMAIL') <> '' then
+      begin
+        Result := Result + ';'+fTobListDest.detail[II].GetString('US_EMAIL');
+      end else Errorin := True;
+    end;
+  end;
+  if ErrorIn then
+  begin
+    PGIInfo('ATTENTION : Certain destinataire n''ont pas de mail défini.#13#10 Merci de contacter votre administrateur');
+  end;
 end;
 
 end.

@@ -19,6 +19,8 @@ uses
   ;
 
 type
+  TTypeEnvoi = (TTevMt,TTevST);
+  
   TOptionVerdonSais = class (TObject)
     private
       fActif : Boolean;
@@ -35,16 +37,39 @@ type
       Destructor destroy; override;
   end;
 
-
+var TOBDestVERDON : TOB;
 
 procedure ConstitueAffaireVerdon(FF : TForm);
+procedure TraiteAcceptationVerdon (naturepiece,souche : string; numero,Indice : integer);
+procedure ChargeDestinatairesVerdon;
+procedure LibereDestinatairesVerdon;
 
 implementation
 
 uses Facture,
-     FactTOB
+     FactTOB,
+     UtilsMail
      ;
+procedure LibereDestinatairesVerdon;
+begin
+  TOBDestVERDON.free;
+  TOBDestVERDON := nil;
+end;
 
+procedure ChargeDestinatairesVerdon;
+var QQ : Tquery;
+begin
+  if TOBDestVERDON = nil then
+  begin
+    TOBDestVERDON := TOB.Create ('LES DESTINATAIRES',nil,-1);
+  end;
+  QQ := OpenSQL('SELECT * FROM BTVERDDESTMAIL',True,-1,'',True);
+  if not QQ.eof then
+  begin
+    TOBDestVERDON.LoadDetailDB('BVERDESTMAIL','','',QQ,false);
+  end;
+  Ferme(QQ);
+end;
 
 procedure ConstitueAffaireVerdon(FF : TForm );
 var XX : TFFacture;
@@ -145,6 +170,124 @@ begin
     TOBPiece.SetString('GP_AFFAIRE3',TOBAFFaire.GetString('AFF_AFFAIRE3'));
     TOBPiece.SetString('GP_AVENANT',TOBAFFaire.GetString('AFF_AVENANT'));
   end;
+end;
+
+
+procedure EnvoiMail (TOBP : TOB; NatureEnvoie : TTypeEnvoi);
+var XX : TGestionMail;
+    QualifTexte : string;
+begin
+  XX := TGestionMail.Create(Application);
+
+  if NatureEnvoie=TTevMt then
+      XX.Sujet := 'Acceptation de devis - Depassement montant'
+  else
+      XX.Sujet := 'Acceptation de devis - Sous traitance présente';
+  //    
+  XX.Corps := hTStringList.Create;
+  XX.Corps.Clear ;
+
+  XX.Copie         := '';
+  XX.TypeContact   := '';
+  XX.Fournisseur   := '';
+  XX.FichierSource := '';
+  XX.FichierTempo  := '';
+  XX.Fichiers      := '';
+  XX.TypeDoc       := '';
+  //Pourrait être déterminé par le type d'enregistrement traité ou par le type de planning (????)
+  XX.Tiers         := '';
+  XX.Contact       := '';
+  XX.Destinataire  := '';
+  if NatureEnvoie=TTevMt then
+  begin
+    XX.QualifMail    := 'VVM';
+  end else if NatureEnvoie=TTevST then
+  begin
+    XX.QualifMail    := 'VVS';
+  end;
+  XX.TobRapport    := TOBP;
+  XX.GestionParam  := True;
+  XX.ListeDestinataires := TOBDestVERDON;
+
+  XX.AppelEnvoiMail (true,False);
+
+  FreeAndNil(XX);
+
+end;
+
+procedure TraiteAcceptationVerdon (naturepiece,souche : string; numero,Indice : integer);
+var TT : TOB;
+    QQ : TQuery;
+    SQl : string;
+    MtAccepte,MtDevis : double;
+    StPresent : Boolean;
+begin
+    StPresent := false;
+    MtAccepte := 0;
+    MtDevis := 0;
+    TT := TOB.Create ('PIECE',nil,-1);
+    TRY
+      SQL := 'SELECT * FROM PIECE '+
+             'LEFT JOIN TIERS ON T_NATUREAUXI="CLI" AND GP_TIERS=T_TIERS '+
+             'LEFT JOIN AFFAIRE ON GP_AFFAIRE=AFF_AFFAIRE '+
+             'WHERE '+
+             'GP_NATUREPIECEG="'+naturepiece+'" AND '+
+             'GP_SOUCHE="'+Souche+'" AND '+
+             'GP_NUMERO='+InttoStr(Numero)+' AND '+
+             'GP_INDICEG='+InttoStr(Indice);
+      QQ := OpenSql (SQL,True,1,'',true);
+      begin
+        if not QQ.eof then
+        begin
+          TT.SelectDB('',QQ);
+          MtDevis := TT.GetDouble('GP_TOTALHTDEV');
+        end;
+      end;
+      ferme (QQ);
+      //
+      SQL := 'SELECT SUM(P2.GP_TOTALHTDEV) FROM PIECE P2 '+
+             'WHERE '+
+             'P2.GP_AFFAIRE=(SELECT P1.GP_AFFAIRE FROM PIECE P1 WHERE '+
+             'P1.GP_NATUREPIECEG="'+naturepiece+'" AND '+
+             'P1.GP_SOUCHE="'+Souche+'" AND '+
+             'P1.GP_NUMERO='+InttoStr(Numero)+' AND '+
+             'P1.GP_INDICEG='+InttoStr(Indice)+') AND '+
+             '(SELECT AFF_ETATAFFAIRE FROM AFFAIRE WHERE AFF_AFFAIRE=P2.GP_AFFAIREDEVIS)="ACP"';
+      QQ := OpenSql (SQL,True,1,'',true);
+      begin
+        if not QQ.eof then
+        begin
+          MtAccepte := QQ.fields[0].AsFloat;
+        end;
+      end;
+      ferme (QQ);
+      //
+      SQL := 'SELECT 1 AS EXIST FROM LIGNE '+
+             'LEFT JOIN ARTICLE ON GL_ARTICLE=GA_ARTICLE '+
+             'WHERE '+
+             'GA_NATUREPRES IN (SELECT BNP_NATUREPRES FROM NATUREPREST WHERE BNP_TYPERESSOURCE="ST") AND '+
+             'GL_NATUREPIECEG="'+naturepiece+'" AND '+
+             'GL_SOUCHE="'+Souche+'" AND '+
+             'GL_NUMERO='+InttoStr(Numero)+' AND '+
+             'GL_INDICEG='+InttoStr(Indice);
+      if ExisteSQL(SQL) then
+      begin
+        StPresent := True;
+      end;
+      //
+      if ARRONDI(MtAccepte+MTDevis,V_PGI.okdecV) > 25000 then
+      begin
+        // Envoie mail pour montant depassé
+        EnvoiMail (TT,TTevMt);
+      end else if StPresent then
+      begin
+        EnvoiMail (TT,TTevST);
+        // Envoie mail pour sous traitance      
+      end;
+    FINALLY
+      TT.free;
+    END;
+
 end;
 
 constructor TOptionVerdonSais.create(Parent: Tform);

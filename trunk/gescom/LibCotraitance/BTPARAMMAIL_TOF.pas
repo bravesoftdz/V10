@@ -179,6 +179,16 @@ begin
     Rapport.Qualif  := 'PLA';
     Rapport.IDLienOLE := '{???}';
     Ecran.Caption := 'Paramétrage du mail pour Suppression évènement Planning';
+  end else if TypeMail = 'VVM' then
+  begin
+    Rapport.Qualif  := 'VVM'; 
+    Rapport.IDLienOLE := '{732DC75E-13F2-4D31-8081-7728924CFE55}';
+    Ecran.Caption := 'Paramétrage du mail pour information VERDON - Cas Montant';
+  end else if TypeMail = 'VVS' then
+  begin
+    Rapport.Qualif  := 'VVS';
+    Rapport.IDLienOLE := '{1F6AB88D-EBFB-4A06-8EBA-579D9524B261}';
+    Ecran.Caption := 'Paramétrage du mail pour information VERDON - Cas Sous-traitant';
   end;
 
   UpdateCaption(ecran);;
@@ -260,7 +270,12 @@ begin
       else if TypeMail = 'PM' then
         Rapport.IDLienOLE := '{???}'
       else if TypeMail = 'PS' then
-        Rapport.IDLienOLE := '{???}';
+        Rapport.IDLienOLE := '{???}'
+      else if TypeMail = 'VVM' then
+        Rapport.IDLienOLE := '{732DC75E-13F2-4D31-8081-7728924CFE55}'
+      else if TypeMail = 'VVS' then
+        Rapport.IDLienOLE := '{1F6AB88D-EBFB-4A06-8EBA-579D9524B261}';
+
     end;
     Rapport.SauveRapportLo;
   end;
@@ -305,7 +320,9 @@ begin
   else if  TypeMail = 'T' then
     Ok_LookUp := LookupList(ZoneMail,'Insertion Zones','COMMUN','CO_ABREGE','CO_LIBELLE','CO_TYPE="MAI"','CO_CODE',False,-1,'',tlDefault, 350 )
   else if  pos(TypeMail, 'PC;PM;PS') > 0 then
-    Ok_LookUp := LookupList(ZoneMail,'Insertion Zones','COMMUN','CO_ABREGE','CO_LIBELLE','CO_TYPE="IPC"','CO_CODE',False,-1,'',tlDefault, 350 );
+    Ok_LookUp := LookupList(ZoneMail,'Insertion Zones','COMMUN','CO_ABREGE','CO_LIBELLE','CO_TYPE="IPC"','CO_CODE',False,-1,'',tlDefault, 350 )
+  else if  (TypeMail = 'VVS') or (TypeMail = 'VVM') then
+    Ok_LookUp := LookupList(ZoneMail,'Insertion Zones','COMMUN','CO_ABREGE','CO_LIBELLE','CO_TYPE="VVD"','CO_CODE',False,-1,'',tlDefault, 350 );
 
   if not Ok_LookUp then Exit;
 

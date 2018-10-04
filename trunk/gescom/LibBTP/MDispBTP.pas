@@ -1410,6 +1410,21 @@ Cegid,False,False)};
               AglLanceFiche ('YY','YYIDENTBANCAIRE','','','ACTION=MODIFICATION') ;
               V_PGI.ZoomOle := false;
              END;
+    148825 : BEGIN
+              V_PGI.ZoomOle := true;
+              AglLanceFiche ('BTP','BTVERDDESTMAIL','','','ACTION=MODIFICATION') ;
+              V_PGI.ZoomOle := false;
+             END;
+    148831 : BEGIN
+              V_PGI.ZoomOle := true;
+              AglLanceFiche ('BTP','BTPARAMMAIL','','','ACTION=MODIFICATION;TYPEMAIL=VVM') ;
+              V_PGI.ZoomOle := false;
+             END;
+    148832 : BEGIN
+              V_PGI.ZoomOle := true;
+              AglLanceFiche ('BTP','BTPARAMMAIL','','','ACTION=MODIFICATION;TYPEMAIL=VVS') ;
+              V_PGI.ZoomOle := false;
+             END;
 
     // 74XXX : ParamTvaTpf(false) ;  TPF non gérée
     74153 : FicheModePaie_AGL('');
@@ -2731,6 +2746,13 @@ Case NumModule of
           FMenuG.RemoveItem(148823);
           FMenuG.RemoveGroup(-148820,true);
         end;
+        if not (VH_GC.BTCODESPECIF = '002') then
+        begin
+          FMenuG.RemoveItem(-148830);
+          FMenuG.RemoveGroup(-148830,true);
+          FMenuG.RemoveItem(148824);
+        end;
+
         For i:=1 to 9 do   // tablTiers
             begin
             FMEnuG.RenameItem (74410+i,RechDomZoneLibre ('CT'+IntToStr(i), False));

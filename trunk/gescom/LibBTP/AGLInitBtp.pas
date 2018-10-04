@@ -128,7 +128,8 @@ uses factvariante,
      factligneBase,
      galPatience,
      CalcOLEGenericBTP,
-     BTDEMANDEDATES_TOF;
+     BTDEMANDEDATES_TOF,
+     USpecifVerdon;
 
 Procedure PositionneEtatAffaire(CodeAffaire, CodeEtat : String);
 begin
@@ -340,6 +341,10 @@ Begin
       PgiInfo(TraduireMemoire('Saisie impossible, un devis a déjà été accepté pour cette affaire.'));
       Exit;
     end;
+    if VH_GC.BTCODESPECIF = '002' then
+    begin
+      TraiteAcceptationVerdon (naturepiece,souche,numero,Indice);
+    end;
     //   Modif brl 24/03 :
     //   if not PositionnePieceMorteVivante (naturepiece,souche,numero,indice,'-',etatprec) then exit;
     TOBTiers := TOB.create ('TIERS',nil,-1);
@@ -493,103 +498,108 @@ var F : TForm;
     cledoc : r_cledoc;
 
 begin
-F:=TForm(Longint(Parms[0]));
-DemandeAcompte := (Parms[1] = 'X');
-AnnulAcceptation := (Parms[3] = 'X');
-if (TFMul(F).FListe=nil) then exit;
-Q:=TFMul(F).Q;
-if Parms[2] = VH_GC.AFNatProposition then
-begin
-  Mess:=TexteMessage[10]
-end else
-begin
-	if AnnulAcceptation then
+  F:=TForm(Longint(Parms[0]));
+  DemandeAcompte := (Parms[1] = 'X');
+  AnnulAcceptation := (Parms[3] = 'X');
+  if (TFMul(F).FListe=nil) then exit;
+  Q:=TFMul(F).Q;
+  if Parms[2] = VH_GC.AFNatProposition then
   begin
-  	Mess:=TexteMessage[11];
+    Mess:=TexteMessage[10]
   end else
   begin
-  	Mess:=TexteMessage[1];
+    if AnnulAcceptation then
+    begin
+      Mess:=TexteMessage[11];
+    end else
+    begin
+      Mess:=TexteMessage[1];
+    end;
   end;
-end;
-if (PGIAskAF (Mess, F.Caption)<>mrYes) then exit;
-SourisSablier;
+  if (PGIAskAF (Mess, F.Caption)<>mrYes) then exit;
+  SourisSablier;
 
-TOBAff:=TOB.Create('AFFAIRE',Nil,-1) ;
+  TOBAff:=TOB.Create('AFFAIRE',Nil,-1) ;
 
-// on crée une TOB de toutes les études sélectionnées
-TobPieces := TOB.Create ('Liste des études',NIL, -1);
+  // on crée une TOB de toutes les études sélectionnées
+  TobPieces := TOB.Create ('Liste des études',NIL, -1);
+  if VH_GC.BTCODESPECIF = '002' then ChargeDestinatairesVerdon;
 
-try
-if TFMul(F).Fliste.AllSelected then
-BEGIN
-  Q.First;
-  while Not Q.EOF do
-  BEGIN
-    CodeAffaire:=Q.FindField('AFF_AFFAIRE').AsString;
-    AffaireRef:=Q.FindField('GP_AFFAIRE').AsString;
-    NaturePiece:=Q.FindField('GP_NATUREPIECEG').AsString;
-    Souche:=Q.FindField('GP_SOUCHE').AsString;
-    Numero:=Q.FindField('GP_NUMERO').AsInteger;
-    Indice:=Q.FindField('GP_INDICEG').AsInteger;
-    Tiers:=Q.findfield('GP_TIERS').asString;
-    //
-    Cledoc.Souche := Souche;
-    Cledoc.NaturePiece := NaturePiece;
-    Cledoc.NumeroPiece := Numero;
-    Cledoc.Indice := Indice;
-    //
-    if not AlertDemandePrix (cledoc,TttPAcceptation) then continue;
-    //
-    if NaturePiece = VH_GC.AFNatAffaire then
-       PrepaAcceptationDevis(CodeAffaire, AffaireRef, NaturePiece, Souche, Numero, Indice, Tiers,TOBAff,DemandeAcompte,AnnulAcceptation)
+  try
+    if TFMul(F).Fliste.AllSelected then
+    BEGIN
+      Q.First;
+      while Not Q.EOF do
+      BEGIN
+        CodeAffaire:=Q.FindField('AFF_AFFAIRE').AsString;
+        AffaireRef:=Q.FindField('GP_AFFAIRE').AsString;
+        NaturePiece:=Q.FindField('GP_NATUREPIECEG').AsString;
+        Souche:=Q.FindField('GP_SOUCHE').AsString;
+        Numero:=Q.FindField('GP_NUMERO').AsInteger;
+        Indice:=Q.FindField('GP_INDICEG').AsInteger;
+        Tiers:=Q.findfield('GP_TIERS').asString;
+        //
+        Cledoc.Souche := Souche;
+        Cledoc.NaturePiece := NaturePiece;
+        Cledoc.NumeroPiece := Numero;
+        Cledoc.Indice := Indice;
+        //
+        if not AlertDemandePrix (cledoc,TttPAcceptation) then continue;
+        //
+        if NaturePiece = VH_GC.AFNatAffaire then
+        begin
+          PrepaAcceptationDevis(CodeAffaire, AffaireRef, NaturePiece, Souche, Numero, Indice, Tiers,TOBAff,DemandeAcompte,AnnulAcceptation)
+        end else
+        begin
+          PrepaAcceptationEtude(CodeAffaire, NaturePiece, Souche, Numero, Indice, TOBAff, TobPieces);
+        end;
+        Q.NEXT;
+      END;
+      TFMul(F).Fliste.AllSelected:=False;
+    END
     else
-       PrepaAcceptationEtude(CodeAffaire, NaturePiece, Souche, Numero, Indice, TOBAff, TobPieces);
-    Q.NEXT;
-  END;
-  TFMul(F).Fliste.AllSelected:=False;
-END
-else
-begin
-  for i:=0 to TFMul(F).Fliste.nbSelected-1 do
-  begin
-    TFMul(F).Fliste.GotoLeBookmark(i);
-    CodeAffaire:=TFMul(F).Fliste.datasource.dataset.FindField('AFF_AFFAIRE').AsString;
-    AffaireRef:=TFMul(F).Fliste.datasource.dataset.FindField('GP_AFFAIRE').AsString;
-    NaturePiece:=TFMul(F).Fliste.datasource.dataset.FindField('GP_NATUREPIECEG').AsString;
-    Souche:=TFMul(F).Fliste.datasource.dataset.FindField('GP_SOUCHE').AsString;
-    Numero:=TFMul(F).Fliste.datasource.dataset.FindField('GP_NUMERO').AsInteger;
-    Indice:=TFMul(F).Fliste.datasource.dataset.FindField('GP_INDICEG').AsInteger;
-    Tiers:=Q.findfield('GP_TIERS').asString;
-    //
-    Cledoc.Souche := Souche;
-    Cledoc.NaturePiece := NaturePiece;
-    Cledoc.NumeroPiece := Numero;
-    Cledoc.Indice := Indice;
-    //
-    if not AlertDemandePrix (cledoc,TttPAcceptation) then continue;
-    //
-    if NaturePiece = VH_GC.AFNatAffaire then
-       PrepaAcceptationDevis(CodeAffaire, AffaireRef, NaturePiece, Souche, Numero, Indice, Tiers, TOBAff,DemandeAcompte,AnnulAcceptation)
-    else
-    	 PrepaAcceptationEtude(CodeAffaire, NaturePiece, Souche, Numero, Indice, TOBAff, TobPieces);
+    begin
+      for i:=0 to TFMul(F).Fliste.nbSelected-1 do
+      begin
+        TFMul(F).Fliste.GotoLeBookmark(i);
+        CodeAffaire:=TFMul(F).Fliste.datasource.dataset.FindField('AFF_AFFAIRE').AsString;
+        AffaireRef:=TFMul(F).Fliste.datasource.dataset.FindField('GP_AFFAIRE').AsString;
+        NaturePiece:=TFMul(F).Fliste.datasource.dataset.FindField('GP_NATUREPIECEG').AsString;
+        Souche:=TFMul(F).Fliste.datasource.dataset.FindField('GP_SOUCHE').AsString;
+        Numero:=TFMul(F).Fliste.datasource.dataset.FindField('GP_NUMERO').AsInteger;
+        Indice:=TFMul(F).Fliste.datasource.dataset.FindField('GP_INDICEG').AsInteger;
+        Tiers:=Q.findfield('GP_TIERS').asString;
+        //
+        Cledoc.Souche := Souche;
+        Cledoc.NaturePiece := NaturePiece;
+        Cledoc.NumeroPiece := Numero;
+        Cledoc.Indice := Indice;
+        //
+        if not AlertDemandePrix (cledoc,TttPAcceptation) then continue;
+        //
+        if NaturePiece = VH_GC.AFNatAffaire then
+          PrepaAcceptationDevis(CodeAffaire, AffaireRef, NaturePiece, Souche, Numero, Indice, Tiers, TOBAff,DemandeAcompte,AnnulAcceptation)
+        else
+          PrepaAcceptationEtude(CodeAffaire, NaturePiece, Souche, Numero, Indice, TOBAff, TobPieces);
 
+      end;
+    end;
+
+    // Génération des devis depuis les études
+    if (NaturePiece = VH_GC.AFNatProposition) then
+    begin
+      RegroupeLesPieces(TobPieces, VH_GC.AFNatAffaire, True, False, True,0, V_PGI.DateEntree,true,false,false,true,false,'',true,'','VALIDETU');
+    end else if (NaturePiece = 'DE') then
+    begin
+      RegroupeLesPieces(TobPieces, 'CC', True, False, True,0, V_PGI.DateEntree,true,false,false,true,false,'',true);
+    end;
+
+  finally
+    if VH_GC.BTCODESPECIF = '002' then LibereDestinatairesVerdon;
+    TOBAff.Free; TobPieces.Free;
+    TheTOB := nil;
+    SourisNormale ;
   end;
-end;
-
-// Génération des devis depuis les études
-if (NaturePiece = VH_GC.AFNatProposition) then
-begin
-  RegroupeLesPieces(TobPieces, VH_GC.AFNatAffaire, True, False, True,0, V_PGI.DateEntree,true,false,false,true,false,'',true,'','VALIDETU');
-end else if (NaturePiece = 'DE') then
-begin
-  RegroupeLesPieces(TobPieces, 'CC', True, False, True,0, V_PGI.DateEntree,true,false,false,true,false,'',true);
-end;
-
-finally
-  TOBAff.Free; TobPieces.Free;
-  TheTOB := nil;
-  SourisNormale ;
-end;
 
 end;
 
