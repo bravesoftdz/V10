@@ -1,3 +1,0 @@
-{$IFDEF EAGLCLIENT}
-{$ELSE}
-{$ENDIF}

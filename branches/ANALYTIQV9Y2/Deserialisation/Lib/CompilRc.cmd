@@ -1,1 +1,0 @@
-brcc32.exe WinUAC.rc
