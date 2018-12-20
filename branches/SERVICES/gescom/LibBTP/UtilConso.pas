@@ -234,7 +234,7 @@ Var Part      : String;
     NumMouv   : Double;
     TheRetour : TGncERROR;
     TOBC      : TOB;
-    RatioVa   : Double;
+    //RatioVa   : Double;
     RatioVente: double;
     stprec    : String;
     VenteAchat: String;
@@ -244,6 +244,7 @@ Var Part      : String;
     TOBC1,TOBDC1,TOBDETCONSO : TOB;
     CoefPAPR,COEfPrPV : double;
     cledoc : R_CLEDOC;
+    Codecontrat : string;
 Begin
   result := -1;
 
@@ -548,18 +549,40 @@ Begin
         TOBC.PutValue('BCO_QUALIFQTEMOUV', TobLigne.GetValue('GL_QUALIFQTEVTE'));
       end;
 
+      Codecontrat := GetContrat(TobLigne.GetValue('GL_AFFAIRE'));
+
       //FV1 : 23/08/2017 - FS#2648 - DELABOUDINIERE - Rendre les consos associées à un appel facturable
       if (TOBLigne.fieldExists('FACTURABLE')) then
       begin
         TOBC.PutValue('BCO_FACTURABLE', TOBLigne.GetValue('FACTURABLE'));
-        //FV1 - 04/06/2018 - FS#3105 - DELABOUDINIERE - Pas de quantité à facturer en saisie conso sur les ligne venant du TPI
-        if TOBC.GetValue('BCO_FACTURABLE')='A' then
-           TOBC.SetDouble('BCO_QTEFACTUREE', TOBLigne.GetDouble('GL_QTEFACT'))
+        //FV1 : 09/10/2018 - FS#3283 - Euro Energie - Pas permettre la facturation de lignes conso associées à un appel associé à un contra
+        if GetParamSocSecur('SO_LIVAPPELCONTRATFACT', True) then
+        begin
+          //FV1 - 04/06/2018 - FS#3105 - DELABOUDINIERE - Pas de quantité à facturer en saisie conso sur les ligne venant du TPI
+          if TOBC.GetValue('BCO_FACTURABLE')='A' then
+            TOBC.SetDouble('BCO_QTEFACTUREE', TOBLigne.GetDouble('GL_QTEFACT'))
+          else
+            TOBC.SetDouble('BCO_QTEFACTUREE', 0);
+        end
         else
-           TOBC.SetDouble('BCO_QTEFACTUREE', 0);
+        begin
+          if Codecontrat = '' then
+          begin
+            //FV1 - 04/06/2018 - FS#3105 - DELABOUDINIERE - Pas de quantité à facturer en saisie conso sur les ligne venant du TPI
+            if TOBC.GetValue('BCO_FACTURABLE')='A' then
+              TOBC.SetDouble('BCO_QTEFACTUREE', TOBLigne.GetDouble('GL_QTEFACT'))
+            else
+              TOBC.SetDouble('BCO_QTEFACTUREE', 0);
+          end
+          else
+          begin
+            TOBC.PutValue('BCO_FACTURABLE', 'N');
+          end;
+        end;
       end
       else
         TOBC.PutValue('BCO_FACTURABLE', 'N');
+      //
       //
       if Mode = TtcoLivraison then
       begin
@@ -567,10 +590,30 @@ Begin
           TobLigne.PutValue('GL_DPA',TobLigne.GetValue('DPARECUPFROMRECEP'));
         if Part0 = 'W' then
         begin
-          // Appel d'intervention
-          TOBC.PutValue('BCO_FACTURABLE', 'A');
-          TOBC.putValue('BCO_AFFAIRESAISIE',GetContrat(TobLigne.GetValue('GL_AFFAIRE')));
-          TOBC.putValue('BCO_QTEFACTUREE',TOBC.GetValue('BCO_QUANTITE'));
+          //FV1 : 09/10/2018 - FS#3283 - Euro Energie - Pas permettre la facturation de lignes conso associées à un appel associé à un contra
+          if GetParamSocSecur('SO_LIVAPPELCONTRATFACT', True) then
+          begin
+            // Appel d'intervention
+            TOBC.PutValue('BCO_FACTURABLE', 'A');
+            TOBC.putValue('BCO_AFFAIRESAISIE',Codecontrat);
+            TOBC.putValue('BCO_QTEFACTUREE',TOBC.GetValue('BCO_QUANTITE'));
+          end
+          else
+          begin
+            if Codecontrat = '' then
+            begin
+              //FV1 - 04/06/2018 - FS#3105 - DELABOUDINIERE - Pas de quantité à facturer en saisie conso sur les ligne venant du TPI
+              if TOBC.GetValue('BCO_FACTURABLE')='A' then
+                TOBC.SetDouble('BCO_QTEFACTUREE', TOBLigne.GetDouble('GL_QTEFACT'))
+              else
+                TOBC.SetDouble('BCO_QTEFACTUREE', 0);
+            end
+            else
+            begin
+              TOBC.PutValue('BCO_FACTURABLE', 'N');
+            end;
+          end;
+          //
         end;
       end;
 

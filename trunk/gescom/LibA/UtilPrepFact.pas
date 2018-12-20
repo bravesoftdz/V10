@@ -392,7 +392,6 @@ begin
   GereEcheancesGC(pTOBPiece, pTobTiers, pTOBEches, nil, nil, nil,nil,taCreat, pDEV, False);
 
   // MAJ des prix valo et des stocks , trt nomenclature
-  // ValideLesLignes(TobPiece_OK, TOBArticles,TOBNomenclature,False) ;
 
   ValideLesAdresses(pTobPiece, pTobPiece, pTobAdresses);
   //gerelesreliquats

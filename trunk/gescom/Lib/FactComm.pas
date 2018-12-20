@@ -46,7 +46,6 @@ procedure ValideLesCatalogues(TOBPiece, TOBCatalogu: TOB);
 procedure ValideLeTiers(TOBPiece, TOBTiers: TOB);
 procedure InvalideModifTiersPiece(TOBTiers: TOB);
 function DepotGererSurSite(Depot: string): boolean;
-//procedure ValideLesLignes(TOBPiece, TOBArticles, TOBCatalogu, TOBNomenclature, TOBOuvrage, TOBPieceRG, TOBBasesRG: TOB; Reliquat, Rafale: boolean);
 procedure ValideLesLignes(TOBPiece, TOBArticles, TOBCatalogu, TOBNomenclature, TOBOuvrages, TOBPieceRG, TOBBasesRG: TOB; Reliquat, Rafale: boolean; Ajout : boolean = false;GenereAuto:boolean=false;TOBOldPiece : TOB=nil; AutoriseDecoup : boolean=false);
 
 procedure ValideLesPorcs(TOBPiece, TOBPorcs: TOB);
@@ -217,10 +216,12 @@ Uses
      UCotraitance,
      DateUtils,
      factRetenues
-   ,CbpMCD
-    ,CbpEnumerator
-    ,UTransferts
-     ;
+    , CbpMCD
+    , CbpEnumerator
+    , UTransferts
+    , ErrorsManagement
+    , CommonTools
+    ;
 
 function GetTauxTaxe (RegimeTaxe,FamilleTaxe : string; Achat : boolean=false) : double;
 var TOBT : TOB;
@@ -390,163 +391,163 @@ end;
 function DetruitAncien(TOBPiece_O, TOBBases_O, TOBEches_O, TOBN_O, TOBLOT_O, TOBAcomptes_O, TOBPorcs_O, TOBSerie_O, TOBOuvrage_O, TOBLienOle_O, TOBPieceRG_O, TOBBasesRg_O, TobLigneTarif_O: TOB; SuppTOX: Boolean = False; OkSuppLigneFac : Boolean=true) : boolean; overload;
 var CleDoc: R_CleDoc;
   Nb: integer;
-  RefA: string;
+  RefA,SQL: string;
   OldD: TDateTime;
 begin
   Result := False;
   CleDoc := TOB2CleDoc(TOBPiece_O);
-  OldD := TOBPiece_O.GetValue('GP_DATEMODIF');
+  OldD   := TOBPiece_O.GetValue('GP_DATEMODIF');
   TRY
     Nb := ExecuteSQL('DELETE FROM PIECE WHERE ' + WherePiece(CleDoc, ttdPiece, False) + ' AND GP_DATEMODIF="' + USTime(OldD) + '"');
-  if Nb <= 0 then
-  begin
-    V_PGI.IoError := oeSaisie;
-    Exit;
-  end;
-  if TOBPiece_O <> nil then if TOBPiece_O.Detail.Count > 0 then
+    if Nb <= 0 then
     begin
-      Nb := ExecuteSQL('DELETE FROM LIGNE WHERE ' + WherePiece(CleDoc, ttdLigne, False));
-      if Nb <= 0 then
-      begin
-        V_PGI.IoError := oeUnknown;
-        Exit;
-      end;
-      Nb := ExecuteSQL('DELETE FROM LIGNECOMPL WHERE ' + WherePiece(CleDoc, ttdLigneCompl, False));
-    end;
-  Nb := ExecuteSQL('DELETE FROM PIECETRAIT WHERE ' + WherePiece(CleDoc, ttdPieceTrait, False));
-  Nb := ExecuteSQL('DELETE FROM PIECEINTERV WHERE ' + WherePiece(CleDoc, ttdPieceInterv, False));
-  Nb := ExecuteSQL('DELETE FROM PIEDBASE WHERE ' + WherePiece(CleDoc, ttdPiedBase, False));
-  Nb := ExecuteSQL('DELETE FROM TIMBRESPIECE WHERE ' + WherePiece(CleDoc, ttdTimbres, False));
-    Nb := ExecuteSQL('DELETE FROM PIEDCOLLECTIF WHERE ' + WherePiece(CleDoc, ttdVteColl, False));
-  Nb := ExecuteSQL('DELETE FROM LIGNEBASE WHERE ' + WherePiece(CleDoc, ttdLigneBase, False));
-  if TOBEches_O <> nil then if TOBEches_O.Detail.Count > 0 then
-    begin
-      Nb := ExecuteSQL('DELETE FROM PIEDECHE WHERE ' + WherePiece(CleDoc, ttdEche, False));
-      if Nb <= 0 then
-      begin
-        V_PGI.IoError := oeUnknown;
-        Exit;
-      end;
-    end;
-  if TOBN_O <> nil then if TOBN_O.Detail.Count > 0 then
-    begin
-      Result := TOBN_O.DeleteDB;
-      if not Result then
-      begin
-        V_PGI.IoError := oeUnknown;
-        Exit;
-      end;
-    end;
-  if TOBLOT_O <> nil then if TOBLOT_O.Detail.Count > 0 then
-    begin
-      Result := TOBLOT_O.DeleteDB;
-      if not Result then
-      begin
-        V_PGI.IoError := oeUnknown;
-        Exit;
-      end;
-    end;
-  if TOBSerie_O <> nil then if TOBSerie_O.Detail.Count > 0 then
-    begin
-      Result := TOBSerie_O.DeleteDB;
-      if not Result then
-      begin
-        V_PGI.IoError := oeUnknown;
-        Exit;
-      end;
-    end;
-  if TOBAcomptes_O <> nil then if TOBAcomptes_O.Detail.Count > 0 then
-    begin
-      Result := TOBAcomptes_O.DeleteDB;
-      if not Result then
-      begin
-        V_PGI.IoError := oeUnknown;
-        Exit;
-      end;
-    end;
-  if TOBPorcs_O <> nil then if TOBPorcs_O.Detail.Count > 0 then
-    begin
-      Result := TOBPorcs_O.DeleteDB;
-      if not Result then
-      begin
-        V_PGI.IoError := oeUnknown;
-        Exit;
-      end;
-    end;
-
-  if TOBLigneTarif_O <> nil then if TOBLigneTarif_O.Detail.Count > 0 then
-  begin
-    Result := TOBLigneTarif_O.DeleteDB;
-    if not Result then
-    begin
-      V_PGI.IoError := oeUnknown;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_DeletePIECEPrec);
+      V_PGI.IoError := oeSaisie;
       Exit;
     end;
-  end;
-
-  // Modif BTP
-  if TOBLIENOLE_O <> nil then if TOBLIENOLE_O.Detail.Count > 0 then
+    if TOBPiece_O <> nil then if TOBPiece_O.Detail.Count > 0 then
+      begin
+        Nb := ExecuteSQL('DELETE FROM LIGNE WHERE ' + WherePiece(CleDoc, ttdLigne, False));
+        if Nb <= 0 then
+        begin
+          TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteLIGNEPrec);
+          V_PGI.IoError := oeUnknown;
+          Exit;
+        end;
+        Nb := ExecuteSQL('DELETE FROM LIGNECOMPL WHERE ' + WherePiece(CleDoc, ttdLigneCompl, False));
+      end;
+    Nb := ExecuteSQL('DELETE FROM PIECETRAIT WHERE ' + WherePiece(CleDoc, ttdPieceTrait, False));
+    Nb := ExecuteSQL('DELETE FROM PIECEINTERV WHERE ' + WherePiece(CleDoc, ttdPieceInterv, False));
+    Nb := ExecuteSQL('DELETE FROM PIEDBASE WHERE ' + WherePiece(CleDoc, ttdPiedBase, False));
+    Nb := ExecuteSQL('DELETE FROM TIMBRESPIECE WHERE ' + WherePiece(CleDoc, ttdTimbres, False));
+      Nb := ExecuteSQL('DELETE FROM PIEDCOLLECTIF WHERE ' + WherePiece(CleDoc, ttdVteColl, False));
+    Nb := ExecuteSQL('DELETE FROM LIGNEBASE WHERE ' + WherePiece(CleDoc, ttdLigneBase, False));
+    if TOBEches_O <> nil then if TOBEches_O.Detail.Count > 0 then
+      begin
+        Nb := ExecuteSQL('DELETE FROM PIEDECHE WHERE ' + WherePiece(CleDoc, ttdEche, False));
+        if Nb <= 0 then
+        begin
+          TUtilErrorsManagement.SetGenericMessage(TemErr_DeletePIEDECHEPrec);
+          V_PGI.IoError := oeUnknown;
+          Exit;
+        end;
+      end;
+    if TOBN_O <> nil then if TOBN_O.Detail.Count > 0 then
+      begin
+        Result := TOBN_O.DeleteDB;
+        if not Result then
+        begin
+          TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteLIGNENOMENPrec);
+          V_PGI.IoError := oeUnknown;
+          Exit;
+        end;
+      end;
+    if TOBLOT_O <> nil then if TOBLOT_O.Detail.Count > 0 then
+      begin
+        Result := TOBLOT_O.DeleteDB;
+        if not Result then
+        begin
+          TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteLIGNELOTPrec);
+          V_PGI.IoError := oeUnknown;
+          Exit;
+        end;
+      end;
+    if TOBSerie_O <> nil then if TOBSerie_O.Detail.Count > 0 then
+      begin
+        Result := TOBSerie_O.DeleteDB;
+        if not Result then
+        begin
+          TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteLIGNESERIEPrec);
+          V_PGI.IoError := oeUnknown;
+          Exit;
+        end;
+      end;
+    if TOBAcomptes_O <> nil then if TOBAcomptes_O.Detail.Count > 0 then
+      begin
+        Result := TOBAcomptes_O.DeleteDB;
+        if not Result then
+        begin
+          TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteACOMPTESPrec);
+          V_PGI.IoError := oeUnknown;
+          Exit;
+        end;
+      end;
+    if TOBPorcs_O <> nil then if TOBPorcs_O.Detail.Count > 0 then
+      begin
+        Result := TOBPorcs_O.DeleteDB;
+        if not Result then
+        begin
+          TUtilErrorsManagement.SetGenericMessage(TemErr_DeletePIEDPORTPrec);
+          V_PGI.IoError := oeUnknown;
+          Exit;
+        end;
+      end;
+    if TOBLigneTarif_O <> nil then if TOBLigneTarif_O.Detail.Count > 0 then
     begin
-      Result := TOBLIENOLE_O.DeleteDB;
+      Result := TOBLigneTarif_O.DeleteDB;
       if not Result then
       begin
+        TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteLIGNETARIFPrec);
         V_PGI.IoError := oeUnknown;
         Exit;
       end;
     end;
-  if TOBOuvrage_O <> nil then if TOBOuvrage_O.Detail.Count > 0 then
+    // Modif BTP
+    if TOBLIENOLE_O <> nil then if TOBLIENOLE_O.Detail.Count > 0 then
+      begin
+        Result := TOBLIENOLE_O.DeleteDB;
+        if not Result then
+        begin
+          TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteLIENSOLEPrec);
+          V_PGI.IoError := oeUnknown;
+          Exit;
+        end;
+      end;
+    if TOBOuvrage_O <> nil then if TOBOuvrage_O.Detail.Count > 0 then
+      begin
+        Nb := ExecuteSQL('DELETE FROM LIGNEOUV WHERE ' + WherePiece(CleDoc, ttdOuvrage, False));
+        if Nb <= 0 then
+        begin
+          TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteLIGNEOUVPrec);
+          V_PGI.IoError := oeUnknown;
+          Exit;
+        end;
+      end;
+    //Suppression des demandes de prix
+    ExecuteSQL('DELETE FROM PIECEDEMPRIX WHERE ' + WherePiece(CleDoc, ttdPieceDemPrix , False));
+    ExecuteSQL('DELETE FROM DETAILDEMPRIX WHERE ' + WherePiece(CleDoc, TtdDetailDemPrix , False));
+    ExecuteSQL('DELETE FROM ARTICLEDEMPRIX WHERE ' + WherePiece(CleDoc, TTdArticleDemPrix , False));
+    ExecuteSQL('DELETE FROM FOURLIGDEMPRIX WHERE ' + WherePiece(CleDoc, TtdFournDemprix , False));
+    //
+    ExecuteSQL('DELETE FROM LIGNEOUVPLAT WHERE ' + WherePiece(CleDoc, ttdOuvrageP , False));
+    //
+    ExecuteSQL('DELETE FROM BLIGNEMETRE WHERE ' + WherePiece(CleDoc, ttdLigneMetre , False));
+    //
+      if (Pos (cledoc.NaturePiece,'FBT;DAC;FBP;BAC') > 0) and (OkSuppLigneFac) then
     begin
-  (*
-      Result := TOBOuvrage_O.DeleteDB;
-      if not Result then
-      begin
-        V_PGI.IoError := oeUnknown;
-        Exit;
-      end;
-  *)
-      Nb := ExecuteSQL('DELETE FROM LIGNEOUV WHERE ' + WherePiece(CleDoc, ttdOuvrage, False));
-      if Nb <= 0 then
-      begin
-        V_PGI.IoError := oeUnknown;
-        Exit;
-      end;
+      ExecuteSQL('DELETE FROM LIGNEFAC WHERE ' + WherePiece(CleDoc, ttdLigneFac , False));
     end;
-
-
-  //Suppression des demandes de prix
-  ExecuteSQL('DELETE FROM PIECEDEMPRIX WHERE ' + WherePiece(CleDoc, ttdPieceDemPrix , False));
-  ExecuteSQL('DELETE FROM DETAILDEMPRIX WHERE ' + WherePiece(CleDoc, TtdDetailDemPrix , False));
-  ExecuteSQL('DELETE FROM ARTICLEDEMPRIX WHERE ' + WherePiece(CleDoc, TTdArticleDemPrix , False));
-  ExecuteSQL('DELETE FROM FOURLIGDEMPRIX WHERE ' + WherePiece(CleDoc, TtdFournDemprix , False));
-  //
-
-  ExecuteSQL('DELETE FROM LIGNEOUVPLAT WHERE ' + WherePiece(CleDoc, ttdOuvrageP , False));
-  //
-  ExecuteSQL('DELETE FROM BLIGNEMETRE WHERE ' + WherePiece(CleDoc, ttdLigneMetre , False));
-  //
-    if (Pos (cledoc.NaturePiece,'FBT;DAC;FBP;BAC') > 0) and (OkSuppLigneFac) then
-  begin
-    ExecuteSQL('DELETE FROM LIGNEFAC WHERE ' + WherePiece(CleDoc, ttdLigneFac , False));
-  end;
-  //
-  Nb := ExecuteSQL('DELETE FROM PIECERG WHERE ' + WherePiece(CleDoc, ttdRetenuG, False));
-  Nb := ExecuteSQL('DELETE FROM PIEDBASERG WHERE ' + WherePiece(CleDoc, ttdBaseRG, False));
-  //
-  ExecuteSQL('DELETE FROM BTPIECEMILIEME WHERE ' + WherePiece(CleDoc, TTdRepartmill , False));
-  // --------
-  if GetParamSoc('SO_GCPIECEADRESSE') then
-  begin
-    ExecuteSQL('DELETE FROM PIECEADRESSE WHERE ' + WherePiece(CleDoc, ttdPieceAdr, False));
-  end;
-  //Nb := ExecuteSQL('DELETE FROM BREVISIONS WHERE ' + WherePiece(CleDoc, ttdRevision, False));
-
-  RefA := EncodeRefPresqueCPGescom(TOBPiece_O);
-  ExecuteSQL('DELETE FROM VENTANA WHERE YVA_TABLEANA="GL" AND YVA_IDENTIFIANT LIKE "' + RefA + '"');
-  if isComptaStock(TOBPiece_O.GetValue('GP_NATUREPIECEG')) then ExecuteSQL('DELETE FROM VENTANA WHERE YVA_TABLEANA="GS" AND YVA_IDENTIFIANT LIKE "' + RefA + '"');
-  RefA := EncodeRefpieceSup(TOBPiece_O);
-  ExecuteSQL('UPDATE BTEVENTMAT SET BEM_CODEETAT="ARE",BEM_REFPIECE="",BEM_LIBREALISE="" WHERE BEM_REFPIECE LIKE "'+RefA+'"');
-  DeleteLesTOBTRF (cledoc);
-  Result := True;
+    //
+    Nb := ExecuteSQL('DELETE FROM PIECERG WHERE ' + WherePiece(CleDoc, ttdRetenuG, False));
+    Nb := ExecuteSQL('DELETE FROM PIEDBASERG WHERE ' + WherePiece(CleDoc, ttdBaseRG, False));
+    //
+    ExecuteSQL('DELETE FROM BTPIECEMILIEME WHERE ' + WherePiece(CleDoc, TTdRepartmill , False));
+    // --------
+    if GetParamSoc('SO_GCPIECEADRESSE') then
+      ExecuteSQL('DELETE FROM PIECEADRESSE WHERE ' + WherePiece(CleDoc, ttdPieceAdr, False));
+    RefA := EncodeRefPresqueCPGescom(TOBPiece_O);
+    ExecuteSQL('DELETE FROM VENTANA WHERE YVA_TABLEANA="GL" AND YVA_IDENTIFIANT LIKE "' + RefA + '"');
+    if isComptaStock(TOBPiece_O.GetValue('GP_NATUREPIECEG')) then ExecuteSQL('DELETE FROM VENTANA WHERE YVA_TABLEANA="GS" AND YVA_IDENTIFIANT LIKE "' + RefA + '"');
+  SQL := 'DELETE FROM PIECEREPARTTVA WHERE '+
+         'BP8_NATUREPIECEG="'+CleDoc.NaturePiece+'" AND '+
+         'BP8_SOUCHE="'+CleDoc.Souche+'" AND '+
+         'BP8_NUMERO='+IntToStr(CleDoc.NumeroPiece)+' AND '+
+         'BP8_INDICEG='+IntToStr(CleDoc.Indice);
+  ExecuteSQL(SQL);
+    RefA := EncodeRefpieceSup(TOBPiece_O);
+    ExecuteSQL('UPDATE BTEVENTMAT SET BEM_CODEETAT="ARE",BEM_REFPIECE="",BEM_LIBREALISE="" WHERE BEM_REFPIECE LIKE "'+RefA+'"');
+    DeleteLesTOBTRF (cledoc);
+    Result := True;
   EXCEPT
     on E: Exception do
     begin
@@ -558,7 +559,7 @@ end;
 function DetruitAncien(Cledoc : r_cledoc; DateModif : TdateTime): boolean; overload;
 var
   Nb: integer;
-  RefA: string;
+  RefA,SQL: string;
   OldD: TDateTime;
 begin
   Result := False;
@@ -610,6 +611,13 @@ begin
   end;
   RefA := EncodeRefPresqueCPGescom(cledoc);
   ExecuteSQL('DELETE FROM VENTANA WHERE YVA_TABLEANA="GL" AND YVA_IDENTIFIANT LIKE "' + RefA + '"');
+  SQL := 'DELETE FROM PIECEREPARTTVA WHERE '+
+       'BP8_NATUREPIECEG="'+CleDoc.NaturePiece+'" AND '+
+       'BP8_SOUCHE="'+CleDoc.Souche+'" AND '+
+       'BP8_NUMERO='+IntToStr(CleDoc.NumeroPiece)+' AND '+
+       'BP8_INDICEG='+IntToStr(CleDoc.Indice);
+  ExecuteSQL(SQL);
+
   if isComptaStock(Cledoc.NaturePiece) then ExecuteSQL('DELETE FROM VENTANA WHERE YVA_TABLEANA="GS" AND YVA_IDENTIFIANT LIKE "' + RefA + '"');
   Result := True;
 end;
@@ -707,11 +715,21 @@ begin
  // Mise à jour de la pièce d'origine effectuée plus tard
     Result := True;
   end;
-  if not Result then BEGIN MessageValid := 'Erreur Lors de la mise à jour du document précédent'; V_PGI.IoError := oeSaisie; END;
+  if not Result then
+  begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_DeletePIECEPrec);
+    MessageValid := 'Erreur Lors de la mise à jour du document précédent';
+    V_PGI.IoError := oeSaisie;
+  end;
   if ((TOBAcomptes_O <> nil) and (Result)) then
   begin
     Result := TOBAcomptes_O.DeleteDB;
-    if not Result then BEGIN MessageValid := 'Erreur Lors de la suppression des acomptes précédents';V_PGI.IoError := oeSaisie; END;
+    if not Result then
+    BEGIN
+      TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteACOMPTESPrec);
+      MessageValid := 'Erreur Lors de la suppression des acomptes précédents';
+      V_PGI.IoError := oeSaisie;
+    END;
   end;
 end;
 
@@ -738,21 +756,21 @@ begin
     end;
   END;
   if not  okok then
-  BEGIN
+  begin
     V_PGI.IoError := oeUnknown;
-  END;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_InsertLIENSOLE);
+  end;
 end;
 
 procedure ValideLesArticles(TOBPiece, TOBArticles: TOB);
 var NaturePieceG: string;
 begin
   NaturePieceG := TOBPiece.GetValue('GP_NATUREPIECEG');
-//  if GetInfoParPiece(NaturePieceG, 'GPP_MAJPRIXVALO') = '' then exit;
   if ValideArticleEtStock(TOBArticles,Naturepieceg) then
   begin
-    if GetInfoParPiece(NaturePieceG, 'GPP_MAJPRIXVALO') <> '' then MajCatalogueSaisie(TOBArticles);
-  end
-  else
+    if GetInfoParPiece(NaturePieceG, 'GPP_MAJPRIXVALO') <> '' then
+      MajCatalogueSaisie(TOBArticles);
+  end else
   begin
     V_PGI.IoError := oeUnknown;
   end;
@@ -955,6 +973,7 @@ begin
     TobL := TheTobPiece.Detail[i];
     if TobL = nil then
     begin
+      TUtilErrorsManagement.SetGenericMessage(TemErr_RecalculStock);
       V_PGI.IoError := oeUnknown;
       Break;
     end;
@@ -1146,6 +1165,7 @@ begin
     end
     else
     begin
+      TUtilErrorsManagement.SetGenericMessage(TemErr_RecalculStock);
       MessageValid := 'Erreur sur Article/ouvrage '+TOBL.GetValue('GL_CODEARTICLE');
       PGiError (messageValid);
       V_PGI.IoError := oeSaisie;
@@ -1241,6 +1261,7 @@ begin
   END;
   if not okok then
   begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_UpdatePIEDPORT);
     V_PGI.IoError := oeUnknown;
   end;
 end;
@@ -1300,12 +1321,10 @@ var
   {$ENDIF}
   FerrorSD : boolean;
 begin
-  {$IFDEF BTP}
   if not (RGMultiple(TOBpiece)) then
     RGNonImprimable := 'X'
   else
     RGNonImprimable := '-';
-  {$ENDIF}
   NaturePieceG := TOBPiece.GetValue('GP_NATUREPIECEG');
   DepotRecepteurGererSurSite := True;
   QualifMvt := GetInfoParPiece(NaturePieceG, 'GPP_QUALIFMVT');
@@ -1360,10 +1379,9 @@ begin
           TOBL.SetInteger('GL_INDICENOMEN',0)
         end else
         begin
-          MessageValid := 'Erreur sur ouvrage '+TOBL.GetValue('GL_CODEARTICLE')+ '(Indice Nul)';
-          PgiError(MessageValid);
-          //
           V_PGI.Ioerror := OeUnknown;
+          MessageValid  := Format('Erreur sur ouvrage %s (Indice Nul)', [TOBL.GetString('GL_CODEARTICLE')]);
+          TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, MessageValid);
           exit;
         end;
       end;
@@ -1382,9 +1400,9 @@ begin
       begin
         if (not ReAffecteLigOuv(IndiceOuv, TobL, TOBOuvrages)) then
         begin
-          MessageValid := 'Erreur de réaffectation / ouvrage '+ TOBL.GetValue('GL_CODEARTICLE');
-          PgiError(MessageValid);
           V_PGI.Ioerror := OeUnknown;
+          MessageValid  := 'Erreur de réaffectation / ouvrage '+ TOBL.GetValue('GL_CODEARTICLE');
+          TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, MessageValid);
           exit;
         end;
         TOBOuvrage := TOBOuvrages.Detail[IndiceOuv - 1];
@@ -1447,10 +1465,10 @@ begin
           end;
         end else
         begin
-           MessageValid := 'Erreur de réaffectation stock / ouvrage '+TOBL.GetValue('GL_CODEARTICLE');
-          PgiError(MessageValid);
-           V_PGI.IoError := oeStock;
-           Break;
+          V_PGI.IoError := oeStock;
+          MessageValid  := 'Erreur de réaffectation stock / ouvrage '+TOBL.GetValue('GL_CODEARTICLE');
+          TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, MessageValid);
+          Break;
         end;
       end;
       // MODIF BTP
@@ -1470,13 +1488,6 @@ begin
           TOBL.PutValue('GL_VIVANTE', '-');
       end;
       if not ReliquatMt then TOBL.PutValue('GL_MTRESTE',0);
-      (*
-      //--- GUINIER : Gestion des Reliquats sur Montant pour Prestation
-      if not ReliquatMt then
-        TOBL.PutValue('GL_MTRESTE',0)
-      else
-        TOBL.PutValue('GL_MTRESTE', TOBL.GEtVALUE('GL_MONTANTHTDEV'));
-      *)
     end;
     {$IFDEF BTP}
     if TOBL.getValue('INDICERG') <> 0 then
@@ -1521,7 +1532,6 @@ begin
           TOBCatalogu.Detail[i].Free;
     end;
   end;
-
 end;
 
 {***********A.G.L.***********************************************
@@ -1773,7 +1783,7 @@ begin
   end;
 
   // Devise
-  DEV.Code := TOBTiers.GetValue('T_DEVISE');
+  DEV.Code := TOBTiers.GetValue('T_DEVISE');  if DEV.Code = '' then DEV.Code := 'EUR';
   if (DEV.Code = '') then DEV.Code := V_PGI.DevisePivot;
   GetInfosDevise(DEV);
   DEV.Taux := GetTaux(DEV.Code, DEV.DateTaux, CleDoc.DatePiece);
@@ -2221,7 +2231,7 @@ begin
       + 'T_NATUREAUXI="' + TOBTT.GetValue('T_NATUREAUXI') + '" AND '
       + 'T_FERME = "-"';
   TRY
-  Nb := ExecuteSQL(SQL);
+    Nb := ExecuteSQL(SQL);
   EXCEPT
     on E: Exception do
     begin
@@ -2231,6 +2241,7 @@ begin
   if Nb <> 1 then
   BEGIN
     V_PGI.IoError := oeTiers;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateTIERS);
   END;
   FINALLY
     if TOBPiece.getString('GP_VENTEACHAT')='ACH' then
@@ -2238,7 +2249,6 @@ begin
       if TOBTT <>nil Then TOBTT.free;
     end;
   END;
-  // if Not TOBTiers.UpdateDB then V_PGI.IoError:=oeTiers ;
 end;
 
 procedure InvalideModifTiersPiece(TOBTiers: TOB);
@@ -3014,7 +3024,12 @@ begin
   AcomptesVersPiece(TOBAcomptes, TOBPiece);
   if (TOBpieceTrait <> nil) and (TOBpieceTrait.detail.count > 0) and (ExisteReglDirect(TOBpieceTrait)) then
   begin
-		Mode := FabriqueEchesGC(TOBPiece, TOBTiers, TOBEches, TOBAcomptes, TOBPieceRG,TOBpieceTrait,TOBPorcs,  DEV)
+		Mode := FabriqueEchesGC(TOBPiece, TOBTiers, TOBEches, TOBAcomptes, TOBPieceRG,TOBpieceTrait,TOBPorcs,  DEV);
+    if V_PGI.IOError <> Oeok then
+    begin
+      Result := false;
+      Exit;
+    end;
   end else
   begin
     if TOBEches.Detail.Count <= 0 then Mode := FabriqueEchesGC(TOBPiece, TOBTiers, TOBEches, TOBAcomptes, TOBPieceRG,TOBpieceTrait,TOBPorcs,  DEV)
@@ -3843,365 +3858,379 @@ var
   LigneSuppr, OkStock: Boolean;
   Ok_ReliquatMt,SolderReliquat, DesolderReliquat: Boolean;
   NewReste, QteTransfo, Delta,DeltaMt, Temp: Double;
-
+  ErrorMsg : string;
 begin
   Result := True;
-
-  FillChar(OldCleDocPrecedente,Sizeof(OldCleDocPrecedente),#0);
-
-  TobModifMere := Tob.Create('_MODIF_', nil, -1);
-
   try
-    { Comparaison entre l'ancienne et la nouvelle piece }
-    CompareTobPiece(TobPiece, TobPiece_O, TobModifMere, True);
-    { Mise à jour des lignes origines }
-    i := -1;
-    while (i < TobModifMere.detail.count - 1) and (V_PGI.IoError = oeOk) do
-    begin
-      Inc(i);
-      TobModifFille := TobModifMere.Detail[i];
-      Diff        := 0;
-      LigneSuppr  := False;
-      CoeffDispo  := 1;
-      DiffMt      := 0;
-      Article := TobModifFille.getValue('GL_CODEARTICLE');
-      Temp := TobModifFille.getValue('OLD_QTEFACT');
+    FillChar(OldCleDocPrecedente,Sizeof(OldCleDocPrecedente),#0);
 
-      Ok_ReliquatMt := CtrlOkReliquat(TobModifFille, 'GL');
+    TobModifMere := Tob.Create('_MODIF_', nil, -1);
 
-      SolderReliquat    := False;
-      DesolderReliquat  := False;
-      case Action of
-        urCreat: { Création d'une piece }
-          begin
-            if (TobModifFille.GetValue('NEW_EXISTE') = 'X') then
-            begin
-              Diff := -1 * TobModifFille.GetValue('NEW_QTEFACT');
-              DiffMt := -1 * TobModifFille.GetValue('NEW_MTHTDEV');
-            end;
-          end;
-        urModif: { Modification d'une piece }
-          begin
-            if (TobModifFille.GetValue('OLD_EXISTE') = 'X') and (TobModifFille.GetValue('NEW_EXISTE') = 'X') then
-            begin
-              if Ok_ReliquatMt then
-              begin
-                if (TobModifFille.GetValue('OLD_MTHTDEV') <> TobModifFille.GetValue('NEW_MTHTDEV')) then
-                begin
-                  DiffMT := TobModifFille.GetValue('OLD_MTHTDEV') - TobModifFille.GetValue('NEW_MTHTDEV');
-                  CoeffDispo := -1;
-                end
-                else if (TobModifFille.GetValue('OLD_SOLDERELIQUAT') <> TobModifFille.GetValue('NEW_SOLDERELIQUAT')) then
-                begin
-                  if TobModifFille.GetValue('NEW_SOLDERELIQUAT') = 'X' then
-                    SolderReliquat := True { On vient de solder une ligne dans un BL }
-                  else if TobModifFille.GetValue('NEW_SOLDERELIQUAT') = '-' then
-                    DesolderReliquat := True;
-                end;
-              end else
-              begin
-                if (TobModifFille.GetValue('OLD_QTEFACT') <> TobModifFille.GetValue('NEW_QTEFACT')) then
-                begin
-                  Diff := TobModifFille.GetValue('OLD_QTEFACT') - TobModifFille.GetValue('NEW_QTEFACT');
-                  CoeffDispo := -1;
-                end
-                else if (TobModifFille.GetValue('OLD_SOLDERELIQUAT') <> TobModifFille.GetValue('NEW_SOLDERELIQUAT')) then
-                begin
-                  if TobModifFille.GetValue('NEW_SOLDERELIQUAT') = 'X' then
-                    SolderReliquat := True { On vient de solder une ligne dans un BL }
-                  else if TobModifFille.GetValue('NEW_SOLDERELIQUAT') = '-' then
-                    DesolderReliquat := True;
-                end;
-              end;
-            end
-            else if (TobModifFille.GetValue('OLD_EXISTE') = 'X') and (TobModifFille.GetValue('NEW_EXISTE') = '-') then
-            begin
-              if Ok_ReliquatMt then
-              begin
-               { Modification d'une pièce avec une suppression de ligne }
-               DiffMT := TobModifFille.GetValue('OLD_MTHTDEV');
-               LigneSuppr := True;
-               CoeffDispo := -1;
-              end else
-              begin
-               { Modification d'une pièce avec une suppression de ligne }
-               Diff := TobModifFille.GetValue('OLD_QTEFACT');
-               LigneSuppr := True;
-               CoeffDispo := -1;
-              end;
-            end;
-          end;
-        urSuppr: { Suppression de piece }
-          begin
-            if Ok_ReliquatMt then
-            begin
-              if (TobModifFille.GetValue('OLD_EXISTE') = 'X') and (TobModifFille.GetValue('NEW_EXISTE') = 'X') then
-              begin
-                DiffMT := TobModifFille.GetValue('OLD_MTHTDEV');
-                LigneSuppr := True;
-                if DiffMT < 0 then DiffMT := Abs(DiffMT);
-                CoeffDispo := -1;
-              end;
-            end else
-            begin
-              if (TobModifFille.GetValue('OLD_EXISTE') = 'X') and (TobModifFille.GetValue('NEW_EXISTE') = 'X') then
-              begin
-                Diff := TobModifFille.GetValue('OLD_QTEFACT');
-                LigneSuppr := True;
-                if Diff < 0 then Diff := Abs(Diff);
-                CoeffDispo := -1;
-              end;
-            end;
-          end;
-      end;
-      { Les quantités ont été modifiées }
-      if (Diff <> 0) or (DiffMT <> 0) or SolderReliquat or DesolderReliquat then
+    try
+      { Comparaison entre l'ancienne et la nouvelle piece }
+      CompareTobPiece(TobPiece, TobPiece_O, TobModifMere, True);
+      { Mise à jour des lignes origines }
+      i := -1;
+      while (i < TobModifMere.detail.count - 1) and (V_PGI.IoError = oeOk) do
       begin
-        { Recherche de la ligne de pièce }
-        CleDoc := TOB2CleDoc(TobModifFille);
-        CleDoc.NumLigne := TobModifFille.GetValue('GL_NUMLIGNE');
-        CleDoc.NumOrdre := TobModifFille.GetValue('GL_NUMORDRE');
-        if not LigneSuppr then
-          TobLigne := FindCleDocInTobPiece(CleDoc, TobPiece)
-        else
-          TobLigne := FindCleDocInTobPiece(CleDoc, TobPiece_O);
-        if Assigned(TobLigne) then
-        begin
-          { Requete de mise à jour du reste à livrer }
-          DecodeRefPiece(TobLigne.GetValue('GL_PIECEPRECEDENTE'), CleDocPrecedente);
-            {
-              iQualite 10999
-              Avant la nouvelle gestion des reliquats, lors d'une modification de pièce, le GL_PIECEPRECEDENTE
-              de la nouvelle pièce pointait vers l'ancienne pièce (bien qu'il n'y est pas eu de transformation)
-              Ce test empèche donc la mise à jour de la pièce précédente dans ce cas.
-            }
-            // Ajout LS Suite amise ajour intempstive des previsions suite a modif des besoins...
-            // mais c'est quoi que je prends comme produits dejà ??
-            // if CleDocPrecedente.NaturePiece = 'PBT' then continue;
-            // --
-            if (((CleDoc.NaturePiece <> CleDocPrecedente.NaturePiece)
-                or (CleDoc.Souche <> CleDocPrecedente.Souche)
-                or (CleDoc.NumeroPiece <> CleDocPrecedente.NumeroPiece))) and
-                (GetInfoParPiece (Cledoc.NaturePiece,'GPP_RELIQUAT')='X') then
+        Inc(i);
+        TobModifFille := TobModifMere.Detail[i];
+        Diff        := 0;
+        LigneSuppr  := False;
+        CoeffDispo  := 1;
+        DiffMt      := 0;
+        Article := TobModifFille.getValue('GL_CODEARTICLE');
+        Temp := TobModifFille.getValue('OLD_QTEFACT');
+
+        Ok_ReliquatMt := CtrlOkReliquat(TobModifFille, 'GL');
+
+        SolderReliquat    := False;
+        DesolderReliquat  := False;
+        case Action of
+          urCreat: { Création d'une piece }
             begin
-              { Mise à jour du Delta pour la pièce précédente dans le dispo }
-              { Récupère la pièce précédente et ses lignes pour mise à jour du Dispo }
-              TobPiecePrecedente := Tob.Create('PIECE', nil, -1);
-              TOBOuvrage_P := TOB.Create ('LES OUV',nil,-1);
-              try
-                { Charge la pièce précédente avant la mise à jour }
-                ChargelaPieceEtUneLigne (CleDocPrecedente, TobPiecePrecedente,TOBOuvrage_P);
-//                LoadPieceLignes(CleDocPrecedente, TobPiecePrecedente,true,True);
-                { Récupère la ligne précédente dans la pièce précédente }
-//                TobLignePiecePrecedente := FindCleDocInTobPiece(CleDocPrecedente, TobPiecePrecedente);
-								if TobPiecePrecedente.Detail.Count > 0 then
-                	TobLignePiecePrecedente := TobPiecePrecedente.detail[0]
-                else
-                	TobLignePiecePrecedente := nil;
-                {GPAO_TP_RELIQUAT_SOLDESUPPRLIG-Début}
-                if SolderReliquat or DeSolderReliquat then
-                begin
-                  Diff    := 0;
-                  DiffMt  := 0;
-                  if Assigned(TobLignePiecePrecedente) then
-                  begin
-                    if SolderReliquat then
-                    begin
-                      // --- GUINIER ---
-                      if Ok_ReliquatMt then
-                      Begin
-                        if TobLignePiecePrecedente.GetValue('GL_MTRESTE') > 0 then DiffMt := -1 * TobLignePiecePrecedente.GetValue('GL_MTRESTE');
-                      end else
-                      begin
-                        if TobLignePiecePrecedente.GetValue('GL_QTERESTE') > 0 then Diff := -1 * TobLignePiecePrecedente.GetValue('GL_QTERESTE');
-                      end;
-                    end
-                    else { Désolde le reliquat : Il faut remettre à jour le GL_QTERESTE }
-                    begin
-                      { Total des quantités déjà transformée + Piece actuelle qui vient d'être supprimée }
-                      QteTransfo    := CalculResteALivrer(TobLignePiecePrecedente, TobPiece);
-                      NewReste      := TobLignePiecePrecedente.GetValue('GL_QTESTOCK') - QteTransfo;
-                      Diff          := NewReste - TobLignePiecePrecedente.GetValue('GL_QTERESTE');
-                      // --- GUINIER ---
-                      if Ok_ReliquatMt then
-                      Begin
-                        QteTransfo  := CalculResteALivrer(TobLignePiecePrecedente, TobPiece);
-                        NewReste    := TobLignePiecePrecedente.GetValue('GL_MONTANTHTDEV') - QteTransfo;
-                        DiffMt        := NewReste - TobLignePiecePrecedente.GetValue('GL_MTRESTE');
-                      end;
-                    end;
-                  end;
-                end;
-                {GPAO_TP_RELIQUAT_SOLDESUPPRLIG-Fin}
-                //
-                if TobLignePiecePrecedente = nil then exit;
-                // --- GUINIER ---
-
-                //
-
+              if (TobModifFille.GetValue('NEW_EXISTE') = 'X') then
+              begin
+                Diff := -1 * TobModifFille.GetValue('NEW_QTEFACT');
+                DiffMt := -1 * TobModifFille.GetValue('NEW_MTHTDEV');
+              end;
+            end;
+          urModif: { Modification d'une piece }
+            begin
+              if (TobModifFille.GetValue('OLD_EXISTE') = 'X') and (TobModifFille.GetValue('NEW_EXISTE') = 'X') then
+              begin
                 if Ok_ReliquatMt then
                 begin
-                  DeltaMT := TobLignePiecePrecedente.GetValue('GL_MTRESTE') + DiffMt;
-                  if DiffMt >= 0 then
+                  if (TobModifFille.GetValue('OLD_MTHTDEV') <> TobModifFille.GetValue('NEW_MTHTDEV')) then
                   begin
-                    Signe := '+';
-                    // --- GUINIER ---
-                    if DeltaMt > TobLignePiecePrecedente.GetValue('GL_MONTANTHTDEV')  then DiffMt := TobLignePiecePrecedente.GetValue('GL_MONTANTHTDEV') - TobLignePiecePrecedente.GetValue('GL_MTRESTE');
+                    DiffMT := TobModifFille.GetValue('OLD_MTHTDEV') - TobModifFille.GetValue('NEW_MTHTDEV');
+                    CoeffDispo := -1;
                   end
-                  else
+                  else if (TobModifFille.GetValue('OLD_SOLDERELIQUAT') <> TobModifFille.GetValue('NEW_SOLDERELIQUAT')) then
                   begin
-                    Signe := '-';
-                    if DeltaMt < 0  then	Diffmt := TobLignePiecePrecedente.GetValue('GL_MTRESTE') * (-1);
-                    If DiffMt = 0   then  Signe := '-';
-                    if diffmt < 0   then  diffmt := ABS(diffmt); Signe := '-';
+                    if TobModifFille.GetValue('NEW_SOLDERELIQUAT') = 'X' then
+                      SolderReliquat := True { On vient de solder une ligne dans un BL }
+                    else if TobModifFille.GetValue('NEW_SOLDERELIQUAT') = '-' then
+                      DesolderReliquat := True;
                   end;
                 end else
                 begin
-                  Delta := TobLignePiecePrecedente.GetValue('GL_QTERESTE') + Diff;
-                  if Diff >= 0 then
+                  if (TobModifFille.GetValue('OLD_QTEFACT') <> TobModifFille.GetValue('NEW_QTEFACT')) then
                   begin
-                    Signe := '+';
-                    if Delta > TobLignePiecePrecedente.GetValue('GL_QTEFACT')         then Diff := TobLignePiecePrecedente.GetValue('GL_QTEFACT') - TobLignePiecePrecedente.GetValue('GL_QTERESTE');
+                    Diff := TobModifFille.GetValue('OLD_QTEFACT') - TobModifFille.GetValue('NEW_QTEFACT');
+                    CoeffDispo := -1;
                   end
-                  else
+                  else if (TobModifFille.GetValue('OLD_SOLDERELIQUAT') <> TobModifFille.GetValue('NEW_SOLDERELIQUAT')) then
                   begin
-                    Signe := '-';
-                    if Delta < 0 then	Diff := TobLignePiecePrecedente.GetValue('GL_QTERESTE') * (-1);
-                    If Diff = 0 then Signe := '-';
-                    if diff < 0 then diff := ABS(diff); Signe := '-';
+                    if TobModifFille.GetValue('NEW_SOLDERELIQUAT') = 'X' then
+                      SolderReliquat := True { On vient de solder une ligne dans un BL }
+                    else if TobModifFille.GetValue('NEW_SOLDERELIQUAT') = '-' then
+                      DesolderReliquat := True;
                   end;
                 end;
-
-                if (diff <> 0) Or (DiffMt <> 0) then
-                begin
-                  { Mise à jour du reste à livrer dans la ligne précédente }
-                  // --- GUINIER ---
-                  Sql := 'UPDATE LIGNE SET ';
-                  if Ok_ReliquatMt then
-                  begin
-                    Sql := Sql + 'GL_MTRESTE = GL_MTRESTE ' + Signe + ' ' + StrFPoint(DiffMt)+', GL_QTERESTE=GL_QTEFACT';
-                  end else
-                  begin
-                    Sql := Sql + 'GL_QTERESTE = GL_QTERESTE ' + Signe + ' ' + StrFPoint(Diff);
-                  end;
-                  //
-                  Sql := SQL + ',GL_VIVANTE="X" WHERE ' + WherePiece(CleDocPrecedente, ttdLigne, True, True);
-                  Result := (ExecuteSQL(Sql) = 1);
-                  if Result then
-                  begin
-                    { MODE DCA 27/08/2003 - Modif/Suppr - Mise à jour de GP_DATEMODIF de la pièce précédente }
-                    if ((OldCleDocPrecedente.NaturePiece <> CleDocPrecedente.NaturePiece) or
-                        (OldCleDocPrecedente.Souche <> CleDocPrecedente.Souche) or
-                        (OldCleDocPrecedente.NumeroPiece <> CleDocPrecedente.NumeroPiece) or
-                        (OldCleDocPrecedente.Indice <> CleDocPrecedente.Indice)) then
-                    begin
-                      { Mise à jour de GP_DATEMODIF de la pièce précédente }
-                      Sql := 'UPDATE PIECE SET GP_DATEMODIF="' + USTime(NowH) + '",GP_VIVANTE="X" WHERE ' + WherePiece(CleDocPrecedente, ttdPiece, False);
-                      Result := (ExecuteSQL(Sql) = 1);
-                      OldCleDocPrecedente.NaturePiece := CleDocPrecedente.NaturePiece;
-                      OldCleDocPrecedente.Souche := CleDocPrecedente.Souche;
-                      OldCleDocPrecedente.NumeroPiece := CleDocPrecedente.NumeroPiece;
-                      OldCleDocPrecedente.Indice := CleDocPrecedente.Indice;
-                    end;
-                    if Result then
-                    begin
-                      OkStock := True;
-                      if Assigned(TobLignePiecePrecedente) then
-                      begin
-                        NaturePieceG := TobPiecePrecedente.GetValue('GP_NATUREPIECEG');
-                        ColMoins := GetInfoParPiece(NaturePieceG, 'GPP_QTEMOINS');
-                        ColPlus := GetInfoParPiece(NaturePieceG, 'GPP_QTEPLUS');
-                        StPrixValo := GetInfoParPiece(NaturePieceG, 'GPP_MAJPRIXVALO');
-                        { Mise à jour de la quantité }
-//                        OldQteReste := Max(0, Double(TobLignePiecePrecedente.G('GL_QTERESTE')));
-//                        NewQteReste := Max(0, Double(TobLignePiecePrecedente.G('GL_QTERESTE')) + Diff);
-                        // --- GUINIER ---
-                        if Ok_ReliquatMt then
-                        begin
-                          OldMtReste := TobLignePiecePrecedente.G('GL_MTRESTE');
-                          if Signe = '+' then
-                            NewMtReste := TobLignePiecePrecedente.G('GL_MTRESTE')+diffMt
-                          else
-                            NewMtReste := TobLignePiecePrecedente.G('GL_MTRESTE')-diffMt;
-                          DiffMtDispo := OldMtReste - NewMtReste;
-                          TobLignePiecePrecedente.PutValue('GL_MONTANTHTDEV', DiffMtDispo);
-                          if TobLignePiecePrecedente.GetDouble('GL_MONTANTHTDEV')=0 then TobLignePiecePrecedente.SetDouble('GL_QTERESTE',0)
-                                                                                    else TobLignePiecePrecedente.SetDouble('GL_QTERESTE',TobLignePiecePrecedente.GetDouble('GL_QTEFACT'));
-                        end else
-                        begin
-                          OldQteReste := TobLignePiecePrecedente.G('GL_QTERESTE');
-                          if Signe = '+' then
-                            NewQteReste := TobLignePiecePrecedente.G('GL_QTERESTE')+diff
-                          else
-                            NewQteReste := TobLignePiecePrecedente.G('GL_QTERESTE')-diff;
-                          DiffDispo := OldQteReste - NewQteReste;
-                        end;
-                        if DiffDispo <> 0 then
-                        begin
-                          DiffDispo   := DiffDispo * CoeffDispo;
-                          TobLignePiecePrecedente.PutValue('GL_QTESTOCK', DiffDispo);
-                          TobLignePiecePrecedente.PutValue('GL_QTEFACT',  DiffDispo);
-                          RatioVA     := GetRatio(TobLignePiecePrecedente, nil, trsStock);
-                          IndiceNomen := TobLignePiecePrecedente.GetValue('GL_INDICENOMEN');
-                          if (IndiceNomen > 0) and Assigned(TOBOuvrage_O) and (TOBOuvrage_O.detail.count >0)  then
-                            TobOuvrage := TOBOuvrage_O.Detail[IndiceNomen - 1]
-                          else
-                            TobOuvrage := nil;
-                          { Ajout de la TobNomen dans les paramètres }
-                          OkStock := MajQteStock(TobLignePiecePrecedente, TobArticles, TOBouvrage, ColPlus, ColMoins, True, RatioVA);
-                        end;
-                      end;
-                      { On vient de mettre à jour le reste à livrer, mise à jour de l'état de la pièce  d'origine }
-                      if OkStock then
-                        UpDateEtatPiecePrecedente(CleDocPrecedente)
-                      else
-                      begin
-                        PgiError ('Erreur Mise à jour des stocks');
-                        V_PGI.IoError := oeStock;
-                      end;
-                    end
-                    else
-                    begin
-                      if V_PGI.Sav then
-                        PGIError(TraduireMemoire('La requête') + ' : ' + Sql + ' ' + TraduireMemoire('a échoué')
-                            , TraduireMemoire('Mise à jour de la date de modification dans la pièce origine'));
-                        V_PGI.IoError := oeUnknown;
-                    end;
-                  end else
-                  begin
-                    if V_PGI.Sav then
-                      PGIError(TraduireMemoire('La requête') + ' : ' + Sql + ' ' + TraduireMemoire('a échoué')
-                        , TraduireMemoire('Mise à jour des quantités dans la pièce origine'));
-                    V_PGI.IoError := oeUnknown;
-                  end;
-                end;
-              finally
-                TobPiecePrecedente.Free;
-                TOBOuvrage_P.Free;
-              end;
-            end
-            else if (((CleDoc.NaturePiece <> CleDocPrecedente.NaturePiece)
-                   or (CleDoc.Souche <> CleDocPrecedente.Souche)
-                   or (CleDoc.NumeroPiece <> CleDocPrecedente.NumeroPiece))) and
-                      (GetInfoParPiece (Cledoc.NaturePiece,'GPP_RELIQUAT')='-') then
-            begin
-              // --- GUINIER ---
-              Sql := 'UPDATE LIGNE SET GL_VIVANTE="X",GL_QTERESTE=GL_QTEFACT ';
-              If Ok_ReliquatMt then Sql := Sql + ',GL_MTRESTE=GL_MONTANTHTDEV ';
-              Sql := Sql + ' WHERE ' + WherePiece(CleDocPrecedente, ttdLigne, True, True);
-              Result := (ExecuteSQL(Sql) = 1);
-              if Result then
+              end
+              else if (TobModifFille.GetValue('OLD_EXISTE') = 'X') and (TobModifFille.GetValue('NEW_EXISTE') = '-') then
               begin
-                { Mise à jour de la pièce }
-                Sql := 'UPDATE PIECE SET GP_VIVANTE="X" WHERE ' + WherePiece(CleDocPrecedente, ttdPiece, False);
-                Result := ExecuteSQL(Sql) = 1;
+                if Ok_ReliquatMt then
+                begin
+                 { Modification d'une pièce avec une suppression de ligne }
+                 DiffMT := TobModifFille.GetValue('OLD_MTHTDEV');
+                 LigneSuppr := True;
+                 CoeffDispo := -1;
+                end else
+                begin
+                 { Modification d'une pièce avec une suppression de ligne }
+                 Diff := TobModifFille.GetValue('OLD_QTEFACT');
+                 LigneSuppr := True;
+                 CoeffDispo := -1;
+                end;
+              end;
+            end;
+          urSuppr: { Suppression de piece }
+            begin
+              if Ok_ReliquatMt then
+              begin
+                if (TobModifFille.GetValue('OLD_EXISTE') = 'X') and (TobModifFille.GetValue('NEW_EXISTE') = 'X') then
+                begin
+                  DiffMT := TobModifFille.GetValue('OLD_MTHTDEV');
+                  LigneSuppr := True;
+                  if DiffMT < 0 then DiffMT := Abs(DiffMT);
+                  CoeffDispo := -1;
+                end;
+              end else
+              begin
+                if (TobModifFille.GetValue('OLD_EXISTE') = 'X') and (TobModifFille.GetValue('NEW_EXISTE') = 'X') then
+                begin
+                  Diff := TobModifFille.GetValue('OLD_QTEFACT');
+                  LigneSuppr := True;
+                  if Diff < 0 then Diff := Abs(Diff);
+                  CoeffDispo := -1;
+                end;
               end;
             end;
         end;
+        { Les quantités ont été modifiées }
+        if (Diff <> 0) or (DiffMT <> 0) or SolderReliquat or DesolderReliquat then
+        begin
+          { Recherche de la ligne de pièce }
+          CleDoc := TOB2CleDoc(TobModifFille);
+          CleDoc.NumLigne := TobModifFille.GetValue('GL_NUMLIGNE');
+          CleDoc.NumOrdre := TobModifFille.GetValue('GL_NUMORDRE');
+          if not LigneSuppr then
+            TobLigne := FindCleDocInTobPiece(CleDoc, TobPiece)
+          else
+            TobLigne := FindCleDocInTobPiece(CleDoc, TobPiece_O);
+          if Assigned(TobLigne) then
+          begin
+            { Requete de mise à jour du reste à livrer }
+            DecodeRefPiece(TobLigne.GetValue('GL_PIECEPRECEDENTE'), CleDocPrecedente);
+              {
+                iQualite 10999
+                Avant la nouvelle gestion des reliquats, lors d'une modification de pièce, le GL_PIECEPRECEDENTE
+                de la nouvelle pièce pointait vers l'ancienne pièce (bien qu'il n'y est pas eu de transformation)
+                Ce test empèche donc la mise à jour de la pièce précédente dans ce cas.
+              }
+              // Ajout LS Suite amise ajour intempstive des previsions suite a modif des besoins...
+              // mais c'est quoi que je prends comme produits dejà ??
+              // if CleDocPrecedente.NaturePiece = 'PBT' then continue;
+              // --
+              if (((CleDoc.NaturePiece <> CleDocPrecedente.NaturePiece)
+                  or (CleDoc.Souche <> CleDocPrecedente.Souche)
+                  or (CleDoc.NumeroPiece <> CleDocPrecedente.NumeroPiece))) and
+                  (GetInfoParPiece (Cledoc.NaturePiece,'GPP_RELIQUAT')='X') then
+              begin
+                { Mise à jour du Delta pour la pièce précédente dans le dispo }
+                { Récupère la pièce précédente et ses lignes pour mise à jour du Dispo }
+                TobPiecePrecedente := Tob.Create('PIECE', nil, -1);
+                TOBOuvrage_P := TOB.Create ('LES OUV',nil,-1);
+                try
+                  { Charge la pièce précédente avant la mise à jour }
+                  ChargelaPieceEtUneLigne (CleDocPrecedente, TobPiecePrecedente,TOBOuvrage_P);
+  //                LoadPieceLignes(CleDocPrecedente, TobPiecePrecedente,true,True);
+                  { Récupère la ligne précédente dans la pièce précédente }
+  //                TobLignePiecePrecedente := FindCleDocInTobPiece(CleDocPrecedente, TobPiecePrecedente);
+                  if TobPiecePrecedente.Detail.Count > 0 then
+                    TobLignePiecePrecedente := TobPiecePrecedente.detail[0]
+                  else
+                    TobLignePiecePrecedente := nil;
+                  {GPAO_TP_RELIQUAT_SOLDESUPPRLIG-Début}
+                  if SolderReliquat or DeSolderReliquat then
+                  begin
+                    Diff    := 0;
+                    DiffMt  := 0;
+                    if Assigned(TobLignePiecePrecedente) then
+                    begin
+                      if SolderReliquat then
+                      begin
+                        // --- GUINIER ---
+                        if Ok_ReliquatMt then
+                        Begin
+                          if TobLignePiecePrecedente.GetValue('GL_MTRESTE') > 0 then DiffMt := -1 * TobLignePiecePrecedente.GetValue('GL_MTRESTE');
+                        end else
+                        begin
+                          if TobLignePiecePrecedente.GetValue('GL_QTERESTE') > 0 then Diff := -1 * TobLignePiecePrecedente.GetValue('GL_QTERESTE');
+                        end;
+                      end
+                      else { Désolde le reliquat : Il faut remettre à jour le GL_QTERESTE }
+                      begin
+                        { Total des quantités déjà transformée + Piece actuelle qui vient d'être supprimée }
+                        QteTransfo    := CalculResteALivrer(TobLignePiecePrecedente, TobPiece);
+                        NewReste      := TobLignePiecePrecedente.GetValue('GL_QTESTOCK') - QteTransfo;
+                        Diff          := NewReste - TobLignePiecePrecedente.GetValue('GL_QTERESTE');
+                        // --- GUINIER ---
+                        if Ok_ReliquatMt then
+                        Begin
+                          QteTransfo  := CalculResteALivrer(TobLignePiecePrecedente, TobPiece);
+                          NewReste    := TobLignePiecePrecedente.GetValue('GL_MONTANTHTDEV') - QteTransfo;
+                          DiffMt        := NewReste - TobLignePiecePrecedente.GetValue('GL_MTRESTE');
+                        end;
+                      end;
+                    end;
+                  end;
+                  {GPAO_TP_RELIQUAT_SOLDESUPPRLIG-Fin}
+                  //
+                  if TobLignePiecePrecedente = nil then exit;
+                  // --- GUINIER ---
+
+                  //
+
+                  if Ok_ReliquatMt then
+                  begin
+                    DeltaMT := TobLignePiecePrecedente.GetValue('GL_MTRESTE') + DiffMt;
+                    if DiffMt >= 0 then
+                    begin
+                      Signe := '+';
+                      // --- GUINIER ---
+                      if DeltaMt > TobLignePiecePrecedente.GetValue('GL_MONTANTHTDEV')  then DiffMt := TobLignePiecePrecedente.GetValue('GL_MONTANTHTDEV') - TobLignePiecePrecedente.GetValue('GL_MTRESTE');
+                    end
+                    else
+                    begin
+                      Signe := '-';
+                      if DeltaMt < 0  then	Diffmt := TobLignePiecePrecedente.GetValue('GL_MTRESTE') * (-1);
+                      If DiffMt = 0   then  Signe := '-';
+                      if diffmt < 0   then  diffmt := ABS(diffmt); Signe := '-';
+                    end;
+                  end else
+                  begin
+                    Delta := TobLignePiecePrecedente.GetValue('GL_QTERESTE') + Diff;
+                    if Diff >= 0 then
+                    begin
+                      Signe := '+';
+                      if Delta > TobLignePiecePrecedente.GetValue('GL_QTEFACT')         then Diff := TobLignePiecePrecedente.GetValue('GL_QTEFACT') - TobLignePiecePrecedente.GetValue('GL_QTERESTE');
+                    end
+                    else
+                    begin
+                      Signe := '-';
+                      if Delta < 0 then	Diff := TobLignePiecePrecedente.GetValue('GL_QTERESTE') * (-1);
+                      If Diff = 0 then Signe := '-';
+                      if diff < 0 then diff := ABS(diff); Signe := '-';
+                    end;
+                  end;
+
+                  if (diff <> 0) Or (DiffMt <> 0) then
+                  begin
+                    { Mise à jour du reste à livrer dans la ligne précédente }
+                    // --- GUINIER ---
+                    Sql := 'UPDATE LIGNE SET ';
+                    if Ok_ReliquatMt then
+                    begin
+                      Sql := Sql + 'GL_MTRESTE = GL_MTRESTE ' + Signe + ' ' + StrFPoint(DiffMt)+', GL_QTERESTE=GL_QTEFACT';
+                    end else
+                    begin
+                      Sql := Sql + 'GL_QTERESTE = GL_QTERESTE ' + Signe + ' ' + StrFPoint(Diff);
+                    end;
+                    //
+                    Sql := SQL + ',GL_VIVANTE="X" WHERE ' + WherePiece(CleDocPrecedente, ttdLigne, True, True);
+                    Result := (ExecuteSQL(Sql) = 1);
+                    if Result then
+                    begin
+                      { MODE DCA 27/08/2003 - Modif/Suppr - Mise à jour de GP_DATEMODIF de la pièce précédente }
+                      if ((OldCleDocPrecedente.NaturePiece <> CleDocPrecedente.NaturePiece) or
+                          (OldCleDocPrecedente.Souche <> CleDocPrecedente.Souche) or
+                          (OldCleDocPrecedente.NumeroPiece <> CleDocPrecedente.NumeroPiece) or
+                          (OldCleDocPrecedente.Indice <> CleDocPrecedente.Indice)) then
+                      begin
+                        { Mise à jour de GP_DATEMODIF de la pièce précédente }
+                        Sql := 'UPDATE PIECE SET GP_DATEMODIF="' + USTime(NowH) + '",GP_VIVANTE="X" WHERE ' + WherePiece(CleDocPrecedente, ttdPiece, False);
+                        Result := (ExecuteSQL(Sql) = 1);
+                        OldCleDocPrecedente.NaturePiece := CleDocPrecedente.NaturePiece;
+                        OldCleDocPrecedente.Souche := CleDocPrecedente.Souche;
+                        OldCleDocPrecedente.NumeroPiece := CleDocPrecedente.NumeroPiece;
+                        OldCleDocPrecedente.Indice := CleDocPrecedente.Indice;
+                      end;
+                      if Result then
+                      begin
+                        OkStock := True;
+                        if Assigned(TobLignePiecePrecedente) then
+                        begin
+                          NaturePieceG := TobPiecePrecedente.GetValue('GP_NATUREPIECEG');
+                          ColMoins := GetInfoParPiece(NaturePieceG, 'GPP_QTEMOINS');
+                          ColPlus := GetInfoParPiece(NaturePieceG, 'GPP_QTEPLUS');
+                          StPrixValo := GetInfoParPiece(NaturePieceG, 'GPP_MAJPRIXVALO');
+                          { Mise à jour de la quantité }
+  //                        OldQteReste := Max(0, Double(TobLignePiecePrecedente.G('GL_QTERESTE')));
+  //                        NewQteReste := Max(0, Double(TobLignePiecePrecedente.G('GL_QTERESTE')) + Diff);
+                          // --- GUINIER ---
+                          if Ok_ReliquatMt then
+                          begin
+                            OldMtReste := TobLignePiecePrecedente.G('GL_MTRESTE');
+                            if Signe = '+' then
+                              NewMtReste := TobLignePiecePrecedente.G('GL_MTRESTE')+diffMt
+                            else
+                              NewMtReste := TobLignePiecePrecedente.G('GL_MTRESTE')-diffMt;
+                            DiffMtDispo := OldMtReste - NewMtReste;
+                            TobLignePiecePrecedente.PutValue('GL_MONTANTHTDEV', DiffMtDispo);
+                            if TobLignePiecePrecedente.GetDouble('GL_MONTANTHTDEV')=0 then TobLignePiecePrecedente.SetDouble('GL_QTERESTE',0)
+                                                                                      else TobLignePiecePrecedente.SetDouble('GL_QTERESTE',TobLignePiecePrecedente.GetDouble('GL_QTEFACT'));
+                          end else
+                          begin
+                            OldQteReste := TobLignePiecePrecedente.G('GL_QTERESTE');
+                            if Signe = '+' then
+                              NewQteReste := TobLignePiecePrecedente.G('GL_QTERESTE')+diff
+                            else
+                              NewQteReste := TobLignePiecePrecedente.G('GL_QTERESTE')-diff;
+                            DiffDispo := OldQteReste - NewQteReste;
+                          end;
+                          if DiffDispo <> 0 then
+                          begin
+                            DiffDispo   := DiffDispo * CoeffDispo;
+                            TobLignePiecePrecedente.PutValue('GL_QTESTOCK', DiffDispo);
+                            TobLignePiecePrecedente.PutValue('GL_QTEFACT',  DiffDispo);
+                            RatioVA     := GetRatio(TobLignePiecePrecedente, nil, trsStock);
+                            IndiceNomen := TobLignePiecePrecedente.GetValue('GL_INDICENOMEN');
+                            if (IndiceNomen > 0) and Assigned(TOBOuvrage_O) and (TOBOuvrage_O.detail.count >0)  then
+                              TobOuvrage := TOBOuvrage_O.Detail[IndiceNomen - 1]
+                            else
+                              TobOuvrage := nil;
+                            { Ajout de la TobNomen dans les paramètres }
+                            OkStock := MajQteStock(TobLignePiecePrecedente, TobArticles, TOBouvrage, ColPlus, ColMoins, True, RatioVA);
+                          end;
+                        end;
+                        { On vient de mettre à jour le reste à livrer, mise à jour de l'état de la pièce  d'origine }
+                        if OkStock then
+                          UpDateEtatPiecePrecedente(CleDocPrecedente)
+                        else
+                        begin
+                          PgiError ('Erreur Mise à jour des stocks');
+                          V_PGI.IoError := oeStock;
+                          TUtilErrorsManagement.SetGenericMessage(TemErr_RecalculStock);
+                        end;
+                      end else
+                      begin
+                        if V_PGI.Sav then
+                          PGIError(TraduireMemoire('La requête') + ' : ' + Sql + ' ' + TraduireMemoire('a échoué')
+                              , TraduireMemoire('Mise à jour de la date de modification dans la pièce origine'));
+                          V_PGI.IoError := oeUnknown;
+                          TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateSatusPIECEPrec);
+                      end;
+                    end else
+                    begin
+                      if V_PGI.Sav then
+                        PGIError(TraduireMemoire('La requête') + ' : ' + Sql + ' ' + TraduireMemoire('a échoué')
+                          , TraduireMemoire('Mise à jour des quantités dans la pièce origine'));
+                      V_PGI.IoError := oeUnknown;
+                      if assigned(TobLignePiecePrecedente) then
+                        ErrorMsg := Format('Erreur lors de la mise à jour des quantités de la ligne %s (article : %s) de la pièce précédente.'
+                                                         , [TobLignePiecePrecedente.GetString('GL_NUMLIGNE'), TobLignePiecePrecedente.GetString('GL_CODEARTICLE')])
+                      else
+                        ErrorMsg := '';
+                      TUtilErrorsManagement.SetGenericMessage(Tools.iif(assigned(TobLignePiecePrecedente), TemErr_MessagePreRempli ,TemErr_UpdateQteLIGNEPrec), ErrorMsg);
+                    end;
+                  end;
+                finally
+                  TobPiecePrecedente.Free;
+                  TOBOuvrage_P.Free;
+                end;
+              end else
+              if (((CleDoc.NaturePiece <> CleDocPrecedente.NaturePiece)
+                 or (CleDoc.Souche <> CleDocPrecedente.Souche)
+                 or (CleDoc.NumeroPiece <> CleDocPrecedente.NumeroPiece))) and
+                    (GetInfoParPiece (Cledoc.NaturePiece,'GPP_RELIQUAT')='-') then
+              begin
+                // --- GUINIER ---
+                Sql := 'UPDATE LIGNE SET GL_VIVANTE="X",GL_QTERESTE=GL_QTEFACT ';
+                If Ok_ReliquatMt then Sql := Sql + ',GL_MTRESTE=GL_MONTANTHTDEV ';
+                Sql := Sql + ' WHERE ' + WherePiece(CleDocPrecedente, ttdLigne, True, True);
+                Result := (ExecuteSQL(Sql) = 1);
+                if Result then
+                begin
+                  { Mise à jour de la pièce }
+                  Sql := 'UPDATE PIECE SET GP_VIVANTE="X" WHERE ' + WherePiece(CleDocPrecedente, ttdPiece, False);
+                  Result := ExecuteSQL(Sql) = 1;
+                  if not Result then
+                    TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateSatusPIECEPrec);
+                end else
+                  TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateQteLIGNEPrec);
+              end;
+          end;
+        end;
       end;
+    finally
+      TobModifMere.Free;
     end;
   finally
-    TobModifMere.Free;
+    if V_PGI.ioError <> oeOk then
+      Result := False;
   end;
 end;
 
@@ -5216,13 +5245,12 @@ begin
         okok := TobLignesCompl.InsertDB (nil,true);
       EXCEPT
         on E: Exception do
-      begin
           PgiError('Erreur SQL : ' + E.Message, 'Erreur écriture LIGNECOMPL');
-        end;
       END;
       if not okok then
       begin
         V_PGI.Ioerror := OeUnknown;
+        TUtilErrorsManagement.SetGenericMessage(TemErr_InsertLIGNCOMPL);
       end;
     finally
       TobLignesCompl.Free;
@@ -5610,10 +5638,10 @@ function GetPrefixeTable (TOBL : TOB) : string;
 begin
   result := '';
   if TOBL = nil then exit;
-  if TOBL.nomtable = 'PIECE' then result := 'GP' else
-  if TOBL.nomtable = 'LIGNE' then result := 'GL' else
+  if TOBL.nomtable = 'PIECE'        then result := 'GP' else
+  if TOBL.nomtable = 'LIGNE'        then result := 'GL' else
   if TOBL.nomtable = 'LIGNEOUVPLAT' then result := 'BOP' else
-  if TOBL.nomtable = 'LIGNEOUV' then result := 'BLO';
+  if TOBL.nomtable = 'LIGNEOUV'     then result := 'BLO';
 end;
 
 function IsgestionAvanc (TOBpiece : TOB) : boolean;

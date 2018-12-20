@@ -7,7 +7,7 @@ interface
 // ubob
 
 uses Forms, dialogs,Hpanel,
-   Classes
+   Classes,UApplication 
   ;
 
 procedure TraitementEchangesBSV;
@@ -26,12 +26,94 @@ implementation
 
 {$R *.DFM}
 
-uses windows, MenuOLG, sysutils, Messages, Controls,HEnt1,
-     uBTPVerrouilleDossier,HMsgBox,Ent1
+uses windows, MenuOLG, sysutils, Messages, Controls,HEnt1, Hctrls,
+     uBTPVerrouilleDossier,HMsgBox,Ent1,PGIExec,MajTable,UTraiteTables,DB,
+    {$IFNDEF DBXPRESS} dbtables {$ELSE} uDbxDataSet {$ENDIF}
   ;
-procedure TraitementEchangesBSV;
-begin
 
+function prepareEnvUtilisateur : boolean;
+var QQ: TQuery;
+begin
+  Result := false;
+  QQ := OpenSql ('SELECT US_EMAIL, US_EMAILPASSWORD, US_EMAILSMTPSERVER, US_EMAILSMTPLOGIN, US_EMAILSMTPPWD, US_SMTPPORT '+
+                 'FROM UTILISAT WHERE US_UTILISATEUR="'+V_PGI.User+'"',True,1,'',True);
+  if not QQ.eof then
+  begin
+    V_PGI.EMailLogin := QQ.fields[0].asString;
+    V_PGI.EMailPassword := QQ.fields[1].AsString;
+    V_PGI.SMTPFrom  := QQ.fields[0].AsString;
+    V_PGI.SMTPServer := QQ.fields[2].AsString;
+    V_PGI.EMailSmtpLogin := QQ.fields[3].AsString;
+    V_PGI.EmailSmtpPassword  := QQ.fields[4].AsString;
+    V_PGI.SMTPPort := QQ.fields[5].AsString;
+    result := ((V_PGI.EMailLogin<>'') or (V_PGI.EMailSmtpLogin<>'')) and (V_PGI.SMTPServer<>'') and ((V_PGI.EMailPassword<>'') or (V_PGI.EmailSmtpPassword<>''));
+  end;
+  ferme(QQ);
+end;
+
+procedure TraitementEchangesBSV;
+var Nom, St, Value,Treatment    : string;
+    i                 : integer;
+    Connect           : Boolean;
+begin
+  V_PGI.Halley:=TRUE ;
+  V_PGI.Versiondev:=FALSE ;
+  VH^.ModeSilencieux := True;
+  V_PGI.MultiUserLogin := TRUE;
+  Connect := FALSE;
+  V_PGI.MailMethod := mmSMTP;
+  
+  V_PGI.UserLogin  := 'LSE';
+  V_PGI.DateEntree := Date();
+
+  for i:=1 to ParamCount do
+  begin
+    St:=ParamStr(i) ;
+    Nom:=UpperCase(Trim(ReadTokenPipe(St,'='))) ;
+    Value:=UpperCase(Trim(St)) ;
+    //Paramètres de connexion
+    if Nom='/USER'     then V_PGI.User :=Value;
+    if Nom='/PASSWORD' then V_PGI.PassWord:=Value;
+    if Nom='/DATE'     then BEGIN  V_PGI.DateEntree:=StrToDate(Value) ; END ;
+    if Nom='/BASE'     then BEGIN  V_PGI.CurrentAlias:=Value ; END ;
+    if Nom='/TRAIT'    then BEGIN  Treatment:= Value; END ;
+  end;
+
+  if (not Connect) then
+  begin
+    Connect := ConnecteHalley(V_PGI.CurrentAlias,FALSE,@ChargeMagHalley,NIL,NIL,NIL);
+  end;
+
+  if connect then
+  begin
+    if Treatment = 'STOCKEGED' then
+    begin
+      prepareEnvUtilisateur;
+      ConstitueDocsFromDatasBSV(false,true);
+    end else if Treatment = 'XXXXX' then
+    begin
+    end;
+  end;
+
+  Application.ProcessMessages;
+  if Connect then
+  begin
+    Logout ;
+    DeconnecteHalley ;
+  end else
+  begin
+    // Fermeture de l'application
+    Application.ProcessMessages;
+    if FMenuG <> nil then
+    begin
+      FMenuG.ForceClose := True ;
+      PostMessage(FmenuG.Handle,WM_CLOSE,0,0) ;
+      FMenuG.Close ;
+    end;
+    VH^.STOPRSP:=TRUE ;
+    Exit;
+  end;
+  VH^.STOPRSP:=TRUE ;
 end;
 
 procedure Dispatch(Num: Integer; PRien: THPanel; var retourforce, sortiehalley: boolean);
@@ -71,7 +153,7 @@ begin
     16: ;
     100: ; // executer depuis le lanceur
 
-    160001: ;
+    160001: ConstitueDocsFromDatasBSV(true,false);
     
   else HShowMessage('2;?caption?;' + TraduireMemoire('Fonction non disponible : ') + ';W;O;O;O;', TitreHalley, IntToStr(Num));
   end;
@@ -133,42 +215,37 @@ begin
   TitreHalley := 'Utilitaires POC    Base ' + IntToStr(V_PGI.NumVersionBase);
   HalSocIni := 'CEGIDPGI.ini';
 
-  Copyright := '© Copyright ' + Apalatys;
-  V_PGI.NumVersion := '10.0' ;
-  V_PGI.NumBuild := IntToStr(V_PGI.NumVersionBase) + '.161';
-  V_PGI.DateVersion := EncodeDate(2018, 10, 10) ;
+  { Ce nom apparaît en bas à gauche de l'application }
+  Copyright := '© Copyright L.S.E';
 
-  V_PGI.LaSerie := S5;
-
-  V_PGI.OutLook := TRUE;
-  V_PGI.OfficeMsg := TRUE;
-  V_PGI.ToolsBarRight := TRUE;
-  ChargeXuelib;
-
-  V_PGI.AlterTable := True;
-  V_PGI.VersionDemo := TRUE;
-  V_PGI.VersionReseau := true;
-  V_PGI.ImpMatrix := True;
-  V_PGI.OKOuvert := FALSE;
-  V_PGI.Halley := TRUE;
-  V_PGI.MenuCourant := 0;
-  V_PGI.CodeProduit:='034' ;
-
-  V_PGI.RazForme := TRUE;
-
-
-
-  V_PGI.StandardSurDP := True;
-  V_PGI.MajPredefini := True;
-  V_PGI.CegidApalatys := False;
-  V_PGI.CegidBureau := True;
-  V_PGI.IsPgiMajVer := True;
-  // V_PGI.MajStructAuto := true ;
-
-  v_pgi.enableTableToView:=False;
+  V_PGI.PGIContexte:=[ctxGescom,ctxAffaire,ctxBTP,ctxGRC];
+  V_PGI.StandardSurDp := False;  // indispensable pour l'aiguillage entre le DP et les bases dossiers (gamme Expert), voir SQL025
+  V_PGI.OutLook:=TRUE ;
+  V_PGI.OfficeMsg:=TRUE ;
+  V_PGI.ToolsBarRight:=TRUE ;
+  ChargeXuelib ;
+  V_PGI.VersionDemo:=True ;
+  V_PGI.MenuCourant:=0 ;
+  V_PGI.VersionReseau:=True ;
+  V_PGI.NumVersion:='10.0.0' ;
+  V_PGI.NumVersionBase:=998 ;
+  V_PGI.NumBuild:='000.001';
+  V_PGI.CodeProduit:='032' ;
+  V_PGI.DateVersion:=EncodeDate(2015,10,13);
+  V_PGI.ImpMatrix := True ;
+  V_PGI.OKOuvert:=FALSE ;
+  V_PGI.Halley:=TRUE ;
+  V_PGI.BlockMAJStruct:=TRUE ;
+  V_PGI.PortailWeb:='http://www.lse.fr/' ;
+  V_PGI.CegidApalatys:=FALSE ;
+  V_PGI.QRMultiThread:=TRUE;
+  V_PGI.MenuCourant:=0 ;
   V_PGI.RazForme:=TRUE;
-	GetInfoMajApplication;
-
+  V_PGI.NumMenuPop:=27 ;
+  V_PGI.CegidBureau:= True;
+  V_PGI.LookUpLocate:= True;   // utile pour les ellipsis_click sur THEDIT
+  V_PGI.QRPDFOptions:=4;        // pour tronquer les libellés en impression
+  V_PGI.QRPdf:=True;           // Mode PDF Par défaut pour totalisations situations
 end;
 
 initialization

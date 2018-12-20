@@ -413,7 +413,6 @@ begin
   TUtilBTPVerdon.AddLog(ServiceName, lTn, TUtilBTPVerdon.GetMsgStartEnd(lTn, True, LastSynchro), LogValues, 0);
 end;
 
-
 { TImportExportTreatment }
 
 procedure TImportExportTreatment.AssignAdoQry(AdoQryBTP, AdoQryTMP : AdoQry; FolderValues : T_FolderValues; LogValues : T_WSLogValues);

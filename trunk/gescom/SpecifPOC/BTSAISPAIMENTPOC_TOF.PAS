@@ -33,6 +33,7 @@ Uses StdCtrls,
      Messages,
      AGLInit,
      HTB97,
+     CommonTools,
      UTOF ;
 
 Type
@@ -74,7 +75,7 @@ Type
 function DemandeReglementSousTrait (TOBPiece,TOBTiers,TOBEches,TOBAcomptes,TObpieceTrait,TOBPieceRG,TOBSousTrait,TOBPorcs: TOB; MontantPaiement : double;  DEV : RDevise) : boolean;
 
 Implementation
-uses FactComm,UCotraitance,UspecifPOC,BTStructChampSup;
+uses FactComm,UCotraitance,UspecifPOC,BTStructChampSup,ParamSoc;
 
 function DemandeReglementSousTrait (TOBPiece,TOBTiers,TOBEches,TOBAcomptes,TObpieceTrait,TOBPieceRG,TOBSousTrait,TOBPorcs: TOB; MontantPaiement : double;  DEV : RDevise) : boolean;
 var TOBParam : TOB;
@@ -545,8 +546,8 @@ procedure TOF_BTSAISPAIMENTPOC.BInsertClick(Sender: TObject);
     TT.putValue('BPI_TYPEINTERV','Y00');
     TT.putValue('BPI_TYPEPAIE','001');
     TT.putValue('BPI_DATECONTRAT',V_PGI.DateEntree);
-    TT.SetBoolean('BPI_AUTOLIQUID',true);
     TT.SetString('BPI_FAMILLETAXE',GetInfoMarcheST(TOBpiece.GetString('GP_AFFAIRE'),Fournisseur,CodeMarche,'FAMILLETAXE1'));
+    TT.SetBoolean('BPI_AUTOLIQUID',Tools.StringInList(TT.GetString('BPI_FAMILLETAXE'), GetParamSocSecur('SO_CODETVALIQUIDST','')));
     TT.SetString('BPI_TIERSFOU',Fournisseur);
     TT.SetString('BPI_CODEMARCHE',CodeMarche);
     TT.SetDouble('NBUSED',1);

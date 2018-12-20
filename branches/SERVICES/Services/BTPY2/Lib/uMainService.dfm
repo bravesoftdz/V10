@@ -5,8 +5,8 @@ object SvcSyncBTPY2: TSvcSyncBTPY2
   OnExecute = ServiceExecute
   OnStart = ServiceStart
   OnStop = ServiceStop
-  Left = 198
-  Top = 117
+  Left = 109
+  Top = 86
   Height = 150
   Width = 215
 end

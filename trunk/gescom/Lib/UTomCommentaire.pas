@@ -15,7 +15,7 @@ Uses StdCtrls, Controls, Classes,forms, sysutils, ComCtrls,
 {$IFDEF EAGLCLIENT}
       UtileAGL,eFiche,eFichList,
 {$ELSE}
-      DBCtrls,db,dbTables,FichList,Fiche, HDB,
+      DBCtrls,db,{$IFNDEF DBXPRESS} dbTables, {$ELSE} uDbxDataSet, {$ENDIF}FichList,Fiche, HDB,
 {$ENDIF}
      HTB97, HRichOLE;
 

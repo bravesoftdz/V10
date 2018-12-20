@@ -22,8 +22,10 @@ Uses HEnt1, HCtrls, UTOB, Ent1, LookUp, Controls, ComCtrls, StdCtrls, ExtCtrls,
 {$ENDIF}
      TiersPayeur, Paramsoc,VentilCpta, EcrPiece_TOF,ULibEcriture,UtilIntercompta,
      TiersUtil,uEntCommun
-     , UConnectWSConst;
-
+     , UConnectWSConst
+     , ErrorsManagement
+     ;
+     
 Type T_RetCpta = (rcOk,rcRef,rcPar,rcMaj) ;
 
      T_GCAcompte = RECORD
@@ -54,13 +56,14 @@ Type T_RetCpta = (rcOk,rcRef,rcPar,rcMaj) ;
 
 
      T_TypeEcr = (tecTiers,tecHT,tecTaxe,tecRemise,tecStock,TecRG,TecTaxeRg);
+     T_CreatPont = (ccpEscompte,ccpRemise,ccpHT,ccpTaxe,ccpStock,ccpVarStk,ccpRG) ;
 
 // Modif BTP
 Procedure ReinitAcompteGCCpta ( TOBAcc : TOB ) ;
 // --
 Procedure LanceZoomEcriture ( TOBPiece : TOB ; DeStock : boolean ) ;
 Procedure DetruitCompta ( TOBPiece : TOB ; DateSupp : TdateTime; Var OldEcr,OldStk : RMVT;ForModif : boolean=false ) ;
-Function  PassationComptable ( TOBPiece,TOBOuvrages,TOBOuvragesP,TOBBases,TOBBasesL,TOBEches,TOBPieceTrait,TOBAffInterv,TOBTiers,TOBArticles,TOBCpta,TOBAcomptes,TOBPorcs,TOBPieceRG,TOBBasesRG,TOBAnaP,TOBAnaS,TOBPieceInterv,TOBVTECOLL  : TOB ; DEV : Rdevise ; OldEcr,OldStk : RMVT ; bParle : Boolean ; NewPiece : Boolean = True ) : boolean ;
+Function  PassationComptable ( TOBPiece,TOBOuvrages,TOBOuvragesP,TOBBases,TOBBasesL,TOBEches,TOBPieceTrait,TOBAffInterv,TOBTiers,TOBArticles,TOBCpta,TOBAcomptes,TOBPorcs,TOBPieceRG,TOBBasesRG,TOBAnaP,TOBAnaS,TOBPieceInterv,TOBVTECOLL,TOBREPARTTVA  : TOB ; DEV : Rdevise ; OldEcr,OldStk : RMVT ; bParle : Boolean ; NewPiece : Boolean = True; BAPPOC : boolean=false ) : boolean ;
 Function  ChargeAjouteCompta ( TOBCpta,TOBPiece,TOBL,TOBA,TOBTiers,TOBCata,TobAffaire : TOB ; AvecAnal : boolean;TOBGCS:TOB=nil ) : TOB ;
 {$IFDEF BTP}
 Function  ChargeAjouteComptaBTP ( TOBCpta,TOBPiece,TOBL,TOBA,TOBTiers,TOBCata,TobAffaire : TOB ; FamTaxe : string; AvecAnal : boolean;TOBGCS:TOB=nil ) : TOB ;
@@ -99,6 +102,7 @@ function GetWSDocumentInfFromRmvt(lRmvt : RMVT) : T_WSDocumentInf;
 Procedure GCLettrerAcomptes (MM : RMVT ; TOBEcr,TOBAcomptes,TOBPiece : TOB ) ;
 procedure IntegreAcomptesReglements (TOBpiece,TOBEches,TOBAcomptes : TOB) ;
 procedure LoadAnalyticOnTobEntry(TobEcr : TOB);
+function AccountIsValidWithTryCreate(TobG : TOB; Account, TVACode, TPFCode : string; What : T_CreatPont; TemErrNumber, ErrorNumber : integer) : T_RetCpta;
 
 implementation
 Uses
@@ -118,6 +122,7 @@ Uses
   {$IFDEF MODE}
   , FactCptaMode
   {$ENDIF}
+  ,BTPUtil
   ;
 
 type MODIF_Diff = class(TOB)
@@ -161,8 +166,6 @@ Type T_MontantArtFi = RECORD   // Montants des articles financiers pour une piéc
                    MontantDev  : Double ;
                    END ;
 
-Type T_CreatPont = (ccpEscompte,ccpRemise,ccpHT,ccpTaxe,ccpStock,ccpVarStk,ccpRG) ;
-
 const TexteMessage: array[1..22] of string 	= (
           {1}  'Compte général d''escompte absent ou incorrect'
           {2} ,'Compte général de remise absent ou incorrect'
@@ -182,7 +185,7 @@ const TexteMessage: array[1..22] of string 	= (
          {16} ,'Journal non renseigné'
          {17} ,'Erreur sur le client'
          {18} ,''
-         {19} ,'Ecart sur contréle des piéces d''achat' {DBR CPA}
+         {19} ,'Ecart sur contrôle des pièces d''achat' {DBR CPA}
          {20} ,''
          {21} ,''
          {22} ,''
@@ -199,6 +202,7 @@ begin
       SendEntry.ServerName := '';
       SendEntry.DBName     := '';
       {$IF not defined(APPSRV)}
+      DocInfo.dFromdoc := True;
       SendEntry.SendEntryCEGID(WseT, TobEcr, DocInfo);
       {$IFEND !APPSRV}
     finally
@@ -637,32 +641,32 @@ Var RefA : String ;
     TOBL,TOBAL,TOBV : TOB ;
     i,k        : integer ;
 BEGIN
-MajAnaEntete(TOBPiece,TOBAnaP,TOBAnaS) ;
-RefA:=EncodeRefCPGescom(TOBPiece) ;
-for i:=0 to TOBPiece.Detail.Count-1 do
-    BEGIN
-    TOBL:=TOBPiece.Detail[i] ;
-    if TOBL.Detail.count = 0 then
-    begin
-      NewTOBLigneFille (TOBL);
-    end;
-    TOBAL:=TOBL.Detail[0] ;
-    for k:=0 to TOBAL.Detail.Count-1 do
-        BEGIN
-        TOBV:=TOBAL.Detail[k] ;
-        TOBV.PutValue('YVA_IDENTIFIANT',RefA) ;
-        TOBV.PutValue('YVA_NATUREID','GC') ;
-        TOBV.PutValue('YVA_IDENTLIGNE',FormatFloat('000',i+1)) ;
-        END ;
-    TOBAL:=TOBL.Detail[1] ;
-    for k:=0 to TOBAL.Detail.Count-1 do
-        BEGIN
-        TOBV:=TOBAL.Detail[k] ;
-        TOBV.PutValue('YVA_IDENTIFIANT',RefA) ;
-        TOBV.PutValue('YVA_NATUREID','GC') ;
-        TOBV.PutValue('YVA_IDENTLIGNE',FormatFloat('000',i+1)) ;
-        END ;
-    END ;
+  MajAnaEntete(TOBPiece,TOBAnaP,TOBAnaS) ;
+  RefA:=EncodeRefCPGescom(TOBPiece) ;
+  for i:=0 to TOBPiece.Detail.Count-1 do
+      BEGIN
+      TOBL:=TOBPiece.Detail[i] ;
+      if TOBL.Detail.count = 0 then
+      begin
+        NewTOBLigneFille (TOBL);
+      end;
+      TOBAL:=TOBL.Detail[0] ;
+      for k:=0 to TOBAL.Detail.Count-1 do
+          BEGIN
+          TOBV:=TOBAL.Detail[k] ;
+          TOBV.PutValue('YVA_IDENTIFIANT',RefA) ;
+          TOBV.PutValue('YVA_NATUREID','GC') ;
+          TOBV.PutValue('YVA_IDENTLIGNE',FormatFloat('000',i+1)) ;
+          END ;
+      TOBAL:=TOBL.Detail[1] ;
+      for k:=0 to TOBAL.Detail.Count-1 do
+          BEGIN
+          TOBV:=TOBAL.Detail[k] ;
+          TOBV.PutValue('YVA_IDENTIFIANT',RefA) ;
+          TOBV.PutValue('YVA_NATUREID','GC') ;
+          TOBV.PutValue('YVA_IDENTLIGNE',FormatFloat('000',i+1)) ;
+          END ;
+      END ;
 END ;
 
 Procedure LoadLesAna ( TOBPiece,TOBAnaP,TOBAnaS : TOB ) ;
@@ -785,7 +789,7 @@ BEGIN
   TOBPiece:=TOBL.Parent ;
   TOBAna:=Nil ;
   TOBStk:=Nil ;
-  if VH_GC.GCIfDefCEGID then  // gm le 27/12/02 pour ne pas générer d'ana sur les piéce affaire
+  if VH_GC.GCIfDefCEGID then  // gm le 27/12/02 pour ne pas générer d'ana sur les pièces affaire
   if (TOBPiece.GetValue('GP_NATUREPIECEG') <> GetParamSoc('SO_AFNATAFFAIRE')) and
   	 (TOBPiece.GetValue('GP_NATUREPIECEG') <> GetParamSoc('SO_AFNATPROPOSITION'))  then
   Begin
@@ -954,7 +958,7 @@ Var
   okok      : boolean;
   DocInfo   : T_WSDocumentInf;
 begin
-  {Mise é jour inverse des soldes des comptes}
+  {Mise à jour inverse des soldes des comptes}
   if MM.Simul = 'N' then
   begin
     TOBEcr   := TOB.Create('',Nil,-1) ;
@@ -1012,18 +1016,22 @@ begin
         begin
           {MAJ Soldes}
           MajSoldesEcritureTOB(TOBEcr,False) ;
-          Nb := 0;
-          try
-            Nb := ExecuteSQL('DELETE FROM ECRITURE WHERE ' + WhereEcriture(tsGene,MM,False)) ;
-          except
-            on E: Exception do
-              PgiError('Erreur : ' + E.Message, 'Suppression écriture');
-          end;
-          if ((Nb <= 0) and (InTrans)) then
+          if V_PGI.ioError = oeOk then
           begin
-            MessageValid := 'Erreur Lors de la suppression des écritures comptables';
-            V_PGI.IoError:=oeUnknown ;
-            Exit ;
+            Nb := 0;
+            try
+              Nb := ExecuteSQL('DELETE FROM ECRITURE WHERE ' + WhereEcriture(tsGene,MM,False)) ;
+            except
+              on E: Exception do
+                PgiError('Erreur : ' + E.Message, 'Suppression écriture');
+            end;
+            if ((Nb <= 0) and (InTrans)) then
+            begin
+              MessageValid := 'Erreur Lors de la suppression des écritures comptables';
+              TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteECRITURE);
+              V_PGI.IoError:=oeUnknown ;
+              Exit ;
+            end;
           end;
           try
             ExecuteSQL('DELETE FROM ANALYTIQ WHERE ' + WhereEcriture(tsAnal,MM,False)) ; {! il peut ne pas y avoir d'analytique}
@@ -1050,6 +1058,7 @@ begin
           DocInfo := GetWSDocumentInfFromRmvt(MM);
           if not Okok then
           begin
+            TUtilErrorsManagement.SetGenericMessage(TemErr_InsertExtourneEcriture);
             V_PGI.IoError := oeLettrage;
           end else
           begin
@@ -1057,10 +1066,11 @@ begin
               MajSoldesEcritureTOB(TobEcrEx, true);
             except
               on E: Exception do
-                PgiError('Erreur SQL : ' + E.Message, 'Extourne piéce - Solde');
+                PgiError('Erreur SQL : ' + E.Message, 'Extourne pièce - Solde');
             end;
             if V_PGI.IOError <> oeOk then
             begin
+              TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateSoldeEcriture);
               V_PGI.IoError := oeLettrage;
             end else
               CallWSCegid(wsetExtourne, TOBEcrEx, DocInfo);
@@ -1069,10 +1079,11 @@ begin
           GCCreerPiecePayeur(TOBEcrEx, TOBTiers, DocInfo); //MM.DocType, MM.DocNumber);
           {Update ecritures principales}
           try
-            TOBEcr.UpdateDB(false);
+            if not TOBEcr.UpdateDB(false) then
+              TUtilErrorsManagement.SetGenericMessage(TemErr_InsertEcritureTiersPayeur);
           except
             on E: Exception do
-              PgiError('Erreur SQL : ' + E.Message, 'Enreg. Piéce comptable');
+              PgiError('Erreur SQL : ' + E.Message, 'Enreg. Pièce comptable');
           end;
         end;
       end;
@@ -1093,6 +1104,7 @@ begin
     end;
     if ((Nb<=0) and (InTrans)) then
     begin
+      TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteECRITURE);
       V_PGI.IoError:=oeUnknown ;
       Exit ;
     end;
@@ -1118,7 +1130,10 @@ Var Nb : integer ;
 begin
   Nb := ExecuteSQL('UPDATE ECRITURE SET E_REFGESCOM="'+NewRef+'" WHERE '+WhereEcriture(tsGene,MM,False)) ;
   if ((Nb<=0) and (InTrans)) then
+  begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateERefGescom);
     V_PGI.IoError := oeUnknown;
+  end;
 end ;
 
 function MODIF_Diff.YouzTob(T : TOB) : integer;
@@ -1202,7 +1217,10 @@ begin
       DD := TOBPiece.GetValue('GP_DATEPIECE');
       RefComptable:=EncodeRefCPGescom(TOBPiece);
       if ExecuteSQL('DELETE FROM COMPTADIFFEREE WHERE GCD_DATEPIECE="'+UsDateTime(DD)+'" AND GCD_REFPIECE="'+RefComptable+'"') <> 1 then
+      begin
         V_PGI.IoError := oeunknown;
+        TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteCOMPTADIFFEREE);
+      end;
     end else
     begin
       DD:=TOBPiece.GetValue('GP_DATEPIECE') ;
@@ -1451,7 +1469,7 @@ BEGIN
   if Acc then
      BEGIN
      NatEcr:=TOBE.GetValue('E_NATUREPIECE') ;
-     if ((NatEcr='OC') or (NatEcr='OF')) then RefI:='Acompte 'else RefI:='Réglement ' ;
+     if ((NatEcr='OC') or (NatEcr='OF')) then RefI:='Acompte 'else RefI:='Règlement ' ;
      END else RefI:='' ;
   if VH_GC.GCIfDefCEGID then
      RefI:=IntToStr(TOBPiece.GetValue('GP_NUMERO'))
@@ -1567,54 +1585,56 @@ Var TauxEsc   : Double ;
     NumL      : integer ;
     DP,CP,DD,CD,XD,XP : Double ;
 BEGIN
-Result:=rcOk ;
-// restitution de RG --> On sort
-if TOBPiece.GetBoolean('GP_RESTITUERG') then Exit;
-// ----
-TauxEsc:=TOBPiece.GetValue('GP_ESCOMPTE') ; if TauxEsc=0 then Exit ;
-if TOBPiece.GetValue('GP_TOTALESCDEV')=0 then Exit ;
-if ((MM.Nature='FC') or (MM.Nature='AC')) then CpteEsc:=VH_GC.GCCpteEscVTE else CpteEsc:=VH_GC.GCCpteEscACH ;
-// Erreur sur Compte Escompte
-if CpteEsc='' then BEGIN Result:=rcPar ; LastMsg:=1 ; Exit ; END ;
-{Etude du compte général d'escompte}
-TOBG:=CreerTOBGeneral(CpteEsc) ;
-// Erreur sur Compte Escompte
-if TOBG=Nil then
-   BEGIN
-   if VH_GC.GCPontComptable='ATT' then Result:=rcPar else
-    if VH_GC.GCPontComptable='REF' then Result:=rcRef else
-       BEGIN
-       if Not CreerCompteGC(TOBG,CpteEsc,'','',ccpEscompte) then Result:=rcPar ;
-       END ;
-   if Result<>rcOk then BEGIN LastMsg:=1 ; Exit ; END ;
-   END ;
-OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
-{Ligne d'écriture}
-TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
-PieceVersECR(MM,TOBPiece,TOBTiers,TOBE,False) ;
-{Général}
-TOBE.PutValue('E_GENERAL',CpteEsc) ;
-TOBE.PutValue('E_CONSO',TOBG.GetValue('G_CONSO')) ;
-{Divers}
-TOBE.PutValue('E_TYPEMVT','HT') ;
-AlimLibEcr(TobE,TobPiece,TobTiers,'Escompte '+StrfPoint(TauxEsc)+' %',tecRemise,True,(MM.Simul='S'));
-{Contreparties}
-TOBE.PutValue('E_CONTREPARTIEGEN',TOBTiers.GetValue('T_COLLECTIF')) ;
-TOBE.PutValue('E_CONTREPARTIEAUX',TOBTiers.GetValue('T_AUXILIAIRE')) ;
-{Eche+Vent}
-NumL:=TOBEcr.Detail.Count-NbEches+1 ; TOBE.PutValue('E_NUMLIGNE',NumL) ;
-if OkVent then TOBE.PutValue('E_ANA','X') ;
-{Montants}
-DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
-RecupLesDCEsc(TOBPiece,XD,XP) ;
-if MM.Nature='FC' then BEGIN DD:=XD ; DP:=XP ; CD:=0 ; CP:=0 ; END else
-if MM.Nature='FF' then BEGIN CD:=XD ; CP:=XP ; DD:=0 ; DP:=0 ; END else
-if MM.Nature='AC' then BEGIN CD:=-XD ; CP:=-XP ; DD:=0 ; DP:=0 ; END else
-if MM.Nature='AF' then BEGIN DD:=-XD ; DP:=-XP ; CD:=0 ; CP:=0 ; END ;
-TOBE.PutValue('E_DEBIT',DP)     ; TOBE.PutValue('E_CREDIT',CP) ;
-TOBE.PutValue('E_DEBITDEV',DD)  ; TOBE.PutValue('E_CREDITDEV',CD) ;
-if ((DP=0) and (CP=0)) then TOBE.Free ;
-TOBG.Free ;
+  Result:=rcOk ;
+  // restitution de RG --> On sort
+  if TOBPiece.GetBoolean('GP_RESTITUERG') then Exit;
+  // ----
+  TauxEsc:=TOBPiece.GetValue('GP_ESCOMPTE') ; if TauxEsc=0 then Exit ;
+  if TOBPiece.GetValue('GP_TOTALESCDEV')=0 then Exit ;
+  if ((MM.Nature='FC') or (MM.Nature='AC')) then CpteEsc:=VH_GC.GCCpteEscVTE else CpteEsc:=VH_GC.GCCpteEscACH ;
+  // Erreur sur Compte Escompte
+  if CpteEsc='' then
+  begin
+    Result:=rcPar ;
+    LastMsg:=1 ;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_CptaCptEscompteNonTrouve);
+    Exit ;
+  end;
+  {Etude du compte général d'escompte}
+  TOBG:=CreerTOBGeneral(CpteEsc) ;
+  // Erreur sur Compte Escompte
+  if TOBG=Nil then
+  begin
+    Result := AccountIsValidWithTryCreate(TobG, CpteEsc, '', '', ccpEscompte, TemErr_CptaCptEscompteNonTrouve, 1);
+    if Result <> rcOk then Exit;
+  end;
+  OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
+  {Ligne d'écriture}
+  TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
+  PieceVersECR(MM,TOBPiece,TOBTiers,TOBE,False) ;
+  {Général}
+  TOBE.PutValue('E_GENERAL',CpteEsc) ;
+  TOBE.PutValue('E_CONSO',TOBG.GetValue('G_CONSO')) ;
+  {Divers}
+  TOBE.PutValue('E_TYPEMVT','HT') ;
+  AlimLibEcr(TobE,TobPiece,TobTiers,'Escompte '+StrfPoint(TauxEsc)+' %',tecRemise,True,(MM.Simul='S'));
+  {Contreparties}
+  TOBE.PutValue('E_CONTREPARTIEGEN',TOBTiers.GetValue('T_COLLECTIF')) ;
+  TOBE.PutValue('E_CONTREPARTIEAUX',TOBTiers.GetValue('T_AUXILIAIRE')) ;
+  {Eche+Vent}
+  NumL:=TOBEcr.Detail.Count-NbEches+1 ; TOBE.PutValue('E_NUMLIGNE',NumL) ;
+  if OkVent then TOBE.PutValue('E_ANA','X') ;
+  {Montants}
+  DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
+  RecupLesDCEsc(TOBPiece,XD,XP) ;
+  if MM.Nature='FC' then BEGIN DD:=XD ; DP:=XP ; CD:=0 ; CP:=0 ; END else
+  if MM.Nature='FF' then BEGIN CD:=XD ; CP:=XP ; DD:=0 ; DP:=0 ; END else
+  if MM.Nature='AC' then BEGIN CD:=-XD ; CP:=-XP ; DD:=0 ; DP:=0 ; END else
+  if MM.Nature='AF' then BEGIN DD:=-XD ; DP:=-XP ; CD:=0 ; CP:=0 ; END ;
+  TOBE.PutValue('E_DEBIT',DP)     ; TOBE.PutValue('E_CREDIT',CP) ;
+  TOBE.PutValue('E_DEBITDEV',DD)  ; TOBE.PutValue('E_CREDITDEV',CD) ;
+  if ((DP=0) and (CP=0)) then TOBE.Free ;
+  TOBG.Free ;
 END ;
 
 
@@ -1722,7 +1742,13 @@ BEGIN
   if ((MM.Nature='FC') or (MM.Nature='AC')) then CpteRem:=VH_GC.GCCpteRemVTE else CpteRem:=VH_GC.GCCpteRemACH ;
 
   // Erreur sur Compte remise
-  if CpteRem='' then BEGIN Result:=rcPar ; LastMsg:=2 ; Exit ; END ;
+  if CpteRem='' then
+  BEGIN
+    Result:=rcPar ;
+    LastMsg:=2 ;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_CptaCptRemiseNonTrouve);
+    Exit ;
+  END ;
   LibEcr := 'Remise pied '+StrfPoint(TauxRem)+' %';
 // pour pouvoir gérer l'analyique sur les remises --->
   TOBCode:=ChargeAjouteComptaRem(TOBCpta,TOBPiece,TOBTiers,TOBAnaP,TOBAnaS,VH_GC.GCCpteRemVTE,VH_GC.GCCpteRemACH) ;
@@ -1731,23 +1757,10 @@ BEGIN
   TOBG:=CreerTOBGeneral(CpteRem) ;
   // Erreur sur Compte remise
   if TOBG=Nil then
-  BEGIN
-    if VH_GC.GCPontComptable='ATT' then
-    Begin
-      PGIError('Veuillez vérifier vos paramétres société/Gestion commerciale/Passation comptable/Comptes Inexistant', 'Comptes d''attente');
-      Result:=rcPar;
-    end
-    else if VH_GC.GCPontComptable='REF' then
-    begin
-      PGIError('Veuillez vérifier vos paramétres société/Gestion commerciale/Passation comptable/Comptes Inexistant', 'Refuser l''enregistrement');
-      Result:=rcRef;
-    end
-    else
-    BEGIN
-     if Not CreerCompteGC(TOBG,CpteRem,'','',ccpRemise) then Result:=rcPar ;
-    END ;
-    if Result<>rcOk then BEGIN LastMsg:=2 ; Exit ; END ;
-  END ;
+  begin
+    Result := AccountIsValidWithTryCreate(TobG, CpteRem, '', '', ccpRemise, TemErr_CptaCptRemiseNonTrouve, 2);
+    if Result <> rcOk then exit;
+  end;
   OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
   {Ligne d'écriture}
   TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
@@ -1762,7 +1775,8 @@ BEGIN
   TOBE.PutValue('E_CONTREPARTIEGEN',TOBTiers.GetValue('T_COLLECTIF')) ;
   TOBE.PutValue('E_CONTREPARTIEAUX',TOBTiers.GetValue('T_AUXILIAIRE')) ;
   {Eche+Vent}
-  NumL:=TOBEcr.Detail.Count-NbEches+1 ; TOBE.PutValue('E_NUMLIGNE',NumL) ;
+  NumL:=TOBEcr.Detail.Count-NbEches+1 ;
+  TOBE.PutValue('E_NUMLIGNE',NumL) ;
   if OkVent then TOBE.PutValue('E_ANA','X') ;
   {Montants}
   DD:=0 ; CD:=0 ; DP:=0 ; CP:=0 ;
@@ -1833,7 +1847,6 @@ begin
 end;
 
 Function CreerLignesTaxes ( TOBEcr,TOBPiece,TOBBases,TOBBasesST,TOBBasesCharge,TOBTiers,TOBPieceRG,TOBBasesRg,TOBPOrcs  : TOB ; MM : RMVT ) : T_RetCpta ;
-
 Var i : integer ;
     TOBB,TOBE,TOBG,TOBTTC,TOBTVAAUTOLIQUIDE,TOBTL,TOBTVAAUTOLIQENC : TOB ;
     XD,XP : Double ;
@@ -2124,17 +2137,6 @@ BEGIN
   {#TVAENC}
   TvaEnc:=(TOBPiece.GetValue('GP_TVAENCAISSEMENT')='TE') or (TOBPiece.GetValue('GP_TVAENCAISSEMENT')='TM') ;
   OkPourMixte := ((GereTvaMixte) and (TvaEnc));
-  (*
-  if (OkPourMixte) then
-  begin
-    for i:=0 to TobTVASurEncaiss.Detail.Count-1 do
-    BEGIN
-      TOBTmp:=TobTVASurEncaiss.Detail[i] ;
-      TobTmp.Setdouble('MONTANT',Arrondi(TOBTmp.getDouble('BASE')*TOBTMP.GetDouble('TAUX'),2));
-      TobTmp.Setdouble('MONTANTDEV',Arrondi(TOBTmp.getDouble('BASEDEV')*TOBTMP.GetDouble('TAUX'),2));
-    END;
-  end;
-  *)
   for i:=0 to TOBBases.Detail.Count-1 do
   BEGIN
     // Modif BTP
@@ -2184,23 +2186,23 @@ BEGIN
     CTX := GetCompteTaxe ( CatTaxe,regime,Famtaxe,Achat,TvaEnc,CodeTva,CodeTPF);
     //
     // Erreur sur Compte Taxe
-    if CTX='' then BEGIN Result:=rcPar ; LastMsg:=3 ; Break ; END ;
-
+    if CTX='' then
+    begin
+      Result:=rcPar ;
+      LastMsg:=3 ;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_CptaCptTaxeNonTrouve);
+      Break ;
+    end;
     {Etude du compte général de Taxe}
     TOBG:=CreerTOBgeneral(CTX) ;
     IsEncaiss := TvaEnc;
-
     // Erreur sur Compte Taxe
     if TOBG=Nil then
-    BEGIN
-      if VH_GC.GCPontComptable='ATT' then Result:=rcPar else
-      if VH_GC.GCPontComptable='REF' then Result:=rcRef else
-      BEGIN
-        if Not CreerCompteGC(TOBG,CTX,CodeTVA,CodeTPF,ccpTaxe) then Result:=rcPar ;
-      END ;
-      if Result<>rcOk then BEGIN LastMsg:=3 ; Break ; END ;
-    END ;
-
+    begin
+      AccountIsValidWithTryCreate(TobG, CTX, CodeTVA, codeTPF, ccpTaxe, TemErr_CptaCptTaxeNonTrouve, 3);
+      if Result<>rcOk then
+        Break;
+    end;
     OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
     GetTvaRetenuesDivHT (TOBPorcs,TRP,TRD,CatTaxe);
 
@@ -2235,7 +2237,13 @@ BEGIN
     CTX := GetCompteTaxe ( CatTaxe,regime,Famtaxe,not Achat,TvaEnc,CodeTva,CodeTPF);
     //
     // Erreur sur Compte Taxe
-    if CTX='' then BEGIN Result:=rcPar ; LastMsg:=3 ; Break ; END ;
+    if CTX='' then
+    begin
+      Result:=rcPar ;
+      LastMsg:=3 ;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_CptaCptTaxeNonTrouve);
+      Break ;
+    end;
 
     {Etude du compte général de Taxe}
     TOBG:=CreerTOBgeneral(CTX) ;
@@ -2243,15 +2251,11 @@ BEGIN
 
     // Erreur sur Compte Taxe
     if TOBG=Nil then
-    BEGIN
-      if VH_GC.GCPontComptable='ATT' then Result:=rcPar else
-      if VH_GC.GCPontComptable='REF' then Result:=rcRef else
-      BEGIN
-        if Not CreerCompteGC(TOBG,CTX,CodeTVA,CodeTPF,ccpTaxe) then Result:=rcPar ;
-      END ;
-      if Result<>rcOk then BEGIN LastMsg:=3 ; Break ; END ;
-    END ;
-
+    begin
+      AccountIsValidWithTryCreate(TobG, CTX, CodeTVA, codeTPF, ccpTaxe, TemErr_CptaCptTaxeNonTrouve, 3);
+      if Result<>rcOk then
+        Break;
+    end;
     OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
     GenereEcriture;
     TOBG.Free ;
@@ -2291,18 +2295,21 @@ BEGIN
       FamTaxe := IndexMixte;
       CTX := GetCompteTaxe ( CatTaxe,regime,Famtaxe,Achat,TvaEnc,CodeTva,CodeTPF);
       // Erreur sur Compte Taxe
-      if CTX='' then BEGIN Result:=rcPar ; LastMsg:=3 ; Break ; END ;
+      if CTX='' then
+      begin
+        Result:=rcPar ;
+        LastMsg:=3 ;
+        TUtilErrorsManagement.SetGenericMessage(TemErr_CptaCptTaxeNonTrouve);
+        Break ;
+      end;
       { Etude du compte général de Taxe }
       TOBG := CreerTOBgeneral(CTX);
       // Erreur sur Compte Taxe
       if TOBG=Nil then
       BEGIN
-        if VH_GC.GCPontComptable='ATT' then Result:=rcPar else
-        if VH_GC.GCPontComptable='REF' then Result:=rcRef else
-        BEGIN
-          if Not CreerCompteGC(TOBG,CTX,CodeTVA,CodeTPF,ccpTaxe) then Result:=rcPar ;
-        END ;
-        if Result<>rcOk then BEGIN LastMsg:=3 ; Break ; END ;
+        AccountIsValidWithTryCreate(TobG, CTX, CodeTVA, codeTPF, ccpTaxe, TemErr_CptaCptTaxeNonTrouve, 3);
+        if Result<>rcOk then
+          Break;
       END ;
       OkVent := TOBG.GetBoolean('G_VENTILABLE');
       {Ligne d'écriture}
@@ -2339,52 +2346,51 @@ Var X : Double ;
     i,NbCre,iTrouv,k,ie : integer ;
     MP  : String ;
 BEGIN
-TOBE := nil;
-ie := 0;
-Result:=0 ; NbCre:=0 ;
-if TOBAcomptes=Nil then Exit ;
-for i:=0 to TOBAcomptes.Detail.Count-1 do
-    BEGIN
-    TOBACC:=TOBAcomptes.Detail[i] ;
-    MP:=TOBACC.GetValue('GAC_MODEPAIE') ; iTrouv:=-1 ;
-    for k:=0 to NbCre-1 do
-        BEGIN
-        TOBE:=TOBEches.Detail[k] ;
-        if TOBE.GetValue('GPE_MODEPAIE')=MP then BEGIN iTrouv:=i ; Break ; END ;
-        END ;
-    // forcer le regroupement des échéances d'acompte sur la premiére échéance
-    // PCS 27102003 if VH_GC.GCIfDefCEGID then
-    if ((VH_GC.GCIfDefCEGID) OR (not GetParamSoc('SO_BTCOMPTAREGL'))) and (TOBEches.Detail.Count>0) then
-    begin
-      iTrouv:=0 ; TOBE:=TOBEches.Detail[0] ;
-    end;
-    if iTrouv<0 then
-       BEGIN
-       TOBE:=TOB.Create('PIEDECHE',TOBEches,0) ; Inc(NbCre) ;
-       TOBE.PutValue('GPE_NATUREPIECEG',TOBPiece.GetValue('GP_NATUREPIECEG')) ;
-       TOBE.PutValue('GPE_SOUCHE',TOBPiece.GetValue('GP_SOUCHE')) ;
-       TOBE.PutValue('GPE_NUMERO',TOBPiece.GetValue('GP_NUMERO')) ;
-       TOBE.PutValue('GPE_INDICEG',TOBPiece.GetValue('GP_INDICEG')) ;
-       TOBE.PutValue('GPE_TIERS',TOBPiece.GetValue('GP_TIERS')) ;
-       TOBE.PutValue('GPE_DATEPIECE',TOBPiece.GetValue('GP_DATEPIECE')) ;
-//       TOBE.PutValue('GPE_DATEECHE',TOBPiece.GetValue('GP_DATEPIECE')) ;
-       TOBE.PutValue('GPE_DATEECHE',TOBACC.GetValue('GAC_DATEECHEANCE')) ;
-       TOBE.PutValue('GPE_TAUXDEV',TOBPiece.GetValue('GP_TAUXDEV')) ;
-       TOBE.PutValue('GPE_DATETAUXDEV',TOBPiece.GetValue('GP_DATETAUXDEV')) ;
-       TOBE.PutValue('GPE_DEVISE',TOBPiece.GetValue('GP_DEVISE')) ;
-       TOBE.PutValue('GPE_SAISIECONTRE',TOBPiece.GetValue('GP_SAISIECONTRE')) ;
-       TOBE.PutValue('GPE_COTATION',TOBPiece.GetValue('GP_COTATION')) ;
-       TOBE.PutValue('GPE_MODEPAIE',MP) ; TOBE.PutValue('GPE_ACOMPTE','X') ;
-       END ;
-    X:=TOBE.GetValue('GPE_MONTANTECHE') ; X:=Arrondi(X+TOBACC.GetValue('GAC_MONTANT'),6) ; TOBE.PutValue('GPE_MONTANTECHE',X) ;
-    X:=TOBE.GetValue('GPE_MONTANTDEV')  ; X:=Arrondi(X+TOBACC.GetValue('GAC_MONTANTDEV'),6) ; TOBE.PutValue('GPE_MONTANTDEV',X) ;
-    END ;
-for i:=0 to TOBEches.Detail.Count-1 do
-    BEGIN
-    if i=0 then ie:=TOBEches.Detail[i].GetNumChamp('GPE_NUMECHE') ;
-    TOBEches.Detail[i].PutValeur(ie,i+1) ;
-    END ;
-Result:=NbCre ;
+  TOBE := nil;
+  ie := 0;
+  Result:=0 ; NbCre:=0 ;
+  if TOBAcomptes=Nil then Exit ;
+  for i:=0 to TOBAcomptes.Detail.Count-1 do
+      BEGIN
+      TOBACC:=TOBAcomptes.Detail[i] ;
+      MP:=TOBACC.GetValue('GAC_MODEPAIE') ; iTrouv:=-1 ;
+      for k:=0 to NbCre-1 do
+          BEGIN
+          TOBE:=TOBEches.Detail[k] ;
+          if TOBE.GetValue('GPE_MODEPAIE')=MP then BEGIN iTrouv:=i ; Break ; END ;
+          END ;
+      // forcer le regroupement des échéances d'acompte sur la premiére échéance
+      // PCS 27102003 if VH_GC.GCIfDefCEGID then
+      if ((VH_GC.GCIfDefCEGID) OR (not GetParamSoc('SO_BTCOMPTAREGL'))) and (TOBEches.Detail.Count>0) then
+      begin
+        iTrouv:=0 ; TOBE:=TOBEches.Detail[0] ;
+      end;
+      if iTrouv<0 then
+         BEGIN
+         TOBE:=TOB.Create('PIEDECHE',TOBEches,0) ; Inc(NbCre) ;
+         TOBE.PutValue('GPE_NATUREPIECEG',TOBPiece.GetValue('GP_NATUREPIECEG')) ;
+         TOBE.PutValue('GPE_SOUCHE',TOBPiece.GetValue('GP_SOUCHE')) ;
+         TOBE.PutValue('GPE_NUMERO',TOBPiece.GetValue('GP_NUMERO')) ;
+         TOBE.PutValue('GPE_INDICEG',TOBPiece.GetValue('GP_INDICEG')) ;
+         TOBE.PutValue('GPE_TIERS',TOBPiece.GetValue('GP_TIERS')) ;
+         TOBE.PutValue('GPE_DATEPIECE',TOBPiece.GetValue('GP_DATEPIECE')) ;
+         TOBE.PutValue('GPE_DATEECHE',TOBACC.GetValue('GAC_DATEECHEANCE')) ;
+         TOBE.PutValue('GPE_TAUXDEV',TOBPiece.GetValue('GP_TAUXDEV')) ;
+         TOBE.PutValue('GPE_DATETAUXDEV',TOBPiece.GetValue('GP_DATETAUXDEV')) ;
+         TOBE.PutValue('GPE_DEVISE',TOBPiece.GetValue('GP_DEVISE')) ;
+         TOBE.PutValue('GPE_SAISIECONTRE',TOBPiece.GetValue('GP_SAISIECONTRE')) ;
+         TOBE.PutValue('GPE_COTATION',TOBPiece.GetValue('GP_COTATION')) ;
+         TOBE.PutValue('GPE_MODEPAIE',MP) ; TOBE.PutValue('GPE_ACOMPTE','X') ;
+         END ;
+      X:=TOBE.GetValue('GPE_MONTANTECHE') ; X:=Arrondi(X+TOBACC.GetValue('GAC_MONTANT'),6) ; TOBE.PutValue('GPE_MONTANTECHE',X) ;
+      X:=TOBE.GetValue('GPE_MONTANTDEV')  ; X:=Arrondi(X+TOBACC.GetValue('GAC_MONTANTDEV'),6) ; TOBE.PutValue('GPE_MONTANTDEV',X) ;
+      END ;
+  for i:=0 to TOBEches.Detail.Count-1 do
+      BEGIN
+      if i=0 then ie:=TOBEches.Detail[i].GetNumChamp('GPE_NUMECHE') ;
+      TOBEches.Detail[i].PutValeur(ie,i+1) ;
+      END ;
+  Result:=NbCre ;
 END ;
 
 procedure CalculRgEcheances (TOBpiece,TOBeches,TOBechesRG,TOBPieceRG,TOBBasesRG,TOBAcomptes:TOB);
@@ -2394,35 +2400,34 @@ var Indice : integer;
     MontantCalc,Ecart : double;
     Numcaution : string;
 begin
-MontantCalc := 0;
-//GetCumulRG(TOBPieceRG,XD,XP); // Valeur TTC de RG
-GetRg(TOBPieceRG,False,True,XP,XD,numcaution);
+  MontantCalc := 0;
+  GetRg(TOBPieceRG,False,True,XP,XD,numcaution);
 
-GetSommeAcomptes(TOBAcomptes,XXP,XXD) ;
-MontantTTC:=TOBPiece.GetValue('GP_TOTALTTCDEV')-XD-XXD ;
-for Indice := 0 to TOBEches.detail.count -1 do
-    begin
-    TOBE := TOBEches.detail[Indice];
-    TOBERG:=TOB.create ('PIEDECHE',TOBEchesRG,-1);
-    TOBERG.Dupliquer (TOBE,true,true);
-    {Calcul du ratio de l'echeance par rapport au montant TTC du document}
-    if MontantTTC<>0 then Ratio := TOBERG.GetValue('GPE_MONTANTDEV')/MontantTTC else ratio:=0;
-    TOBERG.PutValue('GPE_MONTANTDEV',arrondi(XD * Ratio,LaDev.Decimale ));
-    MontantCalc:=MontantCalc + TOBERG.GetValue('GPE_MONTANTDEV');
-    end;
-{Reajustement des montants echeances RG par rapport au total RG}
-Ecart := arrondi(MontantCalc-XD,LAdev.Decimale );
-if Ecart <>0  then
-   begin
-   TOBERG := TOBEchesRG.detail[0];
-   TOBERG.PutValue('GPE_MONTANTDEV',TOBERG.GetValue('GPE_MONTANTDEV') + Ecart);
-   end;
-{Reajustement des contrevaleur et pivot par rapport au montant devise}
-for Indice := 0 to TOBEchesRG.detail.count - 1 do
-    begin
-    TOBERG := TOBECHESRG.detail[Indice];
-    CoordinateMont (TOBERG,'GPE_MONTANTDEV','GPE_MONTANTECHE',LaDev);
-    end;
+  GetSommeAcomptes(TOBAcomptes,XXP,XXD) ;
+  MontantTTC:=TOBPiece.GetValue('GP_TOTALTTCDEV')-XD-XXD ;
+  for Indice := 0 to TOBEches.detail.count -1 do
+      begin
+      TOBE := TOBEches.detail[Indice];
+      TOBERG:=TOB.create ('PIEDECHE',TOBEchesRG,-1);
+      TOBERG.Dupliquer (TOBE,true,true);
+      {Calcul du ratio de l'echeance par rapport au montant TTC du document}
+      if MontantTTC<>0 then Ratio := TOBERG.GetValue('GPE_MONTANTDEV')/MontantTTC else ratio:=0;
+      TOBERG.PutValue('GPE_MONTANTDEV',arrondi(XD * Ratio,LaDev.Decimale ));
+      MontantCalc:=MontantCalc + TOBERG.GetValue('GPE_MONTANTDEV');
+      end;
+  {Reajustement des montants echeances RG par rapport au total RG}
+  Ecart := arrondi(MontantCalc-XD,LAdev.Decimale );
+  if Ecart <>0  then
+     begin
+     TOBERG := TOBEchesRG.detail[0];
+     TOBERG.PutValue('GPE_MONTANTDEV',TOBERG.GetValue('GPE_MONTANTDEV') + Ecart);
+     end;
+  {Reajustement des contrevaleur et pivot par rapport au montant devise}
+  for Indice := 0 to TOBEchesRG.detail.count - 1 do
+      begin
+      TOBERG := TOBECHESRG.detail[Indice];
+      CoordinateMont (TOBERG,'GPE_MONTANTDEV','GPE_MONTANTECHE',LaDev);
+      end;
 end;
 
 procedure RecupRGEcheances (TOBH,TOBEchesRG : TOB; var XXD,XXP : double);
@@ -2608,12 +2613,19 @@ Var TOBTTC,TOBG : TOB ;
     XXD,XXP : double;
     LastDate : TdateTime;
 begin
-  Result:=rcOk ; NbAcc:=0 ;
+  Result:=rcOk ;
+  NbAcc:=0 ;
   {Etude du compte général collectif}
   GColl:=TOBTiers.GetValue('T_COLLECTIF') ;
   TOBG:=CreerTOBGeneral(GColl) ;
   {Erreur sur le collectif}
-  if TOBG=Nil then BEGIN Result:=rcPar ; LastMsg:=4 ; Exit ; END ;
+  if TOBG=Nil then
+  begin
+    Result:=rcPar ;
+    LastMsg:=4 ;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_CptaCollectifVide);    
+    Exit ;
+  end;
   {-- }
   cpt:=1;
   OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
@@ -2726,10 +2738,15 @@ begin
   XXP := 0;
   {Etude du compte général collectif}
   GColl:= GetParamSocSecur('SO_BTREGLGENERAL','');
-  //FV1 - 26/07/2016
   TOBG:=CreerTOBGeneral(GColl) ;
   {Erreur sur le collectif}
-  if TOBG=Nil then BEGIN Result:=rcPar ; LastMsg:=4 ; Exit ; END ;
+  if TOBG=Nil then
+  begin
+    Result:=rcPar ;
+    LastMsg:=4 ;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_CptaCptSTPaieDirectNonTrouve);
+    Exit ;
+  end;
   OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
   {Boucle sur les echéances}
   cpt:=0;
@@ -2794,7 +2811,7 @@ begin
 end;
 
 
-Function CreerLignesTiers ( TOBEcr,TOBPiece,TOBEches,TOBTiers,TOBAcomptes,TOBpieceRG,TOBBasesRG,TOBPieceTrait,TOBPorcs,TOBVTECOLL : TOB; DEV : RDevise; var MM : RMVT ) : T_RetCpta ;
+Function CreerLignesTiers ( TOBEcr,TOBPiece,TOBEches,TOBTiers,TOBAcomptes,TOBpieceRG,TOBBasesRG,TOBPieceTrait,TOBPorcs,TOBVTECOLL : TOB; DEV : RDevise; var MM : RMVT; BAPPOC : Boolean=false ) : T_RetCpta ;
 Var TOBTTC,TOBG,TOBH,TOBL : TOB ;
     i,II,cpt,NumE,NumL : integer ;
     GColl,ModePaie,Collectif : String ;
@@ -2817,7 +2834,13 @@ BEGIN
   TOBechesRG:=TOB.create('Les ECHEANCES',nil,-1);
   // --
   {Erreur sur le collectif}
-  if TOBG=Nil then BEGIN Result:=rcPar ; LastMsg:=4 ; Exit ; END ;
+  if TOBG=Nil then
+  BEGIN
+    Result:=rcPar ;
+    LastMsg:=4 ;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_CptaCollectifVide);
+    Exit ;
+  END ;
   OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
   {Gestion de l'acompte}
   if not GetParamSocSecur('SO_ACOMPTESFAC',false) then NbAcc:=InsereEcheancesAcompte(TOBPiece,TOBEches,TOBAcomptes) ;
@@ -2876,6 +2899,7 @@ BEGIN
         TOBTTC.PutValue('E_DATEPAQUETMAX',MM.DateC) ;
         //FV1 - 23/02/2018 : FS#2964 - Viviane - Il faut charger le champ E_DATEVALEUR avec le champ E_DATECOMPTABLE pour la ligne é TTC é
         TOBTTC.PutValue('E_DATEVALEUR', MM.DateC) ;
+        if BAPPOC then TOBTTC.SetBoolean('E_LIBREBOOL0',true);
         {Montants}
         DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
         RecupLesDC(TOBL,XD,XP) ;
@@ -2897,7 +2921,7 @@ BEGIN
         // Test sur code SIREN unique pour l'entreprise (9 premiers caractéres du code SIRET)
         if (TOBTTC.Detail.count <> 0) and (Copy(GetParamsocSecur('SO_SIRET',''),1,9) = '403001001') then
         BEGIN
-          // Mise é jour de la table libre 1 ecriture é partir de la table libre piéce 3
+          // Mise é jour de la table libre 1 ecriture à partir de la table libre piéce 3
           // pour gestion des factures en litiges
           TOBTTC.PutValue('E_TABLE0', TOBPiece.GetValue('GP_LIBREPIECE3'));
         END;
@@ -2943,6 +2967,7 @@ BEGIN
       TOBTTC.PutValue('E_DATEPAQUETMAX',MM.DateC) ;
       //FV1 - 23/02/2018 : FS#2964 - Viviane - Il faut charger le champ E_DATEVALEUR avec le champ E_DATECOMPTABLE pour la ligne é TTC é
       TOBTTC.PutValue('E_DATEVALEUR', MM.DateC) ;
+      if BAPPOC then TOBTTC.SetBoolean('E_LIBREBOOL0',true);
       {Montants}
       DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
       RecupLesDC(TOBH,XD,XP) ;
@@ -2967,7 +2992,7 @@ BEGIN
       // Test sur code SIREN unique pour l'entreprise (9 premiers caractéres du code SIRET)
       if (TOBTTC.Detail.count <> 0) and (Copy(GetParamsocSecur('SO_SIRET',''),1,9) = '403001001') then
       BEGIN
-        // Mise é jour de la table libre 1 ecriture é partir de la table libre piéce 3
+        // Mise à jour de la table libre 1 ecriture à partir de la table libre piéce 3
         // pour gestion des factures en litiges
         TOBTTC.PutValue('E_TABLE0', TOBPiece.GetValue('GP_LIBREPIECE3'));
       END;
@@ -3128,7 +3153,7 @@ Var TauxEsc,TauxRem,EscD,EscP,RemD,RemP : Double ;
     FamBase : String ;
     stLaFamTaxeEcart : string; // DBR Ecart sur ligne d'écriture
 BEGIN
-  {JLD 23/09/2003 : bricole inféme mais sans risque a priori}
+  {JLD 23/09/2003 : bricole infâme mais sans risque a priori}
   if uppercase(Copy(GetParamSoc('SO_NIF'),1,2)) = 'ES' then Exit ;
   {Fin modif JLD}
   if TTCSANSTVA then Exit ;
@@ -3352,62 +3377,66 @@ Var CumHT : T_CodeCpta ;
     NumL,i : integer ;
     Sta,LibDefaut  : String ;
 BEGIN
-Result:=rcOk ;
-CP := 0; DP := 0; CD := 0 ; DD := 0;
-CumHT:=T_CodeCpta(TTA[IndiceCpta]) ;
-// Erreur sur Compte HT
-CHT:=CumHT.CptHT ; if CHT='' then BEGIN Result:=rcPar ; LastMsg:=5 ; Exit ; END ;
-{Etude du compte général HT}
-TOBG:=CreerTOBGeneral(CHT) ;
-// Erreur sur Compte HT
-if TOBG=Nil then
-   BEGIN
-   if VH_GC.GCPontComptable='ATT' then Result:=rcPar else
-    if VH_GC.GCPontComptable='REF' then Result:=rcRef else
-       BEGIN
-       if Not CreerCompteGC(TOBG,CHT,CumHT.FamTaxe[1],CumHT.FamTaxe[2],ccpHT,MM.Nature) then Result:=rcPar ;
-       END ;
-   if Result<>rcOk then BEGIN LastMsg:=5 ; Exit ; END ;
-   END ;
-OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
-{Ligne d'écriture}
-TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
-if CumHT.Anal.Count>0 then
-   BEGIN
-   TOBE.AddChampSup('ANAL',False) ; TOBE.AddChampSup('AXES',False) ;
-   TOBE.PutValue('ANAL',IndiceCpta) ;
-   Sta:='' ; for i:=1 to 5 do if TOBG.GetValue('G_VENTILABLE'+IntToStr(i))='X' then Sta:=Sta+IntToStr(i) ;
-   TOBE.PutValue('AXES',Sta) ;
-   END ;
-PieceVersECR(MM,TOBPiece,TOBTiers,TOBE,False) ;
-CompteGenVersEcr (TOBPiece,TOBE,CumHt.CptHT );
-{Général}
-TOBE.PutValue('E_GENERAL',CHT) ;
-TOBE.PutValue('E_CONSO',TOBG.GetValue('G_CONSO')) ;
-{Divers}
-TOBE.PutValue('E_TYPEMVT','HT') ;
-TOBE.PutValue('E_QTE1',CumHT.Qte) ;
-TOBE.PutValue('E_TVA',CumHT.FamTaxe[1]) ; TOBE.PutValue('E_TPF',CumHT.FamTaxe[2]) ;
-if CumHT.Affaire<>'' then TOBE.PutValue('E_AFFAIRE',CumHT.Affaire) ;
-if CumHT.LibU then LibDefaut:=CumHT.LibArt else LibDefaut:=TOBG.GetValue('G_LIBELLE');
-AlimLibEcr(TobE,TobPiece,TobTiers,LibDefaut,tecHT,True,(MM.Simul='S'));
-{Contreparties}
-TOBE.PutValue('E_CONTREPARTIEGEN',TOBTiers.GetValue('T_COLLECTIF')) ;
-TOBE.PutValue('E_CONTREPARTIEAUX',TOBTiers.GetValue('T_AUXILIAIRE')) ;
-{Eche+Vent}
-NumL:=TOBEcr.Detail.Count-NbEches+1 ; TOBE.PutValue('E_NUMLIGNE',NumL) ;
-if PremHT<0 then PremHT:=TOBEcr.Detail.Count ;
-if OkVent then TOBE.PutValue('E_ANA','X') ;
-{Montants}
-XD:=CumHT.XD ; XP:=CumHT.XP ;
-if MM.Nature='FC' then BEGIN CD:=XD ; CP:=XP ; DD:=0 ; DP:=0 ; END else
-if MM.Nature='FF' then BEGIN DD:=XD ; DP:=XP ; CD:=0 ; CP:=0 ; END else
-if MM.Nature='AC' then BEGIN DD:=-XD ; DP:=-XP ; CD:=0 ; CP:=0 ; END else
-if MM.Nature='AF' then BEGIN CD:=-XD ; CP:=-XP ; DD:=0 ; DP:=0 ; END ;
-TOBE.PutValue('E_DEBIT',DP)     ; TOBE.PutValue('E_CREDIT',CP) ;
-TOBE.PutValue('E_DEBITDEV',DD)  ; TOBE.PutValue('E_CREDITDEV',CD) ;
-if ((DP=0) and (CP=0)) then TOBE.Free ;
-TOBG.Free ;
+  Result:=rcOk ;
+  CP := 0; DP := 0; CD := 0 ; DD := 0;
+  CumHT:=T_CodeCpta(TTA[IndiceCpta]) ;
+  // Erreur sur Compte HT
+  CHT := CumHT.CptHT ;
+  if CHT='' then
+  begin
+    Result  := rcPar ;
+    LastMsg := 5 ;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('Le compte associé à "%s" n''existe pas.', [CumHT.LibArt]));
+    Exit ;
+  end;
+  {Etude du compte général HT}
+  TOBG:=CreerTOBGeneral(CHT) ;
+  // Erreur sur Compte HT
+  if TOBG=Nil then
+  begin
+    Result := AccountIsValidWithTryCreate(TobG, Cht, CumHT.FamTaxe[1], CumHT.FamTaxe[2], ccpHT, TemErr_CptaCpteGLNonTrouve, 5);
+    if Result <> rcOk then
+      exit;
+   end;
+  OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
+  {Ligne d'écriture}
+  TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
+  if CumHT.Anal.Count>0 then
+     BEGIN
+     TOBE.AddChampSup('ANAL',False) ; TOBE.AddChampSup('AXES',False) ;
+     TOBE.PutValue('ANAL',IndiceCpta) ;
+     Sta:='' ; for i:=1 to 5 do if TOBG.GetValue('G_VENTILABLE'+IntToStr(i))='X' then Sta:=Sta+IntToStr(i) ;
+     TOBE.PutValue('AXES',Sta) ;
+     END ;
+  PieceVersECR(MM,TOBPiece,TOBTiers,TOBE,False) ;
+  CompteGenVersEcr (TOBPiece,TOBE,CumHt.CptHT );
+  {Général}
+  TOBE.PutValue('E_GENERAL',CHT) ;
+  TOBE.PutValue('E_CONSO',TOBG.GetValue('G_CONSO')) ;
+  {Divers}
+  TOBE.PutValue('E_TYPEMVT','HT') ;
+  TOBE.PutValue('E_QTE1',CumHT.Qte) ;
+  TOBE.PutValue('E_TVA',CumHT.FamTaxe[1]) ; TOBE.PutValue('E_TPF',CumHT.FamTaxe[2]) ;
+  if CumHT.Affaire<>'' then TOBE.PutValue('E_AFFAIRE',CumHT.Affaire) ;
+  if CumHT.LibU then LibDefaut:=CumHT.LibArt else LibDefaut:=TOBG.GetValue('G_LIBELLE');
+  AlimLibEcr(TobE,TobPiece,TobTiers,LibDefaut,tecHT,True,(MM.Simul='S'));
+  {Contreparties}
+  TOBE.PutValue('E_CONTREPARTIEGEN',TOBTiers.GetValue('T_COLLECTIF')) ;
+  TOBE.PutValue('E_CONTREPARTIEAUX',TOBTiers.GetValue('T_AUXILIAIRE')) ;
+  {Eche+Vent}
+  NumL:=TOBEcr.Detail.Count-NbEches+1 ; TOBE.PutValue('E_NUMLIGNE',NumL) ;
+  if PremHT<0 then PremHT:=TOBEcr.Detail.Count ;
+  if OkVent then TOBE.PutValue('E_ANA','X') ;
+  {Montants}
+  XD:=CumHT.XD ; XP:=CumHT.XP ;
+  if MM.Nature='FC' then BEGIN CD:=XD ; CP:=XP ; DD:=0 ; DP:=0 ; END else
+  if MM.Nature='FF' then BEGIN DD:=XD ; DP:=XP ; CD:=0 ; CP:=0 ; END else
+  if MM.Nature='AC' then BEGIN DD:=-XD ; DP:=-XP ; CD:=0 ; CP:=0 ; END else
+  if MM.Nature='AF' then BEGIN CD:=-XD ; CP:=-XP ; DD:=0 ; DP:=0 ; END ;
+  TOBE.PutValue('E_DEBIT',DP)     ; TOBE.PutValue('E_CREDIT',CP) ;
+  TOBE.PutValue('E_DEBITDEV',DD)  ; TOBE.PutValue('E_CREDITDEV',CD) ;
+  if ((DP=0) and (CP=0)) then TOBE.Free ;
+  TOBG.Free ;
 END ;
 
 Function FabricSQLCompta ( FamArt,FamTiers,FamAff,Etabl,Regime,FamTaxe,VenteAchat : String ) : String ;
@@ -3541,7 +3570,7 @@ BEGIN
   if Copy(CodeAffaire,1,1)='W' then
   begin
     CodeAffaire := GetChampsAffaire (CodeAffaire,'AFF_CHANTIER');
-    if Trim(Copy(CodeAffaire,2,14)) <> '' then   // correction BRL : certaines fois le code n'est pas é blanc mais é "A               00"
+    if Trim(Copy(CodeAffaire,2,14)) <> '' then   // correction BRL : certaines fois le code n'est pas à blanc mais à "A               00"
     begin
       FamAff := TraiteFamilleAffaire (CodeAffaire, TobAffaire );
     end else
@@ -3613,7 +3642,7 @@ BEGIN
         TOBEcr.Detail.Sort('V_NUMEROVENTIL') ; TOBStk.Detail.Sort('V_NUMEROVENTIL') ;
       END ;
       Ferme(Q) ;
-      //CONTREM ???? : TOB peut étre Nil: et ce n'est pas protégé dans la fonction suivante
+      //CONTREM ???? : TOB peut être Nil: et ce n'est pas protégé dans la fonction suivante
     END ;
   END;
   if (TOBC<>Nil) and (AvecAnal) and (TOBA<>Nil) then
@@ -3680,7 +3709,7 @@ BEGIN
   if Copy(CodeAffaire,1,1)='W' then
   begin
     CodeAffaire := GetChampsAffaire (CodeAffaire,'AFF_CHANTIER');
-    if Trim(Copy(CodeAffaire,2,14)) <> '' then  // correction BRL : certaines fois le code n'est pas é blanc mais é "A               00"
+    if Trim(Copy(CodeAffaire,2,14)) <> '' then  // correction BRL : certaines fois le code n'est pas à blanc mais à "A               00"
     begin
       FamAff := TraiteFamilleAffaire (CodeAffaire, TobAffaire );
     end else
@@ -3934,6 +3963,266 @@ BEGIN
   END ;
 END ;
 
+function CreerLigneFromRepartTVA(TOBEcr,TOBPiece,TOBTiers,TOBArticles,TOBREPARTTVA: TOB;  MM : RMVT ; NbDec : integer; DEV : Rdevise) : T_RetCpta;
+
+  Function GetSection (TOBL,TOBA: TOB; CodeAxe : string) : string;
+  var cpt : string;
+      TOBStruc : TOB;
+      Etab,VEnteAchat : string;
+  begin
+    cpt:=''; // mcd 21/11/02 pour remise à blanc cpt entre 2 traitement de
+    Etab := TobPiece.GetValue('GP_ETABLISSEMENT');
+    VenteAchat:=GetInfoParPiece(TobPiece.getvalue('GP_NATUREPIECEG'),'GPP_VENTEACHAT') ;
+    //
+    //
+    if TobStruc <> nil then BEGIN TobStruc.Free; TobStruc := Nil; END;
+    if (Etab <> '')    then TobStruc := ChargeAnaGescom (CodeAxe,Etab,VenteAchat,tCodesection);
+    if (TobStruc =Nil) then TobStruc := ChargeAnaGescom (CodeAxe,'',VenteAchat,tCodesection);
+    //
+    if TobStruc <> Nil then Cpt := TraiteAnaGescom (CodeAxe,TobStruc,TOBPiece,TOBL,TOBA,TOBTiers,tCodeSection);
+    cpt:=copy(cpt,1,VH^.Cpta[AxeToFb(Codeaxe)].lg);
+    // -------------------------------------------------
+    // Ajout LS 22/02/2013 Pour gestion analytique stock
+    // -------------------------------------------------
+    if (cpt='') and
+    (GetParamSocSecur('SO_OPTANALSTOCK',false)) and
+    (Pos(TOBPiece.GetString('GP_NATUREPIECEG'),'FF;AFS')>0) and
+    (TOBl.GetString('GL_TYPEARTICLE')='MAR') and
+    (TOBl.GetString('GL_TENUESTOCK')='X') and
+    (TOBl.GetInteger('GL_IDENTIFIANTWOL')=0) then
+    begin
+      cpt:=copy(BTGetSectionStock(TOBL.GetString('GL_DEPOT')),1,VH^.Cpta[AxeToFb(Codeaxe)].lg);
+    end;
+    // -------------------------------------------------
+    if Cpt <> '' then
+    begin
+      // Création de la section analytique si nécessaire
+      if Not(CreatSectionGenere(Cpt,CodeAxe,TOBL.GEtSTring('GL_ETABLISSEMENT'),TOBPiece,TOBL,TOBA,TOBTiers,TobStruc)) then Exit;
+    end;
+    Result := cpt;
+    TobStruc.Free;
+  End;
+
+
+  Procedure CumulAnal ( CumHT : T_CodeCpta ; TOBLREF,TOBA : TOB ; XD,XP : Double ) ;
+  Var XDT : T_DetAnal ;
+      TOBAL : TOB ;
+      Section,Ax      : String ;
+      i,k,iTrouv,NumAxe : integer ;
+  BEGIN
+    //
+    for NumAxe := 1 to MaxAxe do
+    BEGIN
+      XDT := nil;
+      Ax:='A'+IntToStr(NumAxe) ;
+      Section:= GetSection(TOBLREF,TOBA,Ax) ; if Section = '' then continue;
+      iTrouv:=-1 ;
+      for k:=0 to CumHT.Anal.Count-1 do
+      BEGIN
+        XDT:=T_DetAnal(CumHT.Anal[k]) ;
+        if ((XDT.Section=Section) and (XDT.Ax=Ax)) then BEGIN iTrouv:=k ; Break ; END ;
+      END ;
+      if iTrouv<0 then XDT:=T_DetAnal.Create ;
+      XDT.Section:=Section ; XDT.aX:=aX ;
+      XDT.MD:=XDT.MD+XD ; XDT.MP:=XDT.MP+XP;
+      XDT.Qte1:=XDT.Qte1+1;
+      if iTrouv<0 then CumHT.Anal.Add(XDT) ;
+    end;
+  END ;
+
+  function GenereEcritureTVA (TOBP : TOB; LibelleForce : string='') : T_RetCpta;
+  var Regime,CatTaxe : string;
+      Achat : boolean;
+      CTX,FamTaxe : String;
+      TOBG,TOBTTC,TOBE : TOB;
+      XD,XP,DP,DD,CD,CP : double;
+      NumL : Integer;
+      OkVent,TvaEnc : boolean;
+      CodeTva,CodeTPf : string;
+  begin
+    TvaEnc:=(Pos(TOBPiece.GetValue('GP_TVAENCAISSEMENT'),'TE;TM')>0);
+    Regime:=TOBPiece.GetValue('GP_REGIMETAXE') ;
+    Achat:=((MM.Nature='AF') or (MM.Nature='FF')) ;
+    Famtaxe := TOBP.GeTString('FAMTAXE');  CodeTva := FamTaxe; CodeTpf :='';
+    XD := TOBP.GetDouble('VALEUR'); XP := XD;
+    CatTaxe := 'TX1';
+    CTX := GetCompteTaxe ( CatTaxe,regime,Famtaxe,Achat,TvaEnc,CodeTva,CodeTPF);
+    if CTX = '' then result := rcPar;
+    TOBG:=CreerTOBGeneral(CTX) ;
+    // Erreur sur Compte RG
+    if TOBG=Nil then
+    begin
+      Result := AccountIsValidWithTryCreate(TobG, CTX, '', '', ccpTaxe, TemErr_CptaCpteRGNonTrouve, 2);
+      if Result <> rcOk then
+        exit;
+    end;
+    //
+    OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
+    //
+    {Ligne d'écriture}
+    TOBTTC:=Nil ;
+    if TOBEcr.Detail.Count>0 then TOBTTC:=TOBEcr.Detail[0] ;
+    TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
+    PieceVersECR(MM,TOBPiece,TOBTiers,TOBE,False) ;
+    {Général}
+    TOBE.PutValue('E_GENERAL',CTX) ;
+    TOBE.PutValue('E_CONSO',TOBG.GetValue('G_CONSO')) ;
+    {Divers}
+    AlimLibEcr(TobE,TobPiece,TobTiers,TOBG.GetValue('G_LIBELLE'),tecTaxe,True,(MM.Simul='S'));
+    if LibelleForce <> '' then
+    begin
+      TOBE.SetString('E_LIBELLE',LibelleForce);
+    end;
+    {$IFDEF BTP}
+    if BTTypeTaxe (CatTaxe) = bttTVA then
+    BEGIN
+      TOBE.PutValue('E_TYPEMVT','TVA') ; if PremTVA<0 then PremTVA:=TOBEcr.Detail.Count ;
+    END else if BTTypeTaxe (CatTaxe) = bttTPF then
+    begin
+      TOBE.PutValue('E_TYPEMVT','TPF');
+    end else
+    begin
+      TOBE.PutValue('E_TYPEMVT',CatTaxe) ;
+    end;
+    {$ELSE}
+    if CatTaxe='TX1' then
+    BEGIN
+      TOBE.PutValue('E_TYPEMVT','TVA') ; if PremTVA<0 then PremTVA:=TOBEcr.Detail.Count ;
+    END else
+    if CatTaxe='TX2' then TOBE.PutValue('E_TYPEMVT','TPF')
+                     else TOBE.PutValue('E_TYPEMVT',CatTaxe) ;
+    {$ENDIF}
+    {Contreparties}
+    TOBE.PutValue('E_CONTREPARTIEGEN',TOBTiers.GetValue('T_COLLECTIF')) ;
+    TOBE.PutValue('E_CONTREPARTIEAUX',TOBTiers.GetValue('T_AUXILIAIRE')) ;
+    TOBE.SetBoolean('E_TVAENCAISSEMENT', false);
+    {Eche+Vent}
+    NumL:=TOBEcr.Detail.Count-NbEches+1 ; TOBE.PutValue('E_NUMLIGNE',NumL) ;
+    if OkVent then TOBE.PutValue('E_ANA',OKVent) ;
+    if TOBG.GetValue('G_LETTRABLE')='X' then
+    BEGIN
+      TOBE.PutValue('E_ECHE','X') ; TOBE.PutValue('E_NUMECHE',1) ; TOBE.PutValue('E_ETATLETTRAGE','AL') ;
+      TOBE.PutValue('E_ETAT','0000000000') ;
+      if TOBTTC<>Nil then
+      BEGIN
+        TOBE.PutValue('E_MODEPAIE',TOBTTC.GetValue('E_MODEPAIE')) ;
+        TOBE.PutValue('E_DATEECHEANCE',TOBTTC.GetValue('E_DATEECHEANCE')) ;
+      END ;
+    END ;
+    {Montants}
+    DP:=0 ; CP:=0 ; DD:=0 ; CD:=0 ;
+    if MM.Nature='FC' then BEGIN CD:=XD ; CP:=XP ; DD:=0 ; DP:=0 ; END else
+    if MM.Nature='FF' then BEGIN DD:=XD ; DP:=XP ; CD:=0 ; CP:=0 ; END else
+    if MM.Nature='AC' then BEGIN DD:=-XD ; DP:=-XP ; CD:=0 ; CP:=0 ; END else
+    if MM.Nature='AF' then BEGIN CD:=-XD ; CP:=-XP ; DD:=0 ; DP:=0 ; END ;
+    CP := arrondi(CP,V_PGI.OkDecV); CD := Arrondi (CD,LaDev.decimale);
+    DP := arrondi(DP,V_PGI.OkDecV); DD := Arrondi (DD,LaDev.decimale);
+    if (DP < 0) or (CP <0) then
+    begin
+      DP := DP * (-1);
+      CP := CP * (-1);
+      DD := DD * (-1);
+      CD := CD * (-1);
+      //
+      TOBE.PutValue('E_DEBIT',CP)     ; TOBE.PutValue('E_CREDIT',DP) ;
+      TOBE.PutValue('E_DEBITDEV',CD)  ; TOBE.PutValue('E_CREDITDEV',DD) ;
+    end else
+    begin
+      TOBE.PutValue('E_DEBIT',DP)     ; TOBE.PutValue('E_CREDIT',CP) ;
+      TOBE.PutValue('E_DEBITDEV',DD)  ; TOBE.PutValue('E_CREDITDEV',CD) ;
+    end;
+    if ((DP=0) and (CP=0)) then TOBE.Free ;
+    TOBG.free;
+  end;
+
+
+
+var II,K,KK : Integer;
+    iTrouv : integer;
+    CptHt,FamTaxe,Affaire,LibArt : string;
+    XD,XP,Taxe : Double;
+    TOBL,TOBA,TOBTVA,TOBP : TOB;
+    CumHT : T_CodeCpta;
+    OkTx : boolean;
+begin
+  TOBTVA := TOB.Create ('LES TVA',nil,-1);
+  TRY
+    Affaire := TOBPiece.getString('GP_AFFAIRE');
+    for II := 0 to tobpiece.Detail.count -1 do
+    begin
+      TOBL := TOBPiece.detail[II];
+      if TOBL.GEtString('GL_TYPELIGNE')='ART' then break;
+    end;
+    if TOBL = nil then Exit;
+    TOBA := TOBarticles.findFirst(['GA_ARTICLE'],[TOBL.GetString('GL_ARTICLE')],true); if TOBA = nil then exit;
+    LibArt := TOBA.getString('GA_ARTICLE');
+    //
+    for II := 0 to TOBREPARTTVA.detail.count -1 do
+    begin
+      CptHt := TOBREPARTTVA.detail[II].getString('BP8_GENERAL');
+      XD := TOBREPARTTVA.detail[II].getDouble('BP8_BASEHT'); XP := XD;
+      Taxe := TOBREPARTTVA.detail[II].getDouble('BP8_MONTANTTAXE');
+      FamTaxe := TOBREPARTTVA.detail[II].getString('BP8_FAMILLETAXE1');
+      TOBL.setString('GL_FAMILLENIV2',TOBREPARTTVA.detail[II].getString('BP8_FAMILLENIV2'));
+      //
+      TOBP := TOBTVA.findfirst(['FAMTAXE'],[FamTaxe],true);
+      if TOBP = nil then
+      begin
+        TOBP := TOB.Create('UNE TAXE',TOBTVA,-1);
+        TOBP.AddChampSupValeur('FAMTAXE',FamTaxe);
+        TOBP.AddChampSupValeur('BASE',0);
+        TOBP.AddChampSupValeur('VALEUR',0);
+      end;
+      TOBP.SetDouble('BASE',TOBP.GetDouble('BASE')+XD);
+      TOBP.SetDouble('VALEUR',TOBP.GetDouble('VALEUR')+Taxe);
+      //
+      iTrouv:=-1 ;
+      for k:=0 to TTA.Count-1 do
+      BEGIN
+        CumHT:=T_CodeCpta(TTA[k]) ;
+        if CumHT.CptHT<>CptHT then Continue ;
+        if DistinctAffaire then BEGIN if CumHT.Affaire<>Affaire then Continue ; END ;
+        OkTx:=True ;
+        for kk:=1 to 5 do if CumHT.FamTaxe[kk]<>FamTAxe then OkTx:=False ;
+        if OkTX then BEGIN iTrouv:=k ; Break ; END ;
+      END ;
+      if iTrouv<0 then
+      BEGIN
+        CumHT:=T_CodeCpta.Create ; CumHT.CptHT:=CptHT ; CumHT.LibU:=True ;
+        CumHT.LibArt:=LibArt ; CumHT.Affaire:=Affaire ;
+        CumHT.FamTaxe[1]:=FamTaxe ;
+      END else
+      BEGIN
+        CumHT:=T_CodeCpta(TTA[iTrouv]) ;
+      END ;
+      //
+      CumHT.XD:=CumHT.XD+XD ; CumHT.XP:=CumHT.XP+XP ;
+      CumHT.Qte:=CumHT.Qte+1 ;
+      if CumHT.LibArt<>LibArt then BEGIN CumHT.LibU:=False ; CumHT.LibArt:='' ; END ;
+      CumHT.SommeTaxeD[1]:=CumHT.SommeTaxeD[1]+taxe;
+      CumHT.SommeTaxeP[1]:=CumHT.SommeTaxeP[1]+Taxe;
+      CumulAnal(CumHT,TOBL,TOBA,XD,XP) ;
+      if iTrouv<0 then TTA.Add(CumHT) ;
+    end;
+
+    for II:=0 to TTA.Count-1 do
+    BEGIN
+      if Result=rcOk then Result:=CreerLignesEcrHT(TOBEcr,TOBPiece,TOBTiers,MM,II) ;
+      if Result<>rcOk then Break ;
+    END ;
+    if Result <> rcOk then Exit;
+
+    for II := 0 to TOBTVA.detail.Count -1 do
+    begin
+      if TOBTVA.detail[II].GetDouble('VALEUR')=0 then continue;
+      if Result=rcOk then Result:=GenereEcritureTVA(TOBTVA.detail[II]) ;
+      if Result<>rcOk then Break ;
+    end;
+  FINALLY
+    TOBTVA.free;
+  END;
+end;
+
 Function CreerLignesHTTVA ( TOBEcr,TOBAFFInterv,TOBPieceinterv,TOBPiece,TOBOuvrages,TOBOuvragesP,TOBBases,TOBBasesCharge,TOBTiers,TOBArticles,TOBCpta,TOBPorcs,TOBAnaP,TOBAnaS : TOB ; MM : RMVT ; NbDec : integer; DEV : Rdevise ) : T_RetCpta ;
 Var i,k,itrouv,kk : integer ;
     TOBA,TOBL,TOBCode,TOBP : TOB ;
@@ -4043,7 +4332,13 @@ BEGIN
       end;
     END ;
     // Erreur sur le compte HT port
-    if CptHT='' then BEGIN Result:=rcPar ; LastMsg:=5 ; Break ; END ;
+    if CptHT='' then
+    begin
+      Result:=rcPar ;
+      LastMsg:=5 ;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('Le compte associé au port "%s" est inexistant.', [RefUnique]));
+      Break ;
+    end;
     {Sommations par compte et familles de taxes identiques}
     RecupLesDC(TOBP,XD,XP) ;
     iTrouv:=-1 ;
@@ -4271,13 +4566,15 @@ END ;
 
 
 Function CreerLigneRestitutionRetenueGar ( TOBEcr,TOBPIece,TOBPieceRG,TOBTiers,TOBBasesRG: TOB ; MM : RMVT ) : T_RetCpta ;
-Var CPteRD   : String ;
-    TOBG,TOBE,TOBTTC,TOBL : TOB ;
-    OkVent    : boolean ;
-    NumL      : integer ;
-    DP,CP,DD,CD,XD,XP,XXp,XXD,TheMontantTTC : Double ;
-    DEV : Rdevise;
-    II : integer;
+Var
+  CPteRD   : String ;
+  TOBG,TOBE,TOBTTC,TOBL : TOB ;
+  OkVent    : boolean ;
+  NumL      : integer ;
+  DP,CP,DD,CD,XD,XP,XXp,XXD,TheMontantTTC : Double ;
+  DEV : Rdevise;
+  II : integer;
+  CreateSucces : boolean;
 BEGIN
   Result:=rcOk ;
   if TOBPiece.detail.count = 0 then exit;
@@ -4303,25 +4600,28 @@ BEGIN
     //
     if CPteRD = '' then
     begin
-      if MM.Nature='FC' then BEGIN  CPteRD := GetParamSocSecur('SO_GCCPTERGVTE',''); END else
-      if MM.Nature='AC' then BEGIN  CPteRD := GetParamSocSecur('SO_GCCPTERGVTE',''); END else
-      if MM.Nature='FF' then BEGIN CPteRD := GetParamSocSecur('SO_GCCPTERGACH',''); END else
-      if MM.Nature='AF' then BEGIN CPteRD := GetParamSocSecur('SO_GCCPTERGACH',''); END ;
+      if      MM.Nature = 'FC' then CPteRD := GetParamSocSecur('SO_GCCPTERGVTE','')
+      else if MM.Nature = 'AC' then CPteRD := GetParamSocSecur('SO_GCCPTERGVTE','')
+      else if MM.Nature = 'FF' then CPteRD := GetParamSocSecur('SO_GCCPTERGACH','')
+      else if MM.Nature = 'AF' then CPteRD := GetParamSocSecur('SO_GCCPTERGACH','');
     end;
     // Erreur sur Compte retenues de garanties
-    if CPteRD='' then BEGIN Result:=rcPar ; LastMsg:=12 ; Exit ; END ;
+    if CPteRD = '' then
+    begin
+      Result  := rcPar ;
+      LastMsg := 12 ;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_CptaParamCptRGVide);
+      Exit ;
+    end;
     {Etude du compte général }
     TOBG:=CreerTOBGeneral(CPteRD) ;
     // Erreur sur Compte RG
     if TOBG=Nil then
-       BEGIN
-       if VH_GC.GCPontComptable='ATT' then Result:=rcPar else
-        if VH_GC.GCPontComptable='REF' then Result:=rcRef else
-           BEGIN
-           if Not CreerCompteGC(TOBG,CPteRD,'','',ccpRG) then Result:=rcPar ;
-           END ;
-       if Result<>rcOk then BEGIN LastMsg:=2 ; Exit ; END ;
-       END ;
+    begin
+      Result := AccountIsValidWithTryCreate(TobG, CpteRD, '', '', ccpRG, TemErr_CptaCpteRGNonTrouve, 2);
+      if Result <> rcOk then
+        exit;
+    end;
     OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
     {Ligne d'écriture}
     TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
@@ -4380,6 +4680,7 @@ BEGIN
   end;
   TOBG.Free ;
 end;
+
 Function CreerLigneRetenueDiv ( TOBEcr,TOBPiece,TOBPorcs,TOBBases,TOBTiers : TOB ; MM : RMVT ) : T_RetCpta ;
 Var CPteRD   : String ;
     TOBG,TOBE,TOBTTC,TOBTVARG,TOBP : TOB ;
@@ -4426,19 +4727,21 @@ BEGIN
       CPteRD := TOBP.GEtString('GPT_COLLECTIF');
     end;
     // Erreur sur Compte retenues de garanties
-    if CPteRD='' then BEGIN Result:=rcPar ; LastMsg:=12 ; Exit ; END ;
+    if CPteRD='' then
+    begin
+      Result:=rcPar ;
+      LastMsg:=12 ;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_CptaCptRDNonTrouve);
+      Exit ;
+    end;
     {Etude du compte général }
     TOBG:=CreerTOBGeneral(CPteRD) ;
     // Erreur sur Compte RG
     if TOBG=Nil then
-       BEGIN
-       if VH_GC.GCPontComptable='ATT' then Result:=rcPar else
-        if VH_GC.GCPontComptable='REF' then Result:=rcRef else
-           BEGIN
-           if Not CreerCompteGC(TOBG,CPteRD,'','',ccpRG) then Result:=rcPar ;
-           END ;
-       if Result<>rcOk then BEGIN LastMsg:=2 ; Exit ; END ;
-       END ;
+    begin
+      AccountIsValidWithTryCreate(TobG, CpteRD, '', '', ccpRG, TemErr_CptaCptRDNonTrouve, 2);
+      if Result <> rcOk then Exit;
+    end;
     OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
     {Ligne d'écriture}
     TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
@@ -4531,19 +4834,21 @@ BEGIN
   end;
 
   // Erreur sur Compte retenues de garanties
-  if CpteRG='' then BEGIN Result:=rcPar ; LastMsg:=12 ; Exit ; END ;
+  if CpteRG='' then
+  begin
+    Result:=rcPar ;
+    LastMsg:=12 ;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_CptaCptRGNonTrouve);
+    Exit ;
+  end;
   {Etude du compte général }
   TOBG:=CreerTOBGeneral(CpteRG) ;
   // Erreur sur Compte RG
   if TOBG=Nil then
-     BEGIN
-     if VH_GC.GCPontComptable='ATT' then Result:=rcPar else
-      if VH_GC.GCPontComptable='REF' then Result:=rcRef else
-         BEGIN
-         if Not CreerCompteGC(TOBG,CpteRg,'','',ccpRG) then Result:=rcPar ;
-         END ;
-     if Result<>rcOk then BEGIN LastMsg:=2 ; Exit ; END ;
-     END ;
+  begin
+    Result := AccountIsValidWithTryCreate(TobG, CPteRG, '', '', ccpRG, TemErr_CptaCptRGNonTrouve, 2);
+    if Result <> rcOk then exit;
+  end;
   OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
   {Ligne d'écriture}
   TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
@@ -4788,88 +5093,93 @@ BEGIN
   {Lecture echéances d'acompte en comptabilité}
   QualifP:='N' ;
   TOBCompta:=TOB.Create('',Nil,-1) ;
-  for i:=0 to TOBAcomptes.Detail.Count-1 do
-  BEGIN
-    TOBACC:=TOBAcomptes.Detail[i] ;
-    if TOBACC.GetValue('GAC_ISREGLEMENT')='X' then BEGIN if Achat then NatEcr:='RF' else NatEcr:='RC' ; END
-                else BEGIN if Achat then NatEcr:='OF' else NatEcr:='OC' ; END ;
-    SQL:='SELECT * FROM ECRITURE WHERE E_AUXILIAIRE="'+Auxi+'" AND E_GENERAL="'+Gene+'" '
-         +'AND E_QUALIFPIECE="'+QualifP+'" AND E_ECHE="X" AND (E_NATUREPIECE="'+NatEcr+'" OR E_NATUREPIECE="OD") AND (E_ETATLETTRAGE="AL" OR E_ETATLETTRAGE="PL") '
-         +'AND E_DEVISE="'+CodeD+'" '
-         +'AND E_JOURNAL="'+TOBACC.GetValue('GAC_JALECR')+'" AND E_NUMEROPIECE='+IntToStr(TOBACC.GetValue('GAC_NUMECR')) ;
-    Q:=OpenSQL(SQL,True,-1, '', True) ;
-    if Not Q.EOF then TOBCompta.LoadDetailDB('ECRITURE','','',Q,True) ;
-    Ferme(Q) ;
-  END ;
-  if TOBCompta.Detail.Count<=0 then BEGIN TOBCompta.Free ; Exit ; END ;
-  {Lecture des éventuelles écritures déjé lettrées avec ces acomptes}
-  TOBEcrLiees:=TOB.Create('',Nil,-1) ;
-  for i:=0 to TOBCompta.Detail.Count-1 do
-  BEGIN
-    TOBE:=TOBCompta.Detail[i] ;
-    CodeL:=TOBE.GetValue('E_LETTRAGE') ; if CodeL='' then Continue ;
-    SQL:='SELECT * FROM ECRITURE WHERE E_AUXILIAIRE="'+Auxi+'" AND E_GENERAL="'+Gene+'" '
-         +'AND E_QUALIFPIECE="N" AND E_ECHE="X" AND E_ETATLETTRAGE="PL" '
-         +'AND E_LETTRAGE="'+CodeL+'" AND E_DEVISE="'+CodeD+'" ' ;
-    Q:=OpenSQL(SQL,True,-1, '', True) ;
-    if Not Q.EOF then TOBEcrLiees.LoadDetailDB('ECRITURE','','',Q,True) ;
-    Ferme(Q) ;
-  END ;
-  for i:=TOBEcrLiees.Detail.Count-1 downto 0 do
-  BEGIN
-    {Ne pas se retrouver soi-méme}
-    TOBLett:=TOBEcrLiees.Detail[i] ;
-    TOBTrouve:=TOBCompta.FindFirst(['E_JOURNAL','E_NUMEROPIECE','E_NUMLIGNE','E_NUMECHE'],[TOBLett.GetValue('E_JOURNAL'),TOBLett.GetValue('E_NUMEROPIECE'),TOBLett.GetValue('E_NUMLIGNE'),TOBLett.GetValue('E_NUMECHE')],True) ;
-    if TOBTrouve=Nil then TOBLett.ChangeParent(TOBCompta,-1) ;
-  END ;
-  TOBEcrLiees.Free ;
-  {Rajout des échéances d'acompte de l'écriture de gescom}
-  for i:=0 to TOBEcr.Detail.Count-1 do
-  BEGIN
-    TOBE:=TOBEcr.Detail[i] ; ie:=TOBE.GetNumChamp('E_ECHE') ;
-    if TOBE.GetValeur(ie)<>'X' then Break ;
-    if i>=NbAcc then Break ;
-    NewE:=TOB.Create('ECRITURE',TOBCompta,-1) ;
-    NewE.Dupliquer(TOBE,False,True) ;
-  END ;
-  {Constitution du paquet é lettrer}
-  TLett:=TList.Create ;
-  for i:=0 to TOBCompta.Detail.Count-1 do
-  BEGIN
-    TOBE:=TOBCompta.Detail[i] ; L:=TL_Rappro.Create ;
-    {Comptes et caractéristiques}
-    L.General:=Gene ; L.Auxiliaire:=Auxi ;
-    L.DateC:=TOBE.GetValue('E_DATECOMPTABLE') ; L.DateE:=TOBE.GetValue('E_DATEECHEANCE') ; L.DateR:=TOBE.GetValue('E_DATEREFEXTERNE') ;
-    L.RefI:=TOBE.GetValue('E_REFINTERNE') ; L.RefL:=TOBE.GetValue('E_REFLIBRE') ;
-    L.RefE:=TOBE.GetValue('E_REFEXTERNE') ; L.Lib:=TOBE.GetValue('E_LIBELLE') ;
-    L.Jal:=TOBE.GetValue('E_JOURNAL') ; L.Numero:=TOBE.GetValue('E_NUMEROPIECE') ;
-    L.NumLigne:=TOBE.GetValue('E_NUMLIGNE') ; L.NumEche:=TOBE.GetValue('E_NUMECHE') ;
-    L.CodeL:=TOBE.GetValue('E_LETTRAGE') ; L.CodeD:=CodeD ; L.TauxDEV:=TOBE.GetValue('E_TAUXDEV') ;
-    if MM.CodeLettrage <> '' then L.CodeL := MM.CodeLettrage;
-    L.Nature:=TOBE.GetValue('E_NATUREPIECE') ;
-    L.Facture:=((L.Nature='FC') or (L.Nature='FF') or (L.Nature='AC') or (L.Nature='AF') or (L.Nature='OD')) ;
-    L.Client:=((L.Nature='FC') or (L.Nature='AC') or (L.Nature='RC') or (L.Nature='OC') or (L.Nature='OD')) ;
-    L.EditeEtatTva:=(TOBE.GetValue('E_EDITEETATTVA')='X') ;
-    L.Solution:=0 ; L.Exo:=TOBE.GetValue('E_EXERCICE') ;
-    {Montants, Lettrage}
-    L.DebDev:=TOBE.GetValue('E_DEBITDEV') ; L.CredDev:=TOBE.GetValue('E_CREDITDEV') ;
-    L.Debit:=TOBE.GetValue('E_DEBIT') ; L.Credit:=TOBE.GetValue('E_CREDIT') ;
-    //    L.SaisieEuro:=(SaisieEuro='X') ;
-    if L.CodeD<>V_PGI.DevisePivot then
+  try
+    for i:=0 to TOBAcomptes.Detail.Count-1 do
     BEGIN
-      L.DebitCur:=TOBE.GetValue('E_DEBITDEV') ; L.CreditCur:=TOBE.GetValue('E_CREDITDEV') ;
-    END else
-    BEGIN
-      L.DebitCur:=TOBE.GetValue('E_DEBIT') ; L.CreditCur:=TOBE.GetValue('E_CREDIT') ;
+      TOBACC:=TOBAcomptes.Detail[i] ;
+      if TOBACC.GetValue('GAC_ISREGLEMENT')='X' then BEGIN if Achat then NatEcr:='RF' else NatEcr:='RC' ; END
+                  else BEGIN if Achat then NatEcr:='OF' else NatEcr:='OC' ; END ;
+      SQL:='SELECT * FROM ECRITURE WHERE E_AUXILIAIRE="'+Auxi+'" AND E_GENERAL="'+Gene+'" '
+           +'AND E_QUALIFPIECE="'+QualifP+'" AND E_ECHE="X" AND (E_NATUREPIECE="'+NatEcr+'" OR E_NATUREPIECE="OD") AND (E_ETATLETTRAGE="AL" OR E_ETATLETTRAGE="PL") '
+           +'AND E_DEVISE="'+CodeD+'" '
+           +'AND E_JOURNAL="'+TOBACC.GetValue('GAC_JALECR')+'" AND E_NUMEROPIECE='+IntToStr(TOBACC.GetValue('GAC_NUMECR')) ;
+      Q:=OpenSQL(SQL,True,-1, '', True) ;
+      if Not Q.EOF then TOBCompta.LoadDetailDB('ECRITURE','','',Q,True) ;
+      Ferme(Q) ;
     END ;
-    {Objet}
-    TLETT.Add(L) ;
-  END ;
-  {Lettrage}
-  LettrerUnPaquet(TLett,False,False) ;
-  {Libérations}
-  VideListe(TLett) ; TLett.Free ;
-  TOBCompta.Free ;
+    if TOBCompta.Detail.Count > 0 then
+    begin
+      {Lecture des éventuelles écritures déjé lettrées avec ces acomptes}
+      TOBEcrLiees:=TOB.Create('',Nil,-1) ;
+      for i:=0 to TOBCompta.Detail.Count-1 do
+      BEGIN
+        TOBE:=TOBCompta.Detail[i] ;
+        CodeL:=TOBE.GetValue('E_LETTRAGE') ; if CodeL='' then Continue ;
+        SQL:='SELECT * FROM ECRITURE WHERE E_AUXILIAIRE="'+Auxi+'" AND E_GENERAL="'+Gene+'" '
+             +'AND E_QUALIFPIECE="N" AND E_ECHE="X" AND E_ETATLETTRAGE="PL" '
+             +'AND E_LETTRAGE="'+CodeL+'" AND E_DEVISE="'+CodeD+'" ' ;
+        Q:=OpenSQL(SQL,True,-1, '', True) ;
+        if Not Q.EOF then TOBEcrLiees.LoadDetailDB('ECRITURE','','',Q,True) ;
+        Ferme(Q) ;
+      END ;
+      for i:=TOBEcrLiees.Detail.Count-1 downto 0 do
+      BEGIN
+        {Ne pas se retrouver soi-méme}
+        TOBLett:=TOBEcrLiees.Detail[i] ;
+        TOBTrouve:=TOBCompta.FindFirst(['E_JOURNAL','E_NUMEROPIECE','E_NUMLIGNE','E_NUMECHE'],[TOBLett.GetValue('E_JOURNAL'),TOBLett.GetValue('E_NUMEROPIECE'),TOBLett.GetValue('E_NUMLIGNE'),TOBLett.GetValue('E_NUMECHE')],True) ;
+        if TOBTrouve=Nil then TOBLett.ChangeParent(TOBCompta,-1) ;
+      END ;
+      TOBEcrLiees.Free ;
+      {Rajout des échéances d'acompte de l'écriture de gescom}
+      for i:=0 to TOBEcr.Detail.Count-1 do
+      BEGIN
+        TOBE:=TOBEcr.Detail[i] ; ie:=TOBE.GetNumChamp('E_ECHE') ;
+        if TOBE.GetValeur(ie)<>'X' then Break ;
+        if i>=NbAcc then Break ;
+        NewE:=TOB.Create('ECRITURE',TOBCompta,-1) ;
+        NewE.Dupliquer(TOBE,False,True) ;
+      END ;
+      {Constitution du paquet à lettrer}
+      TLett:=TList.Create ;
+      for i:=0 to TOBCompta.Detail.Count-1 do
+      BEGIN
+        TOBE:=TOBCompta.Detail[i] ; L:=TL_Rappro.Create ;
+        {Comptes et caractéristiques}
+        L.General:=Gene ; L.Auxiliaire:=Auxi ;
+        L.DateC:=TOBE.GetValue('E_DATECOMPTABLE') ; L.DateE:=TOBE.GetValue('E_DATEECHEANCE') ; L.DateR:=TOBE.GetValue('E_DATEREFEXTERNE') ;
+        L.RefI:=TOBE.GetValue('E_REFINTERNE') ; L.RefL:=TOBE.GetValue('E_REFLIBRE') ;
+        L.RefE:=TOBE.GetValue('E_REFEXTERNE') ; L.Lib:=TOBE.GetValue('E_LIBELLE') ;
+        L.Jal:=TOBE.GetValue('E_JOURNAL') ; L.Numero:=TOBE.GetValue('E_NUMEROPIECE') ;
+        L.NumLigne:=TOBE.GetValue('E_NUMLIGNE') ; L.NumEche:=TOBE.GetValue('E_NUMECHE') ;
+        L.CodeL:=TOBE.GetValue('E_LETTRAGE') ; L.CodeD:=CodeD ; L.TauxDEV:=TOBE.GetValue('E_TAUXDEV') ;
+        if MM.CodeLettrage <> '' then L.CodeL := MM.CodeLettrage;
+        L.Nature:=TOBE.GetValue('E_NATUREPIECE') ;
+        L.Facture:=((L.Nature='FC') or (L.Nature='FF') or (L.Nature='AC') or (L.Nature='AF') or (L.Nature='OD')) ;
+        L.Client:=((L.Nature='FC') or (L.Nature='AC') or (L.Nature='RC') or (L.Nature='OC') or (L.Nature='OD')) ;
+        L.EditeEtatTva:=(TOBE.GetValue('E_EDITEETATTVA')='X') ;
+        L.Solution:=0 ; L.Exo:=TOBE.GetValue('E_EXERCICE') ;
+        {Montants, Lettrage}
+        L.DebDev:=TOBE.GetValue('E_DEBITDEV') ; L.CredDev:=TOBE.GetValue('E_CREDITDEV') ;
+        L.Debit:=TOBE.GetValue('E_DEBIT') ; L.Credit:=TOBE.GetValue('E_CREDIT') ;
+        //    L.SaisieEuro:=(SaisieEuro='X') ;
+        if L.CodeD<>V_PGI.DevisePivot then
+        BEGIN
+          L.DebitCur:=TOBE.GetValue('E_DEBITDEV') ; L.CreditCur:=TOBE.GetValue('E_CREDITDEV') ;
+        END else
+        BEGIN
+          L.DebitCur:=TOBE.GetValue('E_DEBIT') ; L.CreditCur:=TOBE.GetValue('E_CREDIT') ;
+        END ;
+        {Objet}
+        TLETT.Add(L) ;
+      END ;
+      {Lettrage}
+      LettrerUnPaquet(TLett,False,False) ;
+      {Libérations}
+      VideListe(TLett) ; TLett.Free ;
+    end;
+  finally
+    TOBCompta.Free ;
+  end;
 END ;
 
 Procedure GCCreerPiecePayeur(TOBECR, TOBTiers: TOB; DocInfo : T_WSDocumentInf); //DocType : string; DocNumber : integer) ;
@@ -4967,15 +5277,16 @@ Result:=EcrDiff.InsertDB(Nil) ;
 EcrDiff.Free ;
 END ;
 
-procedure ConstituRestitutionAcpt (TOBEcr,TOBPiece,TOBTiers: TOB; DEV : RDevise;  var MM : RMVT) ;
+function ConstituRestitutionAcpt (TOBEcr,TOBPiece,TOBTiers: TOB; DEV : RDevise;  var MM : RMVT) : T_RetCpta;
 
-  procedure AjouteEcritureTiers(TOBEcr,TOBPiece,TOBTiers,TTX : TOB; var MM : RMVT);
+  function AjouteEcritureTiers(TOBEcr,TOBPiece,TOBTiers,TTX : TOB; var MM : RMVT) : T_RetCpta;
   var TOBTTC,TOBG : TOB;
       GColl : String ;
       OkVent : boolean;
       NumL : integer;
       ModePaie : string;
   begin
+    Result := rcOk;
     GColl:=TOBTiers.GetValue('T_COLLECTIF') ;
     TOBG:=CreerTOBGeneral(GColl) ;
     OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
@@ -5014,21 +5325,27 @@ procedure ConstituRestitutionAcpt (TOBEcr,TOBPiece,TOBTiers: TOB; DEV : RDevise;
     TOBG.free;
   end;
 
-  procedure  AjouteEcritureHT (TOBEcr,TOBPiece,TOBTiers,TTX : TOB; var MM : RMVT);
+  function  AjouteEcritureHT (TOBEcr,TOBPiece,TOBTiers,TTX : TOB; var MM : RMVT) : T_RetCpta;
   var TOBE,TOBG : TOB;
       Okvent : boolean;
       CHT : string;
-      result : T_RetCpta;
       NumL : integer;
   begin
+    Result := rcOk;
     CHT := TTX.GetString('E_GENERAL');
     TOBG:=CreerTOBGeneral(CHT) ;
     // Erreur sur Compte HT
     if TOBG=Nil then
     BEGIN
-      if VH_GC.GCPontComptable='ATT' then Result:=rcPar else
-      if VH_GC.GCPontComptable='REF' then Result:=rcRef else Result:=rcPar ;
-      if Result<>rcOk then BEGIN LastMsg:=5 ; Exit ; END ;
+      if      VH_GC.GCPontComptable='ATT' then Result:=rcPar
+      else if VH_GC.GCPontComptable='REF' then Result:=rcRef
+      else                                     Result:=rcPar ;
+      if Result <> rcOk then
+      begin
+        LastMsg:=5 ;
+        TUtilErrorsManagement.SetGenericMessage(TemErr_CptaCptRestAcptNonTrouve);
+        Exit ;
+      end;
     END ;
     OkVent:=(TOBG.GetValue('G_VENTILABLE')='X') ;
     {Ligne d'écriture}
@@ -5058,13 +5375,13 @@ procedure ConstituRestitutionAcpt (TOBEcr,TOBPiece,TOBTiers: TOB; DEV : RDevise;
     TOBG.Free ;
   end;
 
-  procedure  AjouteEcritureTVA (TOBEcr,TOBPiece,TOBTiers,TTX : TOB; var MM : RMVT);
+  function  AjouteEcritureTVA (TOBEcr,TOBPiece,TOBTiers,TTX : TOB; var MM : RMVT) : T_RetCpta;
   var TOBE,TOBG : TOB;
       Okvent : boolean;
       CHT : string;
-      result : T_RetCpta;
       NumL : integer;
   begin
+    Result := rcOk;
     CHT := TTX.GetString('E_GENERAL');
     TOBG:=CreerTOBgeneral(CHT) ;
     TOBE:=TOB.Create('ECRITURE',TOBEcr,-1) ;
@@ -5094,7 +5411,6 @@ procedure ConstituRestitutionAcpt (TOBEcr,TOBPiece,TOBTiers: TOB; DEV : RDevise;
     TOBE.PutValue('E_DEBITDEV',TTX.GetDouble('MTRESTITUEDEV'))  ; TOBE.PutValue('E_CREDITDEV',0) ;
   end;
 
-
 var TT,TT1,TTX,TTM : TOB;
     MM1 : RMVT;
     Zcledoc : r_cledoc;
@@ -5103,6 +5419,7 @@ var TT,TT1,TTX,TTM : TOB;
     ratio,Valmax,TC,TCDEV : double;
     SQL : string;
 begin
+  Result := rcOk;
   TT := TOB.Create ('ECRITURES ACPT',nil,-1);
   TRY
     FillChar(MM1,Sizeof(MM1),#0) ;
@@ -5134,7 +5451,6 @@ begin
           TT1 := TT.detail[II];
           if TT1.getString('E_TYPEMVT')= 'TTC' then break;
         end;
-
         if TT1 = nil then exit;
         ratio := TOBpiece.getDouble('GP_ACOMPTE')/TT1.GetDouble('E_DEBIT');
         ValMAx := 0;
@@ -5167,15 +5483,13 @@ begin
         begin
           TTX := TT.detail[II];
           if TTX.getString('E_TYPEMVT')='TTC' then
-          begin
-            AjouteEcritureTiers(TOBEcr,TOBPiece,TOBTiers,TTX,MM);
-          end else if TTX.getString('E_TYPEMVT')='HT' then
-          begin
-            AjouteEcritureHT(TOBEcr,TOBPiece,TOBTiers,TTX,MM);
-          end else
-          begin
-            AjouteEcritureTVA(TOBEcr,TOBPiece,TOBTiers,TTX,MM);
-          end;
+            Result := AjouteEcritureTiers(TOBEcr,TOBPiece,TOBTiers,TTX,MM)
+          else if TTX.getString('E_TYPEMVT')='HT' then
+            Result := AjouteEcritureHT(TOBEcr,TOBPiece,TOBTiers,TTX,MM)
+          else
+            Result := AjouteEcritureTVA(TOBEcr,TOBPiece,TOBTiers,TTX,MM);
+          if Result <> rcOk then
+            break;
         end;
       end;
     end;
@@ -5184,7 +5498,7 @@ begin
   END;
 end;
 
-Function PasseEnCompta ( TOBPiece,TOBOuvrages,TOBOuvragesP,TOBBases,TOBBasesST,TOBBasesCharge,TOBEches,TOBpieceTrait,TOBAFFInterv,TOBTiers,TOBArticles,TOBCpta,TOBAcomptes,TOBPorcs,TOBPieceRG,TOBBasesRG,TOBAnaP,TOBAnaS,TOBPieceinterv,TOBVTECOLL : TOB ; NbDec : integer ; OldEcr : RMVT ; DEV : RDevise; NewPiece : Boolean) : T_RetCpta ;
+Function PasseEnCompta ( TOBPiece,TOBOuvrages,TOBOuvragesP,TOBBases,TOBBasesST,TOBBasesCharge,TOBEches,TOBpieceTrait,TOBAFFInterv,TOBTiers,TOBArticles,TOBCpta,TOBAcomptes,TOBPorcs,TOBPieceRG,TOBBasesRG,TOBAnaP,TOBAnaS,TOBPieceinterv,TOBVTECOLL,TOBREPARTTVA : TOB ; NbDec : integer ; OldEcr : RMVT ; DEV : RDevise; NewPiece : Boolean; BAPPOC : Boolean) : T_RetCpta ;
 Var
   QualifP,PassP,LienP,NatureG,NatCpta,JalCpta,RefCP,Domaine,NatureJal : String ;
   TOBEcr,TOBT,TOBBASRET : TOB ;
@@ -5199,7 +5513,13 @@ Var
   ExePiece : string;
   SendEntry : TSendEntryY2;
   DocInfo : T_WSDocumentInf;
+  MODREPARTBSV : Boolean;
 begin
+  MODREPARTBSV := false;
+  if TOBREPARTTVA <>  nil then
+  begin
+    if TOBREPARTTVA.detail.count > 0 then MODREPARTBSV := True;
+  end;
   Result    := rcOk ;
   if GetParamSocSecur('SO_GCDESACTIVECOMPTA',false) then exit; // SI pas de compta on sort
   LastMsg   := -1;
@@ -5243,6 +5563,7 @@ begin
     begin
       Result:=rcPar ;
       LastMsg:=7 ;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_CptaJournalVide);
       Exit ;
     end;
     TOBPiece.SetString('GP_JALCOMPTABLE', JalCpta) ;
@@ -5254,6 +5575,7 @@ begin
     begin
       Result:=rcPar ;
       LastMsg:=8 ;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_CptaNatureVide);
       Exit ;
     end;
     MM.Nature := NatCpta ;
@@ -5276,7 +5598,9 @@ begin
     if RGComptabilise then FusionneTva ( TobBasesRg,TOBBasesGlob,TOBPIECERG,TOBRepart,Pos(NatureG,'ABT;ABP')>0);
     // Création du RECORD clef comptable
     MM.Simul:=QualifP ;
-    RenseigneClefCompta(TOBPiece,MM) ; PremHT:=-1 ; PremTVA:=-1 ;
+    RenseigneClefCompta(TOBPiece,MM) ;
+    PremHT:=-1 ;
+    PremTVA:=-1 ;
     //Si piéce de caisse en différée, gestion des réglements avec la table PIEDECHE)
     if (MM.Simul = 'S') and (IsNatCaisse(NatureG)) then
     begin
@@ -5305,37 +5629,41 @@ begin
     begin
       Result := rcPar ;
       LastMsg := 9 ;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_CptaNumeroVide);
       Exit;
     end;
-    //
     GereTvaMixte := OkTvaMixte(TOBTiers, MM, NatureJal);
-    //
     MM.Num:=NumCpta ;
     {Préparer analytiques}
     TTA:=TList.Create ;
     if TOBPiece.geTDouble('GP_TOTALTTCDEV')<> 0 then
     begin
       {Lignes de Tiers}
-      Result:=CreerLignesTiers(TOBEcr,TOBPiece,TOBEches,TOBTiers,TOBAcomptes,TOBPieceRg,TOBbasesRG,TOBpieceTrait,TOBPorcs,TOBVTECOLL,DEV, MM) ;
+      Result:=CreerLignesTiers(TOBEcr,TOBPiece,TOBEches,TOBTiers,TOBAcomptes,TOBPieceRg,TOBbasesRG,TOBpieceTrait,TOBPorcs,TOBVTECOLL,DEV, MM, BAPPOC) ;
       if (TOBPiece.GetBoolean('GP_RESTITUERG')) then
       begin
         if Result=rcOk then Result:=CreerLigneRestitutionRetenueGar(TOBEcr,TOBPIece,TOBPieceRG,TOBTiers,TOBBasesRG,MM) ;
       end else
       begin
-        {Lignes HT}
-        if Result=rcOk then Result:=CreerLignesHTTva(TOBEcr,TOBAFFInterv,TOBPieceinterv,TOBPiece,TOBOuvrages,TOBOuvragesP,TOBBases,TOBBasesCharge,TOBTiers,TOBArticles,TOBCpta,TOBPorcs,TOBanaP,TOBAnaS,MM,NbDec,DEV) ;
-        {Taxes}
-        if Result=rcOk then Result:=CreerLignesTaxes(TOBEcr,TOBPiece,TOBBases,TOBBasesST,TOBBasesCharge,TOBTiers,TOBPIeceRG,TOBBASESGlob,TOBPorcs,MM) ;
-        {Escompte et remises}
-        if Result=rcOk then Result:=CreerLigneRemise(TOBEcr,TOBPiece,TOBTiers,TOBanaP,TOBAnaS,TOBCpta,MM) ;
-        if Result=rcOk then Result:=CreerLigneEscompte(TOBEcr,TOBPiece,TOBTiers,MM) ;
-        // Modif BTP
-        {Lignes Retenu de garantie}
-        if (RGComptabilise) then
+        if MODREPARTBSV then
         begin
-           if Result=rcOk then Result:=CreerLigneRetenueGar(TOBEcr,TOBPIece,TOBPieceRG,TOBTiers,TOBBasesRG,MM) ;
-           if Result=rcOk then Result:=CreerLigneRetenueDiv(TOBEcr,TOBPIece,TOBPorcs,TOBBases,TOBTiers,MM) ;
-        //   if Result=rcOk then Result:=CreerLignesTaxesRG(TOBEcr,TOBPiece,TOBPieceRG,TOBTiers,TOBBASESGlob,TOBBasesRg,MM) ;
+          if Result=rcOk then Result := CreerLigneFromRepartTVA(TOBEcr,TOBPiece,TOBTiers,TOBArticles,TOBREPARTTVA,MM,NbDec,DEV);
+        end else
+        begin
+          {Lignes HT}
+          if Result=rcOk then Result:=CreerLignesHTTva(TOBEcr,TOBAFFInterv,TOBPieceinterv,TOBPiece,TOBOuvrages,TOBOuvragesP,TOBBases,TOBBasesCharge,TOBTiers,TOBArticles,TOBCpta,TOBPorcs,TOBanaP,TOBAnaS,MM,NbDec,DEV) ;
+          {Taxes}
+          if Result=rcOk then Result:=CreerLignesTaxes(TOBEcr,TOBPiece,TOBBases,TOBBasesST,TOBBasesCharge,TOBTiers,TOBPIeceRG,TOBBASESGlob,TOBPorcs,MM) ;
+          {Escompte et remises}
+          if Result=rcOk then Result:=CreerLigneRemise(TOBEcr,TOBPiece,TOBTiers,TOBanaP,TOBAnaS,TOBCpta,MM) ;
+          if Result=rcOk then Result:=CreerLigneEscompte(TOBEcr,TOBPiece,TOBTiers,MM) ;
+          // Modif BTP
+          {Lignes Retenu de garantie}
+          if (RGComptabilise) then
+          begin
+             if Result=rcOk then Result:=CreerLigneRetenueGar(TOBEcr,TOBPIece,TOBPieceRG,TOBTiers,TOBBasesRG,MM) ;
+             if Result=rcOk then Result:=CreerLigneRetenueDiv(TOBEcr,TOBPIece,TOBPorcs,TOBBases,TOBTiers,MM) ;
+          end;
         end;
         if (GetparamSocSecur('SO_BTCPTAPAIEDIRECT',false)) and (not GetparamSocSecur('SO_BTREGLSTTIERS',true)) then
         begin
@@ -5346,7 +5674,7 @@ begin
           // contitution de la partie d'écriture comptable correspondante é la deduction de l'acompte
           if Result=rcOk then
           begin
-            if (TOBpiece.getString('GP_ATTACHEMENT') <> '') and (tobpiece.getDouble('GP_ACOMPTE')<>0)  then ConstituRestitutionAcpt (TOBEcr,TOBPiece,TOBTiers,DEV, MM) ;
+            if (TOBpiece.getString('GP_ATTACHEMENT') <> '') and (tobpiece.getDouble('GP_ACOMPTE')<>0)  then Result := ConstituRestitutionAcpt (TOBEcr,TOBPiece,TOBTiers,DEV, MM) ;
           end;
         end;
       end;
@@ -5379,6 +5707,7 @@ begin
         begin
           Result  := rcMaj ;
           LastMsg := 10 ;
+          TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateSoldeEcriture);
         end;
       end;
       if Result=rcOk then
@@ -5389,8 +5718,10 @@ begin
           DocInfo := GetWSDocumentInfFromTob(TobPiece);
           TobEcr.AddChampSup('IBAN', False);
           if Not TOBEcr.InsertDBByNivel(False) then
-            V_PGI.IoError := oeUnknown
-          else
+          begin
+            TUtilErrorsManagement.SetGenericMessage(TemErr_CptaErrorInsertTobEcr);
+            V_PGI.IoError := oeUnknown;
+          end else
           if TGetParamWSCEGID.ConnectToY2 then
           begin
             { Si RIB renseigné, recherche IBAN correspondant }
@@ -5411,12 +5742,8 @@ begin
           {Tiers payeur}
           if QualifP='N' then GCCreerPiecePayeur(TOBECR, TOBTiers, DocInfo);
           {TVA encaissement}
-          {$IFDEF BTP}
           if (QualifP='N') or (QualifP='S') then
             ElementsTvaEnc(MM,False,TOBPiece.GetString('GP_TVAENCAISSEMENT'));
-          {$ELSE BTP}
-           if QualifP='N' then ElementsTvaEnc(MM,False,TOBPiece.GetValue('GP_TVAENCAISSEMENT')) ;
-          {$ENDIF BTP}
           TOBEcr.DelChampSup('IBAN', False);
           {Fermeture de la piece apres comptabilisation} //AC
           if GetInfoParPiece(NatureG,'GPP_ACTIONFINI')='COM' then
@@ -5428,7 +5755,10 @@ begin
         end else
         begin
            if Not InsertionDifferee(TOBEcr) then
+           begin
+            TUtilErrorsManagement.SetGenericMessage(TemErr_CptaErrorInsertTobEcrDiff);
             V_PGI.IoError := oeUnknown ;
+           end;
         end;
       end;
     end;
@@ -5642,11 +5972,10 @@ Var i,k,itrouv,kk : integer ;
     XDT : T_DetAnaL ;
     prefixe : string;
 BEGIN
-
-Result:=rcOk ;
-sVA:=TOBPiece.GetValue('GP_VENTEACHAT') ;
-for i:=0 to TOBPiece.Detail.Count-1 do
-    BEGIN
+  Result:=rcOk ;
+  sVA:=TOBPiece.GetValue('GP_VENTEACHAT') ;
+  for i:=0 to TOBPiece.Detail.Count-1 do
+  begin
     TOBL:=TOBPiece.Detail[i] ;
     if i = 0 then prefixe := GetPrefixeTable (TOBL);
     {Tests préalables}
@@ -5668,7 +5997,13 @@ for i:=0 to TOBPiece.Detail.Count-1 do
     if CptStock='' then CptStock:=GetParamSoc('SO_GCCPTESTOCK') ;
     if CptVarStk='' then CptVarStk:=GetParamSoc('SO_GCCPTEVARSTK') ;
     // Erreur sur le compte stock
-    if ((CptStock='') or (CptVarStk='')) then BEGIN Result:=rcPar ; LastMsg:=11 ; Break ; END ;
+    if ((CptStock='') or (CptVarStk='')) then
+    begin
+      Result:=rcPar ;
+      LastMsg:=11 ;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_CptaSCptEscompteNonTrouve);
+      Break ;
+    end;
     {Sommations par compte et familles de taxes identiques}
     RecupLesDCStock(TOBL,TOBArticles,(sVA='ACH'),XD,XP) ;
     {Stock}
@@ -5712,46 +6047,54 @@ for i:=0 to TOBPiece.Detail.Count-1 do
     if CumVarStk.LibArt<>LibArt then BEGIN CumVarStk.LibU:=False ; CumVarStk.LibArt:='' ; END ;
     CumulAnal(CumVarStk,TOBL,XD,XP) ;
     if iTrouv<0 then TTVarStk.Add(CumVarStk) ;
-    END ;
-{Arrondissage des cumuls}
-for i:=0 to TTStock.Count-1 do
-    BEGIN
-    CumStock:=T_CodeCpta(TTStock[i]) ;
-    CumStock.XD:=Arrondi(CumStock.XD,NbDec) ; CumStock.XP:=Arrondi(CumStock.XP,V_PGI.OkDecV) ;
-    for kk:=0 to CumStock.Anal.Count-1 do
-        BEGIN
-        XDT:=CumStock.Anal[kk] ;
-        XDT.MD:=Arrondi(XDT.MD,NbDec) ;
-        XDT.MP:=Arrondi(XDT.MP,V_PGI.OkDecV) ;
-        if CumStock.XD<>0 then XDT.Qte1:=Arrondi(CumStock.Qte*XDT.MD/CumStock.XD,V_PGI.OkDecQ) ;
-        XDT.TotQte1:=CumStock.Qte ;
-        END ;
-    END ;
-for i:=0 to TTVarStk.Count-1 do
-    BEGIN
-    CumVarStk:=T_CodeCpta(TTVarStk[i]) ;
-    CumVarStk.XD:=Arrondi(CumVarStk.XD,NbDec) ; CumVarStk.XP:=Arrondi(CumVarStk.XP,V_PGI.OkDecV) ;
-    for kk:=0 to CumVarStk.Anal.Count-1 do
-        BEGIN
-        XDT:=CumVarStk.Anal[kk] ;
-        XDT.MD:=Arrondi(XDT.MD,NbDec) ;
-        XDT.MP:=Arrondi(XDT.MP,V_PGI.OkDecV) ;
-        if CumVarStk.XD<>0 then XDT.Qte1:=Arrondi(CumVarStk.Qte*XDT.MD/CumVarStk.XD,V_PGI.OkDecQ) ;
-        XDT.TotQte1:=CumVarStk.Qte ;
-        END ;
-    END ;
-{Création des lignes stock}
-for i:=0 to TTStock.Count-1 do
-    BEGIN
-    if Result=rcOk then Result:=CreerLignesEcrStock(TOBEcr,TOBPiece,TOBTiers,MM,i) ;
-    if Result<>rcOk then Break ;
-    END ;
-{Création des lignes Variation Stock}
-if Result=rcOk then for i:=0 to TTVarStk.Count-1 do
-    BEGIN
-    if Result=rcOk then Result:=CreerLignesEcrVarStk(TOBEcr,TOBPiece,TOBTiers,MM,i) ;
-    if Result<>rcOk then Break ;
-    END ;
+  end;
+  {Arrondissage des cumuls}
+  for i:=0 to TTStock.Count-1 do
+      BEGIN
+      CumStock:=T_CodeCpta(TTStock[i]) ;
+      CumStock.XD:=Arrondi(CumStock.XD,NbDec) ; CumStock.XP:=Arrondi(CumStock.XP,V_PGI.OkDecV) ;
+      for kk:=0 to CumStock.Anal.Count-1 do
+          BEGIN
+          XDT:=CumStock.Anal[kk] ;
+          XDT.MD:=Arrondi(XDT.MD,NbDec) ;
+          XDT.MP:=Arrondi(XDT.MP,V_PGI.OkDecV) ;
+          if CumStock.XD<>0 then XDT.Qte1:=Arrondi(CumStock.Qte*XDT.MD/CumStock.XD,V_PGI.OkDecQ) ;
+          XDT.TotQte1:=CumStock.Qte ;
+          END ;
+      END ;
+  for i:=0 to TTVarStk.Count-1 do
+      BEGIN
+      CumVarStk:=T_CodeCpta(TTVarStk[i]) ;
+      CumVarStk.XD:=Arrondi(CumVarStk.XD,NbDec) ; CumVarStk.XP:=Arrondi(CumVarStk.XP,V_PGI.OkDecV) ;
+      for kk:=0 to CumVarStk.Anal.Count-1 do
+          BEGIN
+          XDT:=CumVarStk.Anal[kk] ;
+          XDT.MD:=Arrondi(XDT.MD,NbDec) ;
+          XDT.MP:=Arrondi(XDT.MP,V_PGI.OkDecV) ;
+          if CumVarStk.XD<>0 then XDT.Qte1:=Arrondi(CumVarStk.Qte*XDT.MD/CumVarStk.XD,V_PGI.OkDecQ) ;
+          XDT.TotQte1:=CumVarStk.Qte ;
+          END ;
+      END ;
+  {Création des lignes stock}
+  for i:=0 to TTStock.Count-1 do
+      BEGIN
+      if Result=rcOk then Result:=CreerLignesEcrStock(TOBEcr,TOBPiece,TOBTiers,MM,i) ;
+      if Result<>rcOk then
+      begin
+        TUtilErrorsManagement.SetGenericMessage(TemErr_CptaSErrorInsertTobEcr);
+        Break ;
+      end;
+      END ;
+  {Création des lignes Variation Stock}
+  if Result=rcOk then for i:=0 to TTVarStk.Count-1 do
+      BEGIN
+      if Result=rcOk then Result:=CreerLignesEcrVarStk(TOBEcr,TOBPiece,TOBTiers,MM,i) ;
+      if Result<>rcOk then
+      begin
+        TUtilErrorsManagement.SetGenericMessage(TemErr_CptaSErrorInsertTobEcrV);
+        Break ;
+      end;
+      END ;
 END ;
 
 Procedure MakeContrePStock ( TOBEcr : TOB ) ;
@@ -5819,7 +6162,7 @@ END ;
 Auteur  ...... : Jean-Louis DECOSSE
 Créé le ...... : 15/01/2002
 Modifié le ... : 15/01/2002
-Description .. : Passation stock comptable de la piéce Gescom
+Description .. : Passation stock comptable de la pi?ce Gescom
 Mots clefs ... : LIAISON;COMPTABILITE;PONT;PASSATION;STOCK;
 *****************************************************************}
 Function PasseEnStock ( TOBPiece,TOBTiers,TOBArticles,TOBCpta : TOB ; NbDec : integer ; OldStk : RMVT ) : T_RetCpta ;
@@ -5830,73 +6173,100 @@ Var NatureG,NatCpta,JalCpta,RefCP : String ;
     ii          : integer ;
     QQ          : TQuery ;
 BEGIN
-Result:=rcOk ; LastMsg:=-1 ;
-NatureG:=TOBPiece.GetValue('GP_NATUREPIECEG') ; if Not isComptaStock(NatureG) then Exit ;
-{TOB Ecriture Générique}
-TOBEcr:=TOB.Create('STOCK COMPTABLE',Nil,-1) ;
-// Création du RECORD clef comptable
-FillChar(MM,Sizeof(MM),#0) ; MM.Simul:='N' ;
-RenseigneClefStock(TOBPiece,MM) ;
-{Journal}
-JalCpta:=GetParamSoc('SO_GCJALSTOCK') ;
-// Erreur sur Journal
-if JalCpta='' then BEGIN TOBEcr.Free ; Result:=rcPar ; LastMsg:=7 ; Exit ; END ;
-MM.Jal:=JalCpta ;
-{Nature}
-NatCpta:='OD' ; MM.Nature:=NatCpta ;
-{Valide}
-MM.Valide:=True ;
-{Numéro}
-if ((MM.Jal=OldStk.Jal) and (MM.Simul=OldStk.Simul) and (MM.Nature=OldStk.Nature)) then
-   BEGIN
-   NumCpta:=OldStk.Num ; MM.DateC:=OldStk.DateC ;
-   END else
-   BEGIN
-   NumCpta:=GetNewNumJal(JalCpta,(MM.Simul='N'),MM.DateC) ;
-   END ;
-{Type de journal}
-MM.ModeSaisieJal:='-' ;
-QQ:=OpenSQL('SELECT J_MODESAISIE FROM JOURNAL WHERE J_JOURNAL="'+MM.Jal+'"',True,-1, '', True) ;
-if Not QQ.EOF then MM.ModeSaisieJal:=QQ.Fields[0].AsString ;
-Ferme(QQ) ;
-// Erreur sur le numéro
-if NumCpta<=0 then BEGIN TOBEcr.Free ; Result:=rcPar ; LastMsg:=9 ; Exit ; END ;
-MM.Num:=NumCpta ;
-{Préparer analytiques}
-TTStock:=TList.Create ; TTVarStk:=TList.Create ;
-{Lignes Stock}
-if Result=rcOk then Result:=CreerLignesStock(TOBEcr,TOBPiece,TOBTiers,TOBArticles,TOBCpta,MM,NbDec) ;
-if ((Result=rcOk) and (TOBEcr.Detail.Count>=2)) then
-   BEGIN
-   {Ultimes ajustements}
-   AnalyseLesNegatifs(TOBEcr) ;
-   MakeContrePStock(TOBEcr) ;
-   {Analytiques}
-   MakeAnalGC(TOBEcr,TOBPiece,MM,NbDec) ;
-   {Retour inverse}
-   RefCP:=EncodeRefGCComptable(TOBEcr.Detail[0]) ; TOBPiece.PutValue('GP_REFCPTASTOCK',RefCP) ;
-   {MAJ des soldes comptables}
-   MajSoldesEcritureTOB(TOBEcr,True) ;
-   if V_PGI.IoError<>oeOk then BEGIN Result:=rcMaj ; LastMsg:=10 ; END ;
-   if Result=rcOk then
-      BEGIN
+  Result:=rcOk ;
+  LastMsg:=-1 ;
+  NatureG:=TOBPiece.GetValue('GP_NATUREPIECEG') ;
+  if Not isComptaStock(NatureG) then Exit ;
+  {TOB Ecriture Générique}
+  TOBEcr:=TOB.Create('STOCK COMPTABLE',Nil,-1) ;
+  // Création du RECORD clef comptable
+  FillChar(MM,Sizeof(MM),#0) ; MM.Simul:='N' ;
+  RenseigneClefStock(TOBPiece,MM) ;
+  {Journal}
+  JalCpta:=GetParamSoc('SO_GCJALSTOCK') ;
+  // Erreur sur Journal
+  if JalCpta='' then
+  begin
+    TOBEcr.Free ;
+    Result:=rcPar ;
+    LastMsg:=7 ;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_CptaSJournalVide);
+    Exit ;
+  end;
+  MM.Jal:=JalCpta ;
+  {Nature}
+  NatCpta:='OD' ; MM.Nature:=NatCpta ;
+  {Valide}
+  MM.Valide:=True ;
+  {Numéro}
+  if ((MM.Jal=OldStk.Jal) and (MM.Simul=OldStk.Simul) and (MM.Nature=OldStk.Nature)) then
+     BEGIN
+     NumCpta:=OldStk.Num ; MM.DateC:=OldStk.DateC ;
+     END else
+     BEGIN
+     NumCpta:=GetNewNumJal(JalCpta,(MM.Simul='N'),MM.DateC) ;
+     END ;
+  {Type de journal}
+  MM.ModeSaisieJal:='-' ;
+  QQ:=OpenSQL('SELECT J_MODESAISIE FROM JOURNAL WHERE J_JOURNAL="'+MM.Jal+'"',True,-1, '', True) ;
+  if Not QQ.EOF then MM.ModeSaisieJal:=QQ.Fields[0].AsString ;
+  Ferme(QQ) ;
+  // Erreur sur le numéro
+  if NumCpta<=0 then
+  begin
+    TOBEcr.Free ;
+    Result:=rcPar ;
+    LastMsg:=9 ;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_CptaSNumeroVide);
+    Exit ;
+  end;
+  MM.Num:=NumCpta ;
+  {Préparer analytiques}
+  TTStock:=TList.Create ; TTVarStk:=TList.Create ;
+  {Lignes Stock}
+  if Result=rcOk then
+    Result:=CreerLignesStock(TOBEcr,TOBPiece,TOBTiers,TOBArticles,TOBCpta,MM,NbDec) ;
+
+  if ((Result=rcOk) and (TOBEcr.Detail.Count>=2)) then
+  begin
+    {Ultimes ajustements}
+    AnalyseLesNegatifs(TOBEcr) ;
+    MakeContrePStock(TOBEcr) ;
+    {Analytiques}
+    MakeAnalGC(TOBEcr,TOBPiece,MM,NbDec) ;
+    {Retour inverse}
+    RefCP:=EncodeRefGCComptable(TOBEcr.Detail[0]) ; TOBPiece.PutValue('GP_REFCPTASTOCK',RefCP) ;
+    {MAJ des soldes comptables}
+    MajSoldesEcritureTOB(TOBEcr,True) ;
+    if V_PGI.IoError <> oeOk then
+    begin
+      Result:=rcMaj ;
+      LastMsg:=10 ;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_CptaSUpdateSoldeEcriture);
+    end;
+    if Result=rcOk then
+    begin
       {Insertion}
-      if Not TOBEcr.InsertDBByNivel(False) then V_PGI.IoError:=oeUnknown ;
+      if Not TOBEcr.InsertDBByNivel(False) then
+      begin
+        V_PGI.IoError:=oeUnknown ;
+        TUtilErrorsManagement.SetGenericMessage(TemErr_CptaSErrorInsertTobEcr);
+      end;
+    end;
+  end;
+  TOBEcr.Free ;
+  for ii:=0 to TTStock.Count-1 do
+      BEGIN
+      VideListe(T_CodeCpta(TTStock[ii]).Anal) ;
+      T_CodeCpta(TTStock[ii]).Anal.Free ; T_CodeCpta(TTStock[ii]).Anal:=Nil ;
       END ;
-   END ;
-TOBEcr.Free ;
-for ii:=0 to TTStock.Count-1 do
-    BEGIN
-    VideListe(T_CodeCpta(TTStock[ii]).Anal) ;
-    T_CodeCpta(TTStock[ii]).Anal.Free ; T_CodeCpta(TTStock[ii]).Anal:=Nil ;
-    END ;
-VideListe(TTStock) ; TTStock.Free ; TTStock:=Nil ;
-for ii:=0 to TTVarStk.Count-1 do
-    BEGIN
-    VideListe(T_CodeCpta(TTVarStk[ii]).Anal) ;
-    T_CodeCpta(TTVarStk[ii]).Anal.Free ; T_CodeCpta(TTVarStk[ii]).Anal:=Nil ;
-    END ;
-VideListe(TTVarStk) ; TTVarStk.Free ; TTVarStk:=Nil ;
+  VideListe(TTStock) ; TTStock.Free ; TTStock:=Nil ;
+  for ii:=0 to TTVarStk.Count-1 do
+      BEGIN
+      VideListe(T_CodeCpta(TTVarStk[ii]).Anal) ;
+      T_CodeCpta(TTVarStk[ii]).Anal.Free ; T_CodeCpta(TTVarStk[ii]).Anal:=Nil ;
+      END ;
+  VideListe(TTVarStk) ; TTVarStk.Free ; TTVarStk:=Nil ;
 END ;
 
 procedure CalcBasesTaxe (TOBPiece,TOBBasesL,TOBL,TOBTiers,TOBAFFInterv : TOB; EnHt: boolean; DEV : rdevise);
@@ -6249,7 +6619,7 @@ begin
 end;
 
 
-Function PassationComptable ( TOBPiece,TOBOuvrages,TOBOuvragesP,TOBBases,TOBBasesL,TOBEches,TOBPieceTrait,TOBAffInterv,TOBTiers,TOBArticles,TOBCpta,TOBAcomptes,TOBPorcs,TOBPieceRG,TOBBasesRG,TOBAnaP,TOBAnaS,TOBPieceInterv,TOBVTECOLL  : TOB ; DEV : Rdevise ; OldEcr,OldStk : RMVT ; bParle : Boolean; NewPiece : Boolean = True ) : boolean ;
+Function PassationComptable ( TOBPiece,TOBOuvrages,TOBOuvragesP,TOBBases,TOBBasesL,TOBEches,TOBPieceTrait,TOBAffInterv,TOBTiers,TOBArticles,TOBCpta,TOBAcomptes,TOBPorcs,TOBPieceRG,TOBBasesRG,TOBAnaP,TOBAnaS,TOBPieceInterv,TOBVTECOLL,TOBREPARTTVA  : TOB ; DEV : Rdevise ; OldEcr,OldStk : RMVT ; bParle : Boolean; NewPiece : Boolean = True; BAPPOC : boolean=false ) : boolean ;
 
   procedure AddPorcBase (TOBBase,TOBPorcs : TOB; Sens : string='+');
   var TOBB : TOB;
@@ -6289,25 +6659,17 @@ Var Res : T_RetCpta ;
     TOBEchesCpta,TOBBasesCpta,TOBBasesCptaST,TOBPieceCpta,TOBPieceRGCpta,TOBBaseRGCpta,TOBPorcsCpta,TOBAcomptesCpta,TOBOuvragesPCpta,TOBPieceTraitCpta,TOBBasesCharges : TOB;
     I : Integer;
 BEGIN
-    TOBBasesCharges := TOB.Create ('LES BASES DES CHARGES',nil,-1);
-  //AC 18/08/03 NV GESTION COMPTA DIFF
-  //Si compta différée pour piéce et acompte, ne gére rien iéi
+  TOBBasesCharges := TOB.Create ('LES BASES DES CHARGES',nil,-1);
   Result := True;
-  
   if TOBPiece.GetBoolean('GP_HORSCOMPTA') then Exit;
   if not IsComptaPce(TOBPiece.GetValue('GP_NATUREPIECEG')) then exit;
-  // Fin AC
-  // Modif BTP
   LaDEV.Code:=TOBPiece.GetValue('GP_DEVISE') ; GetInfosDevise(LaDEV) ;
   RGComptabilise := GetParamsoc('SO_GCVENTILRG') ;
-  // --
   if VH_GC.GCIfDefCEGID then
   begin
     Result:=True ;
     if ((TOBPiece.GetValue('GP_TOTALHT')=0) and (TOBPiece.GetValue('GP_TOTALTTC')=0)) then Exit ;
   end;
-
-  //
   if (GetParamSocSecur('SO_BTCPTAPAIEDIRECT',false)) and IsComptabilisationInterv (TOBPieceTrait) then // comptabilisation co traitance et/ou sous traitance
   begin
     TOBPorcsCpta := TOB.Create('BASES RG ENTREP',nil,-1);
@@ -6322,17 +6684,12 @@ BEGIN
     TOBAcomptesCpta := TOB.Create('ACOMPTES ENTREP',nil,-1);
     TOBOuvragesPCpta := TOB.Create ('LES OUVRAGES PLAT CPTA',nil,-1);
     TOBPieceTraitCpta := TOB.Create ('LES INTERV',nil,-1);
-    //
     AddLesSupEntete (TOBpieceCpta);
     TOBPieceCpta.Dupliquer (TOBpiece,true,true);
-    //
     TOBPorcsCpta.Dupliquer(TOBPorcs,true,true);
     TOBAcomptesCpta.Dupliquer(TOBAcomptes,true,true);
-    //
     ZeroFacture (TOBpieceCpta);
     ZeroMontantPorts (TOBPorcsCpta);
-    //
-  //  RecupReglementsEnt (TOBAcomptesCpta,TOBAcomptes);
     // Redefini une piece et des montants pour l'entreprise mandataire
     CalculeLaPieceCpta (TOBpieceCpta,TOBAcomptesCpta,TOBEchesCpta,TOBArticles,TOBBasesCpta,TOBBasesCptaST,TOBOuvrages,TOBOuvragesPCpta,TOBTiers,TOBAFFinterv,TOBPorcsCpta,TOBPieceRGCpta,TOBBaseRGCpta,TOBPieceTrait,TOBPieceInterv,TOBOuvragesP, DEV);
     //
@@ -6362,11 +6719,14 @@ BEGIN
     end;
   end;
   //
-  Result:=False ; DistinctAffaire:=GetParamsoc('SO_GCDISTINCTAFFAIRE') ;
-  TOBTiersCpta:=TOB.Create('TIERS',Nil,-1) ; TOBTiersCpta.Dupliquer(TOBTiers,True,True) ;
+  Result:=False ;
+  DistinctAffaire:=GetParamsoc('SO_GCDISTINCTAFFAIRE') ;
+  TOBTiersCpta:=TOB.Create('TIERS',Nil,-1) ;
+  TOBTiersCpta.Dupliquer(TOBTiers,True,True) ;
   RenseigneTiersFact(TOBPiece,TOBTiers,TOBTiersCpta) ;
-  Res:=PasseEnCompta(TOBPieceCpta,TOBOuvrages,TOBOuvragesPCpta,TOBBasesCpta,TOBBasesCptaST,TOBBasesCharges,TOBEchesCpta,TOBPieceTrait,TOBAFFInterv,TOBTiersCpta,TOBArticles,TOBCpta,TOBAcomptesCpta ,TOBPorcsCpta,TOBPieceRGCpta,TOBBaseRGCpta ,TOBanaP,TOBAnaS,TOBPieceinterv,TOBVTECOLL,DEV.Decimale,OldEcr,DEV,NewPiece) ;
-  if Res=rcOk then Res:=PasseEnStock(TOBPiece,TOBTiers,TOBArticles,TOBCpta,DEV.Decimale,OldStk) ;
+  Res:=PasseEnCompta(TOBPieceCpta,TOBOuvrages,TOBOuvragesPCpta,TOBBasesCpta,TOBBasesCptaST,TOBBasesCharges,TOBEchesCpta,TOBPieceTrait,TOBAFFInterv,TOBTiersCpta,TOBArticles,TOBCpta,TOBAcomptesCpta ,TOBPorcsCpta,TOBPieceRGCpta,TOBBaseRGCpta ,TOBanaP,TOBAnaS,TOBPieceinterv,TOBVTECOLL,TOBREPARTTVA,DEV.Decimale,OldEcr,DEV,NewPiece,BAPPOC) ;
+  if Res=rcOk then
+    Res:=PasseEnStock(TOBPiece,TOBTiers,TOBArticles,TOBCpta,DEV.Decimale,OldStk) ;
   TOBBasesCpta.free;
   if (GetParamSocSecur('SO_BTCPTAPAIEDIRECT',false)) and (IsComptabilisationInterv (TOBPieceTrait))  then  // gestion co traitance et sous traitance
   begin
@@ -7201,7 +7561,7 @@ if LeAcc.latobAcc <> nil then Acc.NewAcc := LeAcc.LaTobAcc;
 io:=Transactions(Acc.ValideReglSousTrait,0) ;
 if io<>oeOk then
    BEGIN
-   Titre:='ATTENTION : Réglement sous traitant non enregistré' ;
+   Titre:='ATTENTION : Règlement sous traitant non enregistré' ;
    if LastMsg>0 then Titre:=Titre+' : '+TexteMessage[LastMsg] ;
    if not Quiet then MessageAlerte(Titre) ;
    END else
@@ -7240,25 +7600,27 @@ BEGIN
   // --
   io:=Transactions(Acc.ValideAcompte,2) ;
   if io<>oeOk then
-     BEGIN
-     Titre:='ATTENTION : Acompte/Réglement non enregistré' ;
+  BEGIN
+     Titre:='ATTENTION : Acompte/Règlement non enregistré' ;
      if LastMsg>0 then Titre:=Titre+' : '+TexteMessage[LastMsg] ;
      if not Quiet then MessageAlerte(Titre) ;
-     END else
-     BEGIN
+  END
+  else
+  BEGIN
      if (Acc.NewAcc<>Nil) and (LeAcc.LaTOBacc = nil) then
-        BEGIN
+     BEGIN
         TOBAcc:=TOB.Create('ACOMPTES',Nil,-1) ;
         TOBAcc.Dupliquer(Acc.NewAcc,True,True) ;
         Result:=TOBAcc ;
-        END ELSE
-        BEGIN
+     END
+     ELSE
+     BEGIN
         // Modification
         TOBAcc:=TOB.Create('ACOMPTES',Nil,-1) ;
         TOBAcc.Dupliquer(Acc.NewAcc,True,True) ;
         Result := TOBAcc;
-        END;
-     END ;
+     END;
+  END ;
   ACC.TOBPiece:=Nil ; ACC.TOBTiers:=Nil ; Acc.Free ;
   TobTiersCpta.Free ;
 END ;
@@ -7373,15 +7735,19 @@ Var LienCpta,NaturePieceG,OldRef,NewRef : String ;
     DD                    : TDateTime ;
     NewNum,iNum           : integer ;
 BEGIN
-if ((TOBPiece=Nil) or (TOBAcomptes=Nil)) then Exit ;
-if TOBAcomptes.Detail.Count<=0 then Exit ;
-NaturePieceG:=TOBPiece.GetValue('GP_NATUREPIECEG') ;
-iNum:=TOBPiece.GetNumChamp('GP_NUMERO') ; NewNum:=TOBPiece.GetValeur(iNum) ;
-LienCpta:=GetInfoParPiece(NaturePieceG,'GPP_TYPEPASSACC') ; if LienCpta<>'DIF' then Exit ;
-TOBPiece.PutValeur(iNum,OldNum) ; OldRef:=EncodeRefCPGescom(TOBPiece) ;
-TOBPiece.PutValeur(iNum,NewNum) ; NewRef:=EncodeRefCPGescom(TOBPiece) ;
-DD:=TOBPiece.GetValue('GP_DATEPIECE') ;
-ExecuteSQL('UPDATE COMPTADIFFEREE SET GCD_REFPIECE="'+NewRef+'", GCD_RANG=GCD_RANG+10 WHERE GCD_DATEPIECE="'+UsDateTime(DD)+'" AND GCD_REFPIECE="'+OldRef+'" AND GCD_USER="'+V_PGI.User+'"') ;
+  if ((TOBPiece=Nil) or (TOBAcomptes=Nil)) then Exit ;
+  if TOBAcomptes.Detail.Count<=0 then Exit ;
+  NaturePieceG:=TOBPiece.GetValue('GP_NATUREPIECEG') ;
+  iNum:=TOBPiece.GetNumChamp('GP_NUMERO') ;
+  NewNum:=TOBPiece.GetValeur(iNum) ;
+  LienCpta:=GetInfoParPiece(NaturePieceG,'GPP_TYPEPASSACC') ;
+  if LienCpta<>'DIF' then Exit ;
+  TOBPiece.PutValeur(iNum,OldNum) ;
+  OldRef:=EncodeRefCPGescom(TOBPiece) ;
+  TOBPiece.PutValeur(iNum,NewNum) ;
+  NewRef:=EncodeRefCPGescom(TOBPiece) ;
+  DD:=TOBPiece.GetValue('GP_DATEPIECE') ;
+  ExecuteSQL('UPDATE COMPTADIFFEREE SET GCD_REFPIECE="'+NewRef+'", GCD_RANG=GCD_RANG+10 WHERE GCD_DATEPIECE="'+UsDateTime(DD)+'" AND GCD_REFPIECE="'+OldRef+'" AND GCD_USER="'+V_PGI.User+'"') ;
 END ;
 
 Procedure RechLibTiersCegid (VenteAchat : string; TobTiers,TOBPiece,TobAdresses: TOB) ;
@@ -7428,7 +7794,7 @@ begin
     (*
     if isExerciceClo (TOBPiece.GetValue('GP_DATEPIECE')) then
     begin
-      PGIInfo(TraduireMemoire('Cette piéce est sur un exercice cléturé en comptabilité.'),'ATTENTION');
+      PGIInfo(TraduireMemoire('Cette pièce est sur un exercice clôturé en comptabilité.'),'ATTENTION');
       Result := False;
       Exit;
     end;
@@ -7442,7 +7808,7 @@ begin
         DateClo := FINDEMOIS(Q.fields[0].AsDateTime);
         if TOBPiece.GetValue('GP_DATEPIECE') <= DateClo then
         begin
-          PGIInfo(TraduireMemoire('Cette piéce est sur une période cléturée en comptabilité.'),'ATTENTION');
+          PGIInfo(TraduireMemoire('Cette piéce est sur une période clôturée en comptabilité.'),'ATTENTION');
           Result := False;
         end;
       end;
@@ -7453,7 +7819,7 @@ begin
     // Contréle période cloturée
     if (Result) and (TOBPiece.GetValue('GP_DATEPIECE')<= GetParamSocSecur('SO_DATECLOTUREPER',iDate1900)) then
     begin
-      PGIInfo(TraduireMemoire('Cette piéce est sur une période cléturée en comptabilité.'),'ATTENTION');
+      PGIInfo(TraduireMemoire('Cette piéce est sur une période clôturée en comptabilité.'),'ATTENTION');
       Result := False;
       Exit;
     end;
@@ -7472,7 +7838,7 @@ begin
         if (TOBECR.Detail[Indice].getValue('E_EXPORTE')='X') and (not GetParamSocSecur('SO_SO_BTAUTOREXPORT',false)) then
         begin
           result := false;
-          PGIInfo(TraduireMemoire(Format('Cette piéce a été exportée %s.', [Tools.iif(not EstSpecifVERDON, '(COMSX)', '')])),'ATTENTION');
+          PGIInfo(TraduireMemoire(Format('Cette pièce a été exportée %s.', [Tools.iif(not EstSpecifVERDON, '(COMSX)', '')])),'ATTENTION');
           break;
         end;
       end;
@@ -7513,7 +7879,7 @@ begin
     //
     if isExerciceClo (TOBPiece.GetValue('GP_DATEPIECE')) then
     begin
-      PGIInfo(TraduireMemoire('Cette piéce est sur un exercice cléturé en comptabilité.'),'ATTENTION');
+      PGIInfo(TraduireMemoire('Cette pièce est sur un exercice clôturé en comptabilité.'),'ATTENTION');
       Result := False;
       Exit;
     end;
@@ -7528,7 +7894,7 @@ begin
         DateClo := FINDEMOIS(Q.fields[0].AsDateTime);
         if TOBPiece.GetValue('GP_DATEPIECE') <= DateClo then
         begin
-          PGIInfo(TraduireMemoire('Cette piéce est sur une période cléturée en comptabilité.'),'ATTENTION');
+          PGIInfo(TraduireMemoire('Cette pièce est sur une période clôturée en comptabilité.'),'ATTENTION');
           Result := False;
         end;
       end;
@@ -7539,13 +7905,13 @@ begin
     // Contréle période cloturée
     if (Result) and (TOBPiece.GetValue('GP_DATEPIECE')<= GetParamSocSecur('SO_DATECLOTUREPER',iDate1900)) then
     begin
-      PGIInfo(TraduireMemoire('Cette piéce est sur une période cléturée en comptabilité.'),'ATTENTION');
+      PGIInfo(TraduireMemoire('Cette pièce est sur une période clôturée en comptabilité.'),'ATTENTION');
       Result := False;
       Exit;
     end;
     //
     if TOBPiece.GetValue('GP_REFCOMPTABLE') = '' then Exit;
-    // contréle lettrage
+    // contrôle lettrage
     MM := DecodeRefGCComptable (TOBPiece.GetValue('GP_REFCOMPTABLE'));
     Q:=OpenSQL('SELECT E_LETTRAGE,E_VALIDE,E_EXPORTE FROM ECRITURE WHERE '+WhereEcriture(tsGene,MM,False),True,-1, '', True) ;
     okok := not Q.Eof;
@@ -7557,13 +7923,13 @@ begin
         if (TOBECR.Detail[Indice].getValue('E_LETTRAGE')<>'') then
         begin
           result := false;
-          PGIInfo(TraduireMemoire('Cette piéce est lettrée en comptabilité via le suivi des réglements.'),'ATTENTION');
+          PGIInfo(TraduireMemoire('Cette piéce est lettrée en comptabilité via le suivi des règlements.'),'ATTENTION');
           break;
         end;
         if (TOBECR.Detail[Indice].getValue('E_EXPORTE')='X') and (not GetParamSocSecur('SO_SO_BTAUTOREXPORT',false)) then
         begin
           result := false;
-          PGIInfo(TraduireMemoire(Format('Cette piéce a été exportée %s.', [Tools.iif(not EstSpecifVERDON, '(COMSX)', '')])),'ATTENTION');
+          PGIInfo(TraduireMemoire(Format('Cette pièce a été exportée %s.', [Tools.iif(not EstSpecifVERDON, '(COMSX)', '')])),'ATTENTION');
           break;
         end;
   // mis en commentaire par BRL car pose pb pour les factures passées en compta comme validée par défaut
@@ -7577,9 +7943,10 @@ begin
 end;
 
 function TraitementVOuvrage (TOBEcr,TOBPieceinterv,TOBAFFInterv,TOBPiece,TOBL,TOBOuvrages,TOBOuvragesP,TOBTiers,TOBArticles,TOBCpta,TOBPorcs: TOB;MM : RMVT ; NbDec : integer; EnHt : boolean; DEV : Rdevise):  T_RetCpta;
-var Indice : integer;
-    TOBPlat,TOBPP,TOBA : TOB;
-    refUnique : string;
+var
+  Indice : integer;
+  TOBPlat,TOBPP,TOBA : TOB;
+  refUnique : string;
 begin
   result := rcOk;
   TOBPlat := FindOuvragesPlat (TOBL,TOBOuvragesP);
@@ -7589,7 +7956,12 @@ begin
     GetOuvragePlat (TOBpiece,TOBL,TOBOuvrages,TOBPlat,TOBTiers,DEV,(TOBPiece.getvalue('GP_NATUREPIECEG')<>'DBT'));
   end;
   //
-  if TOBPlat = nil then BEGIN result := rcRef ; exit; END;
+  if TOBPlat = nil then
+  BEGIN
+    result := rcRef ;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_OuvrageNonTrouve);
+    exit;
+  END;
   TOBL.clearDetail; // on vire pour enfin recuperer les ventil du detail d'ouvrage
   for Indice := 0 to TOBPlat.detail.count -1 do
   begin
@@ -7692,7 +8064,13 @@ begin
       if ((MM.Nature='FC') or (MM.Nature='AC')) then CptHT:=VH_GC.GCCpteHTVTE else CptHT:=VH_GC.GCCpteHTACH ;
     END ;
     // Erreur sur le compte HT article
-    if CptHT='' then BEGIN Result:=rcPar ; LastMsg:=5 ; Exit ; END ;
+    if CptHT='' then
+    begin
+      Result  := rcPar ;
+      LastMsg := 5 ;
+      TUtilErrorsManagement.SetGenericMessage(Tools.iif(Prefixe = 'GL', TemErr_CptaCpteGLNonTrouve, TemErr_CptaCpteRGNonTrouve));
+      Exit ;
+    end;
     iTrouv:=-1 ;
     //
     if GereTvaMixte then CumulTVASurEncaissement(CptHT, TobL);
@@ -7784,6 +8162,28 @@ begin
     finally
       FreeAndNil(TobA);
     end;
+  end;
+end;
+
+function AccountIsValidWithTryCreate(TobG : TOB; Account, TVACode, TPFCode : string; What : T_CreatPont; TemErrNumber, ErrorNumber : integer) : T_RetCpta;
+var
+  CreateSucces : boolean;
+begin
+  Result       := RcOk;
+  CreateSucces := True;
+  if      VH_GC.GCPontComptable = 'ATT' then Result := rcPar
+  else if VH_GC.GCPontComptable = 'REF' then Result := rcRef
+  else
+  begin
+    CreateSucces := CreerCompteGC(TobG, Account, TVACode, TPFCode, What);
+    if not CreateSucces then
+      Result := rcPar;
+  end;
+  if Result <> rcOk then
+  begin
+    LastMsg := ErrorNumber;
+    TUtilErrorsManagement.SetGenericMessage(  Tools.iif(CreateSucces, TemErrNumber, TemErr_MessagePreRempli)
+                                            , Tools.iif(CreateSucces, '', Format('Erreur lors de la création du compte "%s"', [Account])));
   end;
 end;
 

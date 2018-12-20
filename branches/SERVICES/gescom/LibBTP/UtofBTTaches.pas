@@ -127,6 +127,8 @@ type
     fDtDebPeriod        : TDateTime;
     fDtFinPeriod        : TDateTime;
 
+    MNTiers             : THMenuItem;
+
     // Gestion des grids
     // Grid des tâches ...
     procedure InitGrid;
@@ -280,6 +282,7 @@ type
     function TestCoherenceQte(pBoGeneration: Boolean): boolean;
     function TobToScreen(Row: Integer): Integer;
     function Valider(pBoForce, pBoSupControl: Boolean): Boolean;
+    procedure MnTiers_OnClick(Sender: TObject);
 
   end;
 
@@ -2873,15 +2876,15 @@ function TOF_BTTACHES.TobToScreen(Row: Integer): integer;
 begin
 
   if Row <> -1 then
-     begin
-     fTobDet := fTobTaches.Detail[Row];
-     result := Row + 1;
-     end
+  begin
+    fTobDet := fTobTaches.Detail[Row];
+    result := Row + 1;
+  end
   else
-     begin
-     fTobDet := TOB(fGSTaches.Objects[0, fGSTaches.Row]);
-     result := fGSTaches.Row;
-     end;
+  begin
+    fTobDet := TOB(fGSTaches.Objects[0, fGSTaches.Row]);
+    result := fGSTaches.Row;
+  end;
 
   fATATermineChange := false;
   fTobDet.PutEcran(Ecran, fPaDet);
@@ -3538,6 +3541,10 @@ begin
   vMenu := TMenuItem(GetControl('mnRecherche'));
   if vMenu <> nil then
     vMenu.Onclick := bRessourceDispoOnClick;
+
+  MNTiers := THMenuItem(GetControl('MnTiers'));
+  if MNTiers <> Nil then
+    MNTiers.OnClick := MnTiers_OnClick;
 
   pcPage := TPageControl(getControl('PAGETACHE'));
   if pcPage <> nil then
@@ -4266,6 +4273,14 @@ begin
   //AFLanceFiche_PlanningCompar('AFFAIRE:' + fCurAffaire.StAffaire);
 end;
 
+Procedure TOF_BTTACHES.MnTiers_OnClick(Sender : TObject);
+begin
+
+  if (fStTiers <> '') then
+    AGLLanceFiche('GC','GCTIERS','','','T_AUXILIAIRE=' + fStAuxilliaire + ';T_NATUREAUXI=CLI;ACTION=CONSULTATION') ;
+
+end;
+
 procedure TOF_BTTACHES.RefreshGridRes;
 begin
   fGSRes.VidePile(False);
@@ -4641,23 +4656,29 @@ Begin
 end;
 Procedure Tof_BTTACHES.MnAdressesInt_OnClick;
 Var Range    : String;
-		Argument : String;
-    NumAdr   : string;
-    Q        : TQuery;
+		params : String;
 Begin
 
-   Range := 'ADR_TYPEADRESSE=TIE;ADR_NATUREAUXI=CLI;ADR_REFCODE=' + fStTiers;
+  // Range := 'ADR_TYPEADRESSE=TIE;ADR_NATUREAUXI=CLI;ADR_REFCODE=' + fStTiers;
 
-   Argument := 'YTC_TIERSLIVRE=' + fStTiers;
-   Argument := Argument + 'ACTION=CONSULTATION;';
-   Argument := Argument + ';TYPEADRESSE=TIE';
-   Argument := Argument + ';TITRE=' + GetControlText('TLIBCLIAFF');
-   Argument := Argument + ';PART=-';
-   Argument := Argument + ';CLI=' + fStAuxilliaire;
-   Argument := Argument + ';TIERS=' + fStTiers;
-   Argument := Argument + ';NATUREAUXI=CLI';
+  // Argument := 'YTC_TIERSLIVRE=' + fStTiers;
+  // Argument := Argument + 'ACTION=CONSULTATION;';
+  // Argument := Argument + ';TYPEADRESSE=TIE';
+  // Argument := Argument + ';TITRE=' + GetControlText('TLIBCLIAFF');
+  // Argument := Argument + ';PART=-';
+  // Argument := Argument + ';CLI=' + fStAuxilliaire;
+  // Argument := Argument + ';TIERS=' + fStTiers;
+  // Argument := Argument + ';NATUREAUXI=CLI';
 
-   AglLanceFiche('GC', 'GCADRESSES', Range, '', Argument);
+  //AglLanceFiche('GC', 'GCADRESSES', Range, '', Argument);
+  //
+  Range  :='ADR_REFCODE=' + fStTiers + ';ADR_INT=X';
+  Params := 'TYPEADRESSE=TIE;NATUREAUXI=CLI'
+          +';CLI=' + fStAuxilliaire
+          +';TIERS=' + fStTiers
+          +';ACTION=CONSULTATION';
+
+  AglLanceFiche('GC', 'GCADRESSES', Range, '', Params);
 
 end;
 

@@ -102,8 +102,9 @@ uses {$IFDEF VER150} variants,{$ENDIF}
   TntExtCtrls, TntGrids, TntComCtrls,
   UtilNumParag,UrectifSituations, TntMenus,
   UtilsMetresXLS,StrUtils,UFactListes,UTransferts,UspecifVerdon
-
+  , ErrorsManagement
   ;
+
 type
 	TmsFrais = (TmsFValide,TmsFAnul,TmsSuppr,TmsNone); // les 3 seuls mode de gestion
 //  TmInsert = (TmiUp,TmiDown);
@@ -555,6 +556,8 @@ type
     BToolPhases: TToolbarButton97;
     TDESCAFFAIRE: TEdit;
     LDESCAFFAIRE: TLabel;
+    NSep11: TMenuItem;
+    MnEpurDoc: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -656,23 +659,9 @@ type
     procedure GP_REPRESENTANTEnter(Sender: TObject);
     procedure BZoomStockClick(Sender: TObject);
     procedure BZoomPropositionClick(Sender: TObject);
-    // Modif BTP
-    //Modif FV : 11/07/2012 remplacé par BTLanceanalyse
-    //procedure MBAnalDocClick(Sender: TObject);
-    //procedure MBAnalcotraiteClick(Sender: TObject);
-    //procedure MBAnalLocClick(Sender: TObject);
-    //procedure MBAnalyseLocClick(Sender: TObject);
     procedure MBModeVisuClick(Sender: TObject);
-    (*
-    procedure DebutResizeRequest(Sender: TObject; Rect: TRect);
-    procedure FinResizeRequest(Sender: TObject; Rect: TRect);
-    *)
     procedure GSExit(Sender: TObject);
     procedure GSKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    (*
-    procedure DebutEnter(Sender: TObject);
-    procedure FinEnter(Sender: TObject);
-    *)
     procedure TVParagClick(Sender: TObject);
     procedure Descriptif1Exit(Sender: TObject);
     procedure BTypeArticleClick(Sender: TObject);
@@ -681,15 +670,7 @@ type
     procedure BPrixMarcheClick(Sender: TObject);
     procedure FormResize(Sender: TObject);
     procedure TTVParagClose(Sender: TObject);
-    (*
-    procedure DebutExit(Sender: TObject);
-    procedure FinExit(Sender: TObject);
-    *)
     procedure Descriptif1KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    (*
-    procedure DebutKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure FinKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    *)
     procedure BRetenuGarClick(Sender: TObject);
     procedure PPiedResize(Sender: TObject);
     procedure PTotauxResize(Sender: TObject);
@@ -704,11 +685,6 @@ type
   	 procedure TraiteLivrFromRecep;
 	 Function GetMontantPvDEv : Double;
     {$ENDIF}
-    //procedure SRDocGlobalClick(Sender: TObject);
-    //procedure SRDocGlobCotraitanceClick(Sender: TObject);
-    //procedure SRDocParagClick(Sender: TObject);
-    //procedure SRDocParCotraitanceClick(Sender: TObject);
-    //
     procedure FraisdetailClick(Sender: TObject);
     procedure DescriptifKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure SLigneClick(Sender: TObject);
@@ -738,12 +714,6 @@ type
     procedure MBTarifVisuOrigineClick(Sender: TObject);
     procedure FTitrePieceClick(Sender: TObject);
     procedure VoirFrancClick(Sender: TObject);
-    (*
-    procedure FinKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure DebutKeyUp(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    *)
-//  procedure MBCommissionVisuOrigineClick(Sender: TObject);
 	  procedure LoadLesGCS;
     procedure ModebordereauClick(Sender: TObject);
     procedure MBREPARTTVAClick(Sender: TObject);
@@ -797,7 +767,7 @@ type
     procedure MnBSVSTOCKEClick(Sender: TObject);
     procedure POPYTSClick(Sender: TObject);
     procedure BToolPhasesClick(Sender: TObject);
-//    procedure TImprimableClick(Sender: TObject);
+    procedure MnEpurDocClick(Sender: TObject);
 
   private
     AccesSousDetailOk : Boolean;
@@ -876,6 +846,7 @@ type
 		MultiSel_SilentMode : Boolean;
     fGestionAff : TAffichageDoc;
     TTransfertPOC : TGestTransfert;
+
     function  Multicompteur (Naturepiece : string) : boolean;
     procedure Insere_SDP;
     {$ENDIF}
@@ -1407,6 +1378,7 @@ type
   	IMPRESSIONTOB             : TImprPieceViaTOB;
     TheGestParag              : TGestParagraphe;
     TheGestRemplArticle       : Tgestremplarticle;
+
     (* -------------- *)
     property PieceCoTrait : TPieceCotrait read fPieceCoTrait;
     property AffSousDetailUnitaire : boolean read fAffSousDetailUnitaire;
@@ -1880,34 +1852,43 @@ begin
 end;
 
 function SaisiePieceFrais(CleDoc: R_CleDoc; Action: TActionFiche; LeCodeTiers: string ; Laffaire: string ): TmsFrais;
-var X: TFFacture;
+var
+  X: TFFacture;
 begin
-  Result := TmsFValide;
-  SourisSablier;
-  X  := TFFacture.Create(Application);
-  X.LAffaire := laffaire;
-  X.lavenant := '';
-  X.SaisieTypeAvanc := false;
-  X.OrigineEXCEL := false;
-  X.ValidationSaisie := false;
-  // ----
-  X.CleDoc := CleDoc;
-  X.Action := Action;
-  X.NewNature := X.CleDoc.NaturePiece;
-  X.LeCodeTiers := LeCodeTiers;
-  X.TransfoPiece := False;
-  X.DuplicPiece := False;
-  X.TypeSaisieFrs := true;
-{$IFDEF BTP}
-  X.PasBouclerCreat := true;
-{$ENDIF}
-	X.StatutAffaire := 'AFF';
-  SourisNormale;
-  TRY
-    X.ShowModal;
-    result := X.ModeRetourFrs;
-  FINALLY
-    X.Free;
+  TErrManagementSav := TErrorsManagement.Create(temc_DocValid);
+  try
+    TErrManagement.Duplicate(TErrManagementSav);
+    Result := TmsFValide;
+    SourisSablier;
+    X  := TFFacture.Create(Application);
+    X.LAffaire := laffaire;
+    X.lavenant := '';
+    X.SaisieTypeAvanc := false;
+    X.OrigineEXCEL := false;
+    X.ValidationSaisie := false;
+    X.CleDoc := CleDoc;
+    X.Action := Action;
+    X.NewNature := X.CleDoc.NaturePiece;
+    X.LeCodeTiers := LeCodeTiers;
+    X.TransfoPiece := False;
+    X.DuplicPiece := False;
+    X.TypeSaisieFrs := true;
+    X.PasBouclerCreat := true;
+    X.StatutAffaire := 'AFF';
+    SourisNormale;
+    TRY
+      X.ShowModal;
+      result := X.ModeRetourFrs;
+    FINALLY
+      X.Free;
+    end;
+  finally
+    if not assigned(TErrManagement) then
+    begin
+      TErrManagement := TErrorsManagement.Create(temc_DocValid);
+      TErrManagementSav.Duplicate(TErrManagement);
+    end;
+    FreeAndNil(TErrManagementSav);
   end;
 end;
 
@@ -1918,93 +1899,72 @@ Modifié le ... : 19/01/2000
 Description .. : Appel d'une pièce en création ou modification
 Mots clefs ... : PIECE;SAISIE;
 *****************************************************************}
-
 function SaisiePiece(CleDoc: R_CleDoc; Action: TActionFiche; LeCodeTiers: string = ''; Laffaire: string = ''; Lavenant: string = ''; SaisieAvanc: boolean=false;
          OrigineEXCEL: boolean=false ; BoucleCreat : boolean=false;ModeGestionAchat : boolean=false; SaisieBordereau : boolean=false; TheStatutAffaire : String='AFF';
- 		SaisieStock : Boolean=false) : boolean;
-var X: TFFacture;
-  PP: THPanel;
+ 		    SaisieStock : Boolean=false) : boolean;
+var
+  X  : TFFacture;
+  PP : THPanel;
+  MakeSavTErr : boolean;
 begin
-
-  Result := True;
-
-  if PasCreerDateGC(V_PGI.DateEntree) then Exit;
-
-  // Modif LS Suite a possibilité de modifier les suggestion de réapprovisionnement
-  if cledoc.NaturePiece = 'REA' Then
-  	 BEGIN
-     ModifSuggestion (cledoc,Action);
-     exit;
-  	 END;
-
-  // Correction sur nature piece SEX et EEX
-  if (cledoc.NaturePiece = 'SEX') or (CleDoc.NaturePiece = 'EEX') Then
-  	 BEGIN
-     ConsultMouvEx (cledoc,taCOnsult);
-     exit;
-  	 END;
-
-  SourisSablier;
-  PP := FindInsidePanel;
-  X  := TFFacture.Create(Application);
-
-  // modif BTP
-  (*
-  if GetParamSoc('SO_BTDOCAVECTEXTE') then
+  Result  := True;
+  if not PasCreerDateGC(V_PGI.DateEntree) then
   begin
-    if not SaisieAvanc then X.SaContexte := X.saContexte + [tModeBlocNotes];
-    X.BorderStyle := bsSizeable;
-  end;
-  *)
-
-  if SaisieBordereau then
-	   begin
-   	 X.SaContexte := X.saContexte + [tModeSaisieBordereau];
-     end;
-
-  // GUINIER - Saisie Affaire Sur Cde Stock
-  X.SaisieChantierCdeStock := SaisieStock;
-
-
-  X.LAffaire := laffaire;
-  X.lavenant := lavenant;
-  X.SaisieTypeAvanc := SaisieAvanc;
-  X.OrigineEXCEL := OrigineEXCEL;
-  X.ValidationSaisie := False;
-  X.TypeSaisieFrs := false;
-
-  // ----
-  X.CleDoc := CleDoc;
-  X.Action := Action;
-  X.NewNature := X.CleDoc.NaturePiece;
-  X.LeCodeTiers := LeCodeTiers;
-  X.TransfoPiece := False;
-  X.DuplicPiece := False;
-
-{$IFDEF BTP}
-  X.PasBouclerCreat := not BoucleCreat;
-//X.GereDocEnAchat := ModeGestionAchat;
-{$ENDIF}
-
-	X.StatutAffaire := TheStatutAffaire;
-
-//  if PP = nil then
-//  begin
+    MakeSavTErr := (assigned(TErrManagement));
+    if MakeSavTErr then
+      TErrManagementSav := TErrorsManagement.Create(temc_DocValid);
     try
-      X.ShowModal;
+      if cledoc.NaturePiece = 'REA' Then // Modif LS Suite a possibilité de modifier les suggestion de réapprovisionnement
+      begin
+        ModifSuggestion (cledoc,Action);
+        exit;
+      end;
+      if (cledoc.NaturePiece = 'SEX') or (CleDoc.NaturePiece = 'EEX') Then
+      begin
+         ConsultMouvEx (cledoc,taCOnsult);
+         exit;
+      end;
+      if MakeSavTErr then
+        TErrManagement.Duplicate(TErrManagementSav);
+      SourisSablier;
+      PP := FindInsidePanel;
+      X  := TFFacture.Create(Application);
+      if SaisieBordereau then
+        X.SaContexte := X.saContexte + [tModeSaisieBordereau];
+      X.SaisieChantierCdeStock := SaisieStock; // GUINIER - Saisie Affaire Sur Cde Stock
+      X.LAffaire := laffaire;
+      X.lavenant := lavenant;
+      X.SaisieTypeAvanc := SaisieAvanc;
+      X.OrigineEXCEL := OrigineEXCEL;
+      X.ValidationSaisie := False;
+      X.TypeSaisieFrs := false;
+      X.CleDoc := CleDoc;
+      X.Action := Action;
+      X.NewNature := X.CleDoc.NaturePiece;
+      X.LeCodeTiers := LeCodeTiers;
+      X.TransfoPiece := False;
+      X.DuplicPiece := False;
+      X.PasBouclerCreat := not BoucleCreat;
+      X.StatutAffaire := TheStatutAffaire;
+      try
+        X.ShowModal;
+      finally
+        result := X.ValidationSaisie;
+        X.Free;
+      end;
+        SourisNormale;
     finally
-      // Modif BTP
-      result := X.ValidationSaisie;
-      // --
-      X.Free;
+      if MakeSavTErr then
+      begin
+        if not assigned(TErrManagement) then
+        begin
+          TErrManagement := TErrorsManagement.Create(temc_DocValid);
+          TErrManagementSav.Duplicate(TErrManagement);
+        end;
+        FreeAndNil(TErrManagementSav);
+      end;
     end;
-    SourisNormale;
-//  end else
-//  begin
-//    InitInside(X, PP);
-//    X.Show;
-//  end;
-
+  end;
 end;
 
 function PieceEnPa (Naturepiece : string): boolean;
@@ -4632,6 +4592,7 @@ begin
   //
 	fModifSousDetail := TModifSousDetail.create (self);
   TTNUMP := TNumParag.create (self);
+  TErrManagement := TErrorsManagement.Create(temc_DocValid);
 end;
 
 procedure TFFacture.PopEuro(Sender: TObject);
@@ -5815,6 +5776,7 @@ begin
     GP_DOMAINE.Value := DomaineSoc;
     GP_DOMAINE.enabled := false;
   end;
+  
   if GP_AFFAIRE.text <> '' then
   begin
   	GP_AFFAIRE0.Text := Copy (GP_AFFAIRE.text,1,1);
@@ -6635,6 +6597,7 @@ begin
   fGestionAff.free;
   LibereMemContratST;
   TOptionVerdon.Free;
+  FreeAndNil(TErrManagement);
 end;
 
 {==============================================================================================}
@@ -8004,7 +7967,7 @@ begin
       begin
         if TOBL.GetString('TYPETRANSFERT')='X' then
         begin
-          MtTemp := TOBL.GetDouble('GL_MONTANTPA');
+          MtTemp := TOBL.GetDouble('MTTRANSFERT');
         end else
         begin
           MTTemp := Arrondi(TOBL.GetDouble('GL_MONTANTPA')+TOBL.GetDouble('SUMTOTALTS')-TOBL.GetDouble('MTTRANSFERT'),V_PGI.okdecV);
@@ -8851,8 +8814,6 @@ Begin
 
   Result := AppelMetre(TOBL, True);
 
-  TOBL.PutValue('GL_QTEFACT', Result);
-
   if TOBL.getValue('GL_TYPEARTICLE') = 'OUV' then      
   begin
     if TOBL.getValue('GLC_VOIRDETAIL') = 'X' then
@@ -8884,7 +8845,10 @@ Var TOBO        : TOB;
     SaveLig     : Integer;
     Savecol     : Integer;
     SauveQte    : double;
+    Prefixe     : string;
 begin
+
+  If TOBL = nil then exit;
 
   Result      := TOBL.GetDouble('GL_QTEFACT');
   SauveQte    := Result;
@@ -8895,7 +8859,14 @@ begin
   SaveLig := GS.row;
   Savecol := GS.col;
 
-  If TOBL = nil then exit;
+  if IsSousDetail(TOBL) then
+  Begin
+    if Not fAffSousDetailUnitaire then
+    begin
+      PGIInfo('Mêtré possible uniquement si quantités de sous-détails unitaires', 'Gestion des mêtrés');
+      Exit;
+    end;
+  end; 
 
   If TheMetreDoc <> nil then
   begin
@@ -8905,28 +8876,25 @@ begin
     begin
       if TheMetredoc.OkExcel then
       begin
-      //**** Nouvelle Version *****
-      //
-      IndiceNomen := TOBL.GetValue('GL_INDICENOMEN');
-      if IndiceNomen <> 0 then TOBO := TobOuvrage.Detail[IndiceNomen -1];
-      //
-      //Rétablir quand ça marchera le self.enabled mis en commentaire
-      Result := TheMetreDoc.GereMetreXLS(TobPiece, TOBL, TOBO, nil, OkClick);
+        //**** Nouvelle Version *****
         //
-        GS.row := SaveLig;
-        GS.Col := Savecol;
-        if IndiceNomen <> 0 then
-        begin
-          TOBL.SetString('GL_RECALCULER','X');
-          RecalculeOuvrage (TOBL);
-    	    CalculeLaSaisie(SG_RefArt, SaveLig, True);
-        end;
+        IndiceNomen := TOBL.GetValue('GL_INDICENOMEN');
+        if IndiceNomen <> 0 then TOBO := TobOuvrage.Detail[IndiceNomen -1];
+        //
+        Result := TheMetreDoc.GereMetreXLS(TobPiece, TOBL, TOBO, nil, OkClick);
+        //
       end
       else
       begin
         if OkClick then
         begin
-          result := GereMetre (TOBL,TOBMetres,Action,'GL');
+          IndiceNomen := TOBL.GetValue('GL_INDICENOMEN');
+          TOBO  := TOBOUvrage.FindFirst(['BLO_UNIQUEBLO'], [TOBL.Getvalue('UNIQUEBLO')], True);
+          If TOBO = nil then TOBO  := TOBL;
+          //
+          Prefixe := GetPrefixeTable(TOBO);
+          result  := GereMetre (TOBO,TOBMetres,Action, Prefixe);
+          //
           if (SauveQte <> 0) and ((Result = 0) OR (Result = 1)) then
             Result := SauveQte
           else
@@ -8935,12 +8903,24 @@ begin
           TOBL.putValue('GL_QTEFACT',  FloatToStr(Result));
           TOBL.putValue('GL_QTESTOCK', FloatToStr(Result));
           TOBL.putValue('GL_QTERESTE', FloatToStr(Result));
+          TOBL.putValue('GL_QTESAIS',  FloatToStr(Result));
           //
-          GS.row := SaveLig;
-          GS.Col := Savecol;
+          If Prefixe = 'BLO' then
+          begin
+            TOBO.PutValue('BLO_QTEFACT', FloatToStr(Result));
+            TOBO.PutValue('BLO_QTESAIS', FloatToStr(Result));
+          end;
         end;
       end;
     end;
+    //
+    GS.row := SaveLig;
+    GS.Col := Savecol;
+    //
+    TOBL.SetString('GL_RECALCULER','X');
+    RecalculeOuvrage (TOBL);
+    CalculeLaSaisie(SG_RefArt, SaveLig, True);
+    //
   end;
 
 end;
@@ -9051,7 +9031,8 @@ begin
     if (GS.Col = SG_Lib) and (not SaisieTypeAvanc) (*and (not ModifAvanc)*) then  // Modif BRL 23/05/2011 : on autorise la modif des descriptifs en modif de situation
     begin
       TOBL := GetTOBLigne(TOBPiece,GS.row);
-    	if IsLigneReferenceLivr(GetTobLigne(TOBPiece,GS.row)) Then exit;
+    	//if IsLigneReferenceLivr(GetTobLigne(TOBPiece,GS.row)) Then exit;
+      if IsLigneReferenceLivr(TOBL) then exit;
       if (TOBPiece.GetString('GP_NATUREPIECEG')='DBT') and (GetParamSocSecur('SO_BTDESCEQUALLIB',false)) and (TOBL.GetSTring('GL_TYPELIGNE')='ART') then
       begin
         BDescriptif.Down := True;
@@ -11861,20 +11842,21 @@ begin
 end;
 
 function TFFacture.TraiteQte(ACol, ARow: integer; Bparle : boolean = true): Boolean;
-var TOBL, TOBA, TOBLiee: TOB;
-  NewQte, Qte, OldQte, Ecart: Double;
-  OkCond: boolean;
-  RefUnique: string;
-  lCtrlMinimum : boolean;
-  nQteEcoAchat, nQteEcoVente, nQtePCBAchat : double;
-  {$IFDEF BTP}
-  reliquatInit,ResteInit,QteFactInit,QteStockInit,QteReliquatPrec : double;
-  //
-  NewMT, MT, OldMt, MtEcart: Double;
-  MtreliquatInit,MTResteInit,MtInit,MtReliquatPrec : double;
-  Ok_ReliquatMt : Boolean;
-  MtPuHtDev : double;
-  {$ENDIF}
+var TOBL, TOBA, TOBLiee, TOBO : TOB;
+    IndiceNomen : Integer;
+    NewQte, Qte, OldQte, Ecart: Double;
+    OkCond: boolean;
+    RefUnique: string;
+    lCtrlMinimum : boolean;
+    nQteEcoAchat, nQteEcoVente, nQtePCBAchat : double;
+    {$IFDEF BTP}
+    reliquatInit,ResteInit,QteFactInit,QteStockInit,QteReliquatPrec : double;
+    //
+    NewMT, MT, OldMt, MtEcart: Double;
+    MtreliquatInit,MTResteInit,MtInit,MtReliquatPrec : double;
+    Ok_ReliquatMt : Boolean;
+    MtPuHtDev : double;
+    {$ENDIF}
 begin
   Result := True;
   TOBA := nil;
@@ -11904,6 +11886,7 @@ begin
   {$ENDIF}
   Qte := Valeur(GS.Cells[ACol, ARow]);
 
+
   // Ajout protection modification des factures directes en provenance de devis
   if (Pos(TOBPiece.GetValue('GP_NATUREPIECEG'),'FBT;FBP')>0) and
      (TOBL.GetValue('GL_PIECEPRECEDENTE') <> '') and
@@ -11928,6 +11911,21 @@ begin
     exit;
   end;
   //
+  // Modified by f.vautrain 06/12/2018 16:20:02 :
+  //
+  If Valeur(GS.cells[Acol,Arow]) <> Valeur(stcellCur) then
+  begin
+    IndiceNomen := TOBL.GetValue('GL_INDICENOMEN');
+    TOBO  := TOBOUvrage.FindFirst(['BLO_UNIQUEBLO'], [TOBL.Getvalue('UNIQUEBLO')], True);
+    If TOBO = nil then TOBO  := TOBL;
+    If OkLigneMetre(TOBO, TOBmetres) then
+    begin
+      GS.Cells[Acol, Arow] := stcellCur;
+      result := false;
+      exit;
+    end;
+  end;
+  //
   if IsSousDetail(TOBL) then
   begin
     if (Pos(TOBL.GetValue('GL_NATUREPIECEG'),'FBT;FBP')>0) and (TOBL.GetValue('BLF_NATUREPIECEG')<>'') then
@@ -11945,6 +11943,7 @@ begin
       fModifSousDetail.ModifQteAvancSousDet (TOBL,Qte,TypeFacturation,DEV);
     end else
     begin
+      //
       if not fModifSousDetail.ModifQteSousDet (TOBL,Qte,DEV) then
       begin
         GS.Cells[Acol, Arow] := stcellCur;
@@ -12125,8 +12124,8 @@ begin
         end;
       end;
     end;
-    {$ENDIF}
   end;
+  {$ENDIF}
   {$IFDEF GPAO}
   if ((ACol = SG_QF) or (SG_QF < 0)) and (not GetParamSoc('SO_PREFSYSTTARIF')) then TOBL.PutValue('RECALCULTARIF', '-');
   {$ELSE}
@@ -12827,13 +12826,15 @@ begin
     	// surtout ne pas rechercher sur les reference tiers sur la tob article
       // elle peut etre presente plusieurs fois sous des reference tiers differentes
     	TOBART := nil;
-    END ELSE
+    END
+    ELSE
     BEGIN
 			TOBArt := FindTOBArtSais(TOBArticles, RefSais);
     END;
+    //
     if TOBArt <> nil then
     begin
-// MODIF LS
+    // MODIF LS
     	if (TheBordereau <> nil ) then
       begin
       	if TheBordereau.BordereauExists then
@@ -12854,8 +12855,10 @@ begin
         // article gérable qu'en contremarque
         HPiece.Execute(47, caption, '');
         RechArt := traContreM;
-      end else RechArt := traOk;
-    end else
+      end
+      else RechArt := traOk;
+    end
+    else
     begin
     	if TheBordereau <> nil then
       begin
@@ -12873,8 +12876,7 @@ begin
       end;
       TOBArt := CreerTOBArt(TOBArticles);
       if FromMacro then
-      begin
-//
+      begin//
         QArt := OpenSql ('SELECT A.*,AC.*,N.BNP_TYPERESSOURCE,N.BNP_LIBELLE FROM ARTICLE A '+
                        'LEFT JOIN NATUREPREST N ON N.BNP_NATUREPRES=A.GA_NATUREPRES '+
                        'LEFT JOIN ARTICLECOMPL AC ON AC.GA2_ARTICLE=A.GA_ARTICLE WHERE A.GA_ARTICLE="'+RefSais+'"',true,-1, '', True);
@@ -12885,7 +12887,8 @@ begin
           RechArt:=traOk ;
         end else RechArt:=traErreur ;
         Ferme(QArt);
-      end else
+      end
+      else
       begin
         RechArt := TrouverArticleSQL(CleDoc.NaturePiece, RefSais, GP_DOMAINE.Value, '', CleDoc.DatePiece, TOBArt, TOBTiers);
         if TOBArt.GetValue('GA_CONTREMARQUE') = 'X' then
@@ -13470,16 +13473,17 @@ begin
   // Gestion des métrés => FV
   //*** Nouvelle Version ***//
   //  result := TOBL.GetDouble('GL_QTEFACT');
-  result := AppelMetre(TOBL);
+    result := AppelMetre(TOBL);
   //
   //if result <> 0 then             //FV1 - 30/09/2016
   //begin
     // Modif FV
-    Result := Arrondi(Result,V_PGI.OkDecQ);
+    Result := Arrondi(Result, V_PGI.OkDecQ);
     //
     TOBL.putValue('GL_QTEFACT',  result);
     TOBL.putvalue('GL_QTESTOCK', result);
     TOBL.putvalue('GL_QTERESTE', result);
+    TOBL.putvalue('GL_QTESAIS',  result);
 
     if GetQteDetailOuv (TOBL,TOBOuvrage) = 0 then
     Begin
@@ -13586,10 +13590,12 @@ begin
     TOBL.PutValue('BLF_MTPRODUCTION',TOBL.GetValue('BLF_MTSITUATION'));
     TOBL.PutValue('BLF_POURCENTAVANC',100);
   end;
+
   ShowDetail(ARow);
   GP_DEVISE.Enabled := False;
   BDEVISE.Enabled := False;
   GP_DOMAINE.Enabled := False;
+
 end;
 
 procedure TFFacture.UpdateCataLigne(ARow: integer; FromMacro, Calc: boolean; NewQte: double);
@@ -15694,7 +15700,9 @@ begin
   if not CommentLigne then Exit;
   TOBL := GetTOBLigne(TOBPiece, ARow);
   {$IFDEF BTP}
-  if AfficheDesc (self,TOBPiece) = True then Exit;
+
+  if AfficheDesc (self, TOBPiece) = True then Exit;
+
   if (ISFromExcel(TOBL)) {$IFNDEF UTILS} or (SPIGAOOBJ.TestAffaire (TOBPiece.GetValue('GP_AFFAIRE'))) {$ENDIF} then
   begin
     BouttonInVisible;
@@ -18178,8 +18186,13 @@ begin
     addicted := true;
   end;
   {$ENDIF}
+
   IndiceNomen := TOBL.GetValue('GL_INDICENOMEN');
-//if IndiceNomen <= 0 then Exit;
+
+  // FV1 - 07/11/2018 : FS#3349 - GROUPE LB - Message d'erreur pour accéder à la valorisation de l'article via CTRL+O
+  if IndiceNomen <= 0 then Exit;
+  // FV1 - 07/11/2018 : FS#3349 - GROUPE LB - Message d'erreur pour accéder à la valorisation de l'article via CTRL+O
+
   if TOBL.getValue('GL_TYPEARTICLE') = 'NOM' then
   begin
     TOBNomen := TOBNomenclature.Detail[IndiceNomen - 1];
@@ -18442,6 +18455,11 @@ begin
     begin
       TOBL.SEtString('GL_LIBELLE',GetLibelleFromMemo(TOBL));
       AfficheLaLigne(GS.row);
+    end;
+    if (TOBLO.GetBoolean('GL_BLOQUETARIF') <> TOBL.GetBoolean('GL_BLOQUETARIF')) then
+    begin
+    	SuppressionDetailOuvrage(GS.Row);
+      AffichageDetailOuvrage(GS.row);
     end;
     ShowDetail(GS.Row);
     if (TOBL.GetDouble('MONTANTPTC')=0) and (TOBL.GetBoolean('GL_GESTIONPTC')) then TOBL.SetDouble('MONTANTPTC',TOBL.GetDouble('GL_MONTANTHTDEV'));
@@ -19204,10 +19222,13 @@ begin
   //
   //
   //////////////////////////////
-
+  GP_AFFAIRE.Text := DechargeCleAffaire(GP_AFFAIRE0, GP_AFFAIRE1, GP_AFFAIRE2, GP_AFFAIRE3, GP_AVENANT, AFF_TIERS.Text, Action, False, True, false, iP);
+  AFF_TIERS.text := GetChampsAffaire (GP_AFFAIRE.text,'AFF_TIERS');
+  
   if csDestroying in ComponentState then Exit;
 
-  if (GP_AFFAIRE.Text = '') Then //and (GP_AFFAIRE2.Text = '') and (GP_AFFAIRE3.Text = '') then
+  //if (GP_AFFAIRE.Text = '') Then //and (GP_AFFAIRE2.Text = '') and (GP_AFFAIRE3.Text = '') then
+  if (GP_AFFAIRE1.Text + GP_AFFAIRE2.Text + GP_AFFAIRE3.Text = '') Then //and (GP_AFFAIRE2.Text = '') and (GP_AFFAIRE3.Text = '') then
   begin
     // GUINIER - Saisie Affaire Sur Cde Stock
 
@@ -19872,16 +19893,25 @@ begin
   if V_PGI.IoError = oeOk then
   begin
     // Calculs
-    //CalculFacture(TOBPieceDel, BasesDel, TOBTiers, TOBArticles, TOBPieceRg, TOBBasesRg, nil, DEV);
     CalculFacture(TOBAffaire,TOBPieceDel, nil,nil,nil,nil,BasesDel, Nil,TOBTiers, TOBArticles, TOBPieceRg, TOBBasesRg, nil,nil, DEV, false, action);
     ValideLesLignes(TOBPieceDel, TOBArticles, TOBCatalogu, TOBNomenDel, nil, TOBPieceRG, TOBbasesRg, True, False);
+  end;
+  if V_PGI.ioError = oeOk then
+  begin
     // Tout modif
     TOBPieceDel.SetAllModifie(True);
     TOBPieceDel.SetDateModif(NowFutur);
     BasesDel.SetAllModifie(True);
     TOBNomenDel.SetAllModifie(True);
     if not TOBPieceDel.InsertDBByNivel(False) then V_PGI.IoError := oeUnknown;
-    if V_PGI.IoError = oeOk then if not BasesDel.InsertDB(nil) then V_PGI.IoError := oeUnknown;
+    if V_PGI.IoError = oeOk then
+    begin
+      if not BasesDel.InsertDB(nil) then
+      begin
+        V_PGI.IoError := oeUnknown;
+        TUtilErrorsManagement.SetGenericMessage(TemErr_InsertPieceAnnulation);
+      end;
+    end else
     if V_PGI.IoError = oeOk then
     begin
       for i := TOBNomenDel.Detail.Count - 1 downto 0 do
@@ -20004,20 +20034,9 @@ begin
   if TransfoMultiple then
   begin
     for I := 0 to TOBListPieces.Detail.Count -1 do
-    begin
   		SetParentVivante (TOBListPieces.detail[I],TOBpiece_OO);
-    end;
   end else
-      begin
   	SetParentVivante (TOBPiece_O,TOBpiece_OO);
-      end;
-
-  (* lié a la gestion des numéro de série ----> OMG
-  {$IFNDEF CCS3}
-  RazAndSaveLesSeries(TobSerie,TobSerie_O);
-  ReaffecteLesReliquatSerie(TobSerRel, TobPiece_O);
-  {$ENDIF}
-  *)
   Result := True;
 end;
 
@@ -20035,33 +20054,24 @@ begin
     if not GppReliquat then { Transformation d'une pièce. On ne gère pas les reliquats dans la nouvelle pièce }
     begin
       if TransfoMultiple then
-      begin
-      	RazResteALivrerAndKillLesPieces(TOBListPieces);
-      end else
-      begin
-      RazResteALivrerAndKillPiece(TobPiece_O);
-      end;
-      (*
-      {$IFNDEF CCS3}
-      RazAndSaveLesSeries(nil, TobSerie_O);
-      {$ENDIF}
-      *)
+      	RazResteALivrerAndKillLesPieces(TOBListPieces)
+      else
+        RazResteALivrerAndKillPiece(TobPiece_O);
     end;
 end;
 
 procedure TFFacture.ValideLaCompta(OldEcr, OldStk: RMVT);
-var okok : boolean;
+var
+  okok : boolean;
 begin
   if VH_GC.GCIfDefCEGID then
      RechLibTiersCegid(VenteAchat, TobTiers, TOBPiece, TobAdresses);
   TRY
-    okok := PassationComptable( TOBPiece,TOBOUvrage,TOBOuvragesP, TOBBases,TOBBasesL, TOBEches,TOBPieceTrait,TOBAffaireInterv,TOBTiers, TOBArticles, TOBCpta, TOBAcomptes, TOBPorcs, TOBPIECERG, TOBBASESRG, TOBanaP,TOBanaS,TOBSSTRAIT, TOBVTECOLLECTIF,DEV, OldEcr,
+    okok := PassationComptable( TOBPiece,TOBOUvrage,TOBOuvragesP, TOBBases,TOBBasesL, TOBEches,TOBPieceTrait,TOBAffaireInterv,TOBTiers, TOBArticles, TOBCpta, TOBAcomptes, TOBPorcs, TOBPIECERG, TOBBASESRG, TOBanaP,TOBanaS,TOBSSTRAIT, TOBVTECOLLECTIF,nil,DEV, OldEcr,
                                 OldStk, True, ((TransfoPiece = True) or (TransfoMultiple) or (DuplicPiece = True) or (GenAvoirFromSit)) );
   EXCEPT
     on E: Exception do
-  begin
       PgiError('Erreur SQL : ' + E.Message, 'Erreur / ecriture comptable');
-  end;
   END;
   if not okok then  V_PGI.IoError := oeLettrage;
   LibereParamTimbres;
@@ -20206,7 +20216,11 @@ begin
     if TOBDL.GetValue('UTILISE') <> 'X' then TOBDL.Free;
   end;
   if TOBDesLots.Detail.Count > 0 then TOBPiece.PutValue('GP_ARTICLESLOT', 'X');
-  if not TOBDesLots.InsertDB(nil) then V_PGI.IoError := oeUnknown;
+  if not TOBDesLots.InsertDB(nil) then
+  begin
+    V_PGI.IoError := oeUnknown;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_InsertLIGNELOT);
+  end;
 end;
 
 procedure TFFacture.ValideLesSeries;
@@ -20237,7 +20251,11 @@ begin
     if TOBSerLig.GetValue('UTILISE') <> 'X' then TOBSerLig.Free;
   end;
   //if TOBSerie.Detail.Count>0 then TOBPiece.PutValue('GP_ARTICLESLOT','X') ;
-  if not TOBSerie.InsertDB(nil) then V_PGI.IoError := oeUnknown;
+  if not TOBSerie.InsertDB(nil) then
+  begin
+    V_PGI.IoError := oeUnknown;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateLIGNESERIE);
+  end;
   {$ENDIF}
 end;
 
@@ -20259,10 +20277,7 @@ begin
   begin
     OldNum := TOBPiece.GetValue('GP_NUMERO');
     if not SetDefinitiveNumber(TOBPiece, TOBBases, TOBBasesL,TOBEches, TOBNomenclature, TOBAcomptes, TOBPIeceRG, TOBBasesRg, TobLigneTarif, CleDoc.NumeroPiece) then
-    begin
       V_PGI.IoError := oePointage;
-    end;
-    //if Not SetNumeroDefinitif(TOBPiece,TOBBases,TOBEches,TOBNomenclature,TOBAcomptes) then V_PGI.IoError:=oePointage ;
     if GetInfoParPiece(NaturePieceG, 'GPP_ACTIONFINI') = 'ENR' then TOBPiece.PutValue('GP_VIVANTE', '-');
     NewNum := TOBPiece.GetValue('GP_NUMERO');
     GP_NUMEROPIECE.Caption := IntToStr(NewNum);
@@ -20341,13 +20356,15 @@ begin
   begin
     DetruitLesFormules (TOBP,TOBLigFormule_O);
     {$IFDEF AFFAIRE}
-    DetruitAffaireComplement (TOBFormuleVarQte_O,nil);
+    if V_PGI.ioError = oeOk then
+      DetruitAffaireComplement (TOBFormuleVarQte_O,nil);
     {$ENDIF}
-    if not DetruitAncien(TOBP, TOBBases_O, TOBEches_O, TOBN_O, TOBLOT_O, TOBAcomptes_O, TOBPorcs_O, TOBSerie_o, TOBOuvrage_O, TOBLienOLE_O, TOBPIECERG_O, TOBBasesRg_O, TobLigneTarif_O,false,SuppLigneFac) then V_PGI.IoError := oeSaisie;
+    if V_PGI.ioError = oeOk then
+      if not DetruitAncien(TOBP, TOBBases_O, TOBEches_O, TOBN_O, TOBLOT_O, TOBAcomptes_O, TOBPorcs_O, TOBSerie_o, TOBOuvrage_O, TOBLienOLE_O, TOBPIECERG_O, TOBBasesRg_O, TobLigneTarif_O,false,SuppLigneFac) then V_PGI.IoError := oeSaisie;
   end else
   begin
     if not UpdateAncien(TOBP, TOBPiece, TOBAcomptes_O, TobTiers, False, CleDoc.NumeroPiece) then V_PGI.IoError := oeSaisie;
-    if GenAvoirFromSit then
+    if (V_PGI.IoError = oeOk) and (GenAvoirFromSit) then
     begin
       AnnuleSituation (TOBpiece_O,TOBOuvrage_O,TOBPIECERG_O);
       PutValueDetail(TOBPiece_O, 'GP_VIVANTE', '-');
@@ -20448,90 +20465,95 @@ var TOBL, TOBDec, TOBAL, TOBAna: TOB;
 begin
   if Action <> taModif then Exit;
   TOBPieceDel := TOB.Create('PIECE', nil, -1);
-  TOBPieceDel.Dupliquer(TOBPiece, False, True);
-  TOBNomenDel := TOB.Create('', nil, -1);
-  SetLength(NomenASup, TOBNomenclature.Detail.Count);
-  IndiceNomenDel := 1;
-  for i := Low(NomenASup) to High(NomenASup) do NomenASup[i] := False;
-  for i := TOBPiece.Detail.Count - 1 downto 0 do
-  begin
-    {Tests préalables}
-    TOBL := TOBPiece.Detail[i];
-    if TOBL = nil then Break;
-    RefArt := TOBL.GetValue('GL_ARTICLE');
-    if RefArt = '' then Continue;
-    if ((not TOBL.FieldExists('SUPPRIME')) or (TOBL.GetValue('SUPPRIME') <> 'X')) then Continue;
-    // suppression des composants de nomenclature rattachés
-    if TOBL.GetValue('GL_TYPEARTICLE') = 'NOM' then
-    begin
-      IndiceNomen := TOBL.GetValue('GL_INDICENOMEN');
-      if TOBNomenclature.Detail.Count - 1 >= IndiceNomen - 1 then
+  try
+    TOBNomenDel := TOB.Create('', nil, -1);
+    try
+      TOBPieceDel.Dupliquer(TOBPiece, False, True);
+      SetLength(NomenASup, TOBNomenclature.Detail.Count);
+      IndiceNomenDel := 1;
+      for i := Low(NomenASup) to High(NomenASup) do NomenASup[i] := False;
+      for i := TOBPiece.Detail.Count - 1 downto 0 do
       begin
-        TOBLNDel := TOB.Create('LIGNENOMEN', TOBNomenDel, -1);
-        if TOBLNDel = nil then Continue;
-        TOBLNDel.Dupliquer(TOBNomenclature.Detail[IndiceNomen - 1], True, True);
-        NomenASup[IndiceNomen - 1] := True;
-        //TOBNomenclature.Detail[IndiceNomen-1].Free ;
-      end;
-    end;
-    TOBLDel := NewTOBLigne(TOBPieceDel, 0);
-    if TOBLDel = nil then Continue;
-    TOBLDel.Dupliquer(TOBL, False, True);
-    if TOBL.GetValue('GL_TYPEARTICLE') = 'NOM' then
-    begin
-      TOBLDel.PutValue('GL_INDICENOMEN', IndiceNomenDel);
-      Inc(IndiceNomenDel);
-    end;
-    {Suppression et renumérotation : Destruction des lots, série, de l'analytique et en dernier de la ligne}
-    DetruitLot(i + 1);
-    DetruitSerie(i + 1, Action, GereSerie, TobPiece, TobSerie);
-    TOBL.ClearDetail;
-    for j := i + 1 to TOBPiece.Detail.Count - 1 do
-    begin
-      TOBDec := TOBPiece.Detail[j];
-      TOBDec.PutValue('GL_NUMLIGNE', j);
-      if TOBDec.Detail.Count > 0 then
-      begin
-        TOBAL := TOBDec.Detail[0];
-        for k := 0 to TOBAL.Detail.Count - 1 do
+        {Tests préalables}
+        TOBL := TOBPiece.Detail[i];
+        if TOBL = nil then Break;
+        RefArt := TOBL.GetValue('GL_ARTICLE');
+        if RefArt = '' then Continue;
+        if ((not TOBL.FieldExists('SUPPRIME')) or (TOBL.GetValue('SUPPRIME') <> 'X')) then Continue;
+        // suppression des composants de nomenclature rattachés
+        if TOBL.GetValue('GL_TYPEARTICLE') = 'NOM' then
         begin
-          TOBAna := TOBAL.Detail[k];
-          TOBAna.PutValue('YVA_IDENTLIGNE', FormatFloat('000', j + 1));
+          IndiceNomen := TOBL.GetValue('GL_INDICENOMEN');
+          if TOBNomenclature.Detail.Count - 1 >= IndiceNomen - 1 then
+          begin
+            TOBLNDel := TOB.Create('LIGNENOMEN', TOBNomenDel, -1);
+            if TOBLNDel = nil then Continue;
+            TOBLNDel.Dupliquer(TOBNomenclature.Detail[IndiceNomen - 1], True, True);
+            NomenASup[IndiceNomen - 1] := True;
+            //TOBNomenclature.Detail[IndiceNomen-1].Free ;
+          end;
         end;
+        TOBLDel := NewTOBLigne(TOBPieceDel, 0);
+        if TOBLDel = nil then Continue;
+        TOBLDel.Dupliquer(TOBL, False, True);
+        if TOBL.GetValue('GL_TYPEARTICLE') = 'NOM' then
+        begin
+          TOBLDel.PutValue('GL_INDICENOMEN', IndiceNomenDel);
+          Inc(IndiceNomenDel);
+        end;
+        {Suppression et renumérotation : Destruction des lots, série, de l'analytique et en dernier de la ligne}
+        DetruitLot(i + 1);
+        DetruitSerie(i + 1, Action, GereSerie, TobPiece, TobSerie);
+        TOBL.ClearDetail;
+        for j := i + 1 to TOBPiece.Detail.Count - 1 do
+        begin
+          TOBDec := TOBPiece.Detail[j];
+          TOBDec.PutValue('GL_NUMLIGNE', j);
+          if TOBDec.Detail.Count > 0 then
+          begin
+            TOBAL := TOBDec.Detail[0];
+            for k := 0 to TOBAL.Detail.Count - 1 do
+            begin
+              TOBAna := TOBAL.Detail[k];
+              TOBAna.PutValue('YVA_IDENTLIGNE', FormatFloat('000', j + 1));
+            end;
+          end;
+        end;
+        DeleteTobLigneTarif(TobPiece, Tobl);
+        TOBL.Free;
       end;
-    end;
-    DeleteTobLigneTarif(TobPiece, Tobl);
-    TOBL.Free;
-  end;
-  if TOBPieceDel.Detail.Count > 0 then
-  begin
-    for i := 0 to TOBPiece.Detail.Count - 1 do
-    begin
-      TOBL := TOBPiece.Detail[i];
-      // Nomenclatures
-      if TOBL.GetValue('GL_TYPEARTICLE') = 'NOM' then
+      if TOBPieceDel.Detail.Count > 0 then
       begin
-        IndiceNomen := TOBL.GetValue('GL_INDICENOMEN');
-        ReAffecteLigNomen(IndiceNomen, TOBL, TOBNomenclature);
+        for i := 0 to TOBPiece.Detail.Count - 1 do
+        begin
+          TOBL := TOBPiece.Detail[i];
+          // Nomenclatures
+          if TOBL.GetValue('GL_TYPEARTICLE') = 'NOM' then
+          begin
+            IndiceNomen := TOBL.GetValue('GL_INDICENOMEN');
+            ReAffecteLigNomen(IndiceNomen, TOBL, TOBNomenclature);
+          end;
+        end;
+
+        TobNomenCop := Tob.Create('', nil, -1);
+        TobNomenCop.Dupliquer(TobNomenclature, True, True, True);
+        TobNomenclature.ClearDetail;
+        for i := Low(NomenASup) to High(NomenASup) do
+        begin
+          if NomenASup[i] = False then
+            Tob.Create('', TobNomenclature, -1).Dupliquer(TobNomenCop.Detail[i], True, True, True);
+          // DBR : ça décalait les indices de la tob donc supprimait les mauvais détails de nomenclature
+          //if NomenASup[i]=True then TOBNomenclature.Detail[i].Free ;
+        end;
+        TobNomenCop.Free;
+        CreerAnnulation(TOBPieceDel, TOBNomenDel);
       end;
+    finally
+      TOBNomenDel.Free;
     end;
-
-    TobNomenCop := Tob.Create('', nil, -1);
-    TobNomenCop.Dupliquer(TobNomenclature, True, True, True);
-    TobNomenclature.ClearDetail;
-    for i := Low(NomenASup) to High(NomenASup) do
-    begin
-      if NomenASup[i] = False then
-        Tob.Create('', TobNomenclature, -1).Dupliquer(TobNomenCop.Detail[i], True, True, True);
-      // DBR : ça décalait les indices de la tob donc supprimait les mauvais détails de nomenclature
-      //if NomenASup[i]=True then TOBNomenclature.Detail[i].Free ;
-    end;
-    TobNomenCop.Free;
-
-    CreerAnnulation(TOBPieceDel, TOBNomenDel);
+  finally
+    TOBPieceDel.Free;
   end;
-  TOBPieceDel.Free;
-  TOBNomenDel.Free;
 end;
 
 procedure TFFacture.GestionRgUnique(TOBPIECE, TOBPIECERG, TOBBASES, TOBBASESRG, TOBTIers, TOBAffaire, TOBLigneRG: TOB);
@@ -20570,8 +20592,9 @@ begin
 end;
 
 procedure TFFacture.ValideLaPiece; { NEWPIECE }
-var OldEcr, OldStk: RMVT;
-  SavAcompteInit: double; // Modif BTP
+var
+  OldEcr, OldStk: RMVT;
+  SavAcompteInit: double;
   InAvancement : boolean;
   AutoriseSansDecomp : boolean;
   NowFutur : TDateTime;
@@ -20581,735 +20604,646 @@ var OldEcr, OldStk: RMVT;
   okok : boolean;
   OkREXEl : boolean;
   EcritFacturable : boolean;
+  CanContinue : boolean;
+  Msg : string;
 begin
-  // ----
-  if (VH_GC.BTCODESPECIF = '002') and (TOBPiece.getString('GP_NATUREPIECEG')='DBT') and (Action=TaCreat) then
-  begin
-    ConstitueAffaireVerdon(Self);
-  end;
-  // ---
-  EcritFacturable := false;
-  if (action=taModif) and (not IsDejaFacture) and (InDossierfac) and (TOBPiece.getString('GP_NATUREPIECEG')='DBT') then EcritFacturable := true;
-  if fmodeAudit then fAuditPerf.Debut('Validation document');
-	NowFutur := 0;
-//  AutoriseSansDecomp := (Pos(TOBPiece.GetValue('GP_NATUREPIECEG'),'BCE;FPR;FAC')>0) ;
-	AutoriseSansDecomp := (Pos(TOBPiece.GetValue('GP_NATUREPIECEG'),'BCE;FPR;FAC;AF;AFS')>0) ;
-  InAvancement := (SaisieTypeAvanc) or (ModifAvanc);
-  SavAcompteInit := -1;
-{$IFDEF BTP}
-  if fmodeAudit then fAuditPerf.Debut('Warning previsionnel');
-	WarningFinSiprevisionnel (self,TOBPiece,TOBLienDevCha);
-  if fmodeAudit then fAuditPerf.Fin('Warning previsionnel');
-{$ENDIF}
-	if V_PGI.Ioerror = OeOk then
-  begin
-    if Action = taConsult then
+  try
+    if (EstSpecifVERDON) and (TOBPiece.getString('GP_NATUREPIECEG')='DBT') and (Action=TaCreat) then
+      ConstitueAffaireVerdon(Self);
+    if V_PGI.ioError = oeOk then
     begin
-      Close;
-      Exit;
+      EcritFacturable := false;
+      if (action=taModif) and (not IsDejaFacture) and (InDossierfac) and (TOBPiece.getString('GP_NATUREPIECEG')='DBT') then EcritFacturable := true;
+      if fmodeAudit then fAuditPerf.Debut('Validation document');
+      NowFutur := 0;
+      AutoriseSansDecomp := (Pos(TOBPiece.GetValue('GP_NATUREPIECEG'),'BCE;FPR;FAC;AF;AFS')>0) ;
+      InAvancement := (SaisieTypeAvanc) or (ModifAvanc);
+      SavAcompteInit := -1;
+      if fmodeAudit then fAuditPerf.Debut('Warning previsionnel');
+      WarningFinSiprevisionnel (self,TOBPiece,TOBLienDevCha);
+      if fmodeAudit then fAuditPerf.Fin('Warning previsionnel');
     end;
-    Inc(NbTransact);
-    if NbTransact > 1 then
+    if V_PGI.Ioerror = OeOk then
     begin
-      if not TOBPiece.FieldExists('REVALIDATION') then TOBPiece.AddChampSup('REVALIDATION', False);
-      TOBPiece.PutValue('REVALIDATION', 'X');
-      if TOBAdresses.Detail.Count < 2 then
+      if Action = taConsult then
       begin
-        TOB.Create('PIECEADRESSE', TOBAdresses, -1); {Facturation}
-        TOBAdresses.Detail[1].Dupliquer(TOBAdresses.Detail[0], True, True);
+        Close;
+        Exit;
       end;
-    end;
-    InitMove(8, '');
-    SavAcompteInit := -1; // Modif BTP
-    if EstAvoir then
-    begin
-//      if not AvoirDejaInverse then
-//      begin
-        InverseAvoir;
-//        AvoirDejaInverse := True;
-//      end;
-    end;
-    MoveCur(False);
-    if not TransfoMultiple then
-    begin
-  	if fmodeAudit then fAuditPerf.Debut('Réaffecte dispo contremarque');
-    ReaffecteDispoContreM(TOBPiece_O, TOBPiece, TOBCatalogu);
-  	if fmodeAudit then fAuditPerf.Fin('Réaffecte dispo contremarque');
-  	if fmodeAudit then fAuditPerf.Debut('Réaffecte dispo Diff');
-    ReaffecteDispoDiff(TOBArticles); //JD 25/03/03
-  	if fmodeAudit then fAuditPerf.Fin('Réaffecte dispo Diff');
-
-    {$IFDEF AFFAIRE}
-  	if fmodeAudit then fAuditPerf.Debut('Impacte activité ligne');
-    ImpactActiviteLigne(TOBPiece, GereActivite);
-  	if fmodeAudit then fAuditPerf.Fin('Impacte activité ligne');
-    {$ENDIF}
-    end;
-    MoveCur(False);
-  end;
-
-  {Verification et gestion de la piece d'origine sur piece achat}
-  if (Action=taModif) and (not duplicpiece) and (VenteAchat = 'ACH') then
-  begin
-	  if fmodeAudit then fAuditPerf.Debut('Reajustement document origine');
-    ControleEtReajustePieceOrigine (TOBPiece,TOBArticles );
-  	if fmodeAudit then fAuditPerf.Fin('Reajustement document origine');
-  end;
-
-
-  {Traitement pièce d'origine}
-  if ((Action = taModif) and (not DuplicPiece) ) then
-  begin
-  	NowFutur := NowH;
-  	if fmodeAudit then fAuditPerf.Debut('Detruit ancien');
-    if (not GenAvoirFromSit) then
-    begin
-      if TransfoMultiple then
+      Inc(NbTransact);
+      if NbTransact > 1 then
       begin
-        if V_PGI.IoError = oeOk then DetruitLesCompta(TOBListPieces, NowFutur, OldEcr, OldStk,true);
-      end else
-      begin
-        if V_PGI.IoError = oeOk then DetruitCompta(TOBPiece_O, NowFutur, OldEcr, OldStk,true);
-      end;
-    end;
-    if V_PGI.IoError = oeOk then DelOrUpdateAncien; { NEWPIECE }
-  	if fmodeAudit then fAuditPerf.Fin('Detruit ancien');
-  	if fmodeAudit then fAuditPerf.Debut('Traitement stock');
-    if (not GenAvoirFromSit) then
-    begin
-      if not (TransfoPiece or TransfoMultiple) then
-      begin
-        if V_PGI.IoError = oeOk then InverseStock(TOBPiece_O, TOBArticles, TOBCatalogu, TOBOuvrage_O);
-        {$IFNDEF CCS3}
-        if V_PGI.IoError = oeOk then InverseStockLot(TOBPiece_O, TOBLOT_O, TOBArticles);
-        if V_PGI.IoError = oeOk then InverseStockSerie(TOBPiece_O, TOBSerie_O);
-        {$ENDIF}
-      end else
-      begin
-        if (TransfoPiece) then
+        if not TOBPiece.FieldExists('REVALIDATION') then TOBPiece.AddChampSup('REVALIDATION', False);
+        TOBPiece.PutValue('REVALIDATION', 'X');
+        if TOBAdresses.Detail.Count < 2 then
         begin
-          if V_PGI.IoError = oeOk then InverseStockTransfo(TOBPiece_O, TobPiece, TOBArticles, TOBCatalogu, TOBOuvrage_O, Litige);
+          TOB.Create('PIECEADRESSE', TOBAdresses, -1); {Facturation}
+          TOBAdresses.Detail[1].Dupliquer(TOBAdresses.Detail[0], True, True);
+        end;
+      end;
+      InitMove(8, '');
+      SavAcompteInit := -1; // Modif BTP
+      if EstAvoir then
+        InverseAvoir;
+      MoveCur(False);
+      if not TransfoMultiple then
+      begin
+      if fmodeAudit then fAuditPerf.Debut('Réaffecte dispo contremarque');
+      ReaffecteDispoContreM(TOBPiece_O, TOBPiece, TOBCatalogu);
+      if fmodeAudit then fAuditPerf.Fin('Réaffecte dispo contremarque');
+      if fmodeAudit then fAuditPerf.Debut('Réaffecte dispo Diff');
+      ReaffecteDispoDiff(TOBArticles); //JD 25/03/03
+      if fmodeAudit then fAuditPerf.Fin('Réaffecte dispo Diff');
+      {$IFDEF AFFAIRE}
+      if fmodeAudit then fAuditPerf.Debut('Impacte activité ligne');
+      ImpactActiviteLigne(TOBPiece, GereActivite);
+      if fmodeAudit then fAuditPerf.Fin('Impacte activité ligne');
+      {$ENDIF}
+      end;
+      MoveCur(False);
+    end;
+    {Verification et gestion de la piece d'origine sur piece achat}
+    if (Action=taModif) and (not duplicpiece) and (VenteAchat = 'ACH') then
+    begin
+      if fmodeAudit then fAuditPerf.Debut('Reajustement document origine');
+      ControleEtReajustePieceOrigine (TOBPiece,TOBArticles );
+      if fmodeAudit then fAuditPerf.Fin('Reajustement document origine');
+    end;
+    {Traitement pièce d'origine}
+    if (V_PGI.IoError = oeOk) and (Action = taModif) and (not DuplicPiece)  then
+    begin
+      NowFutur := NowH;
+      if fmodeAudit then fAuditPerf.Debut('Detruit ancien');
+      if (not GenAvoirFromSit) then
+      begin
+        if TransfoMultiple then
+        begin
+          if V_PGI.IoError = oeOk then DetruitLesCompta(TOBListPieces, NowFutur, OldEcr, OldStk,true);
+        end else
+        begin
+          if V_PGI.IoError = oeOk then DetruitCompta(TOBPiece_O, NowFutur, OldEcr, OldStk,true);
+        end;
+      end;
+      if V_PGI.IoError = oeOk then DelOrUpdateAncien; { NEWPIECE }
+      if fmodeAudit then fAuditPerf.Fin('Detruit ancien');
+      if fmodeAudit then fAuditPerf.Debut('Traitement stock');
+      if (not GenAvoirFromSit) then
+      begin
+        if not (TransfoPiece or TransfoMultiple) then
+        begin
+          if V_PGI.IoError = oeOk then InverseStock(TOBPiece_O, TOBArticles, TOBCatalogu, TOBOuvrage_O);
           {$IFNDEF CCS3}
-          if V_PGI.IoError = oeOk then InverseStockLotTransfo(TOBPiece_O, TobPiece, TobLot_O, TobArticles);
-          if V_PGI.IoError = oeOk then InverseStockSerieTransfo(TOBPiece_O, TobPiece, TOBSerie_O);
+          if V_PGI.IoError = oeOk then InverseStockLot(TOBPiece_O, TOBLOT_O, TOBArticles);
+          if V_PGI.IoError = oeOk then InverseStockSerie(TOBPiece_O, TOBSerie_O);
           {$ENDIF}
         end else
         begin
-          if V_PGI.IoError = oeOk then InverseStockTransfoMultiple(TOBListPieces, TobPiece, TOBArticles, TOBCatalogu, TOBOuvrage_O, Litige);
-        end;
-      end;
-    end;
-  	if fmodeAudit then fAuditPerf.Fin('Traitement stock');
-  end;
-  MoveCur(False);
-  if fmodeAudit then fAuditPerf.Debut('Recup initiale');
-  {Enregistrement nouvelle pièce}
-  if V_PGI.IoError = oeOk then
-  begin
-    InitToutModif (NowFutur);
-    ValideLaNumerotation;
-    ValideLaCotation(TOBPiece, TOBBases, TOBEches);
-    ValideLaPeriode(TOBPiece);
-    if GetInfoParPiece(NewNature, 'GPP_IMPIMMEDIATE') = 'X' then TOBPiece.PutValue('GP_EDITEE', 'X');
-  end;
-  if fmodeAudit then fAuditPerf.Fin('Recup initiale');
-  MoveCur(False);
-  // JT eQualité 10246
-  if (V_PGI.IoError = oeOk) and (TOBAcomptes.detail.count > 0) and (TOBAcomptes.FieldExists('CHGTNUM') )then
-    ModifRefGC(TOBPiece, TOBAcomptes);
-  // Fin JT
-  // Modif Btp
-  if fmodeAudit then fAuditPerf.Debut('Vire libelle sous detail');
-  if V_PGI.IoError = oeOk then SupLesLibDetail(TOBPiece);
-  if fmodeAudit then fAuditPerf.Fin('Vire libelle sous detail');
-  if V_PGI.IoError = oeOk then GestionRgUnique(TOBPIECE, TOBPIECERG, TOBBASES, TOBBASESRG, TOBTIers, TOBAffaire, TOBLigneRG);
-  // Correction OPTIMISATION
-  if fmodeAudit then fAuditPerf.Debut('positionnement article via sous detail');
-  if V_PGI.IoError = oeOk then ValideLesArticlesFromOuv(TOBarticles,TOBOuvrage);
-  if fmodeAudit then fAuditPerf.Fin('positionnement article via sous detail');
-  // --  surtout bien le laisser avant la valideation des lignes
-  if (V_PGI.IoError=oeOk) and (SaisieCM) then ValideLesEvtsMateriels(TOBPiece,TOBEvtsMat);
-  // ---
-  if fmodeAudit then fAuditPerf.Debut('Preparation validation des lignes et sous détail');
-  if V_PGI.IoError = oeOk then ValideLesLignes(TOBPiece, TOBArticles, TOBCatalogu, TOBNomenclature, TobOuvrage, TOBPieceRG, TOBBasesRG, False, False,false,false,nil,AutoriseSansDecomp);
-  if (V_PGI.IOError = OeOk) and (EcritFacturable) then InitLesLignesFac (TOBPiece);
-  if fmodeAudit then fAuditPerf.Fin('Preparation validation des lignes et sous détail');
-  {$IFDEF BTP}
-  if V_PGI.IoError = oeOk then
-  begin
-  	if fmodeAudit then fAuditPerf.Debut('Constitution des lien devis chantiers');
-    if (V_PGI.IoError = oeOk) and (not InAvancement) then ValideLesLienDevCha(TOBPiece, TOBOuvrage, TOBLienDEVCHA);
-  	if fmodeAudit then fAuditPerf.Fin('Constitution des lien devis chantiers');
-  	if fmodeAudit then fAuditPerf.Debut('Constitution des LIGNECOMPL');
-  	if V_PGI.IoError=oeOk then ValideLesLignesCompl(TOBPiece, TobPiece_O);
-  	if fmodeAudit then fAuditPerf.Fin('Constitution des LIGNECOMPL');
-    if VenteAchat <> 'ACH' then
-    begin
-  		if fmodeAudit then fAuditPerf.Debut('Validation des ouvrages');
-      if V_PGI.IoError = oeOk then ValideLesOuv(TOBOuvrage, TOBPiece);
-  		if fmodeAudit then fAuditPerf.Fin('Validation des ouvrages');
-  		if fmodeAudit then fAuditPerf.Debut('Validation des LIGNEOUVPLAT');
-      if (IsEcritLesOuvPlat) and (V_PGI.IoError = oeOk) then ValideLesOuvPlat (TOBOuvragesP, TOBPiece);
-  		if fmodeAudit then fAuditPerf.Fin('Validation des LIGNEOUVPLAT');
-    end;
-  end;
-  if fmodeAudit then fAuditPerf.Debut('Validation des BASES');
-  if V_PGI.IoError = oeOk then ValideLesBases(TOBPiece,TobBases,TOBBasesL);
-  if fmodeAudit then fAuditPerf.Fin('Validation des BASES');
-  if fmodeAudit then fAuditPerf.Debut('Validation des METRES');
-  if (V_PGI.Ioerror = OeOk) and (not GetParamSocSecur('SO_METRESEXCEL',true)) then ValidelesMetres (TOBPiece,TOBmetres, TobOuvrage);
-  if fmodeAudit then fAuditPerf.Fin('Validation des METRES');
-  {$ENDIF}
-  if V_PGI.IoError = oeOk then
-  begin
-//    if (tModeBlocNotes in SaContexte) then ValideLesLiensOle(TOBPiece, TOBPiece_O, TOBLienOLE);
-  	if fmodeAudit then fAuditPerf.Debut('Validation des LIENSOLE');
-    if V_PGI.Ioerror = OeOk then ValideLesLiensOle(TOBPiece, TOBPiece_O, TOBLienOLE);
-  	if fmodeAudit then fAuditPerf.Fin('Validation des LIENSOLE');
-  end;
-  // -------------------
-  //if V_PGI.IoError=oeOk then ValideLesLignes(TOBPiece,TOBArticles,TOBCatalogu,TOBNomenclature,False,False) ;
-  if fmodeAudit then fAuditPerf.Debut('Validation des ADRESSES');
-  if V_PGI.IoError = oeOk then ValideLesAdresses(TOBPiece, TOBPiece_O, TOBAdresses);
-  if fmodeAudit then fAuditPerf.Fin('Validation des ADRESSES');
-  if V_PGI.IoError = oeOk then
-  begin
-  	if fmodeAudit then fAuditPerf.Debut('Gestion reliquats');
-    GereLesReliquats;
-    ElimineLignesZero;
-  	if fmodeAudit then fAuditPerf.Fin('Gestion reliquats');
-  end;
-  if fmodeAudit then fAuditPerf.Debut('Validation demande de prix');
-  if V_PGI.ioError= OeOk then ValidelesDemPrix (TOBpiece,TOBPieceDemPrix,TOBArticleDemPrix,TOBfournDemprix,TOBDetailDemprix,true);
-  if fmodeAudit then fAuditPerf.Fin('Validation demande de prix');
-  { NEWPIECE }
-  if (Action = taModif) and (((not DuplicPiece) and (ReliquatTransfo)) or (GenAvoirFromSit)) then
-  begin
-    if (TransfoPiece or GenAvoirFromSit)  and (HistoPiece(TobPiece_O)) then
-    begin
-  		if fmodeAudit then fAuditPerf.Debut('Mise à jour pièce précédente');
-      okok := false;
-      TRY
-        okok := TOBPiece_O.UpdateDB(False);
-      EXCEPT
-        on E: Exception do
-        begin
-          PgiError('Erreur SQL : ' + E.Message, 'Pièce précédente (UPDATE)');
-        end;
-      END;
-      if not okok then
-      BEGIN
-        V_PGI.IoError := oeSaisie; { NEWPIECE }
-      end;
-  		if fmodeAudit then fAuditPerf.Fin('Mise à jour pièce précédente');
-    end else if (TransfoMultiple)  and (HistoPiece(TobPiece_O)) then
-    begin
-  		if fmodeAudit then fAuditPerf.Debut('Mise à jour des pièces précédente');
-      for II := 0 to TOBListPieces.detail.count -1 do
-      begin
-        okok := false;
-        TRY
-          okok := TOBListPieces.detail[II].UpdateDB(False);
-        EXCEPT
-          on E: Exception do
+          if (TransfoPiece) then
           begin
-            PgiError('Erreur SQL : ' + E.Message, 'Pièce précédente (UPDATE)');
+            if V_PGI.IoError = oeOk then InverseStockTransfo(TOBPiece_O, TobPiece, TOBArticles, TOBCatalogu, TOBOuvrage_O, Litige);
+            {$IFNDEF CCS3}
+            if V_PGI.IoError = oeOk then InverseStockLotTransfo(TOBPiece_O, TobPiece, TobLot_O, TobArticles);
+            if V_PGI.IoError = oeOk then InverseStockSerieTransfo(TOBPiece_O, TobPiece, TOBSerie_O);
+            {$ENDIF}
+          end else
+          begin
+            if V_PGI.IoError = oeOk then InverseStockTransfoMultiple(TOBListPieces, TobPiece, TOBArticles, TOBCatalogu, TOBOuvrage_O, Litige);
           end;
-        END;
-        if not okok then
-        BEGIN
-          V_PGI.IoError := oeSaisie; { NEWPIECE }
+        end;
+      end;
+      if fmodeAudit then fAuditPerf.Fin('Traitement stock');
     end;
-  end;
-  		if fmodeAudit then fAuditPerf.Fin('Mise à jour des pièces précédente');
-  	end;
-  end;
-  if (V_PGI.IoError = oeOk) and (Action = taModif) and (not DuplicPiece) and (not TransfoPiece) and (not TransfoMultiple) and (not GenAvoirFromSit) then
-  begin
-    if GppReliquat then { Modification d'une pièce dans laquelle les reliquats sont gérés }
+    MoveCur(False);
+    if fmodeAudit then fAuditPerf.Debut('Recup initiale');
+    {Enregistrement nouvelle pièce}
+    if V_PGI.IoError = oeOk then
     begin
-      { Remise à jour du GL_QTERESTE dans la pièce d'origine }
-  		if fmodeAudit then fAuditPerf.Debut('Mise à jour reste à livrer');
-      UpdateResteALivrer(TobPiece, TobPiece_O, TOBArticles, TOBCatalogu, TOBNomenclature, urModif);
-  		if fmodeAudit then fAuditPerf.Fin('Mise à jour reste à livrer');
-      { Recalcul du GL_QTERELIQUAT dans les lignes issues de la pièce en cours de saisie }
-  //    if (V_PGI.IoError = oeOk) then
-  //      UpdateQuantiteReliquat(TobPiece, TobPiece_O);
+      InitToutModif (NowFutur);
+      ValideLaNumerotation;
+      ValideLaCotation(TOBPiece, TOBBases, TOBEches);
+      ValideLaPeriode(TOBPiece);
+      if GetInfoParPiece(NewNature, 'GPP_IMPIMMEDIATE') = 'X' then TOBPiece.PutValue('GP_EDITEE', 'X');
     end;
-    if fmodeAudit then fAuditPerf.Debut('Gestion des soldes de lignes');
-    { En modification de pièce gère le solde ou le désolde des lignes }
-    GereLesLignesSoldees(TobPiece, TobPiece_O, TobArticles, TOBCatalogu, TOBNomenclature);
-    if fmodeAudit then fAuditPerf.Fin('Gestion des soldes de lignes');
-  end;
-
-  {$IFDEF AFFAIRE}
-  if fmodeAudit then fAuditPerf.Debut('Validation activité');
-  if V_PGI.IoError = oeOk then ValideActivite(TOBPiece, TOBPiece_O, TOBArticles, GereActivite, False, DelActivite);
-  if fmodeAudit then fAuditPerf.Fin('Validation activité');
-  {$ENDIF}
-  MoveCur(False);
-  if fmodeAudit then fAuditPerf.Debut('Validation LOTS');
-  if V_PGI.IoError = oeOk then ValideLesLots;
-  if fmodeAudit then fAuditPerf.Fin('Validation LOTS');
-  if fmodeAudit then fAuditPerf.Debut('Validation ARTICLES');
-  if V_PGI.IoError = oeOk then ValideLesArticles(TOBPiece, TOBArticles);
-  if fmodeAudit then fAuditPerf.Fin('Validation ARTICLES');
-  if fmodeAudit then fAuditPerf.Debut('Validation CATALOGUES');
-  if V_PGI.IoError = oeOk then ValideLesCatalogues(TOBPiece, TOBCatalogu);
-  if fmodeAudit then fAuditPerf.Fin('Validation CATALOGUES');
-  if fmodeAudit then fAuditPerf.Debut('Validation ANALYTIQUE');
-  if V_PGI.IoError = oeOk then ValideAnalytiques(TOBPiece, TOBAnaP, TOBAnaS);
-  if fmodeAudit then fAuditPerf.Fin('Validation ANALYTIQUE');
-  if fmodeAudit then fAuditPerf.Debut('Validation TIERS');
-  if V_PGI.IoError = oeOk then ValideTiers;
-  if fmodeAudit then fAuditPerf.Fin('Validation TIERS');
-  MoveCur(False);
-  if fmodeAudit then fAuditPerf.Debut('Validation COMPTA');
-  if V_PGI.IoError = oeOk then ValideLaCompta(OldEcr, OldStk);
-  if fmodeAudit then fAuditPerf.Fin('Validation COMPTA');
-  if V_PGI.IOError = OeOk then
-  begin
-    PrepareInsertCollectif (TOBPiece,TOBVTECOLLECTIF);
-    if not TOBVTECOLLECTIF.InsertDB(nil) then V_PGI.IOError := OeUnknown;
-  end;
-  // if V_PGI.IoError=oeOk then ValideLesLots ; déplacé
-  if fmodeAudit then fAuditPerf.Debut('Validation GESTION SERIES');
-  if V_PGI.IoError = oeOk then ValideLesSeries;
-  if fmodeAudit then fAuditPerf.Fin('Validation GESTION SERIES');
-  if V_PGI.IoError = oeOk then ValideLesFormules(TOBPiece,TOBLigFormule);
-  {$IFDEF AFFAIRE}  //Affaire-Formule des variables
-  if V_PGI.IoError = oeOk then ValideLesAFFormuleVar(TOBPiece, TOBPiece_O, TOBFormuleVarQte);
-  {$ENDIF}
-  {$IFNDEF CHR}
-  if (SaisieTypeAvanc) or ((TobPiece.GetValue('GP_NATUREPIECEG') = GetParamSoc('SO_AFNATAFFAIRE')) and (ISAcompteSoldePartiel(TOBPiece))) then
-  begin
-    // Pour Eviter de rattacher le reliquat d'acompte au devis initial lors de la facturation
-    // ou pour eviter de perdre le montant initial d'acompte lors de la modification d'un devis apres facturation partielle
-    SavAcompteInit := TOBPiece_O.GetValue('GP_ACOMPTEDEV');
-  end;
-  if not EstAvoir then  // JT eQualité 10764
-  if fmodeAudit then fAuditPerf.Debut('Validation ACOMPTES');
-  if V_PGI.IoError = oeOk then ValideLesAcomptes(TOBPiece, TOBAcomptes);
-  if fmodeAudit then fAuditPerf.Fin('Validation ACOMPTES');
-  if SavAcompteInit >= 0 then TOBPiece.PutValue('GP_ACOMPTEDEV', SavAcompteInit);
-  {$ENDIF}
-  if fmodeAudit then fAuditPerf.Debut('Validation PORTS');
-  if V_PGI.IoError = oeOk then ValideLesPorcs(TOBPiece, TOBPorcs);
-  if fmodeAudit then fAuditPerf.Fin('Validation PORTS');
-  {$IFDEF BTP}
-//  if (V_PGI.IoError = oeOk) and (VenteAchat <> 'ACH') then DetruitLignesVirtuellesOuv(TOBPIece, DEV);
-  {$ENDIF}
-  MoveCur(False);
-  // Modif BTP
-  if fmodeAudit then fAuditPerf.Debut('Validation INTERVENANTS');
-  if V_PGI.IoError = oeOk then ValideLesPieceTrait(TOBPiece, TOBAffaire,TOBPieceTrait,TOBSSTrait,DEV);
-  if fmodeAudit then fAuditPerf.Fin('Validation INTERVENANTS');
-  if fmodeAudit then fAuditPerf.Debut('Validation S/T');
-  if V_PGI.IoError = oeOk then ValideLesSousTrait(TOBPiece,TOBSSTrait,DEV);
-  if fmodeAudit then fAuditPerf.Fin('Validation S/T');
-  if fmodeAudit then fAuditPerf.Debut('Validation RG');
-  if V_PGI.IoError = oeOk then ValideLesRetenues(TOBPiece, TOBPieceRG);
-  if V_PGI.IoError = oeOk then ValideLesBasesRG(TOBPiece, TOBBasesRG);
-  if fmodeAudit then fAuditPerf.Fin('Validation RG');
-  if fmodeAudit then fAuditPerf.Debut('Validation TIMBRES TAXES');
-  if V_PGI.IoError = oeOk then ValideLesTimbres(TOBPiece, TOBTimbres);
-  if fmodeAudit then fAuditPerf.Fin('Validation TIMBRES TAXES');
-  if V_PGI.IoError = oeOk then ValideLesRevisions(TOBPiece, TOBrevisions);
-  // --
-  if V_PGI.IoError = oeOk then
-  begin
-//    if (VenteAchat = 'ACH') and (GetInfoParPiece(NewNature,'GPP_TYPEECRCPTA') = 'NOR') and
-//       (Action<>taConsult) and (GetParamSoc ('SO_GCCONTROLEFACTURE')) then
-    if ((VenteAchat = 'ACH') and (not IsTransformable(NewNature)) and
-    		(Action<>taConsult) and
-       (GetParamSoc ('SO_GCCONTROLEFACTURE'))) then
+    if fmodeAudit then fAuditPerf.Fin('Recup initiale');
+    MoveCur(False);
+    if (V_PGI.IoError = oeOk) and (TOBAcomptes.detail.count > 0) and (TOBAcomptes.FieldExists('CHGTNUM') )then
+      ModifRefGC(TOBPiece, TOBAcomptes);
+    if fmodeAudit then fAuditPerf.Debut('Vire libelle sous detail');
+    if V_PGI.IoError = oeOk then SupLesLibDetail(TOBPiece);
+    if fmodeAudit then fAuditPerf.Fin('Vire libelle sous detail');
+    if V_PGI.IoError = oeOk then GestionRgUnique(TOBPIECE, TOBPIECERG, TOBBASES, TOBBASESRG, TOBTIers, TOBAffaire, TOBLigneRG);
+    // Correction OPTIMISATION
+    if fmodeAudit then fAuditPerf.Debut('positionnement article via sous detail');
+    if V_PGI.IoError = oeOk then ValideLesArticlesFromOuv(TOBarticles,TOBOuvrage);
+    if fmodeAudit then fAuditPerf.Fin('positionnement article via sous detail');
+    // --  surtout bien le laisser avant la valideation des lignes
+    if (V_PGI.IoError=oeOk) and (SaisieCM) then ValideLesEvtsMateriels(TOBPiece,TOBEvtsMat);
+    // ---
+    if fmodeAudit then fAuditPerf.Debut('Preparation validation des lignes et sous détail');
+    if V_PGI.IoError = oeOk then ValideLesLignes(TOBPiece, TOBArticles, TOBCatalogu, TOBNomenclature, TobOuvrage, TOBPieceRG, TOBBasesRG, False, False,false,false,nil,AutoriseSansDecomp);
+    if (V_PGI.IOError = OeOk) and (EcritFacturable) then InitLesLignesFac (TOBPiece);
+    if fmodeAudit then fAuditPerf.Fin('Preparation validation des lignes et sous détail');
+    if V_PGI.IoError = oeOk then
     begin
-      if GetInfoParPiece (NewNature, 'GPP_ESTAVOIR') = 'X' then
+      if fmodeAudit then fAuditPerf.Debut('Constitution des lien devis chantiers');
+      if (V_PGI.IoError = oeOk) and (not InAvancement) then ValideLesLienDevCha(TOBPiece, TOBOuvrage, TOBLienDEVCHA);
+      if fmodeAudit then fAuditPerf.Fin('Constitution des lien devis chantiers');
+      if fmodeAudit then fAuditPerf.Debut('Constitution des LIGNECOMPL');
+      if V_PGI.IoError=oeOk then ValideLesLignesCompl(TOBPiece, TobPiece_O);
+      if fmodeAudit then fAuditPerf.Fin('Constitution des LIGNECOMPL');
+      if VenteAchat <> 'ACH' then
       begin
-        TobPiece.PutValue ('GP_TOTALTTC', TobPiece.GetValue ('TOTALTTC_CFA') * -1);
-        TobPiece.PutValue ('GP_TOTALTTCDEV', TobPiece.GetValue ('TOTALTTCDEV_CFA') * -1);
-      end else
-      begin
-        TobPiece.PutValue ('GP_TOTALTTC', TobPiece.GetValue ('TOTALTTC_CFA'));
-        TobPiece.PutValue ('GP_TOTALTTCDEV', TobPiece.GetValue ('TOTALTTCDEV_CFA'));
+        if fmodeAudit then fAuditPerf.Debut('Validation des ouvrages');
+        if V_PGI.IoError = oeOk then ValideLesOuv(TOBOuvrage, TOBPiece);
+        if fmodeAudit then fAuditPerf.Fin('Validation des ouvrages');
+        if fmodeAudit then fAuditPerf.Debut('Validation des LIGNEOUVPLAT');
+        if (IsEcritLesOuvPlat) and (V_PGI.IoError = oeOk) then ValideLesOuvPlat (TOBOuvragesP, TOBPiece);
+        if fmodeAudit then fAuditPerf.Fin('Validation des LIGNEOUVPLAT');
       end;
     end;
-    // MODIF LS Pour gestion de la fin de vie des pieces
-    if (Action=TaModif) and
-    	 (GetInfoParPiece(NewNature, 'GPP_ACTIONFINI') = 'TRA') and
-    	 (ToutesLignesSoldees(TOBpiece)) then
+    if fmodeAudit then fAuditPerf.Debut('Validation des BASES');
+    if V_PGI.IoError = oeOk then ValideLesBases(TOBPiece,TobBases,TOBBasesL);
+    if fmodeAudit then fAuditPerf.Fin('Validation des BASES');
+    if fmodeAudit then fAuditPerf.Debut('Validation des METRES');
+    if (V_PGI.Ioerror = OeOk) and (not GetParamSocSecur('SO_METRESEXCEL',true)) then ValidelesMetres (TOBPiece,TOBmetres, TobOuvrage);
+    if fmodeAudit then fAuditPerf.Fin('Validation des METRES');
+    if fmodeAudit then fAuditPerf.Debut('Validation des LIENSOLE');
+    if V_PGI.Ioerror = OeOk then ValideLesLiensOle(TOBPiece, TOBPiece_O, TOBLienOLE);
+    if fmodeAudit then fAuditPerf.Fin('Validation des LIENSOLE');
+    if fmodeAudit then fAuditPerf.Debut('Validation des ADRESSES');
+    if V_PGI.IoError = oeOk then ValideLesAdresses(TOBPiece, TOBPiece_O, TOBAdresses);
+    if fmodeAudit then fAuditPerf.Fin('Validation des ADRESSES');
+    if V_PGI.IoError = oeOk then
     begin
-    	TOBPiece.PutValue('GP_VIVANTE','-');
+      if fmodeAudit then fAuditPerf.Debut('Gestion reliquats');
+      GereLesReliquats;
+      ElimineLignesZero;
+      if fmodeAudit then fAuditPerf.Fin('Gestion reliquats');
     end;
-    if fIsAcompte then
+    if fmodeAudit then fAuditPerf.Debut('Validation demande de prix');
+    if V_PGI.ioError= OeOk then ValidelesDemPrix (TOBpiece,TOBPieceDemPrix,TOBArticleDemPrix,TOBfournDemprix,TOBDetailDemprix,true);
+    if fmodeAudit then fAuditPerf.Fin('Validation demande de prix');
+    { NEWPIECE }
+    if     (V_PGI.IoError = oeOk)
+       and (Action = taModif)
+       and (   ((not DuplicPiece) and (ReliquatTransfo))
+            or (GenAvoirFromSit))
+    then
     begin
-      if TOBPiece_O.getString('GP_ATTACHEMENT')<> TOBpiece.getString('GP_ATTACHEMENT') then
+      if (TransfoPiece or GenAvoirFromSit)  and (HistoPiece(TobPiece_O)) then
       begin
-        if TOBpiece.getString('GP_ATTACHEMENT')<> '' then
+        if fmodeAudit then fAuditPerf.Debut('Mise à jour pièce précédente');
+        if V_PGI.IoError = oeOk then
         begin
-          if TOBPiece_O.getString('GP_ATTACHEMENT')<> '' then
+          okok := false;
+          TRY
+            okok := TOBPiece_O.UpdateDB(False);
+          EXCEPT
+            on E: Exception do
+            begin
+              PgiError('Erreur SQL : ' + E.Message, 'Pièce précédente (UPDATE)');
+            end;
+          END;
+          if not okok then
+          begin
+            V_PGI.IoError := oeSaisie;
+            TUtilErrorsManagement.SetGenericMessage(TemErr_UpdatePIECEPrec);
+          end;
+        end;
+        if fmodeAudit then fAuditPerf.Fin('Mise à jour pièce précédente');
+      end else
+      if (TransfoMultiple)  and (HistoPiece(TobPiece_O)) then
+      begin
+        if fmodeAudit then fAuditPerf.Debut('Mise à jour des pièces précédente');
+        if V_PGI.IoError = oeOk then
+        begin
+          for II := 0 to TOBListPieces.detail.count -1 do
+          begin
+            okok := false;
+            try
+              okok := TOBListPieces.detail[II].UpdateDB(False);
+            except
+              on E: Exception do
+              begin
+                PgiError('Erreur SQL : ' + E.Message, 'Pièce précédente (UPDATE)');
+              end;
+            end;
+            if not okok then
+            begin
+              V_PGI.IoError := oeSaisie;
+              TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s de la pièce précédente (%s n° %s).'
+                                                                                      , [  TUtilErrorsManagement.GetUpdateError
+                                                                                         , TOBListPieces.detail[II].GetString('GP_NATUREPIECEG')
+                                                                                         , TOBListPieces.detail[II].GetString('GP_NUMERO')
+                                                                                        ]));
+              break;
+            end;
+          end;
+        end;
+        if fmodeAudit then fAuditPerf.Fin('Mise à jour des pièces précédente');
+      end;
+    end;
+    if     (V_PGI.IoError = oeOk)
+       and (Action = taModif)
+       and (not DuplicPiece)
+       and (not TransfoPiece)
+       and (not TransfoMultiple)
+       and (not GenAvoirFromSit)
+    then
+    begin
+      if GppReliquat then { Modification d'une pièce dans laquelle les reliquats sont gérés }
+      begin
+        { Remise à jour du GL_QTERESTE dans la pièce d'origine }
+        if fmodeAudit then fAuditPerf.Debut('Mise à jour reste à livrer');
+        if not UpdateResteALivrer(TobPiece, TobPiece_O, TOBArticles, TOBCatalogu, TOBNomenclature, urModif) then
+          V_PGI.ioError := oeUnknown;
+        if fmodeAudit then fAuditPerf.Fin('Mise à jour reste à livrer');
+      end;
+      if fmodeAudit then fAuditPerf.Debut('Gestion des soldes de lignes');
+      { En modification de pièce gère le solde ou le désolde des lignes }
+      if V_PGI.ioError = oeOk then
+        GereLesLignesSoldees(TobPiece, TobPiece_O, TobArticles, TOBCatalogu, TOBNomenclature);
+      if fmodeAudit then fAuditPerf.Fin('Gestion des soldes de lignes');
+    end;
+    {$IFDEF AFFAIRE}
+    if fmodeAudit then fAuditPerf.Debut('Validation activité');
+    if V_PGI.IoError = oeOk then ValideActivite(TOBPiece, TOBPiece_O, TOBArticles, GereActivite, False, DelActivite);
+    if fmodeAudit then fAuditPerf.Fin('Validation activité');
+    {$ENDIF}
+    MoveCur(False);
+    if fmodeAudit then fAuditPerf.Debut('Validation LOTS');
+    if V_PGI.IoError = oeOk then ValideLesLots;
+    if fmodeAudit then fAuditPerf.Fin('Validation LOTS');
+    if fmodeAudit then fAuditPerf.Debut('Validation ARTICLES');
+    if V_PGI.IoError = oeOk then ValideLesArticles(TOBPiece, TOBArticles);
+    if fmodeAudit then fAuditPerf.Fin('Validation ARTICLES');
+    if fmodeAudit then fAuditPerf.Debut('Validation CATALOGUES');
+    if V_PGI.IoError = oeOk then ValideLesCatalogues(TOBPiece, TOBCatalogu);
+    if fmodeAudit then fAuditPerf.Fin('Validation CATALOGUES');
+    if fmodeAudit then fAuditPerf.Debut('Validation ANALYTIQUE');
+    if V_PGI.IoError = oeOk then ValideAnalytiques(TOBPiece, TOBAnaP, TOBAnaS);
+    if fmodeAudit then fAuditPerf.Fin('Validation ANALYTIQUE');
+    if fmodeAudit then fAuditPerf.Debut('Validation TIERS');
+    if V_PGI.IoError = oeOk then ValideTiers;
+    if fmodeAudit then fAuditPerf.Fin('Validation TIERS');
+    MoveCur(False);
+    if fmodeAudit then fAuditPerf.Debut('Validation COMPTA');
+    if V_PGI.IoError = oeOk then ValideLaCompta(OldEcr, OldStk);
+    if fmodeAudit then fAuditPerf.Fin('Validation COMPTA');
+    if V_PGI.IOError = OeOk then
+    begin
+      PrepareInsertCollectif (TOBPiece,TOBVTECOLLECTIF);
+      if not TOBVTECOLLECTIF.InsertDB(nil) then
+      begin
+        TUtilErrorsManagement.SetGenericMessage(TemErr_UpdatePIEDCOLLECTIF);
+        V_PGI.IOError := OeUnknown;
+      end;
+    end;
+    if fmodeAudit then fAuditPerf.Debut('Validation GESTION SERIES');
+    if V_PGI.IoError = oeOk then ValideLesSeries;
+    if fmodeAudit then fAuditPerf.Fin('Validation GESTION SERIES');
+    if V_PGI.IoError = oeOk then ValideLesFormules(TOBPiece,TOBLigFormule);
+    {$IFDEF AFFAIRE}  
+    if V_PGI.IoError = oeOk then ValideLesAFFormuleVar(TOBPiece, TOBPiece_O, TOBFormuleVarQte);
+    {$ENDIF}
+    {$IFNDEF CHR}
+    if (SaisieTypeAvanc) or ((TobPiece.GetValue('GP_NATUREPIECEG') = GetParamSoc('SO_AFNATAFFAIRE')) and (ISAcompteSoldePartiel(TOBPiece))) then
+    begin
+      // Pour Eviter de rattacher le reliquat d'acompte au devis initial lors de la facturation
+      // ou pour eviter de perdre le montant initial d'acompte lors de la modification d'un devis apres facturation partielle
+      SavAcompteInit := TOBPiece_O.GetValue('GP_ACOMPTEDEV');
+    end;
+    if not EstAvoir then
+    if fmodeAudit then fAuditPerf.Debut('Validation ACOMPTES');
+    if V_PGI.IoError = oeOk then ValideLesAcomptes(TOBPiece, TOBAcomptes);
+    if fmodeAudit then fAuditPerf.Fin('Validation ACOMPTES');
+    if (V_PGI.ioError = oeOk) and (SavAcompteInit >= 0) then TOBPiece.PutValue('GP_ACOMPTEDEV', SavAcompteInit);
+    {$ENDIF !CHR}
+    if fmodeAudit then fAuditPerf.Debut('Validation PORTS');
+    if V_PGI.IoError = oeOk then ValideLesPorcs(TOBPiece, TOBPorcs);
+    if fmodeAudit then fAuditPerf.Fin('Validation PORTS');
+    MoveCur(False);
+    // Modif BTP
+    if fmodeAudit then fAuditPerf.Debut('Validation INTERVENANTS');
+    if V_PGI.IoError = oeOk then ValideLesPieceTrait(TOBPiece, TOBAffaire,TOBPieceTrait,TOBSSTrait,DEV);
+    if fmodeAudit then fAuditPerf.Fin('Validation INTERVENANTS');
+    if fmodeAudit then fAuditPerf.Debut('Validation S/T');
+    if V_PGI.IoError = oeOk then ValideLesSousTrait(TOBPiece,TOBSSTrait,DEV);
+    if fmodeAudit then fAuditPerf.Fin('Validation S/T');
+    if fmodeAudit then fAuditPerf.Debut('Validation RG');
+    if V_PGI.IoError = oeOk then ValideLesRetenues(TOBPiece, TOBPieceRG);
+    if V_PGI.IoError = oeOk then ValideLesBasesRG(TOBPiece, TOBBasesRG);
+    if fmodeAudit then fAuditPerf.Fin('Validation RG');
+    if fmodeAudit then fAuditPerf.Debut('Validation TIMBRES TAXES');
+    if V_PGI.IoError = oeOk then ValideLesTimbres(TOBPiece, TOBTimbres);
+    if fmodeAudit then fAuditPerf.Fin('Validation TIMBRES TAXES');
+    if V_PGI.IoError = oeOk then ValideLesRevisions(TOBPiece, TOBrevisions);
+    if V_PGI.IoError = oeOk then
+    begin
+      if ((VenteAchat = 'ACH') and (not IsTransformable(NewNature)) and
+          (Action<>taConsult) and
+         (GetParamSoc ('SO_GCCONTROLEFACTURE'))) then
+      begin
+        if GetInfoParPiece (NewNature, 'GPP_ESTAVOIR') = 'X' then
+        begin
+          TobPiece.PutValue ('GP_TOTALTTC', TobPiece.GetValue ('TOTALTTC_CFA') * -1);
+          TobPiece.PutValue ('GP_TOTALTTCDEV', TobPiece.GetValue ('TOTALTTCDEV_CFA') * -1);
+        end else
+        begin
+          TobPiece.PutValue ('GP_TOTALTTC', TobPiece.GetValue ('TOTALTTC_CFA'));
+          TobPiece.PutValue ('GP_TOTALTTCDEV', TobPiece.GetValue ('TOTALTTCDEV_CFA'));
+        end;
+      end;
+      // MODIF LS Pour gestion de la fin de vie des pieces
+      if (Action=TaModif) and
+         (GetInfoParPiece(NewNature, 'GPP_ACTIONFINI') = 'TRA') and
+         (ToutesLignesSoldees(TOBpiece)) then
+      begin
+        TOBPiece.PutValue('GP_VIVANTE','-');
+      end;
+      if fIsAcompte then
+      begin
+        if TOBPiece_O.getString('GP_ATTACHEMENT')<> TOBpiece.getString('GP_ATTACHEMENT') then
+        begin
+          if TOBpiece.getString('GP_ATTACHEMENT')<> '' then
+          begin
+            if TOBPiece_O.getString('GP_ATTACHEMENT')<> '' then
+              ReinitPieceAttache(TOBpiece_O);
+            if V_PGI.IoError = oeOk then MajPieceAttache(TOBpiece);
+          end else
           begin
             ReinitPieceAttache(TOBpiece_O);
           end;
-          MajPieceAttache(TOBpiece);
-        end else
-        begin
-          ReinitPieceAttache(TOBpiece_O);
         end;
       end;
-    end;
-    //
-    if (V_PGI.IOerror = OeOK) and (TOBpiece.getString('GP_ETATEXPORT')<>'EXP') and (TOBPiece.getString('GP_NATUREPIECEG')='CF') then
-    begin
-      TRY
-        OKRexel := false;
+      Msg := '';
+      if (V_PGI.IOerror = OeOK) and (TOBpiece.getString('GP_ETATEXPORT')<>'EXP') and (TOBPiece.getString('GP_NATUREPIECEG')='CF') then
+      begin
         TRY
-          OKRexel := EnvoieCommandeRexel (TOBpiece,TOBAdresses);
-        EXCEPT
-          on E: Exception do
+          OKRexel := false;
+          TRY
+            OKRexel := EnvoieCommandeRexel (TOBpiece,TOBAdresses);
+          EXCEPT
+            on E: Exception do
+            begin
+              Msg := E.Message;
+              TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('Erreur lors de l''envoi de la commande chez REXEL%s.', [Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
+            end;
+          END;
+        FINALLY
+          if (OKRexel) then
           begin
-            PgiError('Erreur SQL : ' + E.Message, 'Envoi de la commande chez REXEL');
+            if PgiAsk ('Commande validée auprès du fournisseur ?') = Mryes then
+              TOBpiece.SetString('GP_ETATEXPORT','EXP')
           end;
         END;
-      FINALLY
-        if (OKRexel) and (PgiAsk ('Commande validée auprès du fournisseur ?')=Mryes) then
-        begin
-          TOBpiece.SetString('GP_ETATEXPORT','EXP');
-        end;
-      END;
-    end;
-    if (GenAvoirFromSit) then
-    begin
-      // protection pour éviter de supprimer un avoir global sur situation
-      PutValueDetail(TOBPiece,'GP_VIVANTE','-');
-    end;
-  	if fmodeAudit then fAuditPerf.Debut('ECRITURE DOCUMENT');
-    TRY
-      okok := TOBPiece.InsertDBByNivel(False);
-    EXCEPT
-      on E: Exception do
-    begin
-        PgiError('Erreur SQL : ' + E.Message, 'Erreur mise à jour LIGNE');
       end;
-    END;
-    if not okok then
-    begin
-      V_PGI.IoError := oeUnknown;
+      if (V_PGI.IoError = oeOk) and (GenAvoirFromSit) then
+        PutValueDetail(TOBPiece,'GP_VIVANTE','-'); // protection pour éviter de supprimer un avoir global sur situation
+      if fmodeAudit then fAuditPerf.Debut('ECRITURE DOCUMENT');
+      if V_PGI.IoError = oeOk then
+      begin
+        TRY
+          okok := TOBPiece.InsertDBByNivel(False);
+        EXCEPT
+          on E: Exception do
+            Msg := E.Message;
+        END;
+        if not okok then
+        begin
+          TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s de la pièce ou des lignes%s.', [TUtilErrorsManagement.GetUpdateError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
+          V_PGI.IoError := oeUnknown;
+        end;
+      end;
+     	if fmodeAudit then fAuditPerf.Fin('ECRITURE DOCUMENT');
     end;
-  	if fmodeAudit then fAuditPerf.Fin('ECRITURE DOCUMENT');
-  end;
-  MoveCur(False);
-  if V_PGI.IoError = oeOk then
-  begin
-  	if fmodeAudit then fAuditPerf.Debut('ECRITURE OUVPLAT');
-    if IsEcritLesOuvPlat then
+    MoveCur(False);
+    if V_PGI.IoError = oeOk then
     begin
-      if EstAvoir then InverseLesPieces(TOBOuvragesP, 'LIGNEOUVPLAT');    // Surtout bien le laisser avant ecriture
-      //
-      okok := false;
+      if fmodeAudit then fAuditPerf.Debut('ECRITURE OUVPLAT');
+      if IsEcritLesOuvPlat then
+      begin
+        if EstAvoir then InverseLesPieces(TOBOuvragesP, 'LIGNEOUVPLAT'); // Surtout bien le laisser avant ecriture
+        okok := false;
+        TRY
+          okok := TOBOuvragesP.InsertDBByNivel(false);
+        EXCEPT
+          on E: Exception do
+            Msg := E.Message;
+        END;
+        if not okok then
+        begin
+          TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s du détail des ouvrages%s).', [TUtilErrorsManagement.GetUpdateError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
+          V_PGI.IoError := oeUnknown
+        end else
+          TOBOuvragesP.ClearDetail;
+        if (V_PGI.IoError = oeOk) and (EstAvoir) then
+          InverseLesPieces(TOBOuvragesP, 'LIGNEOUVPLAT');    // Surtout bien le laisser avant ecriture
+      end else
+        TOBOuvragesP.ClearDetail;
+      if fmodeAudit then fAuditPerf.Fin('ECRITURE OUVPLAT');
+    end;
+    if V_PGI.IoError = oeOk then
+    begin
+      if fmodeAudit then fAuditPerf.Debut('ECRITURE BASES');
       TRY
-        okok := TOBOuvragesP.InsertDBByNivel(false);
+        okok :=  TOBBases.InsertDB(nil);
       EXCEPT
         on E: Exception do
-      begin
-          PgiError('Erreur SQL : ' + E.Message, 'Erreur mise à jour OUVRAGES PLAT');
-        end;
+          Msg := E.Message;
       END;
       if not okok then
       begin
-      V_PGI.IoError := oeUnknown;
-      end else
-    begin
-      TOBOuvragesP.ClearDetail;
-    end;
-      if EstAvoir then InverseLesPieces(TOBOuvragesP, 'LIGNEOUVPLAT');    // Surtout bien le laisser avant ecriture
-    end else
-    begin
-      TOBOuvragesP.ClearDetail;
-    end;
-  	if fmodeAudit then fAuditPerf.Fin('ECRITURE OUVPLAT');
-  end;
-  if V_PGI.IoError = oeOk then
-  begin
-  	if fmodeAudit then fAuditPerf.Debut('ECRITURE BASES');
-    TRY
-      okok :=  TOBBases.InsertDB(nil);
-    EXCEPT
-      on E: Exception do
-    begin
-        PgiError('Erreur SQL : ' + E.Message, 'Erreur mise à jour BASES');
+        TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s des taxes%s.', [TUtilErrorsManagement.GetUpdateError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
+        V_PGI.IoError := oeUnknown;
       end;
-    END;
-    if not okok then
-    begin
-      V_PGI.IoError := oeUnknown;
+      if fmodeAudit then fAuditPerf.Fin('ECRITURE BASES');
     end;
-  	if fmodeAudit then fAuditPerf.Fin('ECRITURE BASES');
-  end;
-  if V_PGI.IoError = oeOk then
-  begin
-  	if fmodeAudit then fAuditPerf.Debut('ECRITURE BASES LIGNES');
-    okok := false;
-    TRY
-      okok :=  TOBBasesL.InsertDB(nil);
-    EXCEPT
-      on E: Exception do
+    if V_PGI.IoError = oeOk then
     begin
-        PgiError('Erreur SQL : ' + E.Message, 'Erreur mise à jour BASES LIGNE');
-      end;
-    END;
-    if not okok then
-    begin
-      V_PGI.IoError := oeUnknown;
-    end;
-  	if fmodeAudit then fAuditPerf.Fin('ECRITURE BASES LIGNES');
-  end;
-  if V_PGI.IoError = oeOk then
-  begin
-  	if fmodeAudit then fAuditPerf.Debut('ECRITURE ECHEANCES');
-    okok := false;
-    TRY
-      okok := TOBEches.InsertDB(nil);
-    EXCEPT
-      on E: Exception do
-    begin
-        PgiError('Erreur SQL : ' + E.Message, 'Erreur mise à jour ECHEANCES');
-      end;
-    END;
-    if not okok then
-    begin
-      V_PGI.IoError := oeUnknown;
-    end;
-  	if fmodeAudit then fAuditPerf.Fin('ECRITURE ECHEANCES');
-  end;
-  if V_PGI.IoError = oeOk then
-  begin
-  	if fmodeAudit then fAuditPerf.Debut('ECRITURE ANALYTIQUE/piece');
-    okok := false;
-    TRY
-      okok := TOBAnaP.InsertDB(nil);
-    EXCEPT
-      on E: Exception do
-    begin
-        PgiError('Erreur SQL : ' + E.Message, 'Erreur mise à jour ANALYTIQUE/PIECE');
-      end;
-    END;
-    if not okok then
-    begin
-      V_PGI.IoError := oeUnknown;
-    end;
-  	if fmodeAudit then fAuditPerf.Fin('ECRITURE ANALYTIQUE/piece');
-  end;
-  if V_PGI.IoError = oeOk then
-  begin
-    okok := false;
-    TRY
-      okok := TOBAnaS.InsertDB(nil);
-    EXCEPT
-      on E: Exception do
-    begin
-        PgiError('Erreur SQL : ' + E.Message, 'Erreur mise à jour ANALYTIQUE/STOCK');
-      end;
-    END;
-    if not okok then
-    begin
-      V_PGI.IoError := oeUnknown;
-    end;
-  end;
-  if (V_PGI.Ioerror = OeOk) and (not GetParamSocSecur('SO_METRESEXCEL',true)) then
-  begin
-  	if fmodeAudit then fAuditPerf.Debut('ECRITURE METRES');
-    okok := false;
-    TRY
-  	  okok :=  TOBmetres.InsertDBByNivel(false);
-    EXCEPT
-      on E: Exception do
-    begin
-        PgiError('Erreur SQL : ' + E.Message, 'Erreur mise à jour METRES');
-      end;
-    END;
-    if not okok then
-    begin
-      V_PGI.IoError := oeUnknown;
-    end;
-  	if fmodeAudit then fAuditPerf.Fin('ECRITURE METRES');
-  end;
-  if V_PGI.IoError = oeOk then
-  begin
-    TRY
-      ValideLesNomen(TOBNomenclature);
-    EXCEPT
-      on E: Exception do
+      if fmodeAudit then fAuditPerf.Debut('ECRITURE BASES LIGNES');
+      okok := false;
+      TRY
+        okok :=  TOBBasesL.InsertDB(nil);
+      EXCEPT
+        on E: Exception do
+          Msg := E.Message;
+      END;
+      if not okok then
       begin
-        PgiError('Erreur SQL : ' + E.Message, 'validation nomenclatures');
+        TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s du détail des taxes%s.', [TUtilErrorsManagement.GetUpdateError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
+        V_PGI.IoError := oeUnknown;
       end;
-    END;
-  end;
-  if (V_PGI.IOError = Oeok) and (VH_GC.BTCODESPECIF = '001') then
-  begin
-    try
+      if fmodeAudit then fAuditPerf.Fin('ECRITURE BASES LIGNES');
+    end;
+    if V_PGI.IoError = oeOk then
+    begin
+      if fmodeAudit then fAuditPerf.Debut('ECRITURE ECHEANCES');
+      okok := false;
+      TRY
+        okok := TOBEches.InsertDB(nil);
+      EXCEPT
+        on E: Exception do
+          Msg := E.Message;
+      END;
+      if not okok then
+      begin
+        TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s des échéances%s.', [TUtilErrorsManagement.GetUpdateError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
+        V_PGI.IoError := oeUnknown;
+      end;
+      if fmodeAudit then fAuditPerf.Fin('ECRITURE ECHEANCES');
+    end;
+    if V_PGI.IoError = oeOk then
+    begin
+      if fmodeAudit then fAuditPerf.Debut('ECRITURE ANALYTIQUE/piece');
+      okok := false;
+      TRY
+        okok := TOBAnaP.InsertDB(nil);
+      EXCEPT
+        on E: Exception do
+          Msg := E.Message;
+      END;
+      if not okok then
+      begin
+        TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s de l''analytique de la pièce%s.', [TUtilErrorsManagement.GetUpdateError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
+        V_PGI.IoError := oeUnknown;
+      end;
+      if fmodeAudit then fAuditPerf.Fin('ECRITURE ANALYTIQUE/piece');
+    end;
+    if V_PGI.IoError = oeOk then
+    begin
+      okok := false;
+      TRY
+        okok := TOBAnaS.InsertDB(nil);
+      EXCEPT
+        on E: Exception do
+          Msg := E.Message;
+      END;
+      if not okok then
+      begin
+        TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s de l''analytique du stock%s.', [TUtilErrorsManagement.GetUpdateError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
+        V_PGI.IoError := oeUnknown;
+      end;
+    end;
+    if (V_PGI.Ioerror = OeOk) and (not GetParamSocSecur('SO_METRESEXCEL',true)) then
+    begin
+      if fmodeAudit then fAuditPerf.Debut('ECRITURE METRES');
+      okok := false;
+      TRY
+        okok := TOBmetres.InsertDBByNivel(false);
+      EXCEPT
+        on E: Exception do
+          Msg := E.Message;
+      END;
+      if not okok then
+      begin
+        TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s des métrés des lignes%s.', [TUtilErrorsManagement.GetUpdateError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
+        V_PGI.IoError := oeUnknown;
+      end;
+      if fmodeAudit then fAuditPerf.Fin('ECRITURE METRES');
+    end;
+    if V_PGI.IoError = oeOk then ValideLesNomen(TOBNomenclature);
+    if (V_PGI.IOError = Oeok) and (EstSpecifPOC) then
+    begin
       ValideLesTOBTS (TOBPiece,TOBTSPOC);
-    except
-      on E: Exception do
-      begin
-        PgiError('Erreur SQL : ' + E.Message, 'validation TS POC');
-      end;
+      if V_PGI.IOError = Oeok then
+        ValideLesTOBTRF (TOBPiece,TOBTRFPOC);
     end;
-  end;
-
-  if (V_PGI.IOError = Oeok) and (VH_GC.BTCODESPECIF = '001') then
-  begin
-    try
-      ValideLesTOBTRF (TOBPiece,TOBTRFPOC);
-    except
-      on E: Exception do
-      begin
-        PgiError('Erreur SQL : ' + E.Message, 'validation Transferts POC');
-      end;
-    end;
-  end;
-
-  {$IFDEF BTP}
-  // Modif BTP
-  if fmodeAudit then fAuditPerf.Debut('MODIF SITUATIONS');
-  if (V_PGI.IoError = oeOk) and (PieceRecalculee) then
-  begin
-    FillChar(DocArecalc,SizeOf(DocArecalc),#0);
-    TRY
-    ModifSituation(TOBPiece, TOBOuvrage, TOBPieceRG, TOBPieceRG_O, TOBBasesRg, TOBAcomptes, DEV, DocArecalc);
-    EXCEPT
-      on E: Exception do
-      begin
-        PgiError('Erreur SQL : ' + E.Message, 'Modif Situation');
-      end;
-    END;
-    if (DocArecalc.NumeroPiece <> 0) and (not ReajusteSitSais)then
+    if fmodeAudit then fAuditPerf.Debut('MODIF SITUATIONS');
+    if (V_PGI.IoError = oeOk) and (PieceRecalculee) then
     begin
-      if TraitementRecalculPiece (DocArecalc)<> TrrOk then V_PGI.IOError:=oeUnknown;
-      if V_PGI.IOError = OeOk then
+      FillChar(DocArecalc,SizeOf(DocArecalc),#0);
+      ModifSituation(TOBPiece, TOBOuvrage, TOBPieceRG, TOBPieceRG_O, TOBBasesRg, TOBAcomptes, DEV, DocArecalc);
+      if (V_PGI.ioError = oeOk) and (DocArecalc.NumeroPiece <> 0) and (not ReajusteSitSais)then
       begin
-        StRendu:='Situation suivante recalculée.#13#10'+RechDom('GCNATUREPIECEG',DocArecalc.NaturePiece,False)+' N° '+IntToStr(DocArecalc.NumeroPiece) ;
-        PGIInfo (StRendu,'Modification de situation');
+        if TraitementRecalculPiece (DocArecalc)<> TrrOk then
+        begin
+          TUtilErrorsManagement.SetGenericMessage(TemErr_RecalcPIECE);
+          V_PGI.IOError:=oeUnknown;
+        end;
+        if V_PGI.IOError = OeOk then
+        begin
+          StRendu := 'Situation suivante recalculée.#13#10'+RechDom('GCNATUREPIECEG',DocArecalc.NaturePiece,False)+' N° '+IntToStr(DocArecalc.NumeroPiece) ;
+          TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('Modification de situation - %s', [StRendu]), temtm_Information);
+        end;
       end;
     end;
-  end;
-  if fmodeAudit then fAuditPerf.Fin('MODIF SITUATIONS');
-  {$ENDIF}
-  {$IFDEF AFFAIRE}
-  if fmodeAudit then fAuditPerf.Debut('MAJ AFFAIRE');
-  if V_PGI.IoError = oeOk then if (ctxAffaire in V_PGI.PGIContexte) or (ctxGCAFF in V_PGI.PGIContexte) then
+    if fmodeAudit then fAuditPerf.Fin('MODIF SITUATIONS');
+    {$IFDEF AFFAIRE}
+    if fmodeAudit then fAuditPerf.Debut('MAJ AFFAIRE');
+    if (V_PGI.IoError = oeOk) and ((ctxAffaire in V_PGI.PGIContexte) or (ctxGCAFF in V_PGI.PGIContexte)) then
       MajAffaire(TOBPiece, TOBAcomptes, Codeaffaireavenant, 'VAL', Action, DuplicPiece, InAvancement);
-  if fmodeAudit then fAuditPerf.Fin('MAJ AFFAIRE');
-  {$ENDIF}
-  if (V_PGI.Ioerror = oeok) and (copy (TOBpiece.getValue('GP_AFFAIRE'),1,1)='W') and
-     (TOBPiece.GetValue('GP_NATUREPIECEG') = 'DAP') then
-  begin
-  	if fmodeAudit then fAuditPerf.Debut('MAJ APPEL');
-  	MajAppel (TOBPiece);
-  	if fmodeAudit then fAuditPerf.fin('MAJ APPEL');
-  end;
-  {$IFDEF EDI}
-  if V_PGI.IoError = oeOk then
-    if GetInfoParPiece(CleDoc.NaturePiece, 'GPP_PIECEEDI') = 'X' then
-      if IsEDITiers(TobPiece) then
-        EDICreateETR(TobPiece, EDIGetFieldFromETS('ETS_CODEMESSAGE', EDIGetCleETS(TobPiece.GetValue('GP_TIERS'), TobPiece.GetValue('GP_NATUREPIECEG'))));
-  {$ENDIF}
-
-  {$IFDEF GPAOLIGHT}
-  if V_PGI.IoError = oeOk then
-  begin
-    { Réception à la livraison }
-    if Pos(CleDoc.NaturePiece + ';', GetParamSoc('SO_WMISEENPROD')) <> 0 then
-      wReceptionneWOLFromGL(TobPiece);
-  end;
-  {$ENDIF GPAOLIGHT}
-
-  if V_PGI.IoError = oeOk then
-  begin
-//    wShowMeTheTob(TobLigneTarif);
-    if not TOBLigneTarif.InsertDB(nil) then V_PGI.IoError := oeUnknown;
-  end;
-
-  // Modif BTP .... A LAISSER EN FIN DE FONCTION SVP
-  {$IFDEF BTP}
-  (* CONSO *)
-  if fmodeAudit then fAuditPerf.Debut('MAJ REPART TVA');
-  if (V_PGI.IOError = OeOk) Then
-  begin
-    TRY
-      TheRepartTva.Ecrit;
-    EXCEPT
-      on E: Exception do
-      begin
-        PgiError('Erreur SQL : ' + E.Message, 'Maj repartition TVA');
-      end;
-    END;
-  end;
-  if fmodeAudit then fAuditPerf.Fin('MAJ REPART TVA');
-  if fmodeAudit then fAuditPerf.Debut('ECRITURES CONSOMMATIONS');
-  if (V_PGI.IOError = OeOk) Then
-  begin
-    TRY
-      GestionConso.GenerelesPhases(TOBPiece,TOBCONSODEL,(TransfoPiece or TransfoMultiple or GenAvoirFromSit),DuplicPiece,false,Action);
-    EXCEPT
-      on E: Exception do
-      begin
-        PgiError('Erreur SQL : ' + E.Message, 'Creation / maj Consommations');
-      end;
-    END;
-  end;
-  if (V_PGI.IOError = OeOk) Then GestionConso.clear;
-  if fmodeAudit then fAuditPerf.Fin('ECRITURES CONSOMMATIONS');
-  (* ---- *)
-  (* Generation des livraison depuis les recpetions *)
-  if fmodeAudit then fAuditPerf.Debut('GENERATION LIVRAISONS');
-  if (V_PGI.IOError = OeOk) Then
-  begin
-    TRY
-      GenereLivraisonClients(TOBPiece,Action,(transfoPiece or TransfoMultiple or GenAvoirFromSit),DuplicPiece,false);
-    EXCEPT
-      on E: Exception do
-      begin
-        PgiError('Erreur SQL : ' + E.Message, 'Génération Livraison client');
-      end;
-    END;
-  end;
-  if fmodeAudit then fAuditPerf.Fin('GENERATION LIVRAISONS');
-  if (V_PGI.IOerror = OeOK) and (DuplicPiece) and (TmodeSaisieBordereau in SaContexte) then
-  begin
-     EcritEnteteBord(Self,TOBPiece);
-  end;
-  // ----
-  if V_PGI.IOError = OeOk then
-  begin
-    if GetparamSocSecur ('SO_OPTANALSTOCK',false) then
+    if fmodeAudit then fAuditPerf.Fin('MAJ AFFAIRE');
+    {$ENDIF}
+    if (V_PGI.Ioerror = oeok) and (copy (TOBpiece.getValue('GP_AFFAIRE'),1,1)='W') and
+       (TOBPiece.GetValue('GP_NATUREPIECEG') = 'DAP') then
     begin
-      if IsLivraisonClient(TOBPiece) then
+      if fmodeAudit then fAuditPerf.Debut('MAJ APPEL');
+      MajAppel (TOBPiece);
+      if fmodeAudit then fAuditPerf.fin('MAJ APPEL');
+    end;
+    {$IFDEF EDI}
+    if V_PGI.IoError = oeOk then
+      if GetInfoParPiece(CleDoc.NaturePiece, 'GPP_PIECEEDI') = 'X' then
+        if IsEDITiers(TobPiece) then
+          EDICreateETR(TobPiece, EDIGetFieldFromETS('ETS_CODEMESSAGE', EDIGetCleETS(TobPiece.GetValue('GP_TIERS'), TobPiece.GetValue('GP_NATUREPIECEG'))));
+    {$ENDIF}
+    {$IFDEF GPAOLIGHT}
+    if V_PGI.IoError = oeOk then
+    begin
+      { Réception à la livraison }
+      if Pos(CleDoc.NaturePiece + ';', GetParamSoc('SO_WMISEENPROD')) <> 0 then
+        wReceptionneWOLFromGL(TobPiece);
+    end;
+    {$ENDIF GPAOLIGHT}
+    if V_PGI.IoError = oeOk then
+    begin
+      okok := false;
+      TRY
+        okok := TOBLigneTarif.InsertDB(nil);
+      EXCEPT
+        on E: Exception do
+          Msg := E.Message;
+      END;
+      if not okok then
       begin
-        UpdateStatusMoisOD (TOBPiece);
+        TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s des tarifs des lignes%s.', [TUtilErrorsManagement.GetUpdateError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
+        V_PGI.IoError := oeUnknown;
       end;
     end;
-  end;
-  // ----
-  // Modif BTP .... A LAISSER EN FIN SVP
+    // Modif BTP .... A LAISSER EN FIN DE FONCTION SVP
+    (* CONSO *)
+    if fmodeAudit then fAuditPerf.Debut('MAJ REPART TVA');
+    if (V_PGI.IOError = OeOk) Then TheRepartTva.Ecrit;
+    if fmodeAudit then fAuditPerf.Fin('MAJ REPART TVA');
+    if fmodeAudit then fAuditPerf.Debut('ECRITURES CONSOMMATIONS');
+    if (V_PGI.IOError = OeOk) then GestionConso.GenerelesPhases(TOBPiece,TOBCONSODEL,(TransfoPiece or TransfoMultiple or GenAvoirFromSit),DuplicPiece,false,Action);
+    if (V_PGI.IOError = OeOk) Then GestionConso.clear;
+    if fmodeAudit then fAuditPerf.Fin('ECRITURES CONSOMMATIONS');
+    (* Generation des livraison depuis les recpetions *)
+    if fmodeAudit then fAuditPerf.Debut('GENERATION LIVRAISONS');
+    if (V_PGI.IOError = OeOk) then GenereLivraisonClients(TOBPiece,Action,(transfoPiece or TransfoMultiple or GenAvoirFromSit),DuplicPiece,false);
+    if fmodeAudit then fAuditPerf.Fin('GENERATION LIVRAISONS');
+    if (V_PGI.IOerror = OeOK) and (DuplicPiece) and (TmodeSaisieBordereau in SaContexte) then EcritEnteteBord(Self,TOBPiece);
+    if (V_PGI.IOError = OeOk) and (GetparamSocSecur ('SO_OPTANALSTOCK',false)) and (IsLivraisonClient(TOBPiece)) then UpdateStatusMoisOD (TOBPiece);
+    // ----
+    // Modif BTP .... A LAISSER EN FIN SVP
 
-  ///*** Nouvelle Version ***///
-  if TheMetredoc.AutorisationMetre(Cledoc.NaturePiece) then
-  begin
-    if TheMetreDoc.OkExcel then
+    ///*** Nouvelle Version ***///
+    if (V_PGI.IOError = OeOk) and (TheMetredoc.AutorisationMetre(Cledoc.NaturePiece)) and (TheMetreDoc.OkExcel) then TheMetredoc.ValideMetreDoc(TobPiece);
+    if (V_PGI.IOerror = OEOk) and (ForceEcriture) then ForceEcriture := false;
+    if EstAvoir then
     begin
-    if (V_PGI.IOError = OeOk) then TheMetredoc.ValideMetreDoc(TobPiece);
+      InverseAvoir;
+    end;
+    FiniMove;
+    if fmodeAudit then fAuditPerf.Fin('Validation document' );
+  finally
+    if TErrManagement.Context = temc_DocValid then
+      TErrManagement.ShowError
+    else if StRendu <> '' then
+      PGIInfo(StRendu, 'Modification de situation');
   end;
-  end;
-  {$ENDIF}
-
-  if (V_PGI.IOerror = OEOk) and (ForceEcriture) then ForceEcriture := false;
-  if EstAvoir then
-  begin
-    InverseAvoir;
-  end;
-  FiniMove;
-  if fmodeAudit then fAuditPerf.Fin('Validation document' );
 end;
 
 procedure TFFacture.ValideImpression;
@@ -21717,7 +21651,6 @@ begin
     if ExisteLigneSupp then io := Transactions(ValideNumeroPieceAnnule, 5);
   end;
   NbTransact := 0;
-//  if io = oeOk then io := Transactions(ValideLaPiece, 5);
   if io = oeOk then io := Transactions(ValideLaPiece, 0);
   VH_GC.ModeGestionEcartComptable := ''; {DBR CPA}
   BValider.Enabled := True;
@@ -23358,7 +23291,7 @@ begin
   if HPiece.Execute(38, Caption, '') <> mrYes then Exit;
   NbSel := GS.NbSelected;
   Okok := False;
-  if (Pos(NewCode,VH_GC.AutoLiquiTVAST)>0) then
+  if (Tools.StringInList (NewCode,VH_GC.AutoLiquiTVAST)) then
   begin
     TOBpiece.SetBoolean('GP_AUTOLIQUID',true);
     PutValueDetail(TOBPiece,'GP_RECALCULER','X');
@@ -23738,8 +23671,11 @@ begin
       TOBL.SetString('GL_RENDEMENT',TOBLoc.GetValue('BLO_RENDEMENT'));
       TOBL.SetString('GL_QUALIFHEURE', TOBLoc.GetValue('BLO_QUALIFHEURE'));
       TOBL.SetDouble('GL_COEFMARG', TOBLoc.GetValue('BLO_COEFMARG'));
+      TOBL.SetBoolean('GL_BLOQUETARIF', TOBRef.GetBoolean('GL_BLOQUETARIF'));
       // -- POC --
       TOBL.PutValue('NUMTRANSFERT', TOBLoc.GetValue('NUMTRANSFERT'));
+      TOBL.PutValue('TYPETRANSFERT', TOBLoc.GetVAlue('TYPETRANSFERT'));
+      TOBL.PutValue('TRANSFERED', TOBLoc.GetVAlue('TRANSFERED'));
       TOBL.PutValue('MTTRANSFERT', TOBLoc.GetVAlue('MTTRANSFERT'));
       TOBL.PutValue('SUMTOTALTS', TOBLoc.GetValue('SUMTOTALTS'));
       //
@@ -24249,7 +24185,8 @@ begin
   TOBL := GetTOBLigne(TOBPiece, TextePosition); // récupération TOB ligne
   if TOBL <> nil then
   begin
-    if (Length(Descriptif1.text) <> 0) and (Descriptif1.text <> #$D#$A) then
+    //if (Length(Descriptif1.text) <> 0) and (Descriptif1.text <> #$D#$A) then
+    if (Length(Descriptif1.text) <> 0) and (Descriptif1.text <> sLineBreak) then
     begin
       TOBL.PutValue('GL_BLOCNOTE', ExRichToString(Descriptif1));
       // si la ligne n'est pas une ligne article, on prend les 70 premiers
@@ -28096,25 +28033,29 @@ begin
 end;
 
 procedure TFFACTURE.MajAppel (TOBpiece : TOB);
-var Sql,SqlSup : string;
+var
+  Sql,SqlSup : string;
 	NbOk : integer;
 begin
-(*
-  TobAppel.PutValue('AFF_TOTALHT', QQ.FindField('GP_TOTALHT').AsString );
-  TobAppel.PutValue('AFF_TOTALHTDEV', QQ.FindField('GP_TOTALHTDEV').AsString );
-  TobAppel.PutValue('AFF_TOTALTTC', QQ.FindField('GP_TOTALTTC').AsString );
-  TobAppel.PutValue('AFF_TOTALTTCDEV', QQ.FindField('GP_TOTALTTCDEV').AsString );
-*)
-  if (Action = taCreat)  then SqlSup := ',AFF_ETATAFFAIRE ="ACD" '
-                         else SqlSup := '';
+  try
+    if (Action = taCreat)  then SqlSup := ',AFF_ETATAFFAIRE ="ACD" '
+                           else SqlSup := '';
 
-	Sql := 'UPDATE AFFAIRE SET AFF_TOTALHT='+STRFPOINT (TOBpiece.getValue('GP_TOTALHT'))+
-  			 ',AFF_TOTALHTDEV='+STRFPOINT(TOBpiece.getVAlue('GP_TOTALHTDEV'))+
-         ',AFF_TOTALTTC='+STRFPOINT(TOBpiece.getVAlue('GP_TOTALTTC'))+
-         ',AFF_TOTALTTCDEV='+STRFPOINT(TOBpiece.getVAlue('GP_TOTALTTCDEV'))+
-         SQLSup+' '+
-         'WHERE AFF_AFFAIRE="'+TOBpiece.getValue('GP_AFFAIRE')+'"';
-  NBOk := ExecuteSQL(Sql);
+    Sql := 'UPDATE AFFAIRE SET AFF_TOTALHT='+STRFPOINT (TOBpiece.getValue('GP_TOTALHT'))+
+           ',AFF_TOTALHTDEV='+STRFPOINT(TOBpiece.getVAlue('GP_TOTALHTDEV'))+
+           ',AFF_TOTALTTC='+STRFPOINT(TOBpiece.getVAlue('GP_TOTALTTC'))+
+           ',AFF_TOTALTTCDEV='+STRFPOINT(TOBpiece.getVAlue('GP_TOTALTTCDEV'))+
+           SQLSup+' '+
+           ', AFF_DATEMODIF="' + USDATETIME(NowH) + '" ' +
+           'WHERE AFF_AFFAIRE="'+TOBpiece.getValue('GP_AFFAIRE')+'"';
+    NBOk := ExecuteSQL(Sql);
+  except
+    on E: Exception do
+    begin
+      TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s de l''affaire associée %s (%s).', [TUtilErrorsManagement.GetUpdateError, TOBpiece.GetString('GP_AFFAIRE'), E.Message]));
+      V_PGI.ioError := oeUnknown;
+    end;
+  end;
 end;
 
 
@@ -28351,7 +28292,7 @@ end;
 procedure TFFacture.SetRowHeight(TOBL: TOB; Arow: integer);
 var Canvas : TCanvas;
     Height,Nbmax : integer;
-		texte : THRichEditOLE;
+		texte : THRichEditOle;
 begin
   canvas := TCanvas.create;
   canvas.Brush.Color := GS.Canvas.Brush.Color;
@@ -28372,7 +28313,7 @@ begin
       GS.Canvas.Font.Name  := texte.Font.Name;
       GS.Canvas.Font.Size := texte.Font.Size;
       GS.Canvas.Font.Style := texte.Font.Style;
-      StringToRich(texte, TOBL.GetValue('GL_BLOCNOTE'));
+      StringToRich(texte, TOBL.GetString('GL_BLOCNOTE'));
       Nbmax := texte.lines.Count;
       if NbMax > 15 then NbMax := 15;
       Height := (Nbmax * (GS.Canvas.TextHeight ('W')))+10;
@@ -29296,11 +29237,14 @@ end;
 
 
 procedure TFFacture.MajPieceAttache(TOBpiece: TOB);
+var
+  Msg : string;
 
   procedure AssocieAcompte (TOBpiece : TOB; UneDoc : r_cledoc);
-  var TOBAcC : TOB;
-      Sql : string;
-      ZRefPiece : String;
+  var
+    TOBAcC : TOB;
+    Sql : string;
+    ZRefPiece : String;
   begin
     if TOBPiece.GetString('GP_NATUREPIECEG')='DBT' then
     begin
@@ -29313,6 +29257,7 @@ procedure TFFacture.MajPieceAttache(TOBpiece: TOB);
         on E: Exception do
         begin
           PgiError('Erreur SQL : ' + E.Message, 'Erreur / facture Acompte');
+          Msg := E.Message;
           V_PGI.ioerror := OeUnknown;
           exit;
         end;
@@ -29338,7 +29283,7 @@ procedure TFFacture.MajPieceAttache(TOBpiece: TOB);
         EXCEPT
           on E: Exception do
           begin
-            PgiError('Erreur SQL : ' + E.Message, 'Erreur / facture Acompte');
+            Msg := E.Message;
             V_PGI.ioerror := OeUnknown;
             exit;
           end;
@@ -29354,7 +29299,7 @@ procedure TFFacture.MajPieceAttache(TOBpiece: TOB);
         EXCEPT
           on E: Exception do
           begin
-            PgiError('Erreur SQL : ' + E.Message, 'Erreur / facture Acompte (3)');
+            Msg := E.Message;
             V_PGI.ioerror := OeUnknown;
             exit;
           end;
@@ -29368,62 +29313,80 @@ procedure TFFacture.MajPieceAttache(TOBpiece: TOB);
 var ZCledoc : r_cledoc;
 begin
   if TOBpiece.getString('GP_ATTACHEMENT')='' then exit;
-  DecodeRefPiece(TOBpiece.getString('GP_ATTACHEMENT'),Zcledoc);
-  AssocieAcompte(TOBpiece,Zcledoc);
+  try
+    DecodeRefPiece(TOBpiece.getString('GP_ATTACHEMENT'),Zcledoc);
+    AssocieAcompte(TOBpiece,Zcledoc);
+  finally
+    if V_PGI.ioError <> oeOk then
+    begin
+      Msg := Format('%s des informations de la pièce attachée (%s n° %s). %s.', [TUtilErrorsManagement.GetUpdateError, ZCleDoc.NaturePiece, IntToStr(ZCleDoc.NumeroPiece), Msg]);
+      TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Msg);
+    end;
+  end;
 end;
 
 procedure TFFacture.ReinitPieceAttache(TOBpiece_O: TOB);
-var ZCledoc : r_cledoc;
+var
+  ZCledoc : r_cledoc;
+  Msg     : string;
 begin
   if TOBpiece_O.getString('GP_ATTACHEMENT')='' then exit;
-  DecodeRefPiece(TOBpiece_O.getString('GP_ATTACHEMENT'),Zcledoc);
-  if TOBPiece_O.GetString('GP_NATUREPIECEG')='DBT' Then
-  begin
-    TRY
-      ExecuteSql ('UPDATE PIECE SET GP_ATTACHEMENT="" WHERE '+WherePiece(Zcledoc,ttdPiece,false));
-      ExecuteSql ('DELETE FROM BSITUATIONS WHERE '+
-                  'BST_NATUREPIECE="'+Zcledoc.NaturePiece+'" AND '+
-                  'BST_SOUCHE="'+ZCledoc.Souche +'" AND '+
-                  'BST_NUMEROFAC='+InttoStr(ZCledoc.NumeroPiece) +' AND '+
-                  'BST_NUMEROSIT=1');
-    EXCEPT
-      on E: Exception do
-      begin
-        PgiError('Erreur SQL : ' + E.Message, 'Erreur / facture Acompte');
-        V_PGI.ioerror := OeUnknown;
-        exit;
-      end;
-    END;
-  end else if TOBPiece_O.GetString('GP_NATUREPIECEG')='B00' Then
-  begin
-    TRY
-      ExecuteSql ('DELETE FROM BSITUATIONS WHERE '+
-                  'BST_NATUREPIECE="'+TOBPiece.getString('GP_NATUREPIECEG')+'" AND '+
-                  'BST_SOUCHE="'+TOBPiece.getString('GP_SOUCHE') +'" AND '+
-                  'BST_NUMEROFAC='+InttoStr(TOBPiece.getInteger('GP_NUMERO')) +' AND '+
-                  'BST_NUMEROSIT=1');
-      ExecuteSql ('DELETE FROM ACOMPTES '+
-                  'WHERE '+ WherePiece( Zcledoc,ttdAcompte,false));
-    EXCEPT
-      on E: Exception do
-      begin
-        PgiError('Erreur SQL : ' + E.Message, 'Erreur / facture Acompte');
-        V_PGI.ioerror := OeUnknown;
-        exit;
-      end;
-    END;
-    TRY
-      ExecuteSql ('UPDATE PIECE SET GP_ATTACHEMENT="",GP_ACOMPTEDEV=0,GP_ACOMPTE=0 '+
-                  'WHERE '+ WherePiece( Zcledoc,TtdPiece,false));
-    EXCEPT
-      on E: Exception do
-      begin
-        PgiError('Erreur SQL : ' + E.Message, 'Erreur / facture Acompte');
-        V_PGI.ioerror := OeUnknown;
-        exit;
-      end;
-    END;
+  try
+    DecodeRefPiece(TOBpiece_O.getString('GP_ATTACHEMENT'),Zcledoc);
+    if TOBPiece_O.GetString('GP_NATUREPIECEG')='DBT' Then
+    begin
+      TRY
+        ExecuteSql ('UPDATE PIECE SET GP_ATTACHEMENT="" WHERE '+WherePiece(Zcledoc,ttdPiece,false));
+        ExecuteSql ('DELETE FROM BSITUATIONS WHERE '+
+                    'BST_NATUREPIECE="'+Zcledoc.NaturePiece+'" AND '+
+                    'BST_SOUCHE="'+ZCledoc.Souche +'" AND '+
+                    'BST_NUMEROFAC='+InttoStr(ZCledoc.NumeroPiece) +' AND '+
+                    'BST_NUMEROSIT=1');
+      EXCEPT
+        on E: Exception do
+        begin
+          Msg := E.Message;
+          V_PGI.ioerror := OeUnknown;
+          exit;
+        end;
+      END;
+    end else if TOBPiece_O.GetString('GP_NATUREPIECEG')='B00' Then
+    begin
+      TRY
+        ExecuteSql ('DELETE FROM BSITUATIONS WHERE '+
+                    'BST_NATUREPIECE="'+TOBPiece.getString('GP_NATUREPIECEG')+'" AND '+
+                    'BST_SOUCHE="'+TOBPiece.getString('GP_SOUCHE') +'" AND '+
+                    'BST_NUMEROFAC='+InttoStr(TOBPiece.getInteger('GP_NUMERO')) +' AND '+
+                    'BST_NUMEROSIT=1');
+        ExecuteSql ('DELETE FROM ACOMPTES '+
+                    'WHERE '+ WherePiece( Zcledoc,ttdAcompte,false));
+      EXCEPT
+        on E: Exception do
+        begin
+          Msg := E.Message;
+          V_PGI.ioerror := OeUnknown;
+          exit;
+        end;
+      END;
+      TRY
+        ExecuteSql ('UPDATE PIECE SET GP_ATTACHEMENT="",GP_ACOMPTEDEV=0,GP_ACOMPTE=0 '+
+                    'WHERE '+ WherePiece( Zcledoc,TtdPiece,false));
+      EXCEPT
+        on E: Exception do
+        begin
+          Msg := E.Message;
+          V_PGI.ioerror := OeUnknown;
+          exit;
+        end;
+      END;
 
+    end;
+  finally
+    if V_PGI.ioError <> oeOk then
+    begin
+      Msg := Format('Erreur lors de la réinitialisation des informations de la pièce attachée (%s n° %s). %s', [ZCleDoc.NaturePiece, IntToStr(ZCleDoc.NumeroPiece), Msg]);
+      TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Msg);
+    end;
   end;
 end;
 
@@ -29817,7 +29780,6 @@ var Cledoc : r_cledoc;
     II : integer;
 begin
   if TOBPiece.getString('GP_NATUREPIECEG')<>'DBT' then exit;
-  //
   Cledoc := TOB2Cledoc(TOBPIECE);
   ExecuteSql ('DELETE FROM LIGNEFAC WHERE '+WherePiece(Cledoc,ttdLignefac,false));
 end;
@@ -30211,7 +30173,7 @@ begin
         TOBFIelds.Detail[II].SetString('BP3_VALEUR',TheValeurResult);
       end;
     end;
-    TheResultID := StoreDocumentBSV(FileName,TOBFields,false);
+    TheResultID := StoreDocumentBSV(True,nil,FileName,TOBFields,false);
     if TheResultId <> '' then
     begin
       TOBPiece.setString('GP_BSVREF',TheResultId);
@@ -30276,9 +30238,12 @@ begin
   	AfficheLaLigne(I+1);
   end;
   GS.EndUpdate;
-  GoToLigne (Arow,ACol);
-  PosValueCell (GS.Cells[Acol,ARow]) ;
-  GS.SynEnabled := true;
+  if (ACol <> -1) and (Arow <> -1) then
+  begin
+    GoToLigne (Arow,ACol);
+    PosValueCell (GS.Cells[Acol,ARow]) ;
+    GS.SynEnabled := true;
+  end;
 end;
 
 
@@ -30357,6 +30322,38 @@ begin
   ShellExecute (0, 'open', pchar (TheAccesWTT), nil, nil, SW_SHOWNORMAL);
 
 //
+end;
+
+procedure TFFacture.MnEpurDocClick(Sender: TObject);
+var II : Integer;
+    TOBL : TOB;
+    LastCol,LastRow : integer;
+begin
+  if PGIAsk('ATTENTION : Vous allez supprimer toutes les lignes dont le quantitatif est nul.#13#10 Confirmez-vous l''opération ?')<>Mryes then exit;
+  LastCOl := GS.col;
+  LastRow := GS.row;
+  InitMoveProgressForm(nil, 'Traitement de l''opération en cours', 'Veuillez patienter SVP ...', 5, FALSE, TRUE);
+  try
+    MoveCurProgressForm('Phase préparatoire');
+    SupLesLibDetail(TOBPiece);
+    II := 0;
+    repeat
+      TOBL := TOBPiece.detail[II];
+      MoveCurProgressForm('Traitement épuration en cours');
+      if TOBL.GetString('GL_TYPELIGNE')<>'ART' then BEGIN Inc(II); continue; END;
+      if TOBL.getDouble('GL_QTEFACT')=0 then TOBL.free else Inc(II);
+    until II >= TOBPiece.detail.count;
+    MoveCurProgressForm('Phase de finalisation');
+    AffichageDesDetailOuvrages;
+    GS.VidePile(False);
+    //
+    if LastROw > TOBpiece.detail.count then LastRow := TOBPiece.detail.count;
+    MoveCurProgressForm('Raffraichissement de la grille de saisie');
+    RefreshGrid (LastCOl,LastROw);
+  finally
+    FiniMoveProgressForm();
+  end;
+
 end;
 
 initialization

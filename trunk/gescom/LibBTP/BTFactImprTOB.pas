@@ -4004,7 +4004,7 @@ begin
   //
   if TOBRGPre.detail.count > 0 then
   begin
-    GetRg (TOBRGPRE,false,True,Xp,XD,NuMCautionPre);
+    GetRgFromPrec (TOBRGPRE,false,Xp,XD,NuMCautionPre);
     ReliquatRgPre := XD * (-1);
   end;
   //
@@ -4275,6 +4275,7 @@ var req : string;
 		Indice : integer;
     CumXd,CumXp : double;
     TOBLOC,TOBL,TOBP : TOB;
+    TauxDev , TauxTva : double;
 begin
   TOBLOC := TOB.Create ('LES RG DETAILLES',nil,-1);
   TOBRGPre.clearDetail;
@@ -4321,34 +4322,92 @@ begin
            'GP_VIVANTE="X" '+
            'ORDER BY GL_PIECEORIGINE,PRG_FOURN,PRG_NUMERO';
   end;
-
-  TOBLOC.LoadDetailDBFromSQL ('PIECERG',req,false);
+  TOBLOC.LoadDetailDBFromSQL ('PIECERG',req,false);          
   for Indice := 0 to TOBLOC.detail.count -1 do
   begin
     TOBL := TOBLOC.detail[Indice];
-    if (TOBL.getString('PRG_NUMCAUTION') <> '') and ( TOBL.getDouble('PRG_CAUTIONMT')<>0) then Continue; // mt rg couvert par caution
+//    if (TOBL.getString('PRG_NUMCAUTION') <> '') and ( TOBL.getDouble('PRG_CAUTIONMT')<>0) then Continue; // mt rg couvert par caution
     TOBP := TOBRGPre.findFirst(['PIECEPRECEDENTE','PRG_FOURN'],[TOBL.GetValue('GL_PIECEORIGINE'),TOBL.GetValue('PRG_FOURN')],true);
     if TOBP = nil then
     begin
 			TOBP := TOB.Create ('PIECERG',TOBRGPre,-1);
       TOBP.Dupliquer(TOBL,false,true);
       TOBP.AddChampSupValeur('PIECEPRECEDENTE',TOBL.GetValue('GL_PIECEORIGINE'));
-      if TOBP.GetString('PRG_NUMCAUTION')='' then
-      begin
-      	TOBP.SetDouble('PRG_CAUTIONMT',0);
-      	TOBP.SetDouble('PRG_CAUTIONMTDEV',0);
-      end;
+      TOBP.AddChampSup('FIRST',false); TOBP.SetBoolean('FIRST',true);
+      TOBP.AddChampSupValeur ('MTRGPRE',0);
+      TOBP.AddChampSupValeur ('MTRGPREDEV',0);
+      TOBP.AddChampSupValeur ('CAUTIONINIT',0);
+      TOBP.AddChampSupValeur ('CAUTIONINITDEV',0);
+      TOBP.AddChampSupValeur ('CAUTIONAVANT',0);
+      TOBP.AddChampSupValeur ('CAUTIONAVANTDEV',0);
+      //
+      TOBP.AddChampSupValeur ('CAUTIONUTIL',0);
+      TOBP.AddChampSupValeur ('CAUTIONUTILDEV',0);
+      //
+      TOBP.AddChampSupValeur ('CAUTIONAPRES',0);
+      TOBP.AddChampSupValeur ('CAUTIONAPRESDEV',0);
+      //
+      TOBP.SetString('PRG_NUMCAUTION','');
+      TOBP.SetString('PRG_BANQUECP','');
+      TOBP.SetDouble('PRG_MTHTRG',0);
+      TOBP.SetDouble('PRG_MTHTRGDEV',0);
+      TOBP.SetDouble('PRG_MTTTCRG',0);
+      TOBP.SetDouble('PRG_MTTTCRGDEV',0);
+      TOBP.SetDouble('PRG_CAUTIONMT',0);
+      TOBP.SetDouble('PRG_CAUTIONMTDEV',0);
+      TOBP.SetDouble('PRG_CAUTIONMTU',0);
+      TOBP.SetDouble('PRG_CAUTIONMTUDEV',0);
+    end;
+    //
+    if (TOBL.GetDouble('PRG_CAUTIONMT')<>0) and (TOBP.GetBoolean('FIRST')) then TOBP.SetBoolean('FIRST',false);
+    if (TOBP.GetBoolean('FIRST')) and (TOBP.GetDouble('PRG_CAUTIONMT')=0) then
+    begin
+      TOBP.SetDouble('CAUTIONAVANT', TOBP.GetDouble('CAUTIONAVANT') + TOBL.GetDouble('PRG_MTTTCRG'))  ;
+      TOBP.SetDouble('CAUTIONAVANTDEV', TOBP.GetDouble('CAUTIONAVANTDEV') + TOBL.GetDouble('PRG_MTTTCRGDEV'));
+    end;
+    //
+    if (TOBL.GetDouble('PRG_CAUTIONMT')<>0) and (TOBP.GetDouble('CAUTIONINIT')=0) and (TOBL.GetDouble('PRG_CAUTIONMT')<>0) then
+    begin
+      TOBP.SetDouble('CAUTIONINIT',TOBL.GetDouble('PRG_CAUTIONMT'));
+      TOBP.SetDouble('CAUTIONINITDEV',TOBL.GetDouble('PRG_CAUTIONMTDEV'));
+    end;
+    //
+    TOBP.SetDouble('CAUTIONUTIL', TOBP.GetDouble('CAUTIONUTIL') + TOBL.GetDouble('PRG_MTTTCRG'))  ;
+    TOBP.SetDouble('CAUTIONUTILDEV', TOBP.GetDouble('CAUTIONUTILDEV') + TOBL.GetDouble('PRG_MTTTCRGDEV'))  ;
+    //
+    TauxTva := TOBL.GetDouble('PRG_MTTTCRGDEV') / TOBL.GetDouble('PRG_MTHTRGDEV');
+    TauxDev := TOBL.GetDouble('PRG_MTTTCRGDEV') / TOBL.GetDouble('PRG_MTTTCRG');
+    //
+    if TOBP.GetDouble('CAUTIONUTIL') > TOBP.GetDouble('CAUTIONINIT') then
+    begin
+      TOBP.SetDouble('PRG_MTTTCRG',  TOBP.GetDouble('CAUTIONUTIL')-TOBP.GetDouble('CAUTIONINIT'))  ;
+      TOBP.SetDouble('PRG_MTTTCRGDEV', TOBP.GetDouble('CAUTIONUTILDEV')-TOBP.GetDouble('CAUTIONINITDEV'))  ;
+      TOBP.SetDouble('PRG_MTHTRG', Arrondi(TOBP.GetDouble('PRG_MTTTCRG')/TauxTva/TauxDev,V_PGI.okdecV))  ;
+      TOBP.SetDouble('PRG_MTHTRGDEV', Arrondi(TOBP.GetDouble('PRG_MTTTCRGDEV')/TauxTva,DEV.decimale))  ;
     end else
     begin
-      TOBP.SetDouble ('PRG_MTHTRG',TOBP.GetDouble ('PRG_MTHTRG')+TOBL.GetDouble ('PRG_MTHTRG'));
-      TOBP.SetDouble ('PRG_MTHTRGDEV',TOBP.GetDouble ('PRG_MTHTRGDEV')+TOBL.GetDouble ('PRG_MTHTRGDEV'));
-      TOBP.SetDouble ('PRG_MTTTCRG',TOBP.GetDouble ('PRG_MTTTCRG')+TOBL.GetDouble ('PRG_MTTTCRG'));
-      TOBP.SetDouble ('PRG_MTTTCRGDEV',TOBP.GetDouble ('PRG_MTTTCRGDEV')+TOBL.GetDouble ('PRG_MTTTCRGDEV'));
-      if TOBP.GetString('PRG_NUMCAUTION')='' then
-      begin
-        TOBP.SetDouble('PRG_CAUTIONMT',0);
-        TOBP.SetDouble('PRG_CAUTIONMTDEV',0);
-      end;
+      TOBP.SetString('PRG_NUMCAUTION','1111');
+      TOBP.SetDouble('PRG_MTTTCRG',  0)  ;
+      TOBP.SetDouble('PRG_MTTTCRGDEV', 0)  ;
+      TOBP.SetDouble('PRG_MTHTRG', 0)  ;
+      TOBP.SetDouble('PRG_MTHTRGDEV', 0)  ;
+    end;
+  end;
+  for Indice := 0 to TOBRGPre.detail.count -1 do
+  begin
+    TOBP := TOBRGPre.detail[Indice];
+    if TOBP.GetDouble('CAUTIONINIT')=0 then
+    begin
+      TOBP.SetDouble('CAUTIONAVANT', 0)  ;
+      TOBP.SetDouble('CAUTIONAVANTDEV', 0);
+    end else
+    begin
+      TOBP.SetDouble('PRG_MTTTCRG',  TOBP.GetDouble('CAUTIONUTIL'))  ;
+      TOBP.SetDouble('PRG_MTTTCRGDEV', TOBP.GetDouble('CAUTIONUTILDEV'))  ;
+      TOBP.SetDouble('PRG_MTHTRG', Arrondi(TOBP.GetDouble('PRG_MTTTCRG')/TauxTva/TauxDev,V_PGI.okdecV))  ;
+      TOBP.SetDouble('PRG_MTHTRGDEV', Arrondi(TOBP.GetDouble('PRG_MTTTCRGDEV')/TauxTva,DEV.decimale))  ;
+      TOBP.SetDouble('PRG_CAUTIONMT',TOBP.GetDouble('CAUTIONINIT'));
+      TOBP.SetDouble('PRG_CAUTIONMTDEV',TOBP.GetDouble('CAUTIONINITDEV'));
     end;
   end;
   TOBLOC.Free;

@@ -1,8 +1,8 @@
 object FFacture: TFFacture
-  Left = 2
-  Top = 2
-  Width = 798
-  Height = 558
+  Left = 255
+  Top = 123
+  Width = 1025
+  Height = 710
   HelpContext = 119000017
   ActiveControl = GP_DATEPIECE
   BorderIcons = [biSystemMenu, biMaximize]
@@ -38,7 +38,7 @@ object FFacture: TFFacture
   object PEntete: THPanel
     Left = 0
     Top = 0
-    Width = 782
+    Width = 1009
     Height = 125
     Align = alTop
     FullRepaint = False
@@ -1201,8 +1201,8 @@ object FFacture: TFFacture
   end
   object PPiedTot: TPanel
     Left = 0
-    Top = 373
-    Width = 782
+    Top = 525
+    Width = 1009
     Height = 24
     Align = alBottom
     BevelOuter = bvNone
@@ -1210,7 +1210,7 @@ object FFacture: TFFacture
     object PGTG: TPanel
       Left = 0
       Top = -56
-      Width = 782
+      Width = 1009
       Height = 80
       Align = alBottom
       BevelOuter = bvNone
@@ -1218,7 +1218,7 @@ object FFacture: TFFacture
       object GTG: THGrid
         Left = 0
         Top = 0
-        Width = 782
+        Width = 1009
         Height = 80
         Align = alClient
         ColCount = 9
@@ -1244,7 +1244,7 @@ object FFacture: TFFacture
     object PGT: TPanel
       Left = 0
       Top = 0
-      Width = 782
+      Width = 1009
       Height = 21
       Align = alTop
       BevelOuter = bvNone
@@ -1252,7 +1252,7 @@ object FFacture: TFFacture
       object GT: THGrid
         Left = 0
         Top = 0
-        Width = 782
+        Width = 1009
         Height = 22
         Align = alTop
         DefaultRowHeight = 18
@@ -1337,8 +1337,8 @@ object FFacture: TFFacture
   end
   object PGlobPied: THPanel
     Left = 0
-    Top = 397
-    Width = 782
+    Top = 549
+    Width = 1009
     Height = 122
     Align = alBottom
     BevelOuter = bvNone
@@ -1352,7 +1352,7 @@ object FFacture: TFFacture
     object PPied: THPanel
       Left = 0
       Top = 0
-      Width = 782
+      Width = 1009
       Height = 87
       Align = alTop
       BevelOuter = bvNone
@@ -1366,7 +1366,7 @@ object FFacture: TFFacture
       TextEffect = tenone
       AutoResize = True
       DesignSize = (
-        782
+        1009
         87)
       object HGP_ESCOMPTE: THLabel
         Left = 222
@@ -1447,7 +1447,7 @@ object FFacture: TFFacture
         Visible = False
       end
       object BLanceCalc: TToolbarButton97
-        Left = 384
+        Left = 611
         Top = 2
         Width = 405
         Height = 101
@@ -2533,7 +2533,7 @@ object FFacture: TFFacture
     object PButtons: TPanel
       Left = 0
       Top = 86
-      Width = 782
+      Width = 1009
       Height = 36
       Align = alBottom
       BevelOuter = bvNone
@@ -2541,7 +2541,7 @@ object FFacture: TFFacture
       object DockBottom: TDock97
         Left = 0
         Top = 5
-        Width = 782
+        Width = 1009
         Height = 31
         BackgroundTransparent = True
         Position = dpBottom
@@ -3178,8 +3178,6 @@ object FFacture: TFFacture
             Width = 28
             Height = 27
             Hint = 'Voir les totalisations documents'
-            Glyph.Data = {00000000}
-            GlyphMask.Data = {00000000}
             ImageIndex = 0
             Images = HimgTOT
             Opaque = False
@@ -3516,6 +3514,10 @@ object FFacture: TFFacture
       '\par '
       '\par '
       '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
       '\par }')
   end
   object BZoomRessource: THBitBtn
@@ -3538,8 +3540,8 @@ object FFacture: TFFacture
   object PGS: TPanel
     Left = 0
     Top = 125
-    Width = 782
-    Height = 248
+    Width = 1009
+    Height = 400
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 2
@@ -3548,8 +3550,8 @@ object FFacture: TFFacture
       Tag = 1
       Left = 0
       Top = 0
-      Width = 782
-      Height = 248
+      Width = 1009
+      Height = 400
       Align = alClient
       BorderStyle = bsNone
       ColCount = 8
@@ -4335,6 +4337,10 @@ object FFacture: TFFacture
           '0\fnil Times New Roman;}}'
         '{\*\generator Riched20 6.3.9600}\viewkind4\uc1 '
         '\pard\f0\fs20 '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
         '\par '
         '\par '
         '\par '

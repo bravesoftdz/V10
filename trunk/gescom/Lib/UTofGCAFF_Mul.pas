@@ -31,6 +31,14 @@ Type
 {$IFDEF BTP}
         procedure BNewClick (Sender : TObject);
   		private
+        MnZTiers  : TMenuItem;
+{$IFDEF EAGLCLIENT}
+        Fliste	: THGrid;
+{$ELSE}
+        Fliste	: THDbGrid;
+{$ENDIF}
+        //
+        procedure MnZTiersClick(Sender: TObject);
     		procedure FlisteDblClick(Sender: TObject);
         function DemandeDatesLivraison(var DateLiv: TDateTime; TypePiece : string = '' ) : boolean;
 {$ENDIF}
@@ -47,6 +55,9 @@ Type
 function PlusNatureLIV : string;
 
 implementation
+
+uses DB,
+     TiersUtil;
 
 function PlusNatureLIV : string;
 begin
@@ -170,9 +181,9 @@ if Pos('ACH',Ecran.Name)= 0 then Tiers:=THEdit(GetControl('GP_TIERS'))   ;
 END ;
 
 procedure TOF_GCAFF_MUL.OnArgument(stArgument : String);
-Var CC : THValComboBox ;
-    CC2 : THMultiValComboBox ;
-    Visu : boolean ;
+Var //CC : THValComboBox ;
+    //CC2 : THMultiValComboBox ;
+    //Visu : boolean ;
 {$IFDEF BTP}
     NatureDoc : THMultiValComboBox;
     XX_WHERENAT : THedit;
@@ -185,7 +196,7 @@ Var CC : THValComboBox ;
 BEGIN
 inherited;
 
-  Visu:=False ;
+  //Visu:=False ;
 
   if (copy (Ecran.Name, 0, 11) = 'GCPIECE_MUL') or
      (copy (Ecran.Name, 0, 11) = 'BTPIECE_MUL') or
@@ -202,7 +213,7 @@ inherited;
       end;
       Ecran.Caption := 'Consultation de pièces';
       if THCheckBox(getCOntrol('CONSULTATION')) <> nil then THCheckBox(getCOntrol('CONSULTATION')).Checked := true;
-      Visu:=True ;
+      //Visu:=True ;
     end
     else
     begin
@@ -217,9 +228,19 @@ inherited;
       Ecran.Caption := 'Modification de pièces';
     end;
   end;
+
   UpdateCaption (Ecran);
 
-THdbGrid(GetCOntrol('FLISTE')).ondblclick := FlisteDblClick;
+  // Modified by f.vautrain 14/12/2018 11:36:49 - FS#3411 - SES - Affiche la fiche "Client" avec via la loupe "Voir tiers" dans les pièces d'achats
+  if Assigned(GetControl('MnZTier')) then
+  begin
+    MnZTiers := TMenuItem(GetControl('MnZTier'));
+    MnZTiers.OnClick := MnZTiersClick;
+  end;
+
+  Fliste := THdbgrid(GetControl('FLISTE'));
+  Fliste.ondblclick := FlisteDblClick;
+  // Modified by f.vautrain 14/12/2018 11:36:49 - FS#3411 - SES - Affiche la fiche "Client" avec via la loupe "Voir tiers" dans les pièces d'achats
 
   if Not(ctxAffaire in V_PGI.PGIContexte) and Not(ctxGCAFF in V_PGI.PGIContexte) then
   BEGIN
@@ -355,7 +376,14 @@ var TobDates : TOB;
 begin
   TOBDates := TOB.Create ('LES DATES', nil,-1);
   TOBDates.AddChampSupValeur('RETOUROK','-');
-  TOBDates.AddChampSupValeur('DATFAC',V_PGI.DateEntree);
+
+  //FV1 - 22/11/2018 : FS#3336 - TESTS BL : En validation de devis, la date de livraison saisie n'est pas reprise dans la commande
+  if DateLiv = 0 then
+    TOBDates.AddChampSupValeur('DATFAC',V_PGI.DateEntree)
+  else
+    TOBDates.AddChampSupValeur('DATFAC', Dateliv);
+  //FV1 - 22/11/2018 : FS#3336 - TESTS BL : En validation de devis, la date de livraison saisie n'est pas reprise dans la commande
+
   TOBDates.AddChampSupValeur('CTRLEX','X');
   If TypePiece <> '' then
     TOBDates.AddChampSupValeur('TYPEDATE','Date de '+TypePiece)
@@ -377,12 +405,12 @@ begin
 end;
 
 procedure TOF_GCAFF_MUL.FlisteDblClick(Sender: TObject);
-Var ClePiece			: array [0..7] of Variant;
-    TheChaine,TheDate     : string;
-		Fliste	: THDbGrid;
-    OneDate : TdateTime;
-    OkLiv : boolean;
-    DateFac : TDateTime;
+Var ClePiece	: array [0..7] of Variant;
+    TheChaine : string;
+		Fliste	  : THDbGrid;
+    OneDate   : TdateTime;
+    OkLiv     : boolean;
+    DateFac   : TDateTime;
 begin
 	  OkLiv := false;
 		Fliste := THdbgrid(GetCOntrol('FLISTE'));
@@ -443,6 +471,8 @@ begin
       if copy (Ecran.Name, 1, 16) = 'BTTRANSPIECE_MUL' then
       begin
         OkLiv := true;
+        //FV1 - 22/11/2018 : FS#3336 - TESTS BL : En validation de devis, la date de livraison saisie n'est pas reprise dans la commande
+        if Fliste.datasource.dataset.FindField('GP_DATELIVRAISON') <> nil then OneDate   := Fliste.datasource.dataset.FindField('GP_DATELIVRAISON').AsDateTime;
         if not DemandeDatesLivraison(OneDate) then
         begin
           Exit;
@@ -553,6 +583,24 @@ if pop<> nil  then
        if st=stItem then  begin pop.items[i].visible:=bVisible; break; end;
        end;
 end ;
+
+// Modified by f.vautrain 14/12/2018 11:30:12 - FS#3411 - SES - Affiche la fiche "Client" avec via la loupe "Voir tiers" dans les pièces d'achats
+procedure TOF_GCAFF_MUL.MnZTiersClick(Sender: TObject);
+var CodeTiers : String;
+    TypePiece : String;
+begin
+  //
+  TypePiece := GetControlText ('GP_NATUREPIECEG');
+  //
+  CodeTiers := Fliste.datasource.dataset.FindField('GP_TIERS').AsString;
+
+  if CodeTiers = '' then exit;
+  //
+  if (GetInfoParPiece(TypePiece,'GPP_VENTEACHAT'))='ACH'  then
+    AGLLanceFiche('GC','GCFOURNISSEUR','',TiersAuxiliaire(CodeTiers,False),'ACTION=CONSULTATION;MONOFICHE')
+  else
+    AGLLanceFiche('GC','GCTIERS','',TiersAuxiliaire(CodeTiers,False),'ACTION=CONSULTATION;MONOFICHE');
+end;
 
 procedure TOF_GCLigne_Mul.FlisteDblClick(Sender: TObject);
 Var ClePiece			: array [0..7] of Variant;

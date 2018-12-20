@@ -81,7 +81,7 @@ type
     function EncodeAmount(TslLine: string): string;
     function EncodeDate(TslLine, DateFieldName: string): string;
     function GetFirstIndiceEcr(TSlEcr: TStringList): Integer;
-    function ConstitueEntries(TSlEcr: TStringList): WideString;
+    function ConstitueEntries(TSlEcr: TStringList; LogValues : T_WSLogValues): WideString;
     function EncodeAxis(AxisCode: string): string;
     procedure SetCegidConnectParameters(CegidConnect : TconnectCEGID);
     procedure SetXmlRootAttributes(RootNode : IXMLNode);
@@ -210,7 +210,7 @@ end;
 function TSendEntryY2.EncodeDocType(TypePiece: string): string;
 begin
   case Tools.CaseFromString(TypePiece, ['N', 'S']) of
-    {N} 0: Result := 'Normal';
+    {N} 0: Result := 'Normal';                                  
     {S} 1: Result := 'Simulation';
   end;
 end;
@@ -614,7 +614,7 @@ end;
     ^LEVEL3=A5'
     ^LEVEL2=ECRITURE^E_AFFAIRE=^E_ANA=-^E_AUXILIAIRE=^..
 }
-function TSendEntryY2.ConstitueEntries(TSlEcr: TStringList): WideString;
+function TSendEntryY2.ConstitueEntries(TSlEcr: TStringList; LogValues : T_WSLogValues): WideString;
 var
   XmlDoc       : IXMLDocument;
   Root         : IXMLNode;
@@ -632,6 +632,8 @@ var
   Cpt          : integer;
   EcrLevelName : string;
   AnaLevelName : string;
+  PathFile     : string;
+  FileName     : string;
 
   function GetLevelName(TableName: string): string;
   var
@@ -666,7 +668,7 @@ var
       begin
         Analytic := Analytics.AddChild('EntryAnalytic');    // <- Noeud EntryAnalytic>> ->
         N1 := Analytic.AddChild('Amount');  N1.Text := Tools.StrFPoint_(StrTofloat(Tools.GetStValueFromTSl(TSlEcr[CptE], 'Y_DEBIT')) + StrTofloat(Tools.GetStValueFromTSl(TSlEcr[CptE], 'Y_CREDIT')));
-        N1 := Analytic.AddChild('Axis');    N1.Text := EncodeAxis(Tools.GetStValueFromTSl(TSlEcr[CptE], 'Y_AXE'));
+        N1 := Analytic.AddChild('Axis');    N1.Text := EncodeAxis(Trim(Tools.GetStValueFromTSl(TSlEcr[CptE], 'Y_AXE')));
         N1 := Analytic.AddChild('Percent'); N1.Text := '0';
         Sections := Analytic.AddChild('Sections');    // <- Noeud EntryAnalytic>> ->
         Sections.Attributes['xmlns:a'] := GetXmlAttributeArray;
@@ -689,10 +691,10 @@ begin
     NodeDoc := Root.AddChild('Document');    // <- Noeud Document ->
     // --- Sur le <document>
     N1 := NodeDoc.Addchild('AccountingDate'); N1.Text := DateTime2Tdate(StrToDateTime(Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_DATECOMPTABLE')));
-    N1 := NodeDoc.Addchild('BusinessCenter'); N1.Text := Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_ETABLISSEMENT');
-    N1 := NodeDoc.Addchild('Currency');       N1.Text := Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_DEVISE');
+    N1 := NodeDoc.Addchild('BusinessCenter'); N1.Text := Trim(Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_ETABLISSEMENT'));
+    N1 := NodeDoc.Addchild('Currency');       N1.Text := Trim(Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_DEVISE'));
     N1 := NodeDoc.Addchild('CurrencyRate');   N1.Text := Tools.StrFPoint_(StrToFloat(Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_TAUXDEV')));
-    N1 := NodeDoc.Addchild('DocumentType');   N1.Text := EncodeDocType(Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_QUALIFPIECE'));
+    N1 := NodeDoc.Addchild('DocumentType');   N1.Text := EncodeDocType(Trim(Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_QUALIFPIECE')));
     Entries := NodeDoc.Addchild('Entries'); // <- Noeud Entries ->
     for Cpt := FirstIndice to pred(TSlEcr.Count) do
     begin
@@ -705,8 +707,8 @@ begin
         N1 := EntryAmount.AddChild('Amount');      N1.Text := EncodeAmount(TSlEcr[Cpt]);
         N1 := EntryAmount.AddChild('DueDate');     N1.Text := EncodeDate(TSlEcr[Cpt], 'E_DATEECHEANCE');
         N1 := EntryAmount.AddChild('Iban');        N1.Text := Trim(Tools.GetStValueFromTSl(TSlEcr[Cpt], 'R_CODEIBAN'));
-        N1 := EntryAmount.AddChild('PaymentMode'); N1.Text := Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_MODEPAIE');
-        if Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_MODEPAIE') <> '' then
+        N1 := EntryAmount.AddChild('PaymentMode'); N1.Text := Trim(Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_MODEPAIE'));
+        if Trim(Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_MODEPAIE')) <> '' then
           N1 := EntryAmount.AddChild('SepaCreditorIdentifier');
         N1.Attributes['i:nil'] := 'true';
         N1 := EntryAmount.AddChild('UniqueMandateReference');
@@ -717,16 +719,16 @@ begin
           Analytics := Amounts.AddChild('Analytics');    // <- Noeud Analytics> ->
           Analytics.Attributes['i:nil'] := 'true';
         end;
-        N1 := Entry.AddChild('Description');           N1.Text := Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_LIBELLE');
+        N1 := Entry.AddChild('Description');           N1.Text := Trim(Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_LIBELLE'));
         N1 := Entry.AddChild('ExternalDateReference'); N1.Text := EncodeDate(TSlEcr[Cpt], 'E_DATEREFEXTERNE');
-        N1 := Entry.AddChild('ExternalReference');     N1.Text := Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_REFEXTERNE');
-        N1 := Entry.AddChild('GeneralAccount');        N1.Text := Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_GENERAL');
-        N1 := Entry.AddChild('InternalReference');     N1.Text := Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_REFINTERNE');
-        N1 := Entry.AddChild('SubsidiaryAccount');     N1.Text := Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_AUXILIAIRE');
+        N1 := Entry.AddChild('ExternalReference');     N1.Text := Trim(Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_REFEXTERNE'));
+        N1 := Entry.AddChild('GeneralAccount');        N1.Text := Trim(Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_GENERAL'));
+        N1 := Entry.AddChild('InternalReference');     N1.Text := Trim(Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_REFINTERNE'));
+        N1 := Entry.AddChild('SubsidiaryAccount');     N1.Text := Trim(Tools.GetStValueFromTSl(TSlEcr[Cpt], 'E_AUXILIAIRE'));
       end;
     end;
-    N1 := NodeDoc.Addchild('EntryType'); N1.Text := EncodeEntryType(Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_NATUREPIECE'));
-    N1 := NodeDoc.Addchild('Journal');   N1.Text := Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_JOURNAL');
+    N1 := NodeDoc.Addchild('EntryType'); N1.Text := EncodeEntryType(Trim(Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_NATUREPIECE')));
+    N1 := NodeDoc.Addchild('Journal');   N1.Text := Trim(Tools.GetStValueFromTSl(TSlEcr[FirstIndice], 'E_JOURNAL'));
     Setting := Root.AddChild('Setting');
     N1 := Setting.AddChild('AnalyticBehavior');   N1.Text := 'Amount';
     N1 := Setting.AddChild('CurrencyBehavior');   N1.Text := 'Known';
@@ -734,7 +736,21 @@ begin
     Root.Attributes['xmlns'] := 'http://schemas.datacontract.org/2004/07/Cegid.Finance.Services.WebPortal';
     Root.Attributes['xmlns:i'] := 'http://www.w3.org/2001/XMLSchema-instance';
     Result := UTF8Encode(Root.XML);
-    XmlDoc.SaveToFile('C:\pgi01\XMLOUT\out.xml');
+    if     (LogValues.DebugEvents = 2)
+       and (LogValues.DebugFilesDirectory <> '')
+       and (DirectoryExists(LogValues.DebugFilesDirectory))
+    then
+    begin
+      PathFile := LogValues.DebugFilesDirectory;
+      if copy(PathFile, length(PathFile), 1) <> '\' then
+        PathFile := Format('%s\', [PathFile]);
+      FileName := Format('%s_Out.xml', [Tools.CastDateTimeForQry(Now)]);
+      FileName := StringReplace(FileName, ' ', '', [rfReplaceAll]);
+      FileName := StringReplace(FileName, ':', '', [rfReplaceAll]);
+      PathFile := Format('%s%s', [PathFile, FileName]);
+      TServicesLog.WriteLog(ssbylLog, Format('%s - Xml file generate :  %s', [WSCDS_DebugMsg, PathFile]), ServiceName_BTPY2, LogValues, 0);
+      XmlDoc.SaveToFile(PathFile);
+    end
   finally
     XmlDoc := nil;
   end;
@@ -784,10 +800,9 @@ begin
     if OneConnectCEGID.IsActive then
     begin
       OneConnectCEGID.LogValues := LogValues;
-      TheXml                    := ConstitueEntries(TSlEcr);
+      TheXml                    := ConstitueEntries(TSlEcr, LogValues);
       if (TheXml <> '') then
       begin
-        if LogValues.DebugEvents > 0 then TServicesLog.WriteLog(ssbylLog, Format('%s - TheXml : %s', [WSCDS_DebugMsg, TheXml]), ServiceName_BTPY2, LogValues, 0);
         OneConnectCEGID.AppelEntriesWS(DocInfo, TheXml, TheRealNumDoc);
         ErrorMsg := OneConnectCEGID.ErrorMsg;
         if EnregistreInfoCptaY2(WsEt, TSlEcr[GetFirstIndiceEcr(TSlEcr)], TheRealNumDoc, DocInfo) then
@@ -1105,10 +1120,6 @@ function TconnectCEGID.AppelEntriesWS(DocInfo : T_WSDocumentInf; TheXml: WideStr
       except
         Msg := Format('Erreur durant Chargement XML' , [HTTPResponse]);
         if LogValues.DebugEvents > 0 then TServicesLog.WriteLog(ssbylLog, Format('%s - %s : %s', [WSCDS_DebugMsg, WSCDS_ErrorMsg, MessageOut, Msg]), ServiceName_BTPY2, LogValues, 0);
-        {$IFNDEF APPSRV}
-        on E: Exception do
-          PgiError('Erreur durant Chargement XML : ' + E.Message);
-        {$ENDIF !APPSRV}
       end;
       if not XmlDoc.IsEmptyDoc then
       begin

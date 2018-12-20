@@ -171,7 +171,7 @@ Type
       MnAvancement,MnDefaireLig,MnDefairePiece,MnDefaireTous,MnDefaireParag : TMenuItem;
       //
       INDICE,TYPEARTICLE,CODEARTICLE,LIBELLE,QTEMARCHE,UNITE,VOIRDETAIL,CODEMARCHE : integer;
-      QTEDEJAFACT,QTECUMULFACT,POURCENTAVANC,MTCUMULEFACT,MTDEJAFACT,MTSITUATION,MTMARCHE,QTESITUATION,PUSIT,MTPRODUCTION : integer;
+      QTEDEJAFACT,QTECUMULFACT,POURCENTAVANC,MTCUMULEFACT,MTDEJAFACT,ZMTSITUATION,MTMARCHE,QTESITUATION,PUSIT,MTPRODUCTION : integer;
       LNQTEDEJAFACT,LNQTECUMULFACT,LNQTESITUATION,LNQTEMARCHE,LNMTMARCHE,LNMTCUMULEFACT,LNMTDEJAFACT,LNUNITE,LPUSIT,LMTPRODUCTION : integer;
       dMtSItuation : double;
       FMTSITUATION : THNumEdit;
@@ -2027,7 +2027,7 @@ begin
     begin
       if not Avancement then LeTitre := 'Mont. Facturé';
       if ReajusteDossier then laLargeur := '0';
-      MTSITUATION := Colonne;
+      ZMTSITUATION := Colonne;
       DefiniAttributCol (GS,Lelement,Colonne,LaLargeur,Lalignement,Letitre,LeNC);
     end else if Lelement = 'BLF_MTPRODUCTION' then
     begin
@@ -2957,7 +2957,7 @@ begin
       begin
       	GS.cells [Acol,Arow] := stprev;
       end;
-    end else if ACol = MTSITUATION  then
+    end else if ACol = ZMTSITUATION  then
     Begin
       if pos(TypeLigne,'ART;SD;OUP')>0 then
       begin
@@ -3672,7 +3672,7 @@ begin
   //
   if (Acol = MTMARCHE) or (Acol = MTDEJAFACT) then BEGIN canvas.Brush.Color := clInfoBk; END;
   IF (Acol= POURCENTAVANC) then BEGIN Canvas.font.color := $E6A008; Canvas.Font.Style := Canvas.Font.Style + [fsBold]; END;
-  IF (Acol= MTSITUATION) then BEGIN canvas.Brush.Color := clInfoBk; Canvas.Font.Style := Canvas.Font.Style + [FsBold]; END;
+  IF (Acol= ZMTSITUATION) then BEGIN canvas.Brush.Color := clInfoBk; Canvas.Font.Style := Canvas.Font.Style + [FsBold]; END;
   //
 end;
 

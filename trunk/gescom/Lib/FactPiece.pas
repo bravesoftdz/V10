@@ -47,6 +47,7 @@ uses
   , UtilTOBPiece
   , UtilGC
   , CommonTools
+  , ErrorsManagement
   ;
 procedure EcrireMaxNumordre(TOBPiece: TOB; MaxNumOrdre: integer);
 begin
@@ -479,7 +480,8 @@ begin
 end;
 
 function SetDefinitiveNumber(TOBPiece, TOBBases, TOBBasesL,TOBEches, TOBNomenclature, TOBAcomptes, TOBPieceRG, TOBBasesRG, TobLigneTarif: TOB; NumDef: integer): boolean;
-var SoucheG: String3;
+var
+  SoucheG: String3;
   i, iNum: integer;
   j: integer;
   TOBB: TOB;
@@ -489,11 +491,13 @@ begin
   SoucheG := TOBPiece.GetValue('GP_SOUCHE');
   if SoucheG = '' then
   begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_CalcNumSouche);
     PgiError('Erreur Souche de la pièce indéfinie');
     Exit;
   end;
   if NumDef <= 0 then
   begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_CalcNumPreNumero);
     PgiError('Erreur numéro de pièce indéfinie');
     exit;
   end;

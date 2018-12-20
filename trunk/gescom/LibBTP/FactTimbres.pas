@@ -26,7 +26,12 @@ procedure ValideLesTimbres(TOBPiece, TOBTimbres : TOB);
 
 implementation
 
-uses UtilTOBPiece,FactUtil;
+uses
+  UtilTOBPiece
+  , FactUtil
+  , ErrorsManagement
+  ;
+
 var TOBTIMBRESP : TOB;
 
 function FindTimbre(Code : string) : TOB;
@@ -187,9 +192,9 @@ begin
   END;
   if not okok then 
   begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateTIMBRESPIECE);
     V_PGI.IoError := oeUnknown;
   end;
-
 end;
 
 end.

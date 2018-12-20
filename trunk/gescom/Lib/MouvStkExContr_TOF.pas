@@ -120,6 +120,11 @@ NatureSortie = 'SEX';
 
 Implementation
 
+uses
+  ErrorsManagement
+  , CommonTools
+  ;
+
 function GCLanceFiche_MouvStkExContr(Nat,Cod : String ; Range,Lequel,Argument : string) : string;
 begin
 Result:='';
@@ -357,42 +362,46 @@ AjouteUneReference;
 end;
 
 procedure TOF_GCMOUVSTKEXCONTR.bValideMouvClick(Sender: TObject);
-var io : TIOErr ;
-    JNalCode : string;
-    ACol, ARow : integer;
+var
+  io : TIOErr ;
+  JNalCode : string;
+  ACol, ARow : integer;
+  Msg : string;
 begin
-if TobDispoContrem.Detail.Count = 0 then exit;
-if Not SortDeLaLigne then exit;
-ACol := GDisp.Col ; ARow := GDisp.Row;
-if Copy(GDisp.ColFormats[ACol],1,3)='CB=' then PostMessage(GDisp.ValCombo.Handle, WM_KEYDOWN, VK_TAB, 0);
-Application.processMessages;
-TobEEX.ClearDetail ; TobSEX.ClearDetail ;
-MsgJnalEventEEX.Clear ; MsgJnalEventSEX.Clear ;
-if not ValideLaSaisie(ARow) then exit;
-if TobDispoContrem.Somme('(SAISI)',[''],[''],False) = 0 then //Aucune saisie
-   begin
-   PGIBox(TraduireMemoire(TexteMessage[2]),TraduireMemoire(Ecran.Caption)) ;
-   exit ;
-   end;
-io:=Transactions(TraiteLaSaisie,5) ;
-Case io of
-    oeOk       : begin
-                 JNalCode := 'OK';
-                 PGIBox(GenereCompteRendu,TraduireMemoire(Ecran.Caption));
-                 end;
-    oeStock    : BEGIN MessageAlerte(TexteMessage[4]) ; JNalCode := 'ERR';  Exit ; END ;
-    oeUnknown  : begin MessageAlerte(TexteMessage[5]) ; JNalCode := 'ERR';  end ;
-    oeSaisie   : begin MessageAlerte(TexteMessage[5]) ; JNalCode := 'ERR';  end ;
-    end ;
-// Journal des evenements --------
-MAJJnalEvent(MsgJnalEventEEX,JNalCode);
-MAJJnalEvent(MsgJnalEventSEX,JNalCode);
-if io <> oeOk then exit;
-SetFocusControl('GQC_ARTICLE');
-GDisp.VidePile(false);
-GDisp.Refresh;
-GDisp.Col := ColSaisi;
-TobDispoContrem.ClearDetail;
+  if TobDispoContrem.Detail.Count = 0 then exit;
+  if Not SortDeLaLigne then exit;
+  ACol := GDisp.Col ; ARow := GDisp.Row;
+  if Copy(GDisp.ColFormats[ACol],1,3)='CB=' then PostMessage(GDisp.ValCombo.Handle, WM_KEYDOWN, VK_TAB, 0);
+  Application.processMessages;
+  TobEEX.ClearDetail ; TobSEX.ClearDetail ;
+  MsgJnalEventEEX.Clear ; MsgJnalEventSEX.Clear ;
+  if not ValideLaSaisie(ARow) then exit;
+  if TobDispoContrem.Somme('(SAISI)',[''],[''],False) = 0 then //Aucune saisie
+  begin
+    PGIBox(TraduireMemoire(TexteMessage[2]),TraduireMemoire(Ecran.Caption)) ;
+    exit ;
+  end;
+  io:=Transactions(TraiteLaSaisie,5) ;
+  Msg := TUtilErrorsManagement.GetGenericMessage;
+  Msg := Tools.iif(Msg <> '', Format(' (%s)', [Msg]), '');
+  JNalCode := Tools.iif(io = oeOk, 'OK', 'ERR');
+  Case io of
+      oeOk      : PGIBox(GenereCompteRendu,TraduireMemoire(Ecran.Caption));
+      oeStock   : MessageAlerte(Format('%s%s', [TexteMessage[4], Msg]));
+      oeUnknown : MessageAlerte(Format('%s%s', [TexteMessage[5], Msg]));
+      oeSaisie  : MessageAlerte(Format('%s%s', [TexteMessage[5], Msg]));
+      end ;
+  if io = oeStock then
+    exit;
+  // Journal des evenements --------
+  MAJJnalEvent(MsgJnalEventEEX,JNalCode);
+  MAJJnalEvent(MsgJnalEventSEX,JNalCode);
+  if io <> oeOk then exit;
+  SetFocusControl('GQC_ARTICLE');
+  GDisp.VidePile(false);
+  GDisp.Refresh;
+  GDisp.Col := ColSaisi;
+  TobDispoContrem.ClearDetail;
 end;
 
 procedure TOF_GCMOUVSTKEXCONTR.BZoomReferenceClick(Sender: TObject);

@@ -282,10 +282,13 @@ begin
     ResultMailForm := AglMailForm(fSujet, fdestinataire, fcopie, Corps, ffichiers, false);
 
     if ResultMailForm = rmfOkButNotSend then
+//      AglSendMail (fSujet,fDestinataire ,fCopie,Corps,fFichiers,False);
       SendMail(fSujet, fdestinataire, fCopie, Corps, ffichiers, True, 1, '', '');
   end else
   begin
     SendMail(fSujet, fdestinataire, fCopie, Corps, ffichiers, True, 1, '', '');
+//      AglSendMail (fSujet,fDestinataire ,fCopie,Corps,fFichiers,False);
+
   end;
 
   corps.Clear;
@@ -294,8 +297,9 @@ end;
 
 //traduction de la chaine venant de la tob
 function TGestionMail.RecupZoneTravail(ZoneChaine: string; TOBTravail: TOB): string;
+var TT : TOB;
 begin
-
+  TT := TOBTravail;
   Result := '';
 
   if TOBTravail.FieldExists(ZoneChaine) then

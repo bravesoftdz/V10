@@ -161,7 +161,9 @@ Uses SaisUtil,
 {$IFDEF MODENT1}
      CPProcMetier,
 {$ENDIF MODENT1}
-     UtilPGI ;
+     UtilPGI
+     , ErrorsManagement
+      ;
 
 
 {***********A.G.L.***********************************************
@@ -414,12 +416,15 @@ BEGIN
 
  // enregistre en base
  ExecMajSoldeTOB (lTS) ;
+ if (V_PGI.ioError <> oeOk) and (assigned(TErrManagement)) then
+  TErrManagement.ErrorNumber := TemErr_UpdateSoldeEcriture;
  ADevalider(lStJal,lDtDateC) ;
 
  if _GetParamSocSecur('SO_CPANODYNA',false) then
   begin
    if not ExecReqMAJAno(lTSA) then
      begin
+      TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateANouveauxCpta);
       V_PGI.IoError := oeSaisie ;
       exit ;
      end ;

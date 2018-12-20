@@ -34,15 +34,16 @@ uses
   uEntCommun,
   UtilTOBPiece,
   UDemandePrix,
-  UtilsMetresXLS;
+  UtilsMetresXLS,
+  CommonTools;
 
   var TheMetredoc : TMetreArt;
 
 
-function  AfficheDesc (FF : Tform ; TOBpiece : TOB) : boolean;
+function  AfficheDesc (FF : Tform ; TobPiece : TOB) : boolean;
 procedure AjusteSousDetail ( FF : Tform ; TOBPiece, TOBNomenclature, TobOuvrage, TOBTiers, TOBAffaire : TOB);
 procedure AppelFraisDetailBtp (FF : TForm ; TobPiece,TOBOuvrage,TOBPorcs : TOB; InclusStInFg : boolean=false);
-procedure AfficheTexteLigne(FF : Tform ; TOBPiece : TOB; Arow: integer; Desc: THRichEditOLE);
+procedure AfficheTexteLigne(FF : Tform ; TobPiece : TOB; Arow: integer; Desc: THRichEditOLE);
 procedure AfterImprimePieceBtp ( FF : Tform ;TOBPiece, TOBNomenclature, TobOuvrage,
                                  TOBTiers, TOBAffaire,TOBLigneRg : TOB;WithReinitQteInit : boolean=true;
                                  ImpressionViaTOB : TImprPieceViaTOB = nil ) ;
@@ -124,16 +125,22 @@ procedure AppliqueChangeCoefMargOuvrage (LaTOB,TOBOUvrages : TOB; DEV : Rdevise)
 
 implementation
 
-uses facture,
-     FactVariante,
-     ParamSoc,
-     StockUtil,
-     FactGrpBtp,
-     FactTarifs,
-     factDomaines,
-     PiecesRecalculs,
-     UtofListeInv, TntGrids,UFonctionsCBP,UspecifPOC,
-     ULiquidTva2014;
+uses
+  facture
+  , FactVariante
+  , ParamSoc
+  , StockUtil
+  , FactGrpBtp
+  , FactTarifs
+  , factDomaines
+  , PiecesRecalculs
+  , UtofListeInv
+  , TntGrids
+  , UFonctionsCBP
+  , UspecifPOC
+  , ULiquidTva2014
+  , ErrorsManagement
+  ;
 
 
 function ControleChantiertermineBTP (TOBPiece : TOB;Affaire : string; TransfoPiece,DuplicPiece : boolean) : boolean;
@@ -216,10 +223,11 @@ begin
   																 else TOBL.PutValue('GL_TENUESTOCK','-');
 end;
 
-function AfficheDesc (FF : Tform ; TOBpiece : TOB) : boolean;
-var TOBL: TOB;
-  Lib, RefArt: string;
-  FFact : TFFacture;
+function AfficheDesc (FF : Tform ; TobPiece : TOB) : boolean;
+var TOBL  : TOB;
+    Lib   : string;
+    RefArt: string;
+    FFact : TFFacture;
 begin
   FFact := TFFacture (FF);
   with FFAct do
@@ -270,11 +278,11 @@ begin
   end;
 end;
 
-procedure AfficheTexteLigne(FF : Tform ; TOBPiece : TOB; Arow: integer; Desc: THRichEditOLE);
-var TOBL: TOB;
-  ARect: TRect;
-  FFact : TFFacture;
-  tt : boolean;
+procedure AfficheTexteLigne(FF : Tform ; TobPiece : TOB; Arow: integer; Desc: THRichEditOLE);
+var TOBL  : TOB;
+    ARect : TRect;
+    FFact : TFFacture;
+    tt    : boolean;
 begin
   FFact := TFFacture (FF);
   with FFact do
@@ -284,7 +292,8 @@ begin
     begin
       if (TOBL <> nil)  then
       begin
-				Desc.Clear; Desc.Text := '';
+				Desc.Clear;
+        Desc.Text := '';
         tt := IsBLobVide (FFact,TOBL,'GL_BLOCNOTE');
         if not tt then StringToRich(Desc, TOBL.GetValue('GL_BLOCNOTE'));
       end;
@@ -1015,7 +1024,7 @@ begin
     	 (LaTob.GetValue('GL_FAMILLETAXE4') <> TOBLO.GetValue('GL_FAMILLETAXE4')) or
     	 (LaTob.GetValue('GL_FAMILLETAXE5') <> TOBLO.GetValue('GL_FAMILLETAXE5'))) then
     begin
-      if (Pos(LaTob.GetValue('GL_FAMILLETAXE1'),VH_GC.AutoLiquiTVAST)>0) and (IsAutoLiquidationTva (TOBpiece)) then
+      if (Tools.StringInList (LaTob.GetValue('GL_FAMILLETAXE1'),VH_GC.AutoLiquiTVAST)) and (IsAutoLiquidationTva (TOBpiece)) then
       begin
         TOBPiece.SetBoolean('GP_AUTOLIQUID',true);
       end;
@@ -2066,8 +2075,14 @@ begin
     TypeArp := (TypeArticle = 'ARP') or (TypeArticle = 'MAR') or (TypeArticle = 'PRE');
     if Action = taconsult then Taction := taconsult else Taction := taModif;
     if (Taction=taModif) and (FFact.ModifAvanc) and (TOBL.GetValue('GL_PIECEPRECEDENTE')<>'') then Taction := TaConsult;
-    TOBNomen := TOBOuvrage.Detail[IndiceNomen - 1];
-    if TOBNomen = nil then Exit;
+
+    // FV1 - 07/11/2018 : FS#3349 - GROUPE LB - Message d'erreur pour accéder à la valorisation de l'article via CTRL+O
+    if indiceNomen > 0 then
+    begin
+      TOBNomen := TOBOuvrage.Detail[IndiceNomen - 1];
+      if TOBNomen = nil then Exit;
+    end;
+    // FV1 - 07/11/2018 : FS#3349 - GROUPE LB - Message d'erreur pour accéder à la valorisation de l'article via CTRL+O
     (*
     if Taction <> taConsult then
     begin
@@ -4059,7 +4074,7 @@ begin
         exit;
       end;
       //
-      Requete := 'UPDATE AFFAIRE SET AFF_ETATAFFAIRE="ENC" WHERE AFF_AFFAIRE="'+Affairedevis+'"';
+      Requete := 'UPDATE AFFAIRE SET AFF_ETATAFFAIRE="ENC", AFF_DATEMODIF="' + USDATETIME(NowH) + '" WHERE AFF_AFFAIRE="'+Affairedevis+'"';
       result := (ExecuteSql (requete)>0);
       if (not result) then
       begin
@@ -4144,7 +4159,11 @@ begin
         UpdateQteStock(TOBDispo,Qte,RatioVA,colPlus,colMoins,true) ;
         TOBLO.PutValue('GL_DEPOT',NewDepot);
         TRY
-          TOBLO.UpdateDB;
+          if not TOBLO.UpdateDB then
+          begin
+            TUtilErrorsManagement.SetGenericMessage(TemErr_CalcStockOrigin);
+            V_PGI.ioError := oeUnknown;
+          end;
         EXCEPT
           on E: Exception do
           begin

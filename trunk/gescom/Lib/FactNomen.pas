@@ -28,7 +28,12 @@ function IsNomenClature (TOBL : TOB) : boolean;
 
 implementation
 
-Uses FactComm,LigNomen ; 
+Uses
+  FactComm
+  , LigNomen
+  , ErrorsManagement
+  , CommonTools
+  ;
 
 
 function IsNomenclature (TOBL : TOB) : boolean;
@@ -37,12 +42,28 @@ begin
 end;
 
 Procedure ValideLesNomen ( TOBNomenclature : TOB ) ;
-Var i : integer ;
-BEGIN
-for i:=TOBNomenclature.Detail.Count-1 downto 0 do
-    if TOBNomenclature.Detail[i].GetValue('UTILISE')<>'X' then TOBNomenclature.Detail[i].Free ;
-if Not TOBNomenclature.InsertDB(Nil) then V_PGI.IoError:=oeUnknown ;
-END ;
+var
+  i    : integer ;
+  Msg  : string;
+  okok : boolean;
+begin
+  for i := TOBNomenclature.Detail.Count-1 downto 0 do
+  begin
+    if TOBNomenclature.Detail[i].GetValue('UTILISE')<>'X' then
+      TOBNomenclature.Detail[i].Free ;
+  end;
+  try
+    okok := TOBNomenclature.InsertDB(Nil);
+  except
+    on E: Exception do
+      Msg := E.Message;
+  end;
+  if not okok then
+  begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s du détail des nomenclatures%s.', [TUtilErrorsManagement.GetUpdateError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
+    V_PGI.IoError:=oeUnknown ;
+  end;
+end;
 
 Procedure RenseigneValoNomen ( TOBL,TOBN : TOB ) ;
 Var TOBPlat,TOBPD : TOB ;
@@ -113,11 +134,12 @@ END ;
 Procedure ReAffecteLigNomen (IndiceNomen : integer ; TOBLig,TOBNomenclature : TOB ) ;
 Var TOBN : TOB ;
 BEGIN
-if IndiceNomen<=0 then Exit ;
-if TOBNomenclature=Nil then Exit ;
-if TOBNomenclature.Detail.Count-1<IndiceNomen-1 then Exit ;
-TOBN:=TOBNomenclature.Detail[IndiceNomen-1] ; TOBN.PutValue('UTILISE','X') ;
-MajLigNomen(TOBN,TOBLig) ;
+  if IndiceNomen<=0 then Exit ;
+  if TOBNomenclature=Nil then Exit ;
+  if TOBNomenclature.Detail.Count-1<IndiceNomen-1 then Exit ;
+  TOBN:=TOBNomenclature.Detail[IndiceNomen-1] ;
+  TOBN.PutValue('UTILISE','X') ;
+  MajLigNomen(TOBN,TOBLig) ;
 END ;
 
 Procedure CreerLesTOBNomen (TOBGroupeNomen,TOBNomen,TOBArticles : TOB ; LaLig,MaxNiv,idep : integer; stDepot : string = '' ) ; // DBR : Depot unique chargé

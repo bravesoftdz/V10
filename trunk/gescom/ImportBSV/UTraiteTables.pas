@@ -12,6 +12,10 @@ uses
   FactSpec, AffaireUtil, BTPUtil, UgenereDocument,Urapport,forms,Paramsoc,Windows
   ;
 
+const
+
+  RAT = 'Rien à traiter';
+
 type
   TID = Integer;
   (*
@@ -46,6 +50,7 @@ type
     TOBTiers : TOB;
     TOBProv : TOB;
     TOBArticlesPlus : TOB;
+    TOBREPARTS : TOB;
     ListDoc : TListTOB;
     WithRaport : Boolean;
     rapport :  TFBTRapport;
@@ -58,6 +63,7 @@ type
     procedure EnregistreAction(TOBNat, TOBTiers, TOBDOc : TOB; OneResult: Tresult);
     procedure ClotureScan(TOBDoc: TOB);
     function IsATraite : Boolean;
+    function findRepartTva(ID: Integer): Tob;
   public
     property TheRapport : TFBTRapport read rapport write rapport;
     property Atraite : boolean read IsATraite;
@@ -69,15 +75,16 @@ type
     function AddDetails (TOBLIGNES : TOB; IDEntete : TID) : Boolean;
     function Finalise : boolean;
     function SetAllTreated (IDEntete : TID; TOBPROV : TOB) : boolean;
+    function SetTvaRepart (IdEntete : TID; TOBTVAREPART : TOB) : boolean;
   end;
 
-procedure ConstitueDocsFromDatasBSV (WithReport : Boolean);
+procedure ConstitueDocsFromDatasBSV (WithEcho : Boolean; FinalySendMail : boolean=false);
 
 implementation
 uses FactComm,FactTOB,FactUtil,FactArticle,ENt1,
      UtilTOBPiece,CalcOLEGenericBTP,galPatience,
      BTGENFACBAST_TOF,XMLDoc,xmlintf,UconnectBSV,
-     UtilsPdf;
+     UtilsPdf,MailOl, TntStdCtrls;
 
 
 procedure MoveFilesEx(XF,XXML,REPIN,REPDEST : string);
@@ -92,7 +99,7 @@ begin
 end;
 
 
-function TraiteFichier (TOBFields: TOB;RepBase,XF,XXML : string; Rapport : THMemo) : integer;
+function TraiteFichier (WithEcho : boolean; TOBFields: TOB;RepBase,XF,XXML : string; Rapport : THMemo) : integer;
   procedure ChargeAffaire(TOBAFF: TOB; CodeChantier : string);
   var QQ: TQuery;
   begin
@@ -213,6 +220,11 @@ begin
       if NodeFolder.NodeName = 'Facture' then
       begin
         NumFacture := NodeFolder.NodeValue;
+        TT := TOBI.FindFirst(['BP3_LIBELLE'],['NumeroDocument'],true);
+        if TT <> nil then
+        begin
+          TT.SetString('BP3_VALEUR',NumFacture);
+        end;
       end else if NodeFolder.NodeName = 'MontantHT' then
       begin
         TotalHT := NodeFolder.NodeValue;
@@ -316,7 +328,7 @@ begin
     end;
 
     // regroupement de la facture d'origine et du BAST si besoin
-    factFourn :=  FindDocumentBSV (SousTraitant,NumFacture,DateFacture);
+    factFourn :=  FindDocumentBSV (WithEcho,Rapport,SousTraitant,NumFacture,DateFacture);
     if factFourn <> '' then
     begin
       RacineFicDest := AglGetGuid;
@@ -333,7 +345,7 @@ begin
     begin
       // nouveau BAST
       TRY
-        TheResultID := StoreDocumentBSV(TF,TOBI,true);
+        TheResultID := StoreDocumentBSV(WithEcho,Rapport,TF,TOBI,true);
         if TheResultId <> '' then
         begin
           TOBE.setString('BM4_IDZEDOC',TheResultId);
@@ -354,7 +366,7 @@ begin
     end else
     begin
       // Réécriture BAST
-      ResultEcrase := EcraseDocumentBSV(TF,TOBI,TOBE.GetString('BM4_IDZEDOC'));
+      ResultEcrase := EcraseDocumentBSV(WithEcho,Rapport,TF,TOBI,TOBE.GetString('BM4_IDZEDOC'));
       if ResultEcrase then
       begin
         Rapport.lines.Add('BAST mis à jour dans la GED : Fournisseur : '+SousTraitant+' Code Marché : '+CodeMarche+' Situation : '+NumSituation);
@@ -374,7 +386,7 @@ begin
 end;
 
                        
-procedure TransfertGED (Rapport : THMemo);
+procedure TransfertGED (WithEcho: boolean; Rapport : THMemo);
 var RepIn,RepBase,RepSav,RepErr : string;
     MySearchRec   : TSearchRec;
     TF,TXML : string;
@@ -384,17 +396,16 @@ begin
   TOBFILES := TOB.create('LES FICHIERS',nil,-1);
   TOBFields := TOB.create('LES PARAMS',nil,-1);
   TRY
-    GetParamStockageBSV(TOBFields,'XBT');
+    Rapport.lines.clear;
+    GetParamStockageBSV(TOBFields,'XBT'{$IFDEF APPSRVWITHCBP} , '', '', 0, ''{$ENDIF APPSRVWITHCBP});
     if TOBFields.Detail.count = 0 then
     begin
-      Rapport.lines.clear;
       Rapport.lines.Add('Veuillez parametrer le BAST pour la liaison avec BSV');
       Exit;
     end;
     RepBase := GetParamSocSecur('SO_BTBASTOUT','');
     if RepBase = '' then
     begin
-      Rapport.lines.clear;
       Rapport.lines.Add('Veuillez parametrer le répertoire de stockage ds BAST');
       Exit;
     end;
@@ -405,7 +416,6 @@ begin
     //
     if FindFirst(IncludeTrailingBackslash(RepIn)+'*.pdf', faAnyFile, MySearchRec) = 0 then
     begin
-      Rapport.lines.clear;
       repeat
         TF := MySearchRec.Name;
         TXML := Copy(TF,1,Length(TF)-4)+'.XML';
@@ -413,7 +423,7 @@ begin
         TT.AddChampSupValeur('FIC',TF);
         TT.AddChampSupValeur('XML',TXML);
         TT.AddChampSupValeur('OK','-');
-        if TraiteFichier (TOBFields,IncludeTrailingBackslash(RepBase),TF,TXML,Rapport) = 0 then
+        if TraiteFichier (WithEcho,TOBFields,IncludeTrailingBackslash(RepBase),TF,TXML,Rapport) = 0 then
         begin
           TT.SetString('OK','X');
         end;
@@ -424,7 +434,7 @@ begin
         TT := TOBFILES.detail[II];
         TF := TT.getString('FIC');
         TXML := TT.getString('XML');
-        if TT.GetString('Ok')='X' then
+        if TT.GetString('OK')='X' then
         begin
           MoveFilesEx(TF,TXML,REPIN,REPSAV);
         end else
@@ -439,36 +449,72 @@ begin
   END;
 end;
 
-procedure ConstitueDocsFromDatasBSV (WithReport : Boolean);
+procedure ConstitueDocsFromDatasBSV (WithEcho : Boolean; FinalySendMail : boolean=false);
+
+  function PrepareMessage (ZRapport : THMemo; var Corps : hTStringList) : Boolean;
+  var II : integer;
+      TheSt : string;
+  begin
+    Result := false;
+    if ((Length(ZRapport.Text) = 0) or (ZRapport.Text = '')) or (ZRapport.Text = #$D#$A) then Exit;
+    Corps.Clear;
+    for II := 0 to ZRapport.Lines.Count -1 do
+    begin
+      if  Zrapport.Lines[II] <> RAT then
+      begin
+        Result := True;
+        Corps.Add(Zrapport.Lines[II]);
+      end;
+    end;
+  end;
+
+  function GetDestinataire : string;
+  var QQ: TQuery;
+  begin
+    Result := '';
+    QQ := OpenSQL('SELECT US_EMAIL FROM UTILISAT WHERE US_UTILISATEUR="'+V_PGI.User+'"',True,1,'',true);
+    if not QQ.eof then
+    begin
+      Result := QQ.Fields[0].AsString;
+    end;
+    Ferme(QQ);
+  end;
+
 var II : Integer;
     QQ,QQ1 : TQuery;
-    TOBEntetes,TOBLIGNEs,TOBPROV,TOBE : TOB;
+    TOBEntetes,TOBLIGNEs,TOBPROV,TOBE,TOBTVAREPART : TOB;
     IMPBSV : TImportDatasBSV;
     CurID : TID;
     SQL : String;
     Rapport : TFBTRapport;
     XX : TFPatience;
+    fsujet,fdestinataire : string;
+    fCorps: HTStringList;
 begin
-
+  fCorps := HTStringList.Create;
   TOBEntetes := TOB.Create ('LES ENTETES',nil,-1);
   TOBLIGNEs := TOB.Create ('LES LIGNES',nil,-1);
   TOBPROV := TOB.Create ('LES PROVENANCES',nil,-1);
-  IMPBSV := TImportDatasBSV.create (WithReport);
-  if WithReport then
+  TOBTVAREPART := TOB.Create ('LES REPART TVA',nil,-1);
+  IMPBSV := TImportDatasBSV.create (WithEcho);
+  Rapport := TFBTRapport.create(application.mainform);
+  if WithEcho then
   begin
-    Rapport := TFBTRapport.create(application.mainform);
     XX := FenetrePatience('Travaux en attente',aoMilieu, False,true);
     XX.lAide.Caption := 'Transfert des BAST dans la GED pour validation...';
     XX.lcreation.visible := false ;
     XX.StartK2000 ;
     XX.Refresh;
-    Rapport.MemoRapport.lines.add('Rien à traiter');
-    IMPBSV.rapport := Rapport;
-    TRY
-      TransfertGED(Rapport.MemoRapport);
-    finally
-      XX.StopK2000 ;
-    end;
+  end;
+  Rapport.MemoRapport.lines.add(RAT);
+  IMPBSV.rapport := Rapport;
+  TRY
+    TransfertGED(WithEcho,Rapport.MemoRapport);
+  finally
+    if WithEcho then XX.StopK2000 ;
+  end;
+  if WithEcho then
+  begin
     XX.lAide.Caption := 'Génération des documents en Attente ...';
     XX.StartK2000 ;
     XX.Refresh;
@@ -489,6 +535,7 @@ begin
       begin
         TOBLIGNEs.ClearDetail;
         TOBPROV.ClearDetail;
+        TOBTVAREPART.ClearDetail;
         TOBE := TOBEntetes.detail[II];
         CurId := IMPBSV.AddNewEntete(TOBEntetes.detail[II]);
         if CurId < 0 then Continue;
@@ -503,6 +550,7 @@ begin
           TOBLIGNEs.LoadDetailDB('BSVLIGNES','','',QQ1,false);
         end;
         ferme (QQ1);
+        //
         if TOBLIGNEs.Detail.count > 0 then
         begin
           IMPBSV.AddDetails (TOBLIGNES,CurID);
@@ -521,6 +569,19 @@ begin
           if TOBPROV.detail.count = 0 then continue;
           IMPBSV.SetAllTreated (CurID,TOBPROV);
         end;
+        //
+        SQL := 'SELECT * FROM BSVTVAREPART WHERE '+
+                        'B13_FOURNISSEUR = "'+ TOBE.GetString('B10_FOURNISSEUR')+'" AND '+
+                        'B13_NATUREPIECE = "'+ TOBE.GetString('B10_NATUREPIECE')+'" AND '+
+                        'B13_NUMERODOC = "'+ TOBE.GetString('B10_NUMERODOC')+'"';
+        QQ1 := openSql (SQL,True,-1,'',true);
+        if not QQ1.eof then
+        begin
+          TOBTVAREPART.LoadDetailDB('BSVLIGNES','','',QQ1,false);
+          IMPBSV.SetTvaRepart (CurID,TOBTVAREPART);
+        end;
+        ferme (QQ1);
+
       end;
     end;
     TOBLIGNEs.ClearDetail;
@@ -532,18 +593,31 @@ begin
     end;
     //
   finally
-    if (WithReport) and (Rapport <> nil) then
+    if (WithEcho) and (Rapport <> nil) then
     begin
       XX.StopK2000 ;
       XX.Free;
       Rapport.ShowModal;
-      Rapport.free;
+    end else if FinalySendMail then
+    begin
+      fdestinataire := GetDestinataire;
+      if fdestinataire <> '' then
+      begin
+        if PrepareMessage (Rapport.MemoRapport,fCorps) then
+        begin
+          SendMail('Compte rendu des échanges BSV-LSE-POC',fdestinataire , '', fCorps, '', True, 1, '', '');
+        end;
+      end;
     end;
+    Rapport.free;
     //
     TOBPROV.free;
     TOBEntetes.free;
     TOBLIGNEs.free;
     IMPBSV.free;
+    TOBTVAREPART.free;
+    fCorps.free;
+
   end;
 end;
 
@@ -735,7 +809,7 @@ begin
 end;
 
 function TImportDatasBSV.AddNewEntete(TOBEntete: TOB): TID;
-var TOBNAT,TOBTIERS,TOBDOC : TOB;
+var TOBNAT,TOBTIERS,TOBDOC,TOBREP : TOB;
     Nature,Tiers,Affaire : string;
     Numdoc : string;
     DateDoc : TDateTime;
@@ -782,6 +856,15 @@ begin
     TOBDOC.SetString('GP_AFFAIRE3',P3);
     TOBDOC.SetString('GP_AVENANT',Av);
     Result := ListDoc.Add(TOBDOC);
+    TOBDOC.AddChampSupValeur('ID',result);
+    // -- LES REPART DE TVA --
+    TOBREP := TOBREPARTS.FindFirst (['ID'],[Result],false);
+    if TOBREP = nil then
+    begin
+      TOBREP := TOB.Create ('UNE REPART',nil,-1);
+      TOBREP.AddChampSupValeur('ID',result);
+      TOBREP.ChangeParent(TOBREPARTS,-1);
+    end;
   end;
 end;
 
@@ -829,6 +912,7 @@ end;
 constructor TImportDatasBSV.create (WithReport : Boolean=false);
 begin
   TOBPieces := TOB.create ('LES DOCUMLENTS',nil,-1);
+  TOBREPARTS := TOB.Create('LES REPARTS / DOC',nil,-1);
   ListDoc := TListTOB.Create;
   WithRaport := WithReport;
   TOBArticlesPlus := TOB.Create ('LES ART',nil,-1);
@@ -837,9 +921,22 @@ end;
 destructor TImportDatasBSV.destroy;
 begin
   TOBPieces.free;
+  TOBREPARTS.free;
   ListDoc.Free;
   TOBArticlesPlus.free;
   inherited;
+end;
+
+function TImportDatasBSV.findRepartTva (ID : Integer) : Tob;
+var TT : TOB;
+begin
+  Result := nil;
+  TT := TOBREPARTS.FindFirst(['ID'],[ID],true);
+  if TT <> nil then
+  begin
+    if TT.Detail.Count = 0 then Exit;
+    Result := TT;
+  end;
 end;
 
 function TImportDatasBSV.Finalise: boolean;
@@ -864,6 +961,7 @@ begin
           for KK := 0 to TOBT.Detail.Count -1 do
           begin
             TOBD := TOBT.detail[KK];
+            XX.GTOBREPARTVA := findRepartTva (TOBD.GetInteger('ID'));
             TheResult := XX.GenereDocument(TOBD);
             EnregistreAction (TOBN,TOBT,TOBD,XX.result);
             if TheREsult.ErrorResult = OeOk then  ClotureScan (TOBD);
@@ -1011,6 +1109,26 @@ begin
   Result := (TOBPieces.Detail.count >0);
 end;
 
+function TImportDatasBSV.SetTvaRepart(IdEntete: TID;TOBTVAREPART: TOB): boolean;
+var TT : TOB;
+    II : integer;
+    TOBD,TL : TOB;
+begin
+  if TOBTVAREPART.detail.count = 0 then exit;
+  TT := TOBREPARTS.FindFirst(['ID'],[IdEntete],true); if TT = nil then Exit;
+  for II := 0 to TOBTVAREPART.detail.count -1 do
+  begin
+    TL := TOBTVAREPART.detail[II];
+    TOBD := TOB.Create ('PIECEREPARTTVA',TT,-1);
+    TOBD.SetString('BP8_GENERAL',TL.GetString('B13_GENERAL'));
+    TOBD.SetString('BP8_FAMILLENIV2',TL.GetString('B13_FAMILLENIV2'));
+    TOBD.SetString('BP8_FAMILLETAXE1',TL.GetString('B13_FAMILLETAXE1'));
+    TOBD.SetDouble('BP8_BASEHT',TL.GetDouble('B13_BASEHT'));
+    TOBD.SetDouble('BP8_TAUXTAXE',TL.GetDouble('B13_TAUXTAXE'));
+    TOBD.SetDouble('BP8_MONTANTTAXE',TL.GetDouble('B13_MONTANTTAXE'));
+  end;
+end;
+
 { TListTOB }
 
 function TListTOB.Add(AObject: TOB): Integer;
@@ -1026,7 +1144,6 @@ end;
 procedure TListTOB.SetItems(Indice: integer; const Value: TOB);
 begin
   Inherited Items[Indice]:= Value;
-
 end;
 
 end.

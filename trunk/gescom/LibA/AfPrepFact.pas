@@ -1338,7 +1338,6 @@ BEGIN
    // remettre le montant à) 1
    GereEcheancesGC(TOBPiece_OK,TOBTiers,TOBEches,NIL,Nil,nil,nil,taCreat,DEV,False);
 // MAJ des prix valo et des stocks , trt nomenclature
-// ValideLesLignes(TobPiece_OK, TOBArticles,TOBNomenclature,False) ;
 
   ValideAnalytiques(TOBPiece_OK, TOBAnaP, TOBAnaS);
   ValideLesAdresses(TOBPiece_OK, TOBPiece_OK, TOBAdresses) ;
@@ -1354,7 +1353,7 @@ for zz:=0  to Tobpiece_ok.Detail.count-1 do
     TOBA:=FindTOBArtRow(TOBPiece_OK,TOBArticles,zz+1) ;
     if TOBA <> Nil then ChargeAjouteCompta(TOBCpta,TOBPiece_OK,ztob,TOBA,TOBTiers,Nil,TOBaffaire,True) ;
     end;
-   PassationComptable(TOBPiece_OK, TobOuvrages,TOBOuvragesP,TOBBases,TOBBasesL, TOBEches, nil,nil,TOBTiers, TOBArticles, TOBCpta, Nil, TOBPorcs, TOBPieceRG, Nil, nil,nil,nil,TOBVTECOLL,DEV, OldEcr, OldStk, True);
+   PassationComptable(TOBPiece_OK, TobOuvrages,TOBOuvragesP,TOBBases,TOBBasesL, TOBEches, nil,nil,TOBTiers, TOBArticles, TOBCpta, Nil, TOBPorcs, TOBPieceRG, Nil, nil,nil,nil,TOBVTECOLL,nil,DEV, OldEcr, OldStk, True);
    LibereParamTimbres;
    TOBPiece_OK.InsertDBByNivel(False) ;  // gm 25/04/2002
    TOBBases.InsertDB(Nil) ;
@@ -1413,7 +1412,7 @@ Begin
             stapprec := ',AFF_DATESITUATION ='+'"'+UsDateTime(TobEchFFact.GetValue('AFA_DATEECHE'))+'"'+
      			 ',AFF_NUMSITUATION ="'+inttostr(TobEchFFact.GetValue('AFA_NUMECHE'))+'"';
     End;
-     Req := 'UPDATE AFFAIRE SET AFF_NUMDERGENER ='+'"'+Numdoc+'"'
+     Req := 'UPDATE AFFAIRE SET AFF_NUMDERGENER ='+'"'+Numdoc+'", AFF_DATEMODIF="' + USDATETIME(NowH) + '" '
  		 + stapprec
      +' WHERE AFF_AFFAIRE='+'"'+CodeAffaire+'"';
        ExecuteSQL(Req);

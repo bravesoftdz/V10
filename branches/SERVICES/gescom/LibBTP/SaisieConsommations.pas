@@ -220,7 +220,8 @@ Type
     OkNumCol 			: Boolean;
     OkSaisEquipe  : Boolean;
     nbcolsInListe : Integer;
-    OkSCETEC      : Boolean;
+    NoGestAppelByInt : Boolean;
+    ValoOnlyPV    : Boolean;
 
     // -- Colonnes dans les grids
     G_SELECT			: integer;
@@ -1120,7 +1121,8 @@ begin
 
 	AppliqueFontDefaut (THRichEditOle(GetControl('RETOURINT')));
 
-  if VH_GC.BTCODESPECIF = '003' then OkSCETEC := True else OkSCETEC := False;
+  NoGestAppelByInt  := GetParamSocSecur('SO_NOGESTAPPELBYINT', False);
+  ValoOnlyPV        := GetParamSocSecur('SO_VALOONLYPV', False);
 
   TypeSaisie := Copy(S,14,12);
   OkSaisEquipe := GetParamSocSecur('SO_BTSAISEQUIPE',false);
@@ -1153,7 +1155,6 @@ begin
      CHOIX_CHANTIERClick(Self);
   end;
   //
-  //if OkSCETEC then THPanel(GetControl('PANELAPPEL')).Visible := False;
   //
   TToolBarButton97(GetControl('BDUPLICCONSO')).visible := false;
 
@@ -1380,7 +1381,7 @@ begin
   TOBL.InitValeurs;
   AddLesSupLignesConso (TOBL);
   WithMajPrix := true;
-
+  
   LLabelHeure.Caption := '';
   LLabelEtat.Caption  := '';
   LLabelTiers.Caption := '';
@@ -1454,6 +1455,13 @@ begin
            TOBL.putValue ('BCO_RESSOURCE', trim(CODERESSOURCE.text));
            TOBL.putValue ('LIBELLEMO', GetMainDoeuvre(CODERESSOURCE.text));
            SetInfoRessource (TOBL,TOBRESSOURCE,WithMajPrix,True,PrestationDefaut);
+           if ValoOnlyPV then
+           begin
+             TOBL.PutValue('BCO_DPA',   0.00);
+             TOBL.PutValue('BCO_DPR',   0.00);
+             TOBL.PutValue ('_PA_INIT', 0.00);
+             TOBL.PutValue ('_PR_INIT', 0.00);
+           end;
          end;
          if (TheMode = TgsMOExt) and (TOBRessource.Getvalue('ARS_TYPERESSOURCE') = 'ST') then
          begin
@@ -1816,7 +1824,15 @@ begin
   if Mode = TgsMo then
   begin
     if Arow <= TOBMO.detail.count then TOBL := TOBMO.detail[Arow-1];
-  end else if Mode = TgsMoEXT then
+    If ValoOnlyPV then
+    begin
+      TOBL.PutValue('BCO_DPA',        0.00);
+      TOBL.PutValue('BCO_DPR',        0.00);
+      TOBL.PutValue('BCO_MONTANTACH', 0.00);
+      TOBL.PutValue('BCO_MONTANTPR',  0.00);
+    end;
+  end
+  else if Mode = TgsMoEXT then
   begin
     if Arow <= TOBMOEXT.detail.count then TOBL := TOBMOEXT.detail[Arow-1];
   end else if Mode = TgsFrs then
@@ -2115,7 +2131,6 @@ begin
   if (GetActiveTabSheet('PGTEMPS').Name = 'THEURES') then
   	 begin
 		 ControleChangeOnglet(GHeures, cancel);
-     PHEURES.Enabled := not OkSCETEC;
      //if (CHOIX_MO.checked) Or (CHOIX_RESSOURCE.checked) Or CHOIX_MOEXT.checked then BChangeEtat.visible := True;
   	 end
   else if (GetActiveTabSheet('PGTEMPS').Name = 'TFRAIS') then
@@ -2175,7 +2190,7 @@ begin
   begin
      Result := '(BCO_NATUREMOUV="MO" OR BCO_NATUREMOUV="FRS" OR BCO_NATUREMOUV="FOU")';
      result := result + ' AND BCO_RESSOURCE="'+Trim(MAINDOEUVRE.text)+'"';
-     if OkSCETEC then result := result + ' AND BCO_AFFAIRE0<>"W"';
+     if NoGestAppelByInt then result := result + ' AND BCO_AFFAIRE0<>"W"';
   end
   else if CHOIX_RESSOURCE.checked then
      begin
@@ -2616,9 +2631,6 @@ begin
   //
   CH_CHANTIER.text := 'W';
   CH_CHANTIER0.text := 'W';
-
-  GHeures.Enabled := not OkSCETEC;
-  PHEURES.Enabled := not OkSCETEC;
 
   If Assigned(Getcontrol('BDuplicSemaine')) then BDuplicSemaine.visible := False;
 
@@ -4417,6 +4429,17 @@ begin
       PGIBox (TraduireMemoire('Main d''oeuvre Fermée'),ecran.caption);
     end
     Else if NoErreur = 1 then Result := true;
+    //
+    if Choix_APPEL.Checked then
+    begin
+      if ValoOnlyPV then
+      begin
+        TOBL.PutValue('BCO_DPA',   0.00);
+        TOBL.PutValue('BCO_DPR',   0.00);
+        TOBL.PutValue ('_PA_INIT', 0.00);
+        TOBL.PutValue ('_PR_INIT', 0.00);
+      end;
+    end;
   end
   else if TOBL.GetValue('BCO_NATUREMOUV')='RES' then
   	 result := OKRessourceMAT (TOBL,valeur,true,Bidon)
@@ -4504,7 +4527,8 @@ begin
   // Article non encore référencé en TOB
   if TOBL.GetValue('BCO_NATUREMOUV')='MO'  then
   	 Begin
-  	 WithMajPrixRessource := true;
+  	 //WithMajPrixRessource := true;
+     WithMajPrixRessource := Not ValoOnlyPV;
   	 result :=  IsPrestationKnown (Valeur,TOBL,false,TgsMO);
      End
   else if TOBL.GetValue('BCO_NATUREMOUV')='RES' then
@@ -4541,6 +4565,17 @@ begin
      //
   SetInfoArticle (TOBL,TOBRessource,TOBL.GetValue('BCO_ARTICLE'),PrestationDefaut,WithMajPrixRessource);
 
+  if TOBL.GetValue('BCO_NATUREMOUV')='MO'  then
+  begin
+    if ValoOnlyPV then
+    begin
+      TOBL.PutValue('BCO_DPA',   0.00);
+      TOBL.PutValue('BCO_DPR',   0.00);
+      TOBL.PutValue ('_PA_INIT', 0.00);
+      TOBL.PutValue ('_PR_INIT', 0.00);
+    end;
+  end;
+
 end;
 
 function TOF_BTSAISIECONSO.VerifAffaire(TheMode: TGrilleModeSaisie;TOBL : TOB;valeur : string) : boolean;
@@ -4569,7 +4604,7 @@ begin
 
   if (TheMode = TgsMO) and (CHOIX_MO.Checked) then
   begin
-    If okscetec then
+    If NoGestAppelByInt then
     begin
       if Nat0 = 'W' then
       Begin
@@ -6695,7 +6730,7 @@ Begin
   //FV1 : 27/01/2014 - FS#827 - DELABOUDINIERE : Contrôle sur chantier non accepté en saisie de consommations
   //                   FS#921 - DELABOUDINIERE : Revoir les contrôles sur appels et contrats en fonction du code état
   //if not ControleAffaire(Result, Ecran.caption,'SCO') then exit;
-  If okscetec then
+  If NoGestAppelByInt then
   begin
     if Copy(Result,1,1)='W' then
     Begin
@@ -7025,6 +7060,7 @@ end;
 Procedure TOF_BTSAISIECONSO.CellExitGrid(TOBL : TOB; Grille:THGrid; Acol, Arow : Integer; TheMode : TGrilleModeSaisie; var StPrev : String; Var Cancel : Boolean);
 Var TOBLigne : TOB;
     ZoneGrille : Variant;
+    TOBTOB : TOB;
 begin
 
   if Action = taConsult then Exit;
@@ -7034,6 +7070,8 @@ begin
 
   ZoneGrille := Grille.cells[Acol,Arow];
 
+  TOBTOB := TOBL;
+
   if (stPrev <> ZoneGrille) or (ZoneGrille = '') then
   begin
     TOBLigne := TOBL.detail[Arow-1];
@@ -7041,7 +7079,7 @@ begin
     	AfficheLaLigne (TOBLigne,Grille,stColListe,Arow);
     if (TheMode = TgsRes) or (TheMode = TgsFourn ) or (TheMode = TgsMoExt) or (TheMode = TgsRecettes) then
     	if LigneFromPieces(TOBLigne) and (Acol <> G_LIBELLE) and (Acol <> G_PHASE) then AfficheLaLigne (TOBLigne,Grille,stColListe,Arow); // modif BRL 150609 : on autorise tjs la modif du libelle et de la phase
-    //Modif FV pour passage qté grille en qté à facturer qualque soit l'onglet de saisie (19062007)
+    //Modif FV pour passage qté grille en qté à facturer quelque soit l'onglet de saisie (19062007)
     if ACol = G_QTE then
     Begin
       QTEFACTURE.Text := ZoneGrille;
@@ -7105,6 +7143,7 @@ begin
         	AppliqueCoeff(TOBLigne);
         end;
       end;
+      //
       AfficheLibelle(TheMode,Acol,Arow);
       CalculeAndAfficheLaLigne(Grille,stColListe,Arow,TOBL);
       if (TypeSaisie = 'INTERVENTION') then
@@ -7221,10 +7260,24 @@ procedure TOF_BTSAISIECONSO.ChangeRessourceEtVAlorisation (TOBL: TOB);
 var WithMajPrix : boolean;
 begin
 	WithMajPrix := false;
-  if TOBL.GetValue ('BCO_NATUREMOUV')='MO' then WithMajPrix := true;
+
+  if TOBL.GetValue ('BCO_NATUREMOUV')='MO' then WithMajPrix := Not ValoOnlyPV; //WithMajPrix := true;
+
   TOBL.putValue ('BCO_RESSOURCE', Trim(MAINDOEUVRE.Text));
   TOBL.putValue ('LIBELLEMO', GetMainDoeuvre(MAINDOEUVRE.Text));
   SetInfoRessource (TOBL,TOBRESSource,WithMajPrix,false,PrestationDefaut);
+
+  if TOBL.GetValue('BCO_NATUREMOUV')='MO'  then
+  begin
+    if ValoOnlyPV then
+    begin
+      TOBL.PutValue('BCO_DPA',   0.00);
+      TOBL.PutValue('BCO_DPR',   0.00);
+      TOBL.PutValue ('_PA_INIT', 0.00);
+      TOBL.PutValue ('_PR_INIT', 0.00);
+    end;
+  end;   
+
   OKTypeHeure(TOBL,TOBL.GetValue('BCO_TYPEHEURE'),TOBTypeHeure);
 end;
 
@@ -7498,7 +7551,12 @@ var TOBLC : TOB;
 		WithMajPrix : boolean;
     Ou : Integer;
 begin
-  WithMajPrix := (Nature='MO');
+  //
+  if (Nature='MO') then
+    WithMajPrix := not ValoOnlyPV
+  else
+    WithMajPrix := False;
+
   if LigneVide (TOBRef.Detail.count,Modes) then TOBLC := TOBRef.detail[TOBRef.Detail.count-1]
   																				 else TOBLC := AddNewLigne (TOBRef,ModeS);
 
@@ -7508,6 +7566,17 @@ begin
   TOBLC.SetInteger('BCO_PAIENUMFIC',0);
   //
   SetInfoRessource (TOBLC,TOBRESS,WithMajPrix,true,PrestationDefaut);
+  //
+  if Nature='MO'  then
+  begin
+    if ValoOnlyPV then
+    begin
+      TOBL.PutValue('BCO_DPA',   0.00);
+      TOBL.PutValue('BCO_DPR',   0.00);
+      TOBL.PutValue ('_PA_INIT', 0.00);
+      TOBL.PutValue ('_PR_INIT', 0.00);
+    end;
+  end;
   //
   Ou := TOBLC.GetIndex+1;
   if Ou >= grid.RowCount then grid.RowCount := Ou+1;
@@ -7685,9 +7754,23 @@ begin
       TOBLC.putValue('BCO_LINKEQUIPE',Equipe);
       TOBLC.SetInteger('BCO_PAIENUMFIC',0);
       //
-      WithMajprix := (Nature='MO');
+      if (Nature='MO') then
+        WithMajPrix := not ValoOnlyPV
+      else
+        WithMajPrix := (Nature='MO');
+      //
       SetInfoRessource (TOBLC,TOBE,WithMajPrix,true,PrestationDefaut);
   //
+      if Nature = 'MO'  then
+      begin
+        if ValoOnlyPV then
+        begin
+          TOBL.PutValue('BCO_DPA',   0.00);
+          TOBL.PutValue('BCO_DPR',   0.00);
+          TOBL.PutValue ('_PA_INIT', 0.00);
+          TOBL.PutValue ('_PR_INIT', 0.00);
+        end;
+      end;
     end;
   end else
   begin

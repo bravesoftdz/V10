@@ -110,7 +110,7 @@ begin
                 THCheckbox(GetControl('CBEXPORTOUV')).Checked,
                 THCheckbox(GetControl('CBEXPORTMAR')).Checked,
                 THCheckbox(GetControl('CBEXPORTPREST')).Checked,
-                THmultiValComboBox(getcontrol('FAMOUV')).value, THmultiValComboBox(getcontrol('FAMART')).value);
+                THmultiValComboBox(getcontrol('FAMOUV')).value, THmultiValComboBox(getcontrol('FAMART')).value,THSpinEdit(GEtControl('NIVFAMMAX')).Value);
 end;
 
 Initialization

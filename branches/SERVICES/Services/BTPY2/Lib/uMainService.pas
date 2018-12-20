@@ -106,7 +106,7 @@ begin
             while not Terminated do
             begin
               Inc(Count);
-              if (Count >= BTPY2Exec.SecondTimeout) or (FirstExec) then
+              if (TServicesLog.CanExecuteFromPeriod(BTPY2Exec.LogValues, ServiceName_BTPY2)) and ((Count >= BTPY2Exec.SecondTimeout) or (FirstExec)) then
               begin
                 FirstExec := False;
                 Count     := 0;
@@ -125,6 +125,9 @@ begin
               end;
               Sleep(1000);
               ServiceThread.ProcessRequests(False);
+              {$IFDEF TSTSRV}
+              ShellExecute(0,'NET','STOP Synchronisation BTP Y2"',nil,nil,SW_HIDE);
+              {$ENDIF TSTSRV}
             end;
           end;
         finally

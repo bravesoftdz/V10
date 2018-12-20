@@ -76,14 +76,14 @@ uses
 
 function localRichToString(const Msg: HString): HString;
 var
-  Memo: THRichEdit;
+  Memo: THRichEditOLE;
   Panel: TPanel;
 begin
   Panel := TPanel.Create(nil);
   try
     Panel.Visible := False;
     Panel.ParentWindow := GetDesktopWindow;
-    Memo := THRichEdit.Create(Panel);
+    Memo := THRichEditOle.Create(Panel);
     Memo.Parent := Panel;
     Memo.Visible := False;
     Memo.Text := Msg; //Memo.Lines.Text := Msg;

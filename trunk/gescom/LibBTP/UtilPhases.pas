@@ -75,7 +75,12 @@ procedure ConstitueStructPhases(TOBPiece,TOBSTP : TOB);
 procedure EnvoieInfoPhaseSurLigne(TOBSTP : TOB);
 
 implementation
-uses factutil;
+uses
+  factutil
+  , UtilGC
+  , ErrorsManagement
+  , CommonTools
+  ;
 
 procedure AnnuleLignesPhases(TOBPiece : TOB);
 var SQL : String;
@@ -540,23 +545,31 @@ begin
 end;
 
 procedure TGestionPhase.Insere;
+var
+  Msg  : string;
+  okok : boolean;
 begin
   AnnulePhases (TOBPiece,GestionConsommation);
   if (GestionConsommation = TTcoLivraison) then GestionConso.ReajusteReception;
   if not TOBPhasesDet.InsertDB (nil,true) then V_PGI.IOError := OeUnknown;
   if (V_PGI.IOError = OeOk ) and (ISPieceGeneratricePhase(TOBpiece.GetValue('GP_NATUREPIECEG')))  then
   begin
-    if not TOBPhases.InsertDB (nil,true) then
+    try
+      okok := TOBPhases.InsertDB (nil,true);
+      if (EstSpecifPOC) and (V_PGI.IOError = OeOk) then
+      begin
+        if TOBPiece.GetString('GP_AFFAIRE') <> '' then
+          ExecuteSQL('UPDATE AFFAIRE SET AFF_DATEMODIF="'+USDATETIME(Nowh)+'" WHERE AFF_AFFAIRE="'+TOBPiece.GetString('GP_AFFAIRE')+'"' );
+      end;
+    except
+      on E: Exception do
+        Msg := E.Message;
+    end;
+    if not okok then
     begin
       MessageValid := 'Erreur mise à jour CONSOS (2)';
+      TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s du détail des phases (LIGNEPHASES)%s.', [TUtilErrorsManagement.GetUpdateError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
       V_PGI.IOError := OeUnknown;
-    end;
-    if (VH_GC.BTCODESPECIF = '001') then
-    begin
-      if V_PGI.IOError = OeOk then
-      begin
-        if TOBPiece.GetString('GP_AFFAIRE') <> '' then ExecuteSQL('UPDATE AFFAIRE SET AFF_DATEMODIF="'+USDATETIME(Nowh)+'" WHERE AFF_AFFAIRE="'+TOBPiece.GetString('GP_AFFAIRE')+'"' );
-      end;
     end;
   end;
 end;

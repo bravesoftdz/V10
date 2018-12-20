@@ -38,13 +38,13 @@ inherited FAssistAffecteDepot: TFAssistAffecteDepot
     Top = 308
     Width = 70
     Height = 23
-    Anchors = [akRight, akBottom]
     Caption = 'Imprimer'
+    Anchors = [akRight, akBottom]
     Flat = False
     OnClick = bImprimerClick
   end
   inherited P: THPageControl2
-    ActivePage = TSExplications
+    ActivePage = TSRapport
     object TSExplications: TTabSheet
       Caption = 'Explications'
       object GBExplications: TGroupBox

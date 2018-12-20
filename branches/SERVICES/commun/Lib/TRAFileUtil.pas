@@ -102,6 +102,7 @@ var
 begin
   if Data <> '' then
   begin
+    if LogValues.DebugEvents = 2 then TServicesLog.WriteLog(ssbylLog, Format('%s - Start FileTraGeneration.GetThirdLine - Data : %s', [WSCDS_DebugMsg, Data]), ServiceName_BTPY2, LogValues, 0);
     Data      := ExtractData(Data);
     MCurrency := Tools.GetStValueFromTSl(Data , 'T_MULTIDEVISE');
     Currency  := Tools.iif(MCurrency = 'X', '', Tools.GetStValueFromTSl(Data , 'T_DEVISE'));
@@ -186,6 +187,7 @@ function FileTraGeneration.GetBankIdLine(Data : string) : string;
 begin
   if Data <> '' then
   begin
+    if LogValues.DebugEvents = 2 then TServicesLog.WriteLog(ssbylLog, Format('%s - Start FileTraGeneration.GetBankIdLine - Data : %s', [WSCDS_DebugMsg, Data]), ServiceName_BTPY2, LogValues, 0);
     Data   := ExtractData(Data);
     Result := GetRecordStartLine(trarcBankId)
             + Tools.FormatValue(Tools.GetStValueFromTSl(Data, 'R_AUXILIAIRE')   , traaLeft, 17)
@@ -218,6 +220,7 @@ function FileTraGeneration.GetAnalyticalSection(Data : string) : string;
 begin
   if Data <> '' then
   begin
+    if LogValues.DebugEvents = 2 then TServicesLog.WriteLog(ssbylLog, Format('%s - Start FileTraGeneration.GetAnalyticalSection - Data : %s', [WSCDS_DebugMsg, Data]), ServiceName_BTPY2, LogValues, 0);
     Data   := ExtractData(Data);
     Result := GetRecordStartLine(trarcAnalyticalSection)
             + Tools.FormatValue(Tools.GetStValueFromTSl(Data, 'S_SECTION'), traaLeft, 17)
@@ -245,6 +248,7 @@ function FileTraGeneration.GetCurrency(Data : string) : string;
 begin
   if Data <> '' then
   begin
+    if LogValues.DebugEvents = 2 then TServicesLog.WriteLog(ssbylLog, Format('%s - Start FileTraGeneration.GetCurrency - Data : %s', [WSCDS_DebugMsg, Data]), ServiceName_BTPY2, LogValues, 0);
     Data   := ExtractData(Data);
     Result := GetRecordStartLine(trarcCurrency)
             + Tools.FormatValue(Tools.GetStValueFromTSl(Data, 'D_DEVISE')        , traaLeft, 3)
@@ -274,7 +278,7 @@ var
 begin
   if Data <> '' then
   begin
-    if LogValues.DebugEvents > 0 then TServicesLog.WriteLog(ssbylLog, Format('%s - Start FileTraGeneration.GetChangeRate - Data : %s', [WSCDS_DebugMsg, Data]), ServiceName_BTPY2, LogValues, 0);
+    if LogValues.DebugEvents = 2 then TServicesLog.WriteLog(ssbylLog, Format('%s - Start FileTraGeneration.GetChangeRate - Data : %s', [WSCDS_DebugMsg, Data]), ServiceName_BTPY2, LogValues, 0);
     Data      := ExtractData(Data);
     FreeDate1 := Tools.GetStValueFromTSl(Data, 'H_DATECOURS');
     if StrToDateTime(FreeDate1) < 2 then FreeDate1 := DateTimeToStr(2);
@@ -295,6 +299,7 @@ function FileTraGeneration.GetPaymentMode(Data : string) : string;
 begin
   if Data <> '' then
   begin
+    if LogValues.DebugEvents = 2 then TServicesLog.WriteLog(ssbylLog, Format('%s - Start FileTraGeneration.GetPaymentMode - Data : %s', [WSCDS_DebugMsg, Data]), ServiceName_BTPY2, LogValues, 0);
     Data   := ExtractData(Data);
     Result := GetRecordStartLine(trarcPaymentMode)
             + Tools.FormatValue(Tools.GetStValueFromTSl(Data, 'MP_MODEPAIE')    , traaLeft, 3)
@@ -318,6 +323,7 @@ var
 begin
   if Data <> '' then
   begin
+    if LogValues.DebugEvents = 2 then TServicesLog.WriteLog(ssbylLog, Format('%s - Start FileTraGeneration.GetPaymentCondition - Data : %s', [WSCDS_DebugMsg, Data]), ServiceName_BTPY2, LogValues, 0);
     Data   := ExtractData(Data);
     Result := GetRecordStartLine(trarcPaymentCondition)
             + Tools.FormatValue(Tools.GetStValueFromTSl(Data, 'MR_MODEREGLE')     , traaLeft, 3)
@@ -341,6 +347,7 @@ function FileTraGeneration.GetChoixCod(Data : string) : string;
 begin
   if Data <> '' then
   begin
+    if LogValues.DebugEvents = 2 then TServicesLog.WriteLog(ssbylLog, Format('%s - Start FileTraGeneration.GetChoixCod - Data : %s', [WSCDS_DebugMsg, Data]), ServiceName_BTPY2, LogValues, 0);
     Data   := ExtractData(Data);
     Result := GetRecordStartLine(trarcChoixCod)
             + Tools.FormatValue(Tools.GetStValueFromTSl(Data, 'CC_TYPE')   , traaLeft, 3)
@@ -359,14 +366,13 @@ var
   FreeDate2 : string;
   FreeDate3 : string;
 begin
-  if LogValues.DebugEvents > 0 then TServicesLog.WriteLog(ssbylLog, Format('%s - Start FileTraGeneration.GetContact - Data : %s', [WSCDS_DebugMsg, Data]), ServiceName_BTPY2, LogValues, 0);
+  if LogValues.DebugEvents = 2 then TServicesLog.WriteLog(ssbylLog, Format('%s - Start FileTraGeneration.GetContact - Data : %s', [WSCDS_DebugMsg, Data]), ServiceName_BTPY2, LogValues, 0);
   if Data <> '' then
   begin
     Data      := ExtractData(Data);
     FreeDate1 := Tools.GetStValueFromTSl(Data, 'C_DATELIBRE1');
     FreeDate2 := Tools.GetStValueFromTSl(Data, 'C_DATELIBRE2');
     FreeDate3 := Tools.GetStValueFromTSl(Data, 'C_DATELIBRE3');
-    if LogValues.DebugEvents > 0 then TServicesLog.WriteLog(ssbylLog, Format('%s - Start FileTraGeneration.GetContact - FreeDate1 : %s, FreeDate2 : %s, FreeDate3 : %s', [WSCDS_DebugMsg, Data, FreeDate1, FreeDate2, FreeDate3]), ServiceName_BTPY2, LogValues, 0);
     if StrToDateTime(FreeDate1) < 2 then FreeDate1 := DateTimeToStr(2);
     if StrToDateTime(FreeDate2) < 2 then FreeDate2 := DateTimeToStr(2);
     if StrToDateTime(FreeDate3) < 2 then FreeDate3 := DateTimeToStr(2);

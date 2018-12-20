@@ -60,19 +60,19 @@ type
     TOBSSTRAIT     : TOB;
     TOBPIECE       : TOB;
     //
-    constructor create;
+    constructor create (NaturePiece : string);
     destructor destroy; override;
     procedure SetModified;
     procedure MajTobs;
   end;
 
 
-procedure ExportBimetre (DateTrait : TDateTime; DirOut,FileName : string; ExportOUV,ExportMAR,ExportPre : boolean; FamOuv,FamMAr : String);
+procedure ExportBimetre (DateTrait : TDateTime; DirOut,FileName : string; ExportOUV,ExportMAR,ExportPre : boolean; FamOuv,FamMAr : String; NivFamMax : integer);
 procedure RecupInfosEnteteBIm(Repertoire,NomFic : string; TOBL : TOB);
 function DecodeDateBim (TheDateBIM: string) : TDateTime;
-function ConstitueDocument(Repertoire : string; TOBL : TOB; RAPPORT: THRichEditOLE) : boolean;
+function ConstitueDocument(NaturePiece : string; Repertoire : string; TOBL : TOB; RAPPORT: THRichEditOLE) : boolean;
 
-
+var CodeDefaut : string;
 implementation
 uses FactTiers,
      FactTOB,
@@ -219,7 +219,7 @@ end;
 
 
 
-procedure ExportePrestations (LIGNES : IXMLNode; FamMar : string; IdLigPere : integer; Var Idlig : integer);
+procedure ExportePrestations (LIGNES : IXMLNode; FamMar : string; IdLigPere : integer; NivFamMAx : Integer; Var Idlig : integer);
 
   function AddEnteteMateriaux (ROOT : IXMLNode; IDLigPere : Integer; var IdLig : integer) : IXMLNode ;
   var DD : IXMLNode;
@@ -290,7 +290,7 @@ begin
         NFAM1 := nil;
       end;
 
-      if (QQ.Fields[1].AsString <> '') then
+      if (QQ.Fields[1].AsString <> '') and (NivFamMax > 1) then
       begin
         if (FamNiv2 <> QQ.Fields[1].AsString) and (QQ.Fields[1].AsString <> '') then
         begin
@@ -304,7 +304,7 @@ begin
         end;
       end else NFAM2 := nil;
 
-      if (QQ.Fields[2].AsString <> '') then
+      if (QQ.Fields[2].AsString <> '') and (NivFamMax > 2) then
       begin
         if (FamNiv3 <> QQ.Fields[2].AsString) and (QQ.Fields[2].AsString <> '') then
         begin
@@ -330,7 +330,7 @@ begin
 end;
 
 
-procedure ExporteMateriaux (LIGNES : IXMLNode; FamMar : string; IdLigPere : integer; Var Idlig : integer);
+procedure ExporteMateriaux (LIGNES : IXMLNode; FamMar : string; IdLigPere : integer; NivFamMax : Integer; Var Idlig : integer);
 
   function AddEnteteMateriaux (ROOT : IXMLNode; IDLigPere : Integer; var IdLig : integer) : IXMLNode ;
   var DD : IXMLNode;
@@ -398,7 +398,7 @@ begin
         end;
       end else NFAM1 := nil;
 
-      if (QQ.Fields[1].AsString <> '') then
+      if (QQ.Fields[1].AsString <> '') and (NivFamMax > 1) then
       begin
         if (FamNiv2 <> QQ.Fields[1].AsString) and (QQ.Fields[1].AsString <> '') then
         begin
@@ -412,7 +412,7 @@ begin
         end;
       end else NFAM2 := nil;
 
-      if (QQ.Fields[2].AsString <> '') then
+      if (QQ.Fields[2].AsString <> '') and (NivFamMax > 2) then
       begin
         if (FamNiv3 <> QQ.Fields[2].AsString) and (QQ.Fields[2].AsString <> '') then
         begin
@@ -438,7 +438,7 @@ begin
 end;
 
 
-procedure ExporteOuvrages (LIGNES : IXMLNode; FamOuv : string; IdLigPere : integer; Var Idlig : integer);
+procedure ExporteOuvrages (LIGNES : IXMLNode; FamOuv : string; IdLigPere : integer; NivFamMax : Integer; Var Idlig : integer);
 
   function AddEnteteOuvrage (ROOT : IXMLNode; IDLigPere : Integer; var IdLig : integer) : IXMLNode ;
   var DD : IXMLNode;
@@ -457,7 +457,7 @@ procedure ExporteOuvrages (LIGNES : IXMLNode; FamOuv : string; IdLigPere : integ
     DD := Result.AddChild('INFO');
     inc(IdLig);
   end;
-  
+
 var QQ: TQuery;
     SQl: string;
     FamNiv1,FamNiv2,FamNiv3 : string;
@@ -506,7 +506,7 @@ begin
         end;
       end else NFAM1 := nil;
 
-      if (QQ.Fields[1].AsString <> '') then
+      if (QQ.Fields[1].AsString <> '') and (NivFamMax > 1) then
       begin
         if (FamNiv2 <> QQ.Fields[1].AsString) and (QQ.Fields[1].AsString <> '') then
         begin
@@ -520,7 +520,7 @@ begin
         end;
       end else NFAM2 := nil;
 
-      if (QQ.Fields[2].AsString <> '') then
+      if (QQ.Fields[2].AsString <> '') and (NivFamMax > 2) then
       begin
         if (FamNiv3 <> QQ.Fields[2].AsString) and (QQ.Fields[2].AsString <> '') then
         begin
@@ -552,7 +552,7 @@ begin
   Result := Format('%04d-%.02d-%.02d',[Year,Month,Day]);
 end;
 
-procedure ExportBimetre (DateTrait : TDateTime; DirOut,FileName : string; ExportOUV,ExportMAR,ExportPre : boolean;  FamOuv,FamMAr : String);
+procedure ExportBimetre (DateTrait : TDateTime; DirOut,FileName : string; ExportOUV,ExportMAR,ExportPre : boolean;  FamOuv,FamMAr : String; NivFamMax : integer);
 var XmlDoc : IXMLDocument ;
     Root,NodeDocs,NodeDoc,headerDoc,TD,LD,CB,DD,TE,CT,Body,LIGNES,Localisation : IXMLNode;
     IdLigP,IDLig : Integer;
@@ -599,9 +599,9 @@ begin
   DD := LIGNES.AddChild('INFO');
   IdLigP := IDLig;
   inc(IDLig);
-  if ExportOUV then ExporteOuvrages (LIGNES, FamOuv, IdLigP, IdLig);
-  if ExportMAR then ExporteMateriaux (LIGNES, FamMAr, IdLigP, IdLig);
-  if ExportPre  then ExportePrestations (LIGNES, FamMAr, IdLigP, IdLig);
+  if ExportOUV then ExporteOuvrages (LIGNES, FamOuv, IdLigP,NivFamMax, IdLig);
+  if ExportMAR then ExporteMateriaux (LIGNES, FamMAr, IdLigP,NivFamMax, IdLig);
+  if ExportPre  then ExportePrestations (LIGNES, FamMAr, IdLigP,NivFamMax, IdLig);
   //
   XmlDoc.SaveToFile(IncludeTrailingBackslash(DirOut)+FileName);
   XmlDoc:= nil;
@@ -655,7 +655,7 @@ begin
                       else TOBL.SetSTring('LIBTYPE','Inconnu');
                     end else if (INFO.NodeName ='DATECREATION') or (INFO.NodeName ='DATEDOC') then
                     begin
-                      TOBL.SetDateTime(INFO.NodeName,DecodeDateBIM(INFO.NodeValue));
+                      if not VarIsNull(INFO.NodeValue) then TOBL.SetDateTime(INFO.NodeName,DecodeDateBIM(INFO.NodeValue));
                     end else if INFO.NodeName = 'TIERS' then
                     begin
                       for MM := 0 to INFO.ChildNodes.count -1 do
@@ -663,12 +663,12 @@ begin
                         INFOC := INFO.ChildNodes[MM];
                         if TOBL.FieldExists(INFOC.NodeName) then
                         begin
-                          TOBL.SetString(INFOC.NodeName,INFOC.NodeValue);
+                          if not VarIsNull(INFOC.NodeValue) then TOBL.SetString(INFOC.NodeName,INFOC.NodeValue);
                         end;
                       end;
                     end else if TOBL.FieldExists(INFO.NodeName) then
                     begin
-                      TOBL.SetString(INFO.NodeName,INFO.NodeValue);
+                      if not VarIsNull(INFO.NodeValue) then TOBL.SetString(INFO.NodeName,INFO.NodeValue);
                     end;
                   end;
                 end;
@@ -683,7 +683,7 @@ begin
   end;
 end;
 
-function ConstitueDocument(Repertoire : string; TOBL : TOB; RAPPORT: THRichEditOLE) : boolean;
+function ConstitueDocument(NaturePiece : string; Repertoire : string; TOBL : TOB; RAPPORT: THRichEditOLE) : boolean;
 
   function ConstitueEntete(TX : TDataTransport;TOBL : TOB) : boolean;
   var CodeTiers,DomaineSoc,Etablissement : string;
@@ -715,14 +715,14 @@ function ConstitueDocument(Repertoire : string; TOBL : TOB; RAPPORT: THRichEditO
     if CodeTiers = ''  then CodeTiers := GetParamSocSecur('SO_BTBIMCLIENTDEF','');
     if DomaineSoc = '' then DomaineSoc:= GetParamSocSecur('SO_BTDOMAINEDEFAUT','');
     //
-    Result := (RemplirTOBTiers (TX.TOBTiers,CodeTiers,'DBT',True)=trtOk);
+    Result := (RemplirTOBTiers (TX.TOBTiers,CodeTiers,NaturePiece,True)=trtOk);
     if not result then
     begin
       PGIInfo('Le client par défaut n''existe pas');
       Exit;
     end;
-    TX.TOBPiece.SetString ('GP_NATUREPIECEG','DBT');
-    TX.TOBPiece.SetString ('GP_SOUCHE',GetSoucheG('DBT',Etablissement,DomaineSoc));
+    TX.TOBPiece.SetString ('GP_NATUREPIECEG',NaturePiece);
+    TX.TOBPiece.SetString ('GP_SOUCHE',GetSoucheG(NaturePiece,Etablissement,DomaineSoc));
     //
     ValNumP := T_ValideNumPieceVide.Create;
     ValNumP.Souche := TX.TOBPiece.GetString ('GP_SOUCHE');
@@ -732,7 +732,7 @@ function ConstitueDocument(Repertoire : string; TOBL : TOB; RAPPORT: THRichEditO
     //
     if TX.TOBPiece.GetInteger('GP_NUMERO') = 0 then begin Result := false; Exit; end;
     //
-    TX.TOBpiece.setSTring('GP_VENTEACHAT',GetInfoParPiece('DBT', 'GPP_VENTEACHAT'));
+    TX.TOBpiece.setSTring('GP_VENTEACHAT',GetInfoParPiece(NaturePiece, 'GPP_VENTEACHAT'));
     TX.TOBPIECE.setString('GP_DEVISE',TX.TOBTiers.GetString('T_DEVISE'));
     TX.DEV.Code := TX.TOBPIECE.GetValue('GP_DEVISE');
     GetInfosDevise(TX.DEV);
@@ -751,7 +751,7 @@ function ConstitueDocument(Repertoire : string; TOBL : TOB; RAPPORT: THRichEditO
     TX.TOBPiece.SetString('GP_REGIMETAXE', VH^.RegimeDefaut);
     if VH^.EtablisDefaut <> '' then TX.TOBPiece.SetString('GP_ETABLISSEMENT', VH^.EtablisDefaut);
     if VH_GC.GCDepotDefaut <> '' then TX.TOBPiece.SetString('GP_DEPOT', VH_GC.GCDepotDefaut);
-    TX.TOBPiece.setString('GP_SOUCHEG',GetSoucheG('DBT', TX.TOBPiece.GetValue('GP_ETABLISSEMENT'), DomaineSoc));
+    TX.TOBPiece.setString('GP_SOUCHEG',GetSoucheG(NaturePiece, TX.TOBPiece.GetValue('GP_ETABLISSEMENT'), DomaineSoc));
     //
     TiersVersPiece(TX.TOBTiers, TX.TOBPiece);
     // Représentant du tiers
@@ -871,6 +871,10 @@ function ConstitueDocument(Repertoire : string; TOBL : TOB; RAPPORT: THRichEditO
     indice := TOBpere.GetIndex;
     TOBL := AddLIgne (TX,Indice);
     TOBA := GetArticle (TX,CodeBiblio);
+    if TOBA = nil then
+    begin
+      TOBA := GetArticle (TX,CodeDefaut);
+    end;
     if TOBA <> nil then
     begin
       TOBL.PutValue('GL_ARTICLE',TOBA.GetString('GA_ARTICLE'));
@@ -994,8 +998,15 @@ var TX : TDataTransport;
     DOCUMENTS,D1,DOCUMENT,LIGNES : IXMLNode;
     II,JJ,KK,LL : Integer;
 begin
+  CodeDefaut := GetParamSocSecur('SO_BTARTICLEDIV','');
+  if CodeDefaut = '' then
+  begin
+    result := false;
+    PgiError('l''article par défaut des appels d''offres n''est pas renseigné');
+    Exit;
+  end;
   result := true;
-  TX := TDataTransport.create;
+  TX := TDataTransport.create (NaturePiece);
   XmlDoc := NewXMLDocument();
   try
     if not ConstitueEntete(TX,TOBL) then Exit;
@@ -1066,7 +1077,7 @@ end;
 
 { TDataTransport }
 
-constructor TDataTransport.create;
+constructor TDataTransport.create(NaturePiece : string);
 begin
   TOBPiece:=TOB.Create('PIECE',Nil,-1)     ;
   AddLesSupEntete (TOBPiece);
@@ -1128,8 +1139,8 @@ begin
 
   InitStructureETL;
   InitStructureOUV;
-  MemoriseChampsSupLigneETL ('DBT',True);
-  MemoriseChampsSupLigneOUV ('DBT');
+  MemoriseChampsSupLigneETL (NaturePiece,True);
+  MemoriseChampsSupLigneOUV (NaturePiece);
 end;
 
 destructor TDataTransport.destroy;

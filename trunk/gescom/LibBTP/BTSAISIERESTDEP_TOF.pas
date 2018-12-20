@@ -13,7 +13,7 @@ Uses StdCtrls,
      Controls, 
      Classes, 
 {$IFNDEF EAGLCLIENT}
-     db, 
+     db,
      {$IFNDEF DBXPRESS} dbtables, {$ELSE} uDbxDataSet, {$ENDIF} 
      mul, 
 {$else}
@@ -169,7 +169,6 @@ Type
     TotalRealiseMARPA     : Double;
     TotalReaDepuisMAR     : Double;
     TotalReaDepuisMARPA   : Double;
-    TotalQteReaDepuisMAR  : Double;
     TotalTheoMAR          : Double;
     TotalTheoMARPA        : Double;
     TotalResteMAR         : Double;
@@ -194,8 +193,6 @@ Type
     TotalBudgetFAC        : Double;
     TotalRealiseFAC       : Double;
     TotalMtDepuisFAC      : Double;
-    TotalEngageFAC        : Double;
-    TotalEngageDFAC       : Double;
     TotalTheoFAC          : Double;
     TotalResteFAC         : Double;
     TotalFinAffFAC        : Double;
@@ -246,7 +243,7 @@ Type
     BPrecedent        : TToolbarButton97;
     BSuivant          : TToolbarButton97;
     BDernier          : TToolbarButton97;
-    BSaisieConso      : TToolbarButton97;
+    //BSaisieConso      : TToolbarButton97;
     //
     fColNamesGS       : string;
     Falignement       : string;
@@ -263,8 +260,6 @@ Type
     DateArreteEncours : boolean;
     FromArrete        : boolean;
     ValideRADaZero    : Boolean;
-    RADDefinitf       : Boolean;
-    Ok_ModifRadValide : Boolean;
     Ok_Marque         : Boolean;
     Ok_Revision       : Boolean;
     Ok_FactHD         : Boolean;
@@ -286,7 +281,7 @@ Type
     procedure BPremierOnClick(Sender: TObject);
     procedure BPrecedentOnClick(Sender: TObject);
     procedure BSuivantOnClick(Sender: TObject);
-    Procedure BSaisieConsoOnClick(Sender : Tobject);
+    //Procedure BSaisieConsoOnClick(Sender : Tobject);
     //
     procedure CalculColGrille;
     procedure Calcultotaldepenses;
@@ -317,7 +312,7 @@ Type
     procedure ChargementFactureDepuis(DateDebut, DateArrete: TDateTime);
     Procedure ChargementFirstAffaire;
     procedure ChargementLigneVide(TOBMere: TOB; TheTitre, TypeTob: String);
-    procedure ChargementProrata(DateArrete: TDateTime);
+    //procedure ChargementProrata(DateArrete: TDateTime);
     procedure ChargementRecettesFraisAnnexes(DateDebut, DateArrete: TDateTime);
     procedure ChargementRecettesAnnexesFraisDepuis(DateDebut, DateArrete: TDateTime);
     procedure ChargementResteADepenser;
@@ -1354,7 +1349,7 @@ begin
   if gestionEnpa then
   Begin
     fColNamesGS := fColNamesGS  + 'REALISEDEPUISPA;';
-    Ftitre      := Ftitre       + 'Mt Depuis PA;';
+    Ftitre      := Ftitre       + 'Mt PA Depuis;';
   end
   else
   Begin
@@ -1948,6 +1943,7 @@ begin
 end;
 
 //FV1 : 05/12/2017 - - GUINIER : Ajouter en Facturation le Montant des Ports & Frais pour Prorata
+{*
 Procedure TOF_BTSAISIERESTDEP.ChargementProrata(DateArrete : TDateTime);
 Var STSQL   : String;
     QQ      : TQuery;
@@ -1986,6 +1982,7 @@ begin
   TOBfact.Free;
 
 end;
+*}
 
 //FV1 : 05/12/2017 - - GUINIER : Ajouter en Facturation le Montant des Ports & Frais pour Prorata
 Procedure TOF_BTSAISIERESTDEP.ChargementRevision(DateArrete : TDateTime);
@@ -2017,7 +2014,7 @@ begin
     For i := 0 TO TobFact.Detail.count -1 do
     Begin
       if TobFact.Detail[i].GeTDouble('FACTURE') <> 0 then
-        ChargeTob(TobFact.Detail[i], TOBFacturation, 'Révision', 'FAC')
+        ChargeTob(TobFact.Detail[i], TOBFacturation, 'Révision', 'FAC');
     end;
   end;
 
@@ -2053,7 +2050,7 @@ begin
     For i := 0 TO TobFact.Detail.count -1 do
     Begin
       if TobFact.Detail[i].GeTDouble('FACTURE') <> 0 then
-        ChargeTob(TobFact.Detail[i], TOBFacturation,'Facturation Hors-Devis', 'FAC')
+        ChargeTob(TobFact.Detail[i], TOBFacturation,'Facturation Hors-Devis', 'FAC');
     end;
   end;
 
@@ -2533,24 +2530,24 @@ begin
       begin
         if not IsLivChantier(TOBL.GetString('GL_PIECEPRECEDENTE'),TOBL.GetString('GL_PIECEORIGINE')) then
         begin
-          if TypeElt = 'CONSOFOU' then TOBL.setString('TYPEELT','STOCK') else
-          if TypeElt = 'CONSOFOUDEPUIS' then TOBL.setString('TYPEELT','STOCKDEPUIS') else
+          if TypeElt = 'CONSOFOU' then TOBL.setString('TYPEELT','STOCK')
+          else if TypeElt = 'CONSOFOUDEPUIS' then TOBL.setString('TYPEELT','STOCKDEPUIS');
         end
         else
         begin
-          if TypeElt = 'CONSOFOU' then TOBL.setString('TYPEELT','CONSO') else
-          if TypeElt = 'CONSOFOUDEPUIS' then TOBL.setString('TYPEELT','CONSODEPUIS') else
+          if TypeElt = 'CONSOFOU' then TOBL.setString('TYPEELT','CONSO')
+          else if TypeElt = 'CONSOFOUDEPUIS' then TOBL.setString('TYPEELT','CONSODEPUIS');
         end;
       end
       else if TOBL.GetString('GL_NATUREPIECEG')='' then
       begin
-          if TypeElt = 'CONSOFOU' then TOBL.setString('TYPEELT','STOCK') else
-          if TypeElt = 'CONSOFOUDEPUIS' then TOBL.setString('TYPEELT','STOCKDEPUIS') else
+          if TypeElt = 'CONSOFOU' then TOBL.setString('TYPEELT','STOCK')
+          else if TypeElt = 'CONSOFOUDEPUIS' then TOBL.setString('TYPEELT','STOCKDEPUIS');
       end
       else
       begin
-          if TypeElt = 'CONSOFOU' then TOBL.setString('TYPEELT','CONSO') else
-          if TypeElt = 'CONSOFOUDEPUIS' then TOBL.setString('TYPEELT','CONSODEPUIS') else
+          if TypeElt = 'CONSOFOU' then TOBL.setString('TYPEELT','CONSO')
+          else if TypeElt = 'CONSOFOUDEPUIS' then TOBL.setString('TYPEELT','CONSODEPUIS');
       end;
     end;
 
@@ -3891,10 +3888,10 @@ var Montant1 : Double;
     Montant3 : Double;
 begin
 
-  Result    := 0;
-  Montant1  := 0;
-  Montant2  := 0;
-  Montant3  := 0;
+  //Result    := 0;
+  //Montant1  := 0;
+  //Montant2  := 0;
+  //Montant3  := 0;
 
   Montant1  := Val1;
   Montant2  := Val2;
@@ -3940,6 +3937,9 @@ end;
 Procedure TOF_BTSAISIERESTDEP.CalculColGrille;
 Var Ind         : Integer;
     TOBL        : TOB;
+    //
+    MtReste     : Double;
+    //
     MTBudget    : Double;
     MtRealise   : Double;
     MtDepuis    : Double;
@@ -3958,27 +3958,30 @@ begin
 
   If TobGrille = nil then exit;
 
-  MTBudget    := 0;
-  MtRealise   := 0;
-  MtDepuis    := 0;
-  //
-  MTBudgetPA  := 0;
-  MtRealisePA := 0;
-  MtDepuisPA  := 0;
-  //
-  QteBudget   := 0;
-  QteRealise  := 0;
-  QteDepuis   := 0;
-  //
-  MtTheo      := 0;
-  MtTheoPA    := 0;
-  QteTheo     := 0;
-
   for ind := 0 to TobGrille.detail.count -1 do
   begin
+    {*
+    MTBudget    := 0;
+    MtRealise   := 0;
+    MtDepuis    := 0;
+    //
+    MTBudgetPA  := 0;
+    MtRealisePA := 0;
+    MtDepuisPA  := 0;
+    //
+    QteBudget   := 0;
+    QteRealise  := 0;
+    QteDepuis   := 0;
+    //
+    MtTheo      := 0;
+    MtTheoPA    := 0;
+    QteTheo     := 0;
+    *}
     TOBL := TobGrille.detail[Ind];
     if TOBL.Getstring('TYPELIGNE')='LI' then
     begin
+      MtReste     := TOBL.GetDouble('RESTEMT');
+      //
       MTBudget    := TOBL.GetDouble('BUDGETMT');
       MtRealise   := TOBL.GetDouble('REALISEMT');
       MtDepuis    := TOBL.GetDouble('REALISEDEPUIS');
@@ -4010,8 +4013,8 @@ begin
         TOBL.PutValue('THEOMTPA', MtTheoPA);
       end;
       //
-      TOBL.PutValue('FINAFFAIRE',   TOBL.GetDouble('REALISEMT')   + TOBL.GetDouble('RESTEMT'));
-      TOBL.PutValue('FINAFFAIREPA', TOBL.GetDouble('REALISEMTPA') + TOBL.GetDouble('RESTEMT'));
+      TOBL.PutValue('FINAFFAIRE',   MtRealise + MtReste);   //TOBL.GetDouble('REALISEMT')   + TOBL.GetDouble('RESTEMT'));
+      TOBL.PutValue('FINAFFAIREPA', MtRealisePA + MtReste); //TOBL.GetDouble('REALISEMTPA') + TOBL.GetDouble('RESTEMT'));
     end;
   end;
 
@@ -4840,12 +4843,14 @@ begin
 
 end;
 
+{*
 procedure TOF_BTSAISIERESTDEP.BSaisieConsoOnClick(Sender: TObject);
 begin
 
   AGLLanceFiche('BTP', 'BTSAISIECONSO', '','','MODIFICATION');
 
 end;
+*}
 
 procedure TOF_BTSAISIERESTDEP.TraitelesOuvrages(TOBLIGNESO, TOBOUVRAGES,TOBBudget: TOB);
 
@@ -4914,6 +4919,7 @@ var II : Integer;
     TOBL,TOBOuv : TOB;
     IndiceNomen : Integer;
 begin
+
   For II := 0 to TOBLIGNESO.detail.count -1 do
   begin
     TOBL := TOBLIGNESO.detail[II];
@@ -4927,12 +4933,12 @@ begin
     begin
       if II >= TOBOUVRAGES.detail.count then Continue;
       TOBOuv := TOBOUVRAGES.detail[IndiceNomen-1];
+      if TOBOUv = nil then exit;
+      ConstitueBudget (TOBL,TOBOuv,TOBBudget);
     end;
     //
-    if TOBOUv = nil then exit;
-
-    ConstitueBudget (TOBL,TOBOuv,TOBBudget);
   end;
+
 end;
 
 procedure TOF_BTSAISIERESTDEP.ChargementEngage(DateArrete: TDateTime);

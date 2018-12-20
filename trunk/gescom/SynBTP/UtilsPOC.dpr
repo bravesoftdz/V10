@@ -1,6 +1,5 @@
 program UtilsPOC;
 uses
-
   SysUtils,
   Forms,
   Hent1,
@@ -1133,10 +1132,8 @@ uses
   UtilBTPVerdon in '..\..\Services\BTPVerdon\Lib\UtilBTPVerdon.pas',
   ControlIniFile in '..\LibBTP\ControlIniFile.pas',
   BTVERDDESTMAIL_TOF in '..\Verdon\BTVERDDESTMAIL_TOF.PAS',
-  BTBIMEXPORT_TOF in '..\BIM\BTBIMEXPORT_TOF.PAS';
-
-
-{FTablette},
+  BTBIMEXPORT_TOF in '..\BIM\BTBIMEXPORT_TOF.PAS',
+  BEXPORTXLSSES_TOF in '..\SES\BEXPORTXLSSES_TOF.PAS';
 
 //
 
@@ -1151,25 +1148,21 @@ begin
   MemCheckLogFileName:=ChangeFileExt(Application.exename,'.log');
   MemChk;
 {$endif}
-  GetInfoApplication;
-	ControlPGIINI;
   Application.Initialize;
   InitAgl;
+  
   OkArg := false;
   OkLogin := false;
   for i:=1 to ParamCount do
   BEGIN
     St := ParamStr(i);
-    if (pos('/USER', St) <> 0) and (pos('/PASSWORD', St) <> 0) then OkLogin := TRUE;
+    if (pos('/USER', St) <> 0)then OkLogin := True;
+    if (pos('/TRAIT', St) <> 0) then OkArg := True;
   END;
 
-  if OkLogin then
+  if (OkLogin) and (OkArg) then
   begin
-    if (pos('/ECHANGESBSV', St) <> 0) then
-    begin
-      OkArg := TRUE;
-      TraitementEchangesBSV;
-    end;
+    TraitementEchangesBSV;
   end;
 
   if not OkArg then

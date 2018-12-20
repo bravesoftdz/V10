@@ -152,6 +152,8 @@ uses FactGrp,UtilTOBPiece,FactTOB,BTStructChampSup,Affaireutil,
      FactAdresse,factNomen,FactLotSerie,FactUtil,FactCpta,FactOuvrage,
      BTPUtil,FactPiece,factRG,FactArticle,factComm,FactTiers,FactAdresseBTP,
      FactCalc,UCumulCollectifs
+     , ErrorsManagement
+     , CommonTools
       ;
 
 function DemandeDatesFacturation(var DateFac: TDateTime) : boolean;
@@ -180,7 +182,7 @@ procedure T_genereFacture.ValideLaCompta(OldEcr, OldStk: RMVT);
 begin
   if VH_GC.GCIfDefCEGID then
      RechLibTiersCegid(VenteAchat, TobTiers, TOBPiece, TobAdresses);
-  if not PassationComptable( TOBPiece,TOBOUvrage,TOBOuvragesP, TOBBases,TOBBasesL, TOBEches,TOBPieceTrait,TOBAffaireInterv,TOBTiers, TOBArticles, TOBCpta, TOBAcomptes, TOBPorcs, TOBPIECERG, TOBBASESRG, TOBanaP,TOBanaS,TOBSSTRAIT,TOBVTECOLL, DEV, OldEcr,OldStk, True, true ) then
+  if not PassationComptable( TOBPiece,TOBOUvrage,TOBOuvragesP, TOBBases,TOBBasesL, TOBEches,TOBPieceTrait,TOBAffaireInterv,TOBTiers, TOBArticles, TOBCpta, TOBAcomptes, TOBPorcs, TOBPIECERG, TOBBASESRG, TOBanaP,TOBanaS,TOBSSTRAIT,TOBVTECOLL,nil, DEV, OldEcr,OldStk, True, true ) then
   begin
     MessageValid := 'Erreur / ecriture comptable';
     V_PGI.IoError := oeLettrage;
@@ -1231,8 +1233,12 @@ begin
 end;
 
 function T_genereFacture.GetMessage: string;
+var
+  Msg : string;
 begin
-  result :=MessageValid; 
+  Msg := TUtilErrorsManagement.GetGenericMessage;
+  Msg := Tools.iif(Msg <> '', Format(' (%s)', [Msg]), '');
+  Result := Format('%s%s', [MessageValid, Msg]);
 end;
 
 end.

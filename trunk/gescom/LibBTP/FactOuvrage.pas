@@ -223,19 +223,17 @@ Procedure OuvVersLigOuv ( TOBPIece,TOBL,TOBNOMEN,TOBLN,TOBA : TOB ; Niv,OrdreCom
 function FindLigneOuvFromUnique (TOBL,TOBOuvrages : TOB; UniqueBlo : Integer) : TOB;
 //
 implementation
-uses factgrp,FactVariante,Facture,FactureBTP
-{$IFDEF BTP}
-//,UMetreArticle
-//,UtilMetres,
- ,PiecesRecalculs
- ,BTStructChampSup
- ,Ucotraitance
- ,UspecifPOC
-{$ENDIF}
+uses
+  factgrp,FactVariante,Facture,FactureBTP
+  ,PiecesRecalculs
+  ,BTStructChampSup
+  ,Ucotraitance
+  ,UspecifPOC
   ,CbpMCD
   ,CbpEnumerator
-
-;
+  , ErrorsManagement
+  , CommonTools
+  ;
 
 procedure InitArticleFromLigneNomen (TOBL,TOBA : TOB);
 begin
@@ -2783,14 +2781,12 @@ BEGIN
       Inc(i);
     end;
   until i >= TOBOuv.Detail.Count;
-
   if Not TOBOuv.InsertDBByNivel(false) then
   begin
-    MessageValid := 'Erreur écriture des ouvrages';
-    PgiError(MessageValid);
-    V_PGI.IoError:=oeUnknown ;
+    V_PGI.IoError := oeUnknown ;
+    MessageValid  := 'Erreur écriture des ouvrages';
+    TUtilErrorsManagement.SetGenericMessage(TemErr_InsertLIGNEOUV);
   end;
-
 END ;
 
 Procedure MajLigOuv (TOBN,TOBLig : TOB) ;
@@ -4568,8 +4564,11 @@ begin
       TOBL1.SetString('GL_QUALIFHEURE', TOBOUV.GetValue('BLO_QUALIFHEURE'));
       // -- POC --
       TOBL1.PutValue('NUMTRANSFERT', TOBOUV.GetValue('NUMTRANSFERT'));
-      TOBL1.PutValue('MTTRANSFERT', TOBOUV.GetValue('MTTRANSFERT'));
+      TOBL1.PutValue('TYPETRANSFERT', TOBOUV.GetVAlue('TYPETRANSFERT'));
+      TOBL1.PutValue('TRANSFERED', TOBOUV.GetVAlue('TRANSFERED'));
+      TOBL1.PutValue('MTTRANSFERT', TOBOUV.GetVAlue('MTTRANSFERT'));
       TOBL1.PutValue('SUMTOTALTS', TOBOUV.GetValue('SUMTOTALTS'));
+      TOBL1.SetBoolean('GL_BLOQUETARIF', TOBL.GetBoolean('GL_BLOQUETARIF'));
       //
       if TOBTRFPOC <> nil then
       begin
@@ -4999,7 +4998,8 @@ begin
         InitialiseLigne (TOBIns,TOBL.GetValue('GL_NUMLIGNE'),1);
         OuvrageVersLigne (TOBL,TOBINS,TOBLoc,Qte,QteDuDetail);
         TOBIns.SetInteger('UNIQUEBLO',TOBLoc.GetInteger('BLO_UNIQUEBLO'));
-
+        TOBIns.SetString('ZZTRI0',TOBLoc.GetString('ZZTRI0'));
+        //
         if (TOBLOC.FieldExists ('BLF_NATUREPIECEG')) and
            (TOBLOC.getvalue('BLF_NATUREPIECEG')<> '') then
         begin
@@ -5662,7 +5662,11 @@ var i : integer;
     ChampDest : string;
     Mcd : IMCDServiceCOM;
     FieldList : IEnumerator ;
+    FieldName : string;
 begin
+
+  i   := 0;
+
   MCD := TMCD.GetMcd;
   if not mcd.loaded then mcd.WaitLoaded();
   //
@@ -5671,13 +5675,21 @@ begin
   //
   FieldList := MCD.GetTable(TOBREF.NomTable).Fields;
   FieldList.Reset();
+  //
   While FieldList.MoveNext do
   begin
+    FieldName := (FieldList.Current as IFieldCOM).name;
     Suffixe := copy((FieldList.Current as IFieldCOM).name,Length(PrefixeRef)+2,255);
     if Suffixe <> '' then
     begin
       ChampDest := PrefixeDest+'_'+suffixe;
-      if TOBDest.FieldExists (ChampDest) then TOBDEST.PutValue (PrefixeDest+'_'+suffixe,TOBREF.Getvaleur(i));
+      if TOBDest.FieldExists (ChampDest) then
+      begin
+        //FV1 - 07/11/2018 : FS#3349 - GROUPE LB - Message d'erreur pour accéder à la valorisation de l'article via CTRL+O
+        //TOBDEST.PutValue (PrefixeDest+'_'+suffixe, TOBREF.GetValue(i));
+        TOBDEST.PutValue (PrefixeDest+'_'+suffixe, TOBREF.GetValue(FieldName));
+        //FV1 - 07/11/2018 : FS#3349 - GROUPE LB - Message d'erreur pour accéder à la valorisation de l'article via CTRL+O
+      end;
     end;
   end;
 end;
@@ -6093,7 +6105,19 @@ for i:=0 to TOBPiece.Detail.Count-1 do
 if Not OkN then Exit ;
 
 TOBNomen:=TOB.Create('',Nil,-1) ;
-requete :='SELECT O.*,N.BNP_TYPERESSOURCE,N.BNP_LIBELLE FROM LIGNEOUV O '+
+requete :='SELECT O.*,N.BNP_TYPERESSOURCE,N.BNP_LIBELLE, '+
+          '"ZZTRI0"=CASE '+
+          'WHEN (BNP_TYPERESSOURCE IS NULL) AND (BLO_NATURETRAVAIL<>"002") THEN "000" '+
+          'WHEN BLO_NATURETRAVAIL="002" THEN "003" '+
+          'WHEN BNP_TYPERESSOURCE="SAL" THEN "001" '+
+          'WHEN BNP_TYPERESSOURCE="INT" THEN "002" '+
+          'WHEN BNP_TYPERESSOURCE="ST" THEN "003" '+
+          'WHEN BNP_TYPERESSOURCE="LOC" THEN "004" '+
+          'WHEN BNP_TYPERESSOURCE="MAT" THEN "005" '+
+          'WHEN BNP_TYPERESSOURCE="OUT" THEN "006" '+
+          'ELSE "007" '+
+          'END ' +
+          'FROM LIGNEOUV O '+
           'LEFT JOIN NATUREPREST N ON BNP_NATUREPRES=(SELECT GA_NATUREPRES FROM ARTICLE WHERE GA_ARTICLE=O.BLO_ARTICLE) '+
           'WHERE '+WherePiece(CleDoc,ttdOuvrage,False)+
           ' ORDER BY BLO_NUMLIGNE,BLO_N1, BLO_N2, BLO_N3, BLO_N4,BLO_N5';
@@ -6882,7 +6906,8 @@ begin
   NewTOBLigneFille(result);
   AddLesSupLigne(result, False);
   InitLesSupLigne(result);
-  result.AddChampSupValeur('UNIQUEBLO',0)
+  result.AddChampSupValeur('UNIQUEBLO',0);
+  result.AddChampSupValeur('ZZTRI0','');
 end;
 
 procedure ValideLesOuvPlat(TOBOuvragesP, TOBPiece : TOB);

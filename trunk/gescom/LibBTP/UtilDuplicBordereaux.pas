@@ -61,7 +61,11 @@ procedure AglDupliqueBordereaux ( parms: array of variant; nb: integer ) ;
 procedure EcritEnteteBord(X : TForm;TOBPiece : TOB);
 
 implementation
-uses facture,Factutil;
+uses
+  facture
+  , Factutil
+  , ErrorsManagement
+  ;
 
 procedure DuplicBordereau;
 begin
@@ -304,8 +308,12 @@ begin
     TheNUM := 0;
     QQ := OpenSql('SELECT MAX(BDE_ORDRE) AS NUMMAX FROM BDETETUDE WHERE BDE_AFFAIRE="'+ TOBPiece.getValue('GP_AFFAIRE')+'" AND '+
                   'BDE_CLIENT="'+TOBPiece.getValue('GP_TIERS')+'" AND BDE_NATUREAUXI="CLI"',true);
-    if not QQ.eof then TheNUm := QQ.findField('NUMMAX').asInteger;
-    ferme (QQ);
+    try
+      if not QQ.eof then
+        TheNUm := QQ.findField('NUMMAX').asInteger;
+    finally
+      ferme (QQ);
+    end;
     TOBE.putValue('BDE_NATUREAUXI','CLI');
     TOBE.putValue('BDE_AFFAIRE',TOBPiece.getValue('GP_AFFAIRE'));
     TOBE.putValue('BDE_CLIENT',TOBPiece.getValue('GP_TIERS'));
@@ -326,6 +334,7 @@ begin
     if not TOBE.InsertDB (nil,true) then
     begin
       MessageValid := 'Erreur mise à jour ENTETE BORDEREAU';
+      TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateBDETETUDE);
       V_PGI.IOError := OeUnknown;
     end;
   FINALLY

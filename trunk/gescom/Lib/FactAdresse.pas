@@ -17,7 +17,7 @@ procedure AffaireVersAdresses(TOBAffaire, TOBAdresses, TOBPiece: TOB);
 procedure TiersVersAdresses(TOBTiers, TOBAdresses, TOBPiece: TOB; CodeFactAff: string = '');
 
 function  GetTobAdresseFromAdresses(TobAdresses: Tob; sTypeAdresse, sTiersLivre: string; iNAdresse: integer; sQuelleAdresse: string): boolean;
-procedure GetTobPieceAdresseFromTobAdresses(TobPieceAdresse, TobAdresses: Tob);
+procedure GetTobPieceAdresseFromTobAdresses(TobPieceAdresse, TobAdresses: Tob; ForceAdresse : Boolean=false);
 procedure GetAdrFromCode(TOBAdr: TOB; CodeTiers: string; ForceTobAdresse: Boolean = False);
 procedure GetAdrFromTOB(TOBAdr, TOBTiers: TOB; ForceTobAdresse: Boolean = False);
 {$IFDEF BTP}
@@ -27,7 +27,11 @@ procedure LoadLesAdressesOrigine(TOBPiece, TOBAdresses: TOB);
 implementation
 
 uses
-  wCommuns,FactUtil;    
+  wCommuns
+  , FactUtil
+  , ErrorsManagement
+  , CommonTools
+  ;
 
 procedure LoadLesAdresses(TOBPiece, TOBAdresses: TOB);
 var NumL, NumF: Integer;
@@ -152,19 +156,12 @@ var NumL, NumF, i: integer;
   TOBAdr: TOB;
   okok : boolean;
 begin
-
   if (TOBAdresses = nil) or (TobAdresses.Detail.Count = 0) then Exit;
-
   if TOBPiece = nil then Exit;
-
   // Indicateur de mise à jour du tiers selon la nature de pièce
-  //{$IFDEF MODE}
   if GetInfoParPiece(TOBPiece.GetValue('GP_NATUREPIECEG'), 'GPP_MAJINFOTIERS') = '-' then Exit;
-  //{$ENDIF}
-
   NumL := TOBPiece.GetValue('GP_NUMADRESSELIVR');
   NumF := TOBPiece.GetValue('GP_NUMADRESSEFACT');
-
   if GetParamSoc('SO_GCPIECEADRESSE') then
   begin
     if ((NumL = NumF) and (TOBAdresses.Detail.Count >= 2)) then TOBAdresses.Detail[1].Free;
@@ -193,9 +190,10 @@ begin
       end;
     END;
     if not okok then
-    BEGIN
+    begin
       V_PGI.IoError := oeUnknown;
-    END;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_InsertPIECEADRESSE);
+    end;
   end
   else
   begin
@@ -548,28 +546,8 @@ Suite ........ : d'une Tob de la table ADRESSES
 Mots clefs ... : ADRESSE; LIVRAISON
 *****************************************************************}
 
-procedure GetTobPieceAdresseFromTobAdresses(TobPieceAdresse, TobAdresses: Tob);
-begin
-  if GetParamSoc('SO_GCPIECEADRESSE') then
-  begin
-    TobPieceAdresse.PutValue('GPA_LIBELLE', TobAdresses.GetValue('ADR_LIBELLE'));
-    TobPieceAdresse.PutValue('GPA_LIBELLE2', TobAdresses.GetValue('ADR_LIBELLE2'));
-    TobPieceAdresse.PutValue('GPA_JURIDIQUE', TobAdresses.GetValue('ADR_JURIDIQUE'));
-    TobPieceAdresse.PutValue('GPA_ADRESSE1', TobAdresses.GetValue('ADR_ADRESSE1'));
-    TobPieceAdresse.PutValue('GPA_ADRESSE2', TobAdresses.GetValue('ADR_ADRESSE2'));
-    TobPieceAdresse.PutValue('GPA_ADRESSE3', TobAdresses.GetValue('ADR_ADRESSE3'));
-    TobPieceAdresse.PutValue('GPA_CODEPOSTAL', TobAdresses.GetValue('ADR_CODEPOSTAL'));
-    TobPieceAdresse.PutValue('GPA_VILLE', TobAdresses.GetValue('ADR_VILLE'));
-    TobPieceAdresse.PutValue('GPA_PAYS', TobAdresses.GetValue('ADR_PAYS'));
-    TobPieceAdresse.PutValue('GPA_INCOTERM', TobAdresses.GetValue('ADR_INCOTERM'));
-    TobPieceAdresse.PutValue('GPA_MODEEXP', TobAdresses.GetValue('ADR_MODEEXP'));
-    TobPieceAdresse.PutValue('GPA_LIEUDISPO', TobAdresses.GetValue('ADR_LIEUDISPO'));
-    TobPieceAdresse.PutValue('GPA_EAN', TobAdresses.GetValue('ADR_EAN'));
-    TobPieceAdresse.PutValue('GPA_NIF', TobAdresses.GetValue('ADR_NIF'));
-    TobPieceAdresse.PutValue('GPA_REGION', TobAdresses.GetValue('ADR_REGION')); 
-    TobPieceAdresse.PutValue('GPA_NUMEROCONTACT', TobAdresses.GetValue('ADR_NUMEROCONTACT'));
-  end
-  else
+procedure GetTobPieceAdresseFromTobAdresses(TobPieceAdresse, TobAdresses: Tob; ForceAdresse : Boolean=false);
+  procedure SetAdressesFromAdr;
   begin
     TobPieceAdresse.PutValue('ADR_LIBELLE', TobAdresses.GetValue('ADR_LIBELLE'));
     TobPieceAdresse.PutValue('ADR_LIBELLE2', TobAdresses.GetValue('ADR_LIBELLE2'));
@@ -586,10 +564,38 @@ begin
     TobPieceAdresse.PutValue('ADR_LIEUDISPO', TobAdresses.GetValue('ADR_LIEUDISPO'));
     TobPieceAdresse.PutValue('ADR_EAN', TobAdresses.GetValue('ADR_EAN'));
     TobPieceAdresse.PutValue('ADR_NIF', TobAdresses.GetValue('ADR_NIF'));
-    TobPieceAdresse.PutValue('ADR_REGION', TobAdresses.GetValue('ADR_REGION')); 
+    TobPieceAdresse.PutValue('ADR_REGION', TobAdresses.GetValue('ADR_REGION'));
     TobPieceAdresse.PutValue('ADR_NUMEROCONTACT', TobAdresses.GetValue('ADR_NUMEROCONTACT'));
-    //TobPieceAdresse.PutValue('ADR_CONTACT', TobAdresses.GetValue('ADR_CONTACT'));
-    //TobPieceAdresse.PutValue('ADR_CONTACTPRENOM', TobAdresses.GetValue('ADR_CONTACTPRENOM')); 
+  end;
+begin
+
+  if ForceAdresse then
+  begin
+    SetAdressesFromAdr;
+  end else
+  begin
+    if GetParamSoc('SO_GCPIECEADRESSE') then
+    begin
+      TobPieceAdresse.PutValue('GPA_LIBELLE', TobAdresses.GetValue('ADR_LIBELLE'));
+      TobPieceAdresse.PutValue('GPA_LIBELLE2', TobAdresses.GetValue('ADR_LIBELLE2'));
+      TobPieceAdresse.PutValue('GPA_JURIDIQUE', TobAdresses.GetValue('ADR_JURIDIQUE'));
+      TobPieceAdresse.PutValue('GPA_ADRESSE1', TobAdresses.GetValue('ADR_ADRESSE1'));
+      TobPieceAdresse.PutValue('GPA_ADRESSE2', TobAdresses.GetValue('ADR_ADRESSE2'));
+      TobPieceAdresse.PutValue('GPA_ADRESSE3', TobAdresses.GetValue('ADR_ADRESSE3'));
+      TobPieceAdresse.PutValue('GPA_CODEPOSTAL', TobAdresses.GetValue('ADR_CODEPOSTAL'));
+      TobPieceAdresse.PutValue('GPA_VILLE', TobAdresses.GetValue('ADR_VILLE'));
+      TobPieceAdresse.PutValue('GPA_PAYS', TobAdresses.GetValue('ADR_PAYS'));
+      TobPieceAdresse.PutValue('GPA_INCOTERM', TobAdresses.GetValue('ADR_INCOTERM'));
+      TobPieceAdresse.PutValue('GPA_MODEEXP', TobAdresses.GetValue('ADR_MODEEXP'));
+      TobPieceAdresse.PutValue('GPA_LIEUDISPO', TobAdresses.GetValue('ADR_LIEUDISPO'));
+      TobPieceAdresse.PutValue('GPA_EAN', TobAdresses.GetValue('ADR_EAN'));
+      TobPieceAdresse.PutValue('GPA_NIF', TobAdresses.GetValue('ADR_NIF'));
+      TobPieceAdresse.PutValue('GPA_REGION', TobAdresses.GetValue('ADR_REGION')); 
+      TobPieceAdresse.PutValue('GPA_NUMEROCONTACT', TobAdresses.GetValue('ADR_NUMEROCONTACT'));
+    end else
+    begin
+      SetAdressesFromAdr;
+    end;
   end;
 end;
 

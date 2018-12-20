@@ -1640,7 +1640,7 @@ Var
   Lib2      : String;
 begin
   FromAppel := (Ecran.name = 'BTMULAPPELS');
-  GetRessourceRecherche(TResponsable, Tools.iif(not FromAppel, 'ARS_TYPERESSOURCE=SAL', ''), Tools.iif(FromAppel, 'DEFAULTTYPERESSOURCE=INT|SAL', ''), '');
+  GetRessourceRecherche(TResponsable, Tools.iif(not FromAppel, 'ARS_TYPERESSOURCE="SAL"', ''), Tools.iif(FromAppel, 'DEFAULTTYPERESSOURCE=INT|SAL', ''), '');
 
   if LibResponsable = nil then Exit;
 

@@ -15,9 +15,14 @@ uses
   HMsgBox,
   ed_tools,
   DateUtils,
-  UTOB;
+  UTOB, TntExtCtrls, HPanel, Grids, TntGrids, HSysMenu, TntStdCtrls;
+  
+const
+    MaxFileSize = 200;
 
 type
+  TmodeTrait = (tmtExport,TmtImport);
+  
   TFexpImpCegid = class(TForm)
     Dock971: TDock97;
     PBouton: TToolWindow97;
@@ -28,7 +33,6 @@ type
     PGCTRL: THPageControl2;
     TPSHTCAR: TTabSheet;
     TBSHTCONTROL: TTabSheet;
-    Trace: TListBox;
     EXPORTFIC: THCritMaskEdit;
     Label1: TLabel;
     NOMFIC: THCritMaskEdit;
@@ -54,6 +58,16 @@ type
     CHKSTOPONERROR: TCheckBox;
     CBVIDAGEEXP: TCheckBox;
     CBVIDAGEIMP: TCheckBox;
+    CBCOMPTA: TCheckBox;
+    CBPAYE: TCheckBox;
+    CBDOSSIER: TCheckBox;
+    HPanel1: THPanel;
+    BLANCETRAIT: TToolbarButton97;
+    GS: THGrid;
+    hmtrad: THSystemMenu;
+    RAPPORT: TTabSheet;
+    TRACE: TListBox;
+    TX: THCritMaskEdit;
     procedure BValiderClick(Sender: TObject);
     procedure BFermeClick(Sender: TObject);
     procedure BImprimerClick(Sender: TObject);
@@ -65,18 +79,38 @@ type
     procedure CHKZIPClick(Sender: TObject);
     procedure CHKREPERTClick(Sender: TObject);
     procedure RDTIMPORTClick(Sender: TObject);
+    procedure CBCOMPTAClick(Sender: TObject);
+    procedure CBPAYEClick(Sender: TObject);
+    procedure CBDOSSIERClick(Sender: TObject);
+    procedure BLANCETRAITClick(Sender: TObject);
+    procedure GSDblClick(Sender: TObject);
+    procedure TXExit(Sender: TObject);
   private
+    T_EXERCICE : TOB;
+    T_Mere : TOB;
+    T : TOB;
+    fRepert : string;
+    ZipFile : string;
     { Déclarations privées }
+    fModeTrait : TmodeTrait;
+    WithOutZip : boolean;
     ExpDir,ExpFile : string;
     procedure ExportDossier;
     procedure ImportDOS(FileN,ExportN: string);
-    function RendSQLTable : string;
-    function ConstitueRequete(maTable: String): string;
+    function RendSQLTable (TraitExport : Boolean=False): string;
     function PGCreatZipFile(Archive: string; CodeSession: TModeOpenZip;var TheTOZ: TOZ; Ecran: TFORM): Boolean;
-    function TraitementTable(TheTOZ: TOZ; MaTable, Prefixe: string;Numversion: integer; DDebut, DFin: TdateTime;CodeEx,LibEx: string; ParExercice,premier : boolean): boolean;
+    function TraitementTable(TheTOZ: TOZ; MaTable,Domaine, Predefini, Prefixe: string; Numversion: integer; DDebut, DFin: TdateTime; CodeEx,LibEx: string; Pagine,premier: boolean ; NumPage,NbEnreg,CurrentLine,NbRecords,NbPage : integer): boolean;
     function PGZipFile(Fichier: string; TheTOZ: TOZ;Ecran: TFORM): Boolean;
     procedure PGFermeZipFile(TheTOZ: TOZ);
     procedure PGVideDirectory(FileN: string);
+    function ExportComptaOnly: Boolean;
+    function ExportPaieCompta: Boolean;
+    function ExportPaieOnly: Boolean;
+    function GetStoredProcedureName(TableName : string) : string;
+    procedure CreateStoredProcedure(TableName, SortedFields : string);
+    function GetProcessMemorySize(_sProcessName: string; var _nMemSize: Cardinal): Boolean;
+    procedure AddTrace(Text : string);
+    procedure PostDrawCell(ACol, ARow: Longint; Canvas: TCanvas; AState: TGridDrawState);
   public
     { Déclarations publiques }
   end;
@@ -87,7 +121,10 @@ procedure LanceImportExport;
 implementation
 
 uses
-  CommonTools;
+  CommonTools
+  , Math
+  , psAPI
+  ;
 
 {$R *.dfm}
 
@@ -104,7 +141,8 @@ end;
 
 procedure TFexpImpCegid.BValiderClick(Sender: TObject);
 begin
-  Trace.Clear;
+  GS.RowCount := 1;
+  WithOutZip := false;
   if RDTEXPORT.Checked then
   begin
     ExpDir := EXPORTFIC.Text;
@@ -112,17 +150,31 @@ begin
 
     if ExpDir = '' then
     begin
-      PgiBox('Vous n''avez pas renseigner le réperoire de transfert !', self.caption);
+      PgiBox('Vous n''avez pas renseigné le réperoire de transfert !', self.caption);
+      ModalResult := mrNone;
+      exit;
+    end;
+    if (not CBPAYE.Checked) and (not CBCOMPTA.Checked) and (not CBDOSSIER.Checked ) then
+    begin
+      PgiBox('Merci de définir le type d''export.', self.caption);
       ModalResult := mrNone;
       exit;
     end;
     if ExpFile = '' then
     begin
-      PgiBox('Vous n''avez pas renseigner le nom du fichier archive !', self.caption);
-      ModalResult := mrNone;
-      exit;
+      if PGIAsk('Vous n''avez pas renseigné le nom du fichier archive !#13#10 Confirmez-vous ?') <> mrYes then
+      begin
+        ModalResult := mrNone;
+        exit;
+      end;
+      if CBVIDAGEEXP.Checked then
+      begin
+        PGIInfo('VOus ne pouvez pas vider le répertoire sans avoir renseigné un fichier de destination');
+        ModalResult := mrNone;
+        exit;
+      end;
+      WithOutZip := true;
     end;
-
     PGCTRL.ActivePage := TBSHTCONTROL;
     ExportDossier;
   end
@@ -140,6 +192,7 @@ begin
       exit;
     end;
     if (PGCTRL  <> nil) and (TBSHTCONTROL <> nil) then PGCTRL.ActivePage := TBSHTCONTROL;
+    //
     IMPORTDOS(IMPORTFIC.Text,IMPORTDIR.Text);
   end;
   ModalResult := 0;
@@ -162,7 +215,9 @@ end;
 
 procedure TFexpImpCegid.FormCreate(Sender: TObject);
 begin
-//
+  T_EXERCICE := TOB.Create ('LES EXERCICES',nil,-1);
+  T_Mere := TOB.Create('Ma TOB', nil, -1);
+  T := TOB.Create('La TOB des tables', nil, -1);
 end;
 
 procedure TFexpImpCegid.FormShow(Sender: TObject);
@@ -172,11 +227,15 @@ begin
   CHKREPERT.Enabled := false;
   IMPORTFIC.Enabled := false;
   IMPORTDIR.Enabled := false;
+  PGCTRL.ActivePage := TPSHTCAR;
+  GS.PostDrawCell := PostDrawCell;
 end;
 
 procedure TFexpImpCegid.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-//
+  T_EXERCICE.free;
+  T_Mere.free;
+  T.free;
 end;
 
 procedure TFexpImpCegid.RDTEXPORTClick(Sender: TObject);
@@ -192,6 +251,9 @@ begin
   CBVIDAGEEXP.Enabled := true;
   NOMFIC.Enabled := true;
   EXPORTFIC.Enabled := true;
+  CBCOMPTA.enabled := true;
+  CBPAYE.enabled := true;
+
 end;
 
 procedure TFexpImpCegid.CHKZIPClick(Sender: TObject);
@@ -223,46 +285,39 @@ begin
   end;
 end;
 
-function TFexpImpCegid.ConstitueRequete(maTable: String): string;
-begin
-  if maTable = 'PARAMSOC' then
-  begin
-    result := 'SELECT * FROM PARAMSOC WHERE '+ Tools.GetPSocTreeToExport;
-  end
-  else if maTable = 'CHOIXCOD' then result := 'SELECT * FROM CHOIXCOD WHERE CC_TYPE IN (SELECT DO_TYPE FROM DECOMBOS WHERE DO_DOMAINE IN ("C","P","Y","T","D","0") AND DO_PREFIXE="CC")'
-  else if maTable = 'CHOIXEXT' then result := 'SELECT * FROM CHOIXEXT WHERE YX_TYPE IN (SELECT DO_TYPE FROM DECOMBOS WHERE DO_DOMAINE IN ("C","P","Y","T","D","0") AND DO_PREFIXE="YX")'
-  else result := 'SELECT * FROM ' + maTable;
-end;
 
 procedure TFexpImpCegid.ExportDossier;
 var
-  T_Mere, T, T1, T_EXERCICE: TOB;
-  St, LibEx,Prefixe,CodeEx: string;
+  T1: TOB;
+  St : string;
   Q: TQuery;
-  Rep, Nbre, II,version,I : integer;
-  ExportOk: Boolean;
-  MaTable, ChampMvt, ZipFile,msg: string;
-  TheToz: TOZ;
-  Pexercice : boolean;
-  DDebut,DFin : Tdatetime;
+  Nbre, II : integer;
+  NbRecords, NbrecordsOk : Integer;
+  RecordSize,TableSize,Ratio : double;
+  NomTable : string;
 begin
+  //
+  BValider.Visible := false;
+  GS.ColCount := 2;
+  GS.Cells[0,0] := 'Liste des tables à traiter';
+  GS.Cells[0,1] := 'Nb Enreg/Partie';
+  TRACE.Items.Clear;
+  fModeTrait := tmtExport;
   ZipFile := IncludeTrailingPathDelimiter (ExpDir) + ExpFile + '.zip';
-  T_EXERCICE := TOB.Create ('LES EXERCICES',nil,-1);
-  T_Mere := TOB.Create('Ma TOB', nil, -1);
-  T := TOB.Create('La TOB des tables', nil, -1);
-
+  T_EXERCICE.ClearDetail;
+  T.ClearDetail;
+  //
   TRY
     Q := OpenSQl ('SELECT EX_EXERCICE,EX_DATEDEBUT,EX_DATEFIN,EX_ABREGE,EX_LIBELLE FROM EXERCICE',True);
     if not Q.eof then T_EXERCICE.loadDetailDb ('EXERCICE','','',Q,false);
     ferme (Q);
-    st := RendSQLTable;
+    st := RendSQLTable (True);
     Q := OPENSQL(ST, TRUE);
     T.LoadDetailDb('DETABLES', '', '', Q, FALSE);
     Ferme(Q);
     //
-    Trace.Items.Add('Les éléments suivants seront analysés et pris en compte :');
-    for II := 0 to T.detail.count - 1 do
-    begin
+    II := 0;
+    repeat
       T1 := T.Detail[II];
       if T1 <> nil then
       begin
@@ -271,115 +326,80 @@ begin
         if not Q.EOF then
         begin
           Nbre := Q.FindField('NBRE').AsInteger;
-          if Nbre > 0 then Trace.Items.Add('Table ' + T1.GetValue('DT_LIBELLE'));
+          if Nbre <= 0 then
+          begin
+            T1.Free
+          end else
+          begin
+            Inc(II);
+          end;
         end;
         Ferme(Q);
       end;
-    end;
-    TheTOZ := nil;
-    //
-    if not PGCreatZipFile(ZipFile, moCreate, TheTOZ, self) then
+    until II > T.detail.count -1;
+    GS.rowCount := T.detail.count  +1;
+    GS.FixedRows := 1;
+    for II := 0 to T.detail.count -1 do
     begin
-      T.free;
-      T_Mere.free;
-      Trace.Items.Add('Erreur sur fichier archive : ' +ZipFile);
-      exit;
-    end;
-
-    Rep := PgiAsk('Voulez vous continuer le traitement', self.Caption);
-    if Rep <> MrYes then
-    begin
-      exit;
-    end;
-    InitMoveProgressForm(nil, 'Lecture des données', 'Veuillez patienter SVP ...', T.detail.count, FALSE, TRUE);
-
-    ExportOk := TRUE;
-    for I := 0 to T.detail.count - 1 do
-    begin
-      T1 := T.Detail[I];
-      if T1 <> nil then
+      T1 := T.detail[II];
+      //
+      NomTable := T1.GetString('DT_NOMTABLE');
+      TableSize   := Tools.GetTableSize(NomTable);
+      T1.SetInteger('NBENREG',-1);
+      if TableSize > MaxFileSize then
       begin
-        MaTable := T1.GetValue('DT_NOMTABLE');
-        Prefixe :=  T1.GetValue('DT_PREFIXE');
-        version := T1.GetInteger('DT_NUMVERSION');
-        //
-        St := ConstitueRequete (maTable);
-        Pexercice := FALSE;
-        if (MaTable <> 'EXERCICE') and (MaTable <> 'MENU') then
+
+        NbRecords   := Tools.GetTableInf(titRecordsQty, NomTable);
+        if TableSize > MaxFileSize then
         begin
-          ChampMvt := 'SELECT 1 FROM DECHAMPS WHERE DH_NOMCHAMP = "' + Prefixe + '_DATECREATION"';
-          if (ExisteSQL(ChampMvt)) then Pexercice := TRUE;
-        end;
-        if Pexercice then
-        begin
-          for II := 0 to  T_EXERCICE.detail.count -1 do
-          begin
-            DDebut := T_EXERCICE.detail[II].GetDateTime('EX_DATEDEBUT');
-            if II = T_EXERCICE.detail.count -1 then DFin := iDate2099
-                                               else DFin := T_EXERCICE.detail[II].GetDateTime('EX_DATEFIN');
-            LibEx :=  T_EXERCICE.detail[II].GetString('EX_LIBELLE');
-            CodeEx := T_EXERCICE.detail[II].GetString('EX_EXERCICE');
-            //
-            if not TraitementTable(TheTOZ,MaTable,Prefixe,version,DDebut,DFin,CodeEx,LibEx,PExercice,(II=0)) then
-            begin
-              Msg := 'Erreur dans table '+MaTable+' Exercice ' + LibEx;
-              PgiError(Msg, self.caption);
-              Trace.Items.add(Msg);
-            end;
-          end;
+          NbrecordsOk := Round(NbRecords / (TableSize / MaxFileSize));
         end else
         begin
-          DDebut := IDate1900;
-          DFin := iDate2099;
-          if not TraitementTable(TheTOZ,MaTable,Prefixe,version,DDebut,DFin,'',LibEx,false,true) then
-          begin
-            Msg := 'Erreur dans table '+MaTable;
-            PgiError(Msg, self.caption);
-            Trace.Items.add(Msg);
-          end;
+          NbrecordsOk := NbRecords;
         end;
+        if NbrecordsOk > 500000 then NbrecordsOk := 500000;
+        (*
+        NbrecordsOk := Round(TableSize/MaxFileSize);
+        if NbrecordsOk > 500000 then NbrecordsOk := 500000;
+        *)
+        T1.SetInteger('NBENREG',NbrecordsOk);
+        T1.SetInteger('NBTOTAL',NbRecords);
       end;
+      //
+      T1.PutLigneGrid(GS,II+1,false,false,'DT_NOMTABLE;NBENREG;');
+      GS.Objects[0,II+1] := T1;
     end;
-    MoveCurProgressForm('Fin de traitement des données');
-    if not Exportok then PgiError('Le traitement est abandonné', self.caption)
-                    else PGFermeZipFile(TheTOZ);
-    if CBVIDAGEEXP.checked then PGVideDirectory(ExpDir);
-    if Assigned(TheToz) then TheToz.Free;
-    try
-      Trace.Items.add('Ecriture du fichier OK');
-    except
-      PGIBox('Une erreur est survenue lors de l''écriture du fichier', self.caption);
-      Trace.Items.add('Une erreur est survenue lors de l''écriture du fichier');
-    end;
-    FiniMoveProgressForm();
-    PgiBox('Exportation terminée', self.caption);
+    hmtrad.ResizeGridColumns(GS);
+    GS.AllSelected := True;
+    BValider.Visible := false;
+    BLANCETRAIT.Visible := True;
   FINALLY
-    T.free;
-    T_Mere.free;
-    T_EXERCICE.free;
   END;
 end;
 
 procedure TFexpImpCegid.ImportDOS(FileN,ExportN: string);
 var
-  rep,  Numvers, ret, LaVersion: Integer;
-  T_Mere, T, T1, T2 : TOB;
+  rep,  Numvers, LaVersion: Integer;
+  T1, T2 : TOB;
   Q: TQUERY;
-  Repert, LeNom,  st, MonFic: string;
+  LeNom,  st, MonFic: string;
   TheTOZ: TOZ;
+  ret : Integer;
   sr: TsearchRec;
-  OkOk : Boolean;
-begin
 
-  T_Mere := TOB.Create('Ma TOB', nil, -1);
-  T := TOB.Create('La TOB des tables', nil, -1);
+begin
   TRY
-    if FileN<> '' then repert := ExtractFilePath(FileN)
-                  else Repert := IncludeTrailingBackslash (ExportN);
+    fModeTrait := TmtImport;
+    T.ClearDetail;
+    T_Mere.ClearDetail;
+    T_EXERCICE.ClearDetail;
+    //
+    if FileN<> '' then frepert := ExtractFilePath(FileN)
+                  else fRepert := IncludeTrailingBackslash (ExportN);
     TheTOZ := nil;
     if (FileN <> '') then
     begin
-      Trace.Items.Add('Phase 1 - unzip du fichier...');
+      AddTrace('Phase 1 - unzip du fichier...');
 
       if not PGCreatZipFile(FileN, moOpen, TheTOZ, Self) then
       begin
@@ -387,124 +407,76 @@ begin
         exit;
       end
       else PGFermeZipFile(TheTOZ);
-      Trace.Items.Add('Phase 1 - unzip du fichier...OK');
+      AddTrace('Phase 1 - unzip du fichier...OK');
     end;
-
+    //
     ST := RendSQLTable;
     Q := OPENSQL(ST, TRUE);
     T.LoadDetailDb('DETABLES', '', '', Q, FALSE);
     Ferme(Q);
+    //
     InitMoveProgressForm(nil, 'Analyse des données', 'Veuillez patienter SVP ...', 2, FALSE, TRUE);
-    ret := FindFirst(Repert + '*.SEB', 0 + faAnyFile, sr);
-    Rep := MrYes;
-    while (ret = 0) and (rep = mrYes) do
-    begin
-      //
-      T_Mere.ClearDetail;
-      //
-      MonFic := Repert + sr.Name;
-      MoveCurProgressForm('Analyse des données du fichier ' + sr.Name);
-      //
-      TOBLoadFromBinFile(MonFic, nil, T_Mere);
-      T1 := T_Mere.Detail[0];
-      if Assigned(T1) then
+    ret := FindFirst(fRepert + '*.SEB', 0 + faAnyFile, sr);
+    TRY
+      Rep := MrYes;
+      while (ret = 0) and (rep = mrYes) do
       begin
-        LeNom := T1.GetValue('TABLE');
-        LaVersion := T1.GetValue('VERSION');
-        T2 := T.FindFirst(['DT_NOMTABLE'], [LeNom], FALSE);
-        if T2 <> nil then
+        //
+        T_Mere.ClearDetail;
+        //
+        MonFic := fRepert + sr.Name;
+        MoveCurProgressForm('Analyse des données du fichier ' + sr.Name);
+        //
+        TOBLoadFromBinFile(MonFic, nil, T_Mere);
+        T1 := T_Mere.Detail[0];
+        if Assigned(T1) then
         begin
-          if (T2.getString('VERIFIED')<> 'X') then
+          LeNom := T1.GetValue('TABLE');
+          LaVersion := T1.GetValue('VERSION');
+          T2 := T.FindFirst(['DT_NOMTABLE'], [LeNom], FALSE);
+          if T2 <> nil then
           begin
-            NumVers := T2.GetValue('DT_NUMVERSION');
-            if (LaVersion <> NumVers) and (NumVers <> 0) and (T2.getString('VERIFIED')<> 'X') and (CHKMSGSTRUCT.checked) then
+            if (T2.getString('VERIFIED')<> 'X') then
             begin
-              if PgiAsk ('ATTENTION : la structure d''origine de la table '+LeNom+' n''est pas identique à celle de ce dossier.#13#10 Confirmez-vous quand même l''import ?',self.caption) <> mryes then
+              NumVers := T2.GetValue('DT_NUMVERSION');
+              if (LaVersion <> NumVers) and (NumVers <> 0) and (T2.getString('VERIFIED')<> 'X') and (CHKMSGSTRUCT.checked) then
               begin
-                rep := MrCancel;
-              end else T2.SetString('VERIFIED','X');
+                if PgiAsk ('ATTENTION : la structure d''origine de la table '+LeNom+' n''est pas identique à celle de ce dossier.#13#10 Confirmez-vous quand même l''import ?',self.caption) <> mryes then
+                begin
+                  rep := MrCancel;
+                end else T2.SetString('VERIFIED','X');
+              end;
             end;
           end;
         end;
+        ret := FindNext(sr);
       end;
-      ret := FindNext(sr);
-    end;
-    sysutils.FindClose(sr);
+    FINALLY
+      sysutils.FindClose(sr);
+    END;
 
     if Rep <> MrYes then
     begin
       PgiError('Des anomalies de structure ont été détectées ou bien vous avez abandonné le traitement', self.caption);
       FiniMoveProgressForm();
-      Trace.Items.Add('Traitement abandonné');
+      AddTrace('Traitement abandonné');
       exit;
-    end;
-
-    if PgiAsk ('ATTENTION : Confirmez-vous le traitement d''import des données ?',self.caption) <> mryes then
+    end else
     begin
       FiniMoveProgressForm();
-      Trace.Items.Add('Traitement abandonné');
-      exit;
     end;
+    BValider.Visible := false;
+    BLANCETRAITClick(self);
     //
-    ret := FindFirst(Repert + '*.TEB', 0 + faAnyFile, sr);
-    OkOk := TRUE;
-    while (ret = 0) and (OkOk) do
-    begin
-      T_mere.ClearDetail;
-      //
-      MonFic := Repert + sr.Name;
-      TOBLoadFromBinFile(MonFic, nil, T_Mere);
-      T1 := T_Mere.Detail[0];
-
-
-      MoveCurProgressForm('Traitement des données du fichier ' + sr.Name);
-      try
-        T2 := T.FindFirst(['DT_NOMTABLE'], [ T1.GetValue('TABLE')], FALSE);
-        if T2 = nil then
-        begin
-          ret := FindNext(sr);
-          continue; // la table n''existe pas dans la destination....
-        end;
-        if (T1.getString('VIDAGE')='X') then
-        begin
-          if (T2.GetString('REINIT')<> 'X') then
-          begin
-            ExecuteSql('DELETE FROM '+T1.GetValue('TABLE'));
-            T2.SetString('REINIT','X');
-          end;
-          T_Mere.SetAllModifie(true);
-          OkOk := T_Mere.InsertDBByNivel(TRUE);
-        end else
-        begin
-          T_Mere.SetAllModifie(true);
-          OkOk := T_Mere.InsertOrUpdateDB(TRUE);
-        end;
-        Trace.Items.add('Traitement du fichier ' + sr.Name + ' OK');
-      except
-        Trace.Items.add('Erreur de traitement des données du fichier ' + sr.Name);
-        if (CHKSTOPONERROR.checked) then
-        begin
-          PgiError('ATTENTION : Le traitement des données du fichier '+sr.name+' n''est pas correct.#13#10 votre base de données n''est pas utilisable en l''état !', self.Caption);
-          OkOk := FALSE;
-        end;
-      end;
-      ret := FindNext(sr);
-    end;
-    FiniMoveProgressForm();
-    sysutils.FindClose(sr);
-    if OkOk then Repert := Copy(Repert, 1, Strlen(PChar(Repert)) - 1);
-    if CBVIDAGEIMP.Checked then PGVideDirectory(Repert);
-    EXECUTESQL ('DELETE FROM PARAMSALARIE WHERE PPP_PGINFOSMODIF="PSA_PRENOM"');
-    PgiBox('Import terminé', self.caption);
   FINALLY
-    T_Mere.free;
-    T.free;
   END;
 end;
 
 function TFexpImpCegid.PGCreatZipFile(Archive: string;CodeSession: TModeOpenZip; var TheTOZ: TOZ; Ecran: TFORM): Boolean;
 begin
   result := false;
+  TheTOZ := nil;
+  if WithOutZip then BEGIN Result := True; Exit; end;
   TheToz := TOZ.Create;
   try
     if TheToz.OpenZipFile(Archive, CodeSession) then
@@ -533,6 +505,7 @@ end;
 
 procedure TFexpImpCegid.PGFermeZipFile(TheTOZ: TOZ);
 begin
+  if WithOutZip then exit;
   TheToz.CloseSession;
 end;
 
@@ -563,6 +536,7 @@ end;
 
 function TFexpImpCegid.PGZipFile(Fichier: string; TheTOZ: TOZ;Ecran: TFORM): Boolean;
 begin
+  if WithOutZip then BEGIN RESULT := True;  Exit; END;
   result := false;
   try
     if TheToz.ProcessFile(Fichier, '') then result := TRUE;
@@ -575,84 +549,265 @@ begin
   end;
 end;
 
-function TFexpImpCegid.RendSQLTable: string;
+function TFexpImpCegid.ExportPaieCompta : Boolean;
 begin
-  result := 'SELECT '+
-            'DT_NOMTABLE,DT_PREFIXE,DT_LIBELLE,DT_NUMVERSION,"-" AS REINIT,"-" AS VERIFIED ' +
-            'FROM DETABLES '+
-            'WHERE '+
-            '(DT_DOMAINE IN ("C","Y","T","D","0","P")) OR '+
-            '(DT_NOMTABLE = "CHOIXCOD") OR (DT_NOMTABLE = "MENU") OR '+
-            '(DT_NOMTABLE = "PARAMSOC") OR '+
-            '(DT_NOMTABLE = "ETABLISS") OR (DT_NOMTABLE = "ETABLCOMPL") OR (DT_NOMTABLE = "SOCIETE")';
-  result := result + 'ORDER BY DT_NOMTABLE';
+  Result := CBDOSSIER.Checked;
 end;
 
-function TFexpImpCegid.TraitementTable(TheTOZ: TOZ; MaTable,Prefixe: string; Numversion: integer; DDebut, DFin: TdateTime; CodeEx,LibEx: string; ParExercice, premier: boolean): boolean;
-var SQl : String;
-    QQ : TQuery;
-    T_MERE,T_Fic,T_STFIC,T_STMERE : TOB;
-    TheFic,TheStFic : string;
+function TFexpImpCegid.ExportComptaOnly : Boolean;
 begin
-  result := true;
-  T_STMEre := TOB.Create ('UNE STRUCTURE',nil,-1);
-  T_STFIC := TOB.Create(MaTable+'_', T_STMere, -1);
-  T_STFIC.AddChampSupValeur('TABLE', MaTable);
-  T_STFIC.AddChampSupValeur('VERSION', Numversion);
-  T_STFIC.AddChampSupValeur('VIDAGE', 'X');
-  //
-  T_Mere := TOB.Create('Ma tob', nil, -1);
-  T_Fic := TOB.Create(MaTable+'_', T_Mere, -1);
-  T_Fic.AddChampSupValeur('TABLE', MaTable);
-  T_Fic.AddChampSupValeur('VERSION', Numversion);
-  T_Fic.AddChampSupValeur('VIDAGE', 'X');
-  if Pos(maTable,'MENU;PARAMSOC;CHOIXCOD;CHOIXEXT;') > 0 then T_Fic.SetString('VIDAGE', '-');
-  TRY
-    TheStFic := ExpDir + '\' + MaTable+'.SEB';
-    //
-    if maTable = 'MENU' then
-    begin
-			SQL := 'SELECT * FROM MENU '+
-      			 'WHERE '+
-      			 '(mn_1=0 and mn_2 in (41,42,43,44,46,47,48,49,200,303,310,347,639,371,372,373,374,375,376,377)) or (mn_1 in (41,42,43,44,46,47,48,49,200,303,310,347,639,371,372,373,374,375,376,377)) or '+
-             '(mn_1=0 and mn_2 in (8,9,11,12,13,14,16,17,18,26,27,324,330,340,361)) or (mn_1 in (8,9,11,12,13,14,16,17,18,26,27,324,330,340,361))';
-    end else
-    begin
-    	SQL := 'SELECT * FROM '+maTable;
-    end;
-    if (ParExercice) then
-    begin
-      MoveCurProgressForm('Traitement de la table ' + MaTable + ' ' + LibEx);
-      if premier then SQL := Sql + ' WHERE '+Prefixe+'_DATECREATION >= "'+USDATETIME(IDate1900)+'" AND '+Prefixe+'_DATECREATION <= "'+USDATETIME(DFin)+'"'
-                 else SQL := Sql + ' WHERE '+Prefixe+'_DATECREATION >= "'+USDATETIME(DDebut)+'" AND '+Prefixe+'_DATECREATION <= "'+USDATETIME(DFin)+'"';
-      TheFic := ExpDir + '\' +MaTable + '#'+CodeEx+'.TEB';
-    end else
-    begin
-      MoveCurProgressForm('Traitement de la table ' + MaTable );
-      TheFic := ExpDir + '\' + MaTable +'.TEB';
-    end;
+  Result := (not CBPAYE.Checked) and (CBCOMPTA.Checked);
+end;
 
-    QQ := OPENSQL(SQL, TRUE);
-    if not QQ.eof then
-    begin
-      T_Fic.LoadDetailDb(MaTable, '', '', QQ, FALSE);
+function TFexpImpCegid.ExportPaieOnly : Boolean;
+begin
+  Result := (CBPAYE.Checked) and (not CBCOMPTA.Checked);
+end;
+
+function TFexpImpCegid.RendSQLTable (TraitExport : Boolean=False): string;
+
+  function GetStartQry : string;
+  begin
+    Result := 'SELECT DT_NOMTABLE'
+            + '     , DT_PREFIXE'
+            + '     , DT_LIBELLE'
+            + '     , DT_NUMVERSION'
+            + '     , DT_DOMAINE'
+            + '     , DT_CLE1'
+            + '     , 0 AS NBENREG '
+            + '     , 0 AS NBTOTAL '
+            + '     , "-" AS REINIT'
+            + '     , "-" AS VERIFIED'
+            + '     , IIF(EXISTS(SELECT DH_NOMCHAMP FROM DECHAMPS WHERE DH_NOMCHAMP=DT_PREFIXE||"_PREDEFINI"),"X","-") AS PREDEFINI'
+            + ' FROM DETABLES'
+            + ' WHERE '
+            ;
+  end;
+
+begin
+  if (not TraitExport) or ((TraitExport) and (ExportPaieCompta)) then
+  begin
+    result := GetStartQry
+            + '( '
+            + '(DT_DOMAINE IN ("C","Y","T","D","0","P")) OR '
+            + '(DT_NOMTABLE = "CHOIXCOD") OR '
+            + '(DT_NOMTABLE = "MENU") OR '
+            + '(DT_NOMTABLE = "PARAMSOC") OR '
+            + '(DT_NOMTABLE = "ETABLISS") OR '
+            + '(DT_NOMTABLE = "ETABLCOMPL") OR '
+            + '(DT_NOMTABLE = "SOCIETE") OR '
+            + '(DT_NOMTABLE = "DESEQUENCES") OR '
+            + '(DT_NOMTABLE = "LIENSOLE")'
+            + ') AND '
+            + 'DT_NOMTABLE <> "YMULTIDOSSIER" AND '
+            + 'DT_NOMTABLE <> "DOSSIER" AND '
+            + 'DT_NOMTABLE NOT LIKE "TRAD%" AND '
+            + 'DT_NOMTABLE <> "LOG" AND '
+            + 'DT_NOMTABLE <> "LIENDONNEES" AND '
+            + 'DT_NOMTABLE <> "RESSOURCEPR" AND '
+            + 'DT_NOMTABLE <> "COMMUN" AND '
+            + 'DT_NOMTABLE <> "CLAVIERECRAN" AND '
+            + 'DT_NOMTABLE <> "EVARTRACK" AND '
+            + 'DT_NOMTABLE <> "JNALEVENT" AND '
+            + 'DT_NOMTABLE <> "MACRO" AND '
+            + 'DT_NOMTABLE <> "MODEDATA" AND '
+            + 'DT_NOMTABLE <> "COURRIER" AND '
+            + 'DT_NOMTABLE <> "MODELES" AND '
+            + 'DT_NOMTABLE <> "RTDOCUMENT" AND '
+            + 'DT_NOMTABLE <> "SOUCHE" AND '
+            + 'DT_NOMTABLE <> "YMYBOBS" AND '
+            + 'DT_NOMTABLE <> "YMYCPTX" AND '
+            + 'DT_NOMTABLE <> "FORMESP"'
+            + 'ORDER BY DT_NOMTABLE'
+            ;
+  end else if (ExportComptaOnly) then
+  begin
+    result := GetStartQry
+            + '( '
+            + '(DT_DOMAINE IN ("C","Y","T","D","0")) OR '
+            + '(DT_NOMTABLE = "CHOIXCOD") OR '
+            + '(DT_NOMTABLE = "MENU") OR '
+            + '(DT_NOMTABLE = "PARAMSOC") OR '
+            + '(DT_NOMTABLE = "ETABLISS") OR '
+            + '(DT_NOMTABLE = "ETABLCOMPL") OR '
+            + '(DT_NOMTABLE = "SOCIETE") OR '
+            + '(DT_NOMTABLE = "DESEQUENCES") OR '
+            + '(DT_NOMTABLE = "LIENSOLE")'
+            + ') AND '
+            + 'DT_NOMTABLE <> "YMULTIDOSSIER" AND '
+            + 'DT_NOMTABLE <> "DOSSIER" AND '
+            + 'DT_NOMTABLE NOT LIKE "TRAD%" AND '
+            + 'DT_NOMTABLE <> "LOG" AND '
+            + 'DT_NOMTABLE <> "LIENDONNEES" AND '
+            + 'DT_NOMTABLE <> "RESSOURCEPR" AND '
+            + 'DT_NOMTABLE <> "COMMUN" AND '
+            + 'DT_NOMTABLE <> "CLAVIERECRAN" AND '
+            + 'DT_NOMTABLE <> "EVARTRACK" AND '
+            + 'DT_NOMTABLE <> "JNALEVENT" AND '
+            + 'DT_NOMTABLE <> "MACRO" AND '
+            + 'DT_NOMTABLE <> "MODEDATA" AND '
+            + 'DT_NOMTABLE <> "COURRIER" AND '
+            + 'DT_NOMTABLE <> "MODELES" AND '
+            + 'DT_NOMTABLE <> "RTDOCUMENT" AND '
+            + 'DT_NOMTABLE <> "SOUCHE" AND '
+            + 'DT_NOMTABLE <> "YMYBOBS" AND '
+            + 'DT_NOMTABLE <> "YMYCPTX" AND '
+            + 'DT_NOMTABLE <> "FORMESP"'
+            + 'ORDER BY DT_NOMTABLE'
+            ;
+  end else if (ExportPaieOnly) then
+  begin
+    Result := GetStartQry
+            +  '('
+            +  '(DT_DOMAINE IN ("P","Y")) OR '
+            +  '(DT_NOMTABLE = "CHOIXCOD") OR (DT_NOMTABLE = "PARAMSOC")  OR (DT_NOMTABLE = "ETABLISS") OR '
+            +  '(DT_NOMTABLE = "CALENDRIER") OR (DT_NOMTABLE = "JOURFERIE") OR '
+            +  '(DT_NOMTABLE = "TIERS") OR (DT_NOMTABLE = "RIB") OR '
+            +  '(DT_NOMTABLE = "ANNUAIRE") OR '
+            +  '(DT_NOMTABLE = "BANQUECP") OR '
+            +  '(DT_NOMTABLE = "VENTIL") OR (DT_NOMTABLE = "VENTANA") OR (DT_NOMTABLE = "AXE") OR (DT_NOMTABLE = "SECTION")'
+            +  ') AND '
+            + 'DT_NOMTABLE <> "YMULTIDOSSIER" AND '
+            + 'DT_NOMTABLE <> "DOSSIER" AND '
+            + 'DT_NOMTABLE NOT LIKE "TRAD%" AND '
+            + 'DT_NOMTABLE <> "LOG" AND '
+            + 'DT_NOMTABLE <> "LIENDONNEES" AND '
+            + 'DT_NOMTABLE <> "RESSOURCEPR" AND '
+            + 'DT_NOMTABLE <> "COMMUN" AND '
+            + 'DT_NOMTABLE <> "CLAVIERECRAN" AND '
+            + 'DT_NOMTABLE <> "EVARTRACK" AND '
+            + 'DT_NOMTABLE <> "JNALEVENT" AND '
+            + 'DT_NOMTABLE <> "MACRO" AND '
+            + 'DT_NOMTABLE <> "MODEDATA" AND '
+            + 'DT_NOMTABLE <> "COURRIER" AND '
+            + 'DT_NOMTABLE <> "MODELES" AND '
+            + 'DT_NOMTABLE <> "RTDOCUMENT" AND '
+            + 'DT_NOMTABLE <> "SOUCHE" AND '
+            + 'DT_NOMTABLE <> "YMYBOBS" AND '
+            + 'DT_NOMTABLE <> "YMYCPTX" AND '
+            + 'DT_NOMTABLE <> "FORMESP"'
+            + 'ORDER BY DT_NOMTABLE'
+  end;
+end;
+
+function TFexpImpCegid.TraitementTable(TheTOZ: TOZ; MaTable,Domaine, Predefini, Prefixe: string; Numversion: integer; DDebut, DFin: TdateTime; CodeEx,LibEx: string; Pagine,premier: boolean ; NumPage,NbEnreg,CurrentLine,NbRecords,NbPage : integer): boolean;
+var
+  SQl : String;
+  QQ : TQuery;
+  T_MERE,T_Fic,T_STFIC,T_STMERE : TOB;
+  TheFic,TheStFic : string;
+  SPName : string;
+  MSg : string;
+begin
+  Result   := True;
+  SPName   := Tools.iif(NumPage > 0, GetStoredProcedureName(MaTable), '');
+  MoveCurProgressForm(Format('%s/%s - Table %s (%s enregistrement(s))%s', [IntTostr(CurrentLine), IntTostr(GS.nbSelected), MaTable, IntToStr(NbRecords), Tools.iif(NumPage > 0, Format(' - Page %s/%s', [IntToStr(NumPage), IntToStr(NbPage)]), '')]));
+  T_STMEre := TOB.Create ('UNE STRUCTURE',nil,-1);
+  try
+    T_Mere := TOB.Create('Ma tob', nil, -1);
+    try
+      try
+        T_STFIC := TOB.Create(MaTable+'_', T_STMere, -1);
+        T_STFIC.AddChampSupValeur('TABLE', MaTable);
+        T_STFIC.AddChampSupValeur('VERSION', Numversion);
+        T_STFIC.AddChampSupValeur('VIDAGE', 'X');
+        T_Fic := TOB.Create(MaTable+'_', T_Mere, -1);
+        T_Fic.AddChampSupValeur('TABLE', MaTable);
+        T_Fic.AddChampSupValeur('VERSION', Numversion);
+        T_Fic.AddChampSupValeur('VIDAGE', 'X');
+        if Pos(maTable,'MENU;PARAMSOC;CHOIXCOD;CHOIXEXT;') > 0 then T_Fic.SetString('VIDAGE', '-');
+        if (Predefini = 'X') or (Domaine='Y') then T_Fic.SetString('VIDAGE','-');
+        TheStFic := ExpDir + '\' + MaTable+'.SEB';
+        if MaTable = 'PARAMSOC' then
+        begin
+          if ExportPaieCompta then
+          begin
+            SQL := 'SELECT * FROM PARAMSOC WHERE (SOC_TREE LIKE "001;001;%") OR (SOC_TREE LIKE "001;002;%") OR (SOC_TREE LIKE "001;005;%") OR (SOC_TREE LIKE "001;018;%")';
+          end else if ExportComptaOnly then
+          begin
+            SQL := 'SELECT * FROM PARAMSOC WHERE (SOC_TREE LIKE "001;001;%") OR (SOC_TREE LIKE "001;002;%") OR (SOC_TREE LIKE "001;018;%")';
+          end else
+          begin
+            SQL := 'SELECT * FROM PARAMSOC WHERE (SOC_TREE LIKE "001;005;%")';
+          end;
+          TheStFic := ExpDir + '\' + MaTable+'.SEB';
+          TheFic := ExpDir + '\' + MaTable +'.TEB';
+        end else if MaTable = 'MENU' then
+        begin
+          if ExportPaieCompta then
+          begin
+            SQL := 'SELECT * FROM MENU '+
+                   'WHERE ('+
+                   '(mn_1=0 and mn_2 in (41,42,43,44,46,47,48,49,200,303,310,347,639,371,372,373,374,375,376,377)) or '+
+                   '(mn_1 in (41,42,43,44,46,47,48,49,200,303,310,347,639,371,372,373,374,375,376,377)) or '+
+                   '(mn_1=0 and mn_2 in (8,9,11,12,13,14,16,17,18,21,26,27,324,330,336,340,361)) or '+
+                   '(mn_1 in (8,9,11,12,13,14,16,17,18,21,26,27,324,330,336,340,361))'+
+                   ')';
+          end else if ExportComptaOnly then
+          begin
+            SQL := 'SELECT * FROM MENU '+
+                   'WHERE '+
+                   '('+
+                   '(mn_1=0 and mn_2 in (8,9,11,12,13,14,16,17,18,21,26,27,324,330,336,340,361)) or '+
+                   '(mn_1 in (8,9,11,12,13,14,16,17,18,21,26,27,324,330,336,340,361))'+
+                   ')';
+
+          end else if ExportPaieOnly then
+          begin
+            SQL := 'SELECT * FROM MENU '+
+                   'WHERE '+
+                   '('+
+                   '(mn_1=0 and mn_2 in (41,42,43,44,46,47,48,49,200,303,310,347,639,371,372,373,374,375,376,377)) or '+
+                   '(mn_1 in (41,42,43,44,46,47,48,49,200,303,310,347,639,371,372,373,374,375,376,377))'+
+                   ')';
+          end;
+          TheStFic := ExpDir + '\' + MaTable+'.SEB';
+          TheFic := ExpDir + '\' + MaTable +'.TEB';
+        end else if SPName <> '' then
+        begin
+          TheStFic := ExpDir + '\' + MaTable+'.SEB';
+          TheFic   := ExpDir + '\' + MaTable +'#'+InttoStr(NumPage)+'.TEB';
+          SQL      := Format('exec [dbo].%s %s, %s', [SPName, IntToStr(NumPage), IntToStr(nbEnreg)]);//  +IntToStr(NumPage)+','+IntToStr(nbEnreg);
+        end else
+        begin
+          TheStFic := ExpDir + '\' + MaTable+'.SEB';
+          SQL := 'SELECT * FROM '+maTable +' WHERE 1=1';
+          TheFic := ExpDir + '\' + MaTable +'.TEB';
+          if Predefini='X' then
+          begin
+            SQL := SQL + ' AND NOT '+Prefixe+'_PREDEFINI IN ("CEG","STD")';
+          end;
+        end;
+        QQ := OPENSQL(SQL, TRUE);
+        if not QQ.eof then
+        begin
+          T_Fic.LoadDetailDb(MaTable, '', '', QQ, FALSE);
+        end;
+        Ferme(QQ);
+        if premier then
+        begin
+          if FileExists(TheSTFic) then DeleteFile(PChar(TheSTFic));
+          T_STFic.SaveToBinFile(TheSTFic, FALSE, TRUE, TRUE, FALSE);
+          if not PGZipFile(TheSTFic, TheTOZ, self) then result := FALSE;
+        end;
+        if FileExists(TheFic) then DeleteFile(PChar(TheFic));
+        T_Fic.SaveToBinFile(TheFic, FALSE, TRUE, TRUE, FALSE);
+        if not PGZipFile(TheFic, TheTOZ, self) then result := FALSE;
+      except
+        On E:Exception do
+        begin
+          Msg := 'Erreur '+E.Message+' sur table '+MaTable;
+          PGIInfo(Msg);
+          AddTrace(Msg);
+          raise;
+        end;
+      end;
+    finally
+      FreeAndNil(T_Mere);
     end;
-    Ferme(QQ);
-    //
-    if premier then
-    begin
-      if FileExists(TheSTFic) then DeleteFile(PChar(TheSTFic));
-      T_STFic.SaveToBinFile(TheSTFic, FALSE, TRUE, TRUE, FALSE);
-      if not PGZipFile(TheSTFic, TheTOZ, self) then result := FALSE;
-    end;
-    //
-    if FileExists(TheFic) then DeleteFile(PChar(TheFic));
-    T_Fic.SaveToBinFile(TheFic, FALSE, TRUE, TRUE, FALSE);
-    if not PGZipFile(TheFic, TheTOZ, self) then result := FALSE;
-  FINALLY
-    FreeAndNil(T_Mere);
-    T_STMEre.free;
-  END;
+  finally
+    FreeAndNil(T_STMEre);
+  end;
 end;
 
 procedure TFexpImpCegid.RDTIMPORTClick(Sender: TObject);
@@ -668,6 +823,368 @@ begin
   CBVIDAGEEXP.Enabled := false;
   NOMFIC.Enabled := false;
   EXPORTFIC.Enabled := false;
+  CBCOMPTA.enabled := False;
+  CBPAYE.enabled := False;
+end;
+
+procedure TFexpImpCegid.CBCOMPTAClick(Sender: TObject);
+begin
+  CBDOSSIER.OnClick := nil;
+  CBDOSSIER.Checked := false;
+  CBDOSSIER.OnClick := CBDOSSIERClick;
+end;
+
+procedure TFexpImpCegid.CBPAYEClick(Sender: TObject);
+begin
+  CBDOSSIER.OnClick := nil;
+  CBDOSSIER.Checked := false;
+  CBDOSSIER.OnClick := CBDOSSIERClick;
+end;
+
+procedure TFexpImpCegid.CBDOSSIERClick(Sender: TObject);
+begin
+  CBCOMPTA.OnClick := nil;
+  CBPAYE.OnClick := nil;
+  CBCOMPTA.Checked := false;
+  CBPAYE.Checked := false;
+  CBCOMPTA.OnClick := CBCOMPTAClick;
+  CBPAYE.OnClick := CBPAYEClick;
+end;
+
+procedure TFexpImpCegid.BLANCETRAITClick(Sender: TObject);
+var
+  T1              : TOB;
+  T2              : TOB;
+  LibEx           : string;
+  Prefixe         : string;
+  CodeEx          : string;
+  MaTable         : string;
+  msg             : string;
+  PREDEFINI       : string;
+  FieldsKey       : string;
+  Domaine         : string;
+  Monfic          : string;
+  RapportName     : string;
+  Version         : integer;
+  I               : integer;
+  ret             : integer;
+  NbRecords       : integer;
+  NbRecordsOk     : double;
+  NbPage          : integer;
+  Cpt             : integer;
+  CurrentLine     : integer;
+  RecordSize      : double;
+  AvailableMemory : integer;
+  ExportOk        : Boolean;
+  OkOk            : Boolean;
+  TheToz          : TOZ;
+  DDebut          : Tdatetime;
+  DFin            : Tdatetime;
+  sr              : TsearchRec;
+  TableSize       : integer;
+begin
+  NbPage            := 0;
+  CurrentLine       := 0;
+  PGCTRL.ActivePage := RAPPORT;
+  ExportOk          := False;
+  AddTrace('--------------------------------');
+  AddTrace('Heure départ '+DateTimeToStr(NowH));
+  AddTrace('--------------------------------');
+  try
+    if fModeTrait = tmtExport then
+    begin
+      TheTOZ := nil;
+      if not WithOutZip then
+      begin
+        if not PGCreatZipFile(ZipFile, moCreate, TheTOZ, self) then
+        begin
+          T.free;
+          T_Mere.free;
+          AddTrace('Erreur sur fichier archive : ' +ZipFile);
+          exit;
+        end;
+      end;
+      InitMoveProgressForm(nil, 'Lecture des données', 'Veuillez patienter SVP ...', T.detail.count, FALSE, TRUE);
+      TRY
+        for I := 1 to GS.RowCount - 1 do
+        begin
+          if not GS.IsSelected(I) then continue;
+          inc(CurrentLine);
+          T1 := TOB(GS.objects[0,I]);
+          if T1 <> nil then
+          begin
+            MaTable         := T1.GetString('DT_NOMTABLE');
+            Prefixe         := T1.GetString('DT_PREFIXE');
+            Version         := T1.GetInteger('DT_NUMVERSION');
+            PREDEFINI       := T1.GetString('PREDEFINI');
+            DOMAINE         := T1.GetString('DT_DOMAINE');
+            FieldsKey       := T1.GetString('DT_CLE1');
+            DDebut          := IDate1900;
+            DFin            := iDate2099;
+            NbRecordsOk       := T1.GetInteger('NBENREG');
+            NbRecords       := T1.GetInteger('NBTOTAL');
+            if NbRecordsOk <>-1 then
+            begin
+              CreateStoredProcedure(MaTable, FieldsKey);
+              try
+                NbPage := Floor(Nbrecords/NbrecordsOk);
+                if (NbPage * NbrecordsOk) < Nbrecords then Inc(NbPage);
+                for Cpt := 1 to NbPage do
+                begin
+                  try
+                    if not TraitementTable(TheTOZ, MaTable, Domaine, PREDEFINI, Prefixe, Version, DDebut, DFin, CodeEx, LibEx, True, (Cpt=1), Cpt, Round(NbrecordsOk), CurrentLine, Round(NbRecords), NbPage) then
+                    begin
+                      Msg := Format('Erreur dans table %s - Page %s/%s', [MaTable, IntToStr(Cpt), IntToStr(NbPage)]);
+                      PgiError(Msg, self.caption);
+                      AddTrace(Msg);
+                    end else
+                      AddTrace(Format('Table %s - Page %s/%s --> Traité Ok', [MaTable, IntToStr(Cpt), IntToStr(NbPage)]));
+                  except
+                    On E:Exception do
+                    begin
+                      Msg := Format('Erreur dans table %s - Page %s/%s', [MaTable, IntToStr(Cpt), IntToStr(NbPage)]);
+                      PGIInfo('Erreur '+E.Message+' sur table '+MaTable );
+                      raise;
+                    end;
+                  end;
+                end;
+              finally
+                Tools.DropStoredProcedure(GetStoredProcedureName(MaTable));
+              end;
+            end else
+            begin
+              TRY
+                if not TraitementTable(TheTOZ, MaTable, Domaine, PREDEFINI, Prefixe, version, DDebut, DFin, '', LibEx, False, True, 0, 0, CurrentLine, Round(NbRecords), 0) then
+                begin
+                  Msg := 'Erreur dans table '+MaTable;
+                  PgiError(Msg, self.caption);
+                  AddTrace(Msg);
+                end else
+                  AddTrace(Format('Table %s --> Traité Ok', [MaTable]));
+              EXCEPT
+                On E:Exception do
+                begin
+                  Msg :='Erreur '+E.Message+' sur table '+MaTable;
+                  PGIInfo(Msg);
+                  AddTrace(Msg);
+                  raise;
+                end;
+              END;
+            end;
+          end;
+        end;
+        ExportOk := True;
+      FINALLY
+        MoveCurProgressForm('Fin de traitement des données');
+        if not Exportok then
+        begin
+          PgiError('Le traitement est abandonné', self.caption)
+        end else
+        begin
+          PGFermeZipFile(TheTOZ);
+        end;
+        if CBVIDAGEEXP.checked then PGVideDirectory(ExpDir);
+        if Assigned(TheToz) then TheToz.Free;
+        try
+          AddTrace('Ecriture du fichier OK');
+        except
+          PGIBox('Une erreur est survenue lors de l''écriture du fichier', self.caption);
+          AddTrace('Une erreur est survenue lors de l''écriture du fichier');
+        end;
+        FiniMoveProgressForm();
+      end;
+    end else
+    begin
+      ret := FindFirst(fRepert + '*.TEB', 0 + faAnyFile, sr);
+      InitMoveProgressForm(nil, 'Lecture des données', 'Veuillez patienter SVP ...', T.detail.count, FALSE, TRUE);
+
+      OkOk := TRUE;
+      TRY
+        while (ret = 0) and (OkOk) do
+        begin
+          T_mere.ClearDetail;
+          //
+          MonFic := fRepert + sr.Name;
+          TOBLoadFromBinFile(MonFic, nil, T_Mere);
+          T1 := T_Mere.Detail[0];
+          MoveCurProgressForm('Traitement des données du fichier ' + sr.Name);
+          try
+            T2 := T.FindFirst(['DT_NOMTABLE'], [ T1.GetValue('TABLE')], FALSE);
+            if T2 = nil then
+            begin
+              ret := FindNext(sr);
+              continue; // la table n''existe pas dans la destination....
+            end;
+            if (T1.getString('VIDAGE')='X') then
+            begin
+              if (T2.GetString('REINIT')<> 'X') then
+              begin
+                ExecuteSql('DELETE FROM '+T1.GetValue('TABLE'));
+                T2.SetString('REINIT','X');
+              end;
+              T_Mere.SetAllModifie(true);
+              OkOk := T_Mere.InsertDBByNivel(TRUE);
+            end else
+            begin
+              T_Mere.SetAllModifie(true);
+              OkOk := T_Mere.InsertOrUpdateDB(TRUE);
+            end;
+            AddTrace('Traitement du fichier ' + sr.Name + ' OK');
+          except
+            AddTrace('Erreur de traitement des données du fichier ' + sr.Name);
+            if (CHKSTOPONERROR.checked) then
+            begin
+              PgiError('ATTENTION : Le traitement des données du fichier '+sr.name+' n''est pas correct.#13#10 votre base de données n''est pas utilisable en l''état !', self.Caption);
+              OkOk := FALSE;
+            end;
+          end;
+          ret := FindNext(sr);
+        end;
+      FINALLY
+        FiniMoveProgressForm();
+        sysutils.FindClose(sr);
+      end;
+      if not okok then
+      begin
+        PGIInfo('Importation abandonnée');
+        BLANCETRAIT.Visible := false;
+        BValider.Visible := true;
+      end else
+      begin
+        fRepert := Copy(fRepert, 1, Strlen(PChar(fRepert)) - 1);
+        if CBVIDAGEIMP.Checked then PGVideDirectory(fRepert);
+        EXECUTESQL ('DELETE FROM PARAMSALARIE WHERE PPP_PGINFOSMODIF="PSA_PRENOM"');
+      end;
+    end;
+  finally
+    AddTrace('--------------------------------');
+    AddTrace('Heure fin '+DateTimeToStr(NowH));
+    AddTrace('--------------------------------');
+    RapportName := Format('%s\%s_Rapport%s.txt', [EXPORTFIC.Text, FormatDateTime('yyyymmdd', Now), Tools.iif(fModeTrait = tmtExport, 'Export', 'Import')]);
+    Trace.Items.SaveToFile(RapportName);
+    PgiBox(Format('%s terminé (rapport enregistré dans %s)', [Tools.iif(fModeTrait = tmtExport, 'Export', 'Import'), RapportName]), self.caption);
+    BLANCETRAIT.Visible := false;
+    BValider.Visible := true;
+  end;
+end;
+
+function TFexpImpCegid.GetStoredProcedureName(TableName : string) : string;
+begin
+  Result := Tools.iif(TableName <> '', Format('sp_paging_%s', [TableName]), '');
+end;
+
+procedure TFexpImpCegid.CreateStoredProcedure(TableName, SortedFields : string);
+var
+  Sql       : string;
+  SPName    : string;
+begin
+  if TableName <> '' then
+  begin
+    SPName := GetStoredProcedureName(TableName);
+    if SPName <> '' then
+    begin
+      Tools.DropStoredProcedure(SPName);
+      Sql := Format('CREATE PROCEDURE [dbo].[%s] @pageno as int, @records as int'
+                 +  ' AS'
+                 +  ' BEGIN'
+                 +  ' SET NOCOUNT ON;'
+                 +  ' declare @offsetcount as int'
+                 +  ' set @offsetcount=(@pageno-1)*@records'
+                 +  ' select * from %s order by %s offset @offsetcount rows fetch Next @records rows only'
+                 +  ' END'
+                   , [SPName, TableName, SortedFields]);
+      ExecuteSQL(Sql);
+    end;
+  end;
+end;
+
+function TFexpImpCegid.GetProcessMemorySize(_sProcessName: string; var _nMemSize: Cardinal): Boolean;
+var
+  l_nWndHandle, l_nProcID, l_nTmpHandle: HWND;
+  l_pPMC: PPROCESS_MEMORY_COUNTERS;
+  l_pPMCSize: Cardinal;
+begin
+  l_nWndHandle := FindWindow(nil, PChar(_sProcessName)); // Application. handle;
+
+  if l_nWndHandle = 0 then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  l_pPMCSize := SizeOf(PROCESS_MEMORY_COUNTERS);
+
+  GetMem(l_pPMC, l_pPMCSize);
+  l_pPMC^.cb := l_pPMCSize;
+
+  GetWindowThreadProcessId(l_nWndHandle, @l_nProcID);
+  l_nTmpHandle := OpenProcess(PROCESS_ALL_ACCESS, False, l_nProcID);
+
+  if (GetProcessMemoryInfo(l_nTmpHandle, l_pPMC, l_pPMCSize)) then
+    _nMemSize := l_pPMC^.WorkingSetSize
+  else
+    _nMemSize := 0;
+
+  FreeMem(l_pPMC);
+
+  Result := True;
+end;
+
+procedure TFexpImpCegid.AddTrace(Text : string);
+begin
+  Trace.Items.Insert(0, Text);
+end;
+
+procedure TFexpImpCegid.GSDblClick(Sender: TObject);
+var Arect : TRect;
+    T1 : TOB;
+begin
+  //
+  T1 := T.Detail[GS.row-1];
+  ARect := GS.CellRect(1, GS.Row);
+  TX.Parent := GS;
+  TX.Top := Arect.top;
+  TX.Left := Arect.Left;
+  TX.Text := IntToStr(T1.GetInteger('NBENREG'));
+  TX.visible := True;
+  TX.SetFocus;
+end;
+
+procedure TFexpImpCegid.TXExit(Sender: TObject);
+var T1 : TOB;
+begin
+  if not IsNumeric(TX.Text) then BEGIN TX.SetFocus; Exit; end;
+  T1 := T.Detail[GS.row-1];
+  T1.setInteger('NBENREG',StrToInt(TX.text));
+  TX.Visible := false;
+  T1.PutLigneGrid(GS,GS.row,false,false,'DT_NOMTABLE;NBENREG;');
+end;
+
+procedure TFexpImpCegid.PostDrawCell(ACol, ARow: Integer; Canvas: TCanvas; AState: TGridDrawState);
+var Arect : TRect;
+    Fix : boolean;
+    T1 : TOB;
+begin
+//
+  if csDestroying in ComponentState then Exit;
+  if GS.RowHeights[ARow] <= 0 then Exit;
+  if ARow = 0 then Exit; 
+  T1 := T.detail[Arow-1]; 
+  ARect := GS.CellRect(ACol, ARow);
+  Fix := ((ACol < GS.FixedCols) or (ARow < GS.FixedRows));
+  GS.Canvas.Pen.Style := psSolid;
+  GS.Canvas.Pen.Color := clgray;
+  GS.Canvas.Brush.Style := BsSolid;
+  if (Acol = 1)  Then
+  begin
+    if T1.GetInteger('NBENREG')=-1 then
+    begin
+    	Canvas.FillRect(ARect);
+      GS.Canvas.Brush.Style := bsSolid;
+      GS.Canvas.TextOut (Arect.left+1,Arect.Top +2,'Tout');
+    end;
+  end;
+
 end;
 
 end.

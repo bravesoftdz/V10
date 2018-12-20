@@ -1380,7 +1380,7 @@ begin
     //chargement des valeurs sur l'ensemble des lignes ouvrage...
     ChargeQteDetailMetre(TobOuvrage, TOBL);
 
-    //On vérifie si la quantité calculée est différente de zétro ou de 1 en fonction des paramètres société....
+    //On vérifie si la quantité calculée est différente de zéro ou de 1 en fonction des paramètres société....
     Result := TOBL.GetDouble(Prefixe + 'QTEFACT');
     //
     if (SauveQte <> 0) and ((Result = 0) OR (Result = 1)) then
@@ -1390,6 +1390,7 @@ begin
       TOBL.putValue(Prefixe + 'QTEFACT',  FloatToStr(Result));       //StrF00(result, V_PGI.OkDecQ)
       TOBL.putValue(Prefixe + 'QTESTOCK', FloatToStr(Result));       //StrF00(result, V_PGI.OkDecQ)
       TOBL.putValue(Prefixe + 'QTERESTE', FloatToStr(Result));       //StrF00(result, V_PGI.OkDecQ)
+      TOBL.putValue(Prefixe + 'QTESAIS',  FloatToStr(Result));       //StrF00(result, V_PGI.OkDecQ)
     end;
 
     //Chargement de la valeur sur la ligne si article simple en fonction de numordre et uniqueblo...
@@ -1513,10 +1514,13 @@ begin
        TobDetail.Putvalue('GL_QTERESTE',Arrondi(Valret,V_PGI.OkDecQ));
        TobDetail.Putvalue('GL_QTESTOCK',Arrondi(Valret,V_PGI.OkDecQ));
        TobDetail.Putvalue('GL_QTEFACT', Arrondi(Valret,V_PGI.OkDecQ));
+       TobDetail.Putvalue('GL_QTESAIS', Arrondi(Valret,V_PGI.OkDecQ));
     end
     else
     begin
       TobDetail.Putvalue('BLO_QTEFACT', Arrondi(Valret,V_PGI.OkDecQ));
+      TobDetail.Putvalue('BLO_QTESAIS', Arrondi(Valret,V_PGI.OkDecQ));
+      //
       if TOBdetail.GetString('BLO_TYPEARTICLE')='PRE' then
       begin
         if (Pos(TobDetail.GetValue('BNP_TYPERESSOURCE'),VH_GC.BTTypeMoInterne)>0) and

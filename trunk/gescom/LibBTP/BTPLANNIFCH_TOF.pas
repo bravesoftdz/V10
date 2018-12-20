@@ -157,7 +157,12 @@ Type
 		procedure TraitementModeGestion;
     procedure AppliqueCoeffRSurLigneFrais(TOBL: TOB; Coeff: double);
     procedure ReajusteLigneDevisPourCtrEtude(TOBL: TOB; CoefFr: double);
-
+    function IntegreArticleGlobal(TOBL, TOBDEBUT: TOB;TheTypeLigne : TTypeProv=TtpNormal): TOB;
+    function DefiniLaBranche (TOBL : TOB) : TOB;
+    function AjouteLeType (LeType : string) : TOB;
+    function findLeType(LeTYpe: string): TOB;
+    function AjouteLaFamille(LeType, LaFamille: string; TT : TOB; IsPrestation : boolean): TOB;
+    function findLaFamille(LeTYpe, LaFamille: string; TOBDEBUT : TOB): TOB;
   end ;
 
   function SetPlannification (TOBDEVIS,TOBSST,TobOuvrage,TOBFrais,TOBOUvrageFrais : TOB) : boolean;
@@ -192,7 +197,7 @@ begin
     if TheTOB <> nil then
     begin
       ExecuteSql ('UPDATE AFFAIRE SET AFF_PREPARE="X" '+
-                  'WHERE '+
+                  ', AFF_DATEMODIF="' + USDATETIME(NowH) + '" WHERE ' +
                   'AFF_AFFAIRE=('+
                   'SELECT GP_AFFAIREDEVIS FROM PIECE WHERE '+WherePiece(OneDoc,ttdPiece,false)+')');
 //uniquement en line
@@ -227,7 +232,7 @@ begin
     if TheTOB <> nil then
     begin
       ExecuteSql ('UPDATE AFFAIRE SET AFF_PREPARE="X" '+
-                  'WHERE '+
+                  ', AFF_DATEMODIF="' + USDATETIME(NowH) + '" WHERE ' +
                   'AFF_AFFAIRE=('+
                   'SELECT GP_AFFAIREDEVIS FROM PIECE WHERE '+WherePiece(OneDoc,ttdPiece,false)+')');
     end;
@@ -273,6 +278,8 @@ TOBD.addChampsupValeur ('MONTANTPR',0,false);
 TOBD.addChampsupValeur ('MONTANTFR',0,false);
 TOBD.addChampsupValeur ('MONTANTFC',0,false);
 TOBD.addChampsupValeur ('MONTANTFG',0,false);
+TOBD.addChampsupValeur ('ZZTRI0','',false);
+TOBD.addChampsupValeur ('FAMILLE','',false);
 end;
 
 procedure TOF_BTPLANNIFCH.getComponents;
@@ -1552,6 +1559,287 @@ TOBS.putValue ('WOL ORIGINE',TOBL.GetValue('GL_IDENTIFIANTWOL'));
 result := TOBS;
 end;
 
+function TOF_BTPLANNIFCH.AjouteLeType (LeType : string) : TOB;
+
+  function GetLibelleType(LeType : string) : string;
+  begin
+    if LeType = '000' then
+    begin
+      Result := 'Matériaux';
+    end else if LeType = '001' then
+    begin
+      Result := 'Main d''oeuvre';
+    end else if LeType = '002' then
+    begin
+      Result := 'Interim.';
+    end else if LeType = '003' then
+    begin
+      Result := 'Sous traitance';
+    end else if LeType = '004' then
+    begin
+      Result := 'Location';
+    end else if LeType = '005' then
+    begin
+      Result := 'Matériels';
+    end else if LeType = '006' then
+    begin
+      Result := 'Outillage';
+    end else if LeType = '007' then
+    begin
+      Result := 'Autre';
+    end;
+  end;
+
+var II,IndexFind,Indice : Integer;
+    TOBXX,TOBI,TOBD, TOBP: TOB;
+begin
+  TOBD := TOBIntermediaire.detail[0];
+  Indice := -1;
+  for II := 0 to TOBD.detail.Count -1 do
+  begin
+    TOBXX := TOBD.detail[II];
+    if TOBXX.GetString('ZZTRI0') > LeType then
+    begin
+      Indice := II;
+      break;
+    end;
+  end;
+  TOBI := TOB.Create ('LA LIGNE',TOBD,Indice);
+  AddChampInterm (Tobi);
+  TOBI.PutValue('ZZTRI0',LeType);
+  TOBI.PutValue('TYPE','PHA');
+  TOBI.PutValue('LIBELLE',GetLibelleType(LeType));
+  TOBI.PutValue ('PROVENANCE','DEVIS');
+  if fLivChantier then TOBI.PutValue('IDENTIFIANTWOL',-1)
+                  else TOBI.PutValue('IDENTIFIANTWOL',0);
+  result := TOBI;
+end;
+
+function TOF_BTPLANNIFCH.AjouteLaFamille (LeType,LaFamille : string;TT : TOB; IsPrestation : boolean) : TOB;
+var II,Indice : Integer;
+    TOBXX,TOBI: TOB;
+begin
+  Indice := -1;
+  for II := 0 to TT.detail.Count -1 do
+  begin
+    TOBXX := TT.detail[II];
+    if (TOBXX.GetString('FAMILLE') > LaFamille) then
+    begin
+      Indice := TOBXX.GetIndex;
+      break;
+    end;
+  end;
+  TOBI := TOB.Create ('LA LIGNE',TT,Indice);
+  AddChampInterm (Tobi);
+  TOBI.PutValue('ZZTRI0',LeType);
+  TOBI.PutValue('FAMILLE',LaFamille);
+  TOBI.PutValue('TYPE','PHA');
+  if IsPrestation then
+  begin
+    TOBI.PutValue('LIBELLE',RechDom('BTNATPRESTATION',LaFamille,false));
+  end else
+  begin
+    TOBI.PutValue('LIBELLE',RechDom('GCFAMILLENIV1',LaFamille,false));
+  end;
+  TOBI.PutValue ('PROVENANCE','DEVIS');
+  if fLivChantier then TOBI.PutValue('IDENTIFIANTWOL',-1)
+                  else TOBI.PutValue('IDENTIFIANTWOL',0);
+  result := TOBI;
+end;
+
+function TOF_BTPLANNIFCH.DefiniLaBranche (TOBL : TOB) : TOB;
+
+  function GetNaturePrest (CodeArticle : string) : string;
+  var QQ : TQuery;
+  begin
+    Result := 'Inconnu...';
+    QQ := OpenSQL('SELECT GA_NATUREPRES FROM ARTICLE WHERE GA_ARTICLE="'+CodeArticle+'"',True,1,'',true);
+    if not QQ.eof then
+    begin
+      Result := QQ.Fields[0].AsString;
+    end;
+    Ferme(QQ);
+  end;
+
+var TT,TF : TOB;
+    LeType,LaFamille : string;
+    IndicePhase : Integer;
+    IsPrestation : Boolean;
+begin
+  IndicePhase := -1;
+  TF := nil;
+  LeType := TOBL.GetString('ZZTRI0');
+  IsPrestation := (TOBL.getSTring('GL_TYPEARTICLE')='PRE');
+  if IsPrestation then
+  begin
+    LaFamille := GetNaturePrest(TOBL.GetString('GL_ARTICLE'));
+  end else
+  begin
+    LaFamille := TOBL.GetString('GL_FAMILLENIV1');
+  end;
+  TT := findLeType(LeType);
+  if TT = nil then
+  begin
+    TT := AjouteLeType (LeType);
+    TF := AjouteLaFamille (LeType,LaFamille,TT, Isprestation);
+  end else
+  begin
+    TF := FindLaFamille (LeType,LaFamille,TT);
+    if TF = nil then
+    begin
+      TF := AjouteLaFamille (LeType,LaFamille,TT,Isprestation);
+    end;
+  end;
+  Result := TF;
+end;
+
+function TOF_BTPLANNIFCH.findLaFamille(LeTYpe,LaFamille : string; TOBDEBUT : TOB) : TOB;
+var II : Integer;
+    TOBD : TOB;
+begin
+  Result := nil;
+  for II := 0 to TOBDEBUT.detail.Count -1 do
+  begin
+    TOBD := TOBDEBUT.detail[II];
+    if TOBD.GetString('FAMILLE') = LaFamille then
+    begin
+      result:= TOBD;
+      Break;
+    end;
+  end;
+end;
+
+
+function TOF_BTPLANNIFCH.findLeType(LeTYpe : string) : TOB;
+var II : Integer;
+    TOBD,TOBT : TOB;
+begin
+  result:= nil;
+  if TOBIntermediaire.detail.Count = 0 then exit;
+  TOBD := TOBIntermediaire.detail[0];
+  for II := 0 to TOBD.Detail.count -1 do
+  begin
+    TOBT := TOBD.detail[II];
+    if TOBT.GetString('ZZTRI0') = LeTYpe then
+    begin
+      result:= TOBT;
+      Break;
+    end;
+  end;
+end;
+
+
+function TOF_BTPLANNIFCH.IntegreArticleGlobal (TOBL,TOBDEBUT: TOB;TheTypeLigne : TTypeProv=TtpNormal): TOB;
+
+  function AddLigne ( TOBDEBUT,TOBL : TOB; Indice : Integer; TheTypeLigne : TTypeProv) : TOB;
+  var Reference,TOBS,TOBLIG : TOB;
+      TypeArt : string;
+      Qte : double;
+      Fournisseur : string;
+  begin
+    if TOBL.GetString('GLC_NATURETRAVAIl')='002' then
+    begin
+      Fournisseur := TOBL.GetString('GL_FOURNISSEUR');
+    end else
+    begin
+      Fournisseur := '';
+    end;
+    TypeArt := TOBL.GetValue('GL_TYPEARTICLE');
+    TOBS := TOB.Create ('LA LIGNE',TOBDEBUT,Indice);
+    // TODO AJOUTER LA MISE A JOUR DES ZONES SUP
+    AddChampInterm (TOBS);
+    if TheTypeLigne = TTpNormal then TOBS.PutValue ('PROVENANCE','DEVIS')
+                                else TOBS.PutValue ('PROVENANCE','FRAIS');
+    if TOBL.GetValue('GLC_NATURETRAVAIL') = '002' then
+    begin
+      Fournisseur := TOBL.GetString('GL_FOURNISSEUR');
+    end else
+    begin
+      Fournisseur := '';
+    end;
+    TOBS.PutValue ('OUVRAGE',CurrentOuv.GetValue('GL_ARTICLE'));
+    TOBS.PutValue ('LIGNEOUV',CurrentOUV.GetValue('GL_NUMLIGNE'));
+    TOBS.PutValue ('ARTICLE',TOBL.GetValue('GL_ARTICLE'));
+    TOBS.PutValue ('TYPE','NOR');
+    TOBS.putValue ('LIBELLE',TOBL.GetValue('GL_LIBELLE'));
+    TOBS.PutValue ('DATEDEBUT',iDate2099);
+    TOBS.PutValue ('NATURETRAVAIL',TOBL.GetValue('GLC_NATURETRAVAIL'));
+    TOBS.PutValue ('FOURNISSEUR',Fournisseur);
+    if fLivChantier then TOBS.PutValue('IDENTIFIANTWOL',-1)
+                    else TOBS.PutValue('IDENTIFIANTWOL',0);
+    TOBS.putValue ('WOL ORIGINE',TOBL.GetValue('GL_IDENTIFIANTWOL'));
+    //
+    TOBLIg:=NewTobLigne(TOBS,0);
+    TOBLIG.dupliquer (TOBL,false,true);
+    TOBS.AddChampSupValeur ('GP_REFINTERNE',TOBDevis.GetValue('GP_REFINTERNE'));
+
+    if (TypeArt = 'OUV') or (TypeArt = 'ARP') then TOBLIG.PutValue('GL_INDICENOMEN',0);
+    result := TOBS;
+  end;
+
+  procedure CumuleLigne (TOBI,TOBL : TOB);
+  var TOBLIG : TOB;
+      TypeArt : string;
+  begin
+    TypeArt := TOBL.GetValue('GL_TYPEARTICLE');
+
+    TOBI.PutValue ('QTE',TOBL.GetValue('GL_QTEFACT')+TOBI.GetValue('QTE'));
+    TOBI.PutValue ('MONTANTPV',TOBI.GetValue('MONTANTPV')+(TOBL.GetValue('GL_QTEFACT')*TOBL.GetValue('GL_PUHTDEV')));
+    TOBI.PutValue ('MONTANTPA',TOBI.GetValue('MONTANTPA') + (TOBL.GetValue('GL_MONTANTPA')));
+    TOBI.PutValue ('MONTANTPR',TOBI.GetValue('MONTANTPR')+(TOBL.GetValue('GL_MONTANTPR')));
+    TOBI.PutValue ('MONTANTFR',TOBI.GetValue('MONTANTFR') + TOBL.GetValue('GL_MONTANTFR'));
+    TOBI.PutValue ('MONTANTFC',TOBI.GetValue('MONTANTFC') + TOBL.GetValue('GL_MONTANTFC'));
+    TOBI.PutValue ('MONTANTFG',TOBI.GetValue('MONTANTFG') + TOBL.GetValue('GL_MONTANTFG'));
+    if TOBI.GetValue('QTE') <> 0 then TOBI.PutValue ('DPA',Arrondi(TOBI.GetValue('MONTANTPA') / TOBI.GetValue('QTE'),V_PGI.okdecQ));
+    if TOBI.GetValue('QTE') <> 0 then TOBI.PutValue ('PV',Arrondi(TOBI.GetValue('MONTANTPV')/ TOBI.GetValue('QTE'),V_PGI.OkDecP));
+    if TOBI.GetValue('QTE') <> 0 then TOBI.PutValue ('DPR',Arrondi(TOBI.GetValue('MONTANTPR')/ TOBI.GetValue('QTE'),V_PGI.OkDecP));
+    TOBLIG:=NewTobLigne(TOBI,0);
+    TOBLIG.dupliquer (TOBL,false,true);
+    TOBLIG.AddChampSUpValeur ('GP_REFINTERNE',TOBDevis.GetValue('GP_REFINTERNE'));
+    if (TypeArt = 'OUV') or (TypeArt = 'ARP') then TOBLIG.PutValue('GL_INDICENOMEN',0);
+  end;
+
+var
+    LeType : string;
+    LaFamille: string;
+    Article,Fournisseur : string;
+    II,IndInsert : Integer;
+    find : Boolean;
+    TOBP,TOBX : TOB;
+begin
+  find := false;
+  IndInsert := -1;
+  LeType := TOBDEBUT.GetString('ZZTRI0');
+  LaFamille := TOBDebut.GetString('FAMILLE');
+  Article := TOBL.GetString('GL_ARTICLE');
+  if TOBL.GetValue('GLC_NATURETRAVAIL')='002' then
+  begin
+    Fournisseur := TOBL.GetValue('GL_FOURNISSEUR');
+  end else
+  begin
+    Fournisseur := '';
+  end;
+  for II := 0 to TOBDEBUT.Detail.count -1 do
+  begin
+    TOBP := TOBDEBUT.detail[II];
+    if (TOBP.GETString('ARTICLE')=Article) and (TOBP.GETString('FOURNISSEUR')=Fournisseur) then
+    begin
+      TOBX := TOBP;
+      find := True;
+      break;
+    end else if (TOBP.GETString('ARTICLE')>Article) then
+    begin
+      IndInsert := II;
+      break;
+    end;
+  end;
+  if TOBX = nil then
+  begin
+     TOBX := AddLigne(TOBDEBUT,TOBL,IndInsert,TheTypeLigne);
+  end;
+  CumuleLigne(TOBX,TOBL);
+end;
+
 function TOF_BTPLANNIFCH.findlaTOB (TOBL,TOBDepart: TOB;ListPhase : Tlist): TOB;
 var TOBDebut : TOB;
     Phase : string;
@@ -1670,131 +1958,190 @@ end;
 
 function TOF_BTPLANNIFCH.GenereTobIntermediaire: boolean;
 var Indice,Indice1 : integer;
-    TOBL,TOBI : TOB;
-    TOBDet,TOBPlat : TOB;
+    TOBL,TOBI,TOBDD : TOB;
+    TOBDet,TOBPlat,ThePhaseDepart,LaPhase : TOB;
     CodeArticle : string;
+    FirstOne : boolean;
 begin
-Result := true;
-//
-MemoriseChampsSupLigneETL ('PBT' ,True);
-MemoriseChampsSupLigneOUV ('PBT');
-MemoriseChampsSupPIECETRAIT;
-//
+  Result := true;
+  FirstOne := True;
+  //
+  MemoriseChampsSupLigneETL ('PBT' ,True);
+  MemoriseChampsSupLigneOUV ('PBT');
+  MemoriseChampsSupPIECETRAIT;
+  //
 
-TOBPlat := TOB.Create ('LIGNE',nil,-1);
-TRY
-for Indice := 0 to TobDevis.detail.count -1 do
+  TOBPlat := TOB.Create ('LIGNE',nil,-1);
+  TRY
+    for Indice := 0 to TobDevis.detail.count -1 do
     begin
-    TOBL := TOBDevis.detail[Indice];
-    // VARIANTE
-    if IsVariante (TOBL) then continue;
-    //
-    if (TOBL.GetString('GLC_NATURETRAVAIL')='001') then continue;
-    // --
-    TOBL.PutValue('GL_DATELIVRAISON',iDate2099);
-    AddLesSupLigne (TOBL,false);
-    if ((ModeTraitement and 1)=1) and (Indice = 0) then
-    begin
-      TOBI := TOB.Create ('LA LIGNE',TOBINTERMEDIAIRE,-1);
-      AddChampInterm (Tobi);
-      TOBI.PutValue('TYPE','PHA');
-      TOBI.PutValue('LIBELLE','Détail des travaux');
-      TOBI.PutValue ('PROVENANCE','DEVIS');
-      if fLivChantier then TOBI.PutValue('IDENTIFIANTWOL',-1)
-                      else TOBI.PutValue('IDENTIFIANTWOL',0);
-      ListPhase.Add (TOBI);
-    end;
-    if (copy(TOBL.GetValue('GL_TYPELIGNE'), 1,2)='DP') and ((ModeTraitement and 2)=2) then
-       BEGIN
-       TOBI := InserePhaseInterm (TOBDevis,TOBL,TOBINTERMEDIAIRE);
-       ListPhase.Add (TOBI);
-       continue;
-       END;
-    if (copy(TOBL.GetValue('GL_TYPELIGNE'),1,2)='TP') and ((ModeTraitement and 1)<>1) and (ListPhase.count > 0) then
-       BEGIN
-       ListPhase.delete (ListPhase.Count-1);
-       continue;
-       END;
-    if ((TOBL.GetValue('GL_TYPEARTICLE')='OUV') OR (TOBL.GetValue('GL_TYPEARTICLE')='ARP')) and (TOBL.GetValue('GL_INDICENOMEN')>0) then
-       BEGIN
-        TOBDet := TOBIntermediaire; // pointe sur le pere
-        if ((ModeTraitement and 4)=4) then
+      TOBL := TOBDevis.detail[Indice];
+      TOBDD := TOBDevis.detail[Indice];
+      // VARIANTE
+      if IsVariante (TOBL) then continue;
+      //
+      if (TOBL.GetString('GLC_NATURETRAVAIL')='001') then continue;
+      // --
+      TOBL.PutValue('GL_DATELIVRAISON',iDate2099);
+      AddLesSupLigne (TOBL,false);
+      if ((ModeTraitement and 1)=1) and (FirstOne) then
+      begin
+        FirstOne := False;
+        TOBI := TOB.Create ('LA LIGNE',TOBINTERMEDIAIRE,-1);
+        AddChampInterm (Tobi);
+        TOBI.PutValue('ZZTRI0','');
+        TOBI.PutValue('TYPE','PHA');
+        TOBI.PutValue('LIBELLE','Détail des travaux');
+        TOBI.PutValue ('PROVENANCE','DEVIS');
+        if fLivChantier then TOBI.PutValue('IDENTIFIANTWOL',-1)
+                        else TOBI.PutValue('IDENTIFIANTWOL',0);
+        ListPhase.Add (TOBI);
+      end;
+      if ((ModeTraitement and 1 )= 1) then
+      begin
+        if ((TOBL.GetValue('GL_TYPEARTICLE')='OUV') OR (TOBL.GetValue('GL_TYPEARTICLE')='ARP')) and (TOBL.GetValue('GL_INDICENOMEN')>0) then
         begin
-          CurrentOuv.dupliquer(TOBL,false,true);
-          TOBI := InsereOuvrageInterm (TOBL,TOBDet,ListPhase); // pointe la fille
-          TobDet := TOBI;
+          TRY
+            MiseAplatouv (TOBdevis,TOBL,TOBOuvrage,TOBPLat,true,FALSE,true,true);
+            for indice1 := 0 to TOBPlat.detail.count -1 do
+            begin
+              // VARIANTE
+              if IsVariante (TOBPLat.detail[Indice1]) then continue;
+              if TOBPLat.detail[Indice1].GetValue('GL_QTEFACT') = 0 then continue;
+              //gestion de la non-prise en compte des lignes Cotraitantes
+              if (TOBPLat.detail[Indice1].GetString('GLC_NATURETRAVAIL')='001') then continue;
+              if (TOBPLat.detail[Indice1].GetValue('GL_TYPEARTICLE')='PRE') then
+              begin
+                TOBPLat.detail[Indice1].PutValue('BNP_TYPERESSOURCE',RenvoieTypeRes(TOBPLat.detail[Indice1].GetValue('GL_ARTICLE')));
+              end;
+              LaPhase := DefiniLaBranche (TOBPlat.detail[Indice1]);
+              if TOBL.GEtValue('GLC_DOCUMENTLIE')<> '' then
+              begin
+                TOBPLat.detail[Indice1].PutValue('GLC_DOCUMENTLIE',TOBL.GEtValue('GLC_DOCUMENTLIE'));
+              end;
+              // -- Recalcul des elements de la ligne en enlevant les frais de chantier
+              ReajusteLigneDevisPourCtrEtude(TOBPLat.detail[Indice1],TOBdevis.getValue('GP_COEFFR'));
+              // --
+              CodeArticle := TOBPlat.detail[Indice1].GetValue('GL_CODEARTICLE');
+              if (TOBPLat.detail[Indice1].getvalue('GL_TYPEARTICLE')='POU') then RemplacePourcent(TOBPlat.detail[Indice1],TOBDevis);
+              IntegreArticleGlobal (TOBPlat.detail[Indice1], LaPhase);
+            end;
+          FINALLY
+            TOBPlat.clearDetail;
+            CurrentOuv.InitValeurs;
+          END;
+        end else if (TOBL.GetValue('GL_TYPEARTICLE')='MAR') OR
+                    (TOBL.GetValue('GL_TYPEARTICLE')='PRE') or
+                    (TOBL.GetValue('GL_TYPEARTICLE')='FRA') or
+                    ((TOBL.GetValue('GL_TYPEARTICLE')='ARP') and (TOBL.GetValue('GL_INDICENOMEN')=0)) then
+        BEGIN
+          if TOBL.GetValue('GL_QTEFACT') = 0 then continue;
+          ReajusteLigneDevisPourCtrEtude(TOBL,TOBdevis.getValue('GP_COEFFR'));
+          LaPhase := DefiniLaBranche (TOBL);
+          IntegreArticleGlobal (TOBL,LaPhase);
+        end else if (TOBL.GetValue('GL_TYPEARTICLE')='POU') then
+        begin
+          // remplacement de l'article de type pourcentage en article std marchandise
+          RemplacePourcent(TOBL,TOBDevis);
+          ReajusteLigneDevisPourCtrEtude(TOBL,TOBdevis.getValue('GP_COEFFR'));
+          LaPhase := DefiniLaBranche (TOBL);
+          IntegreArticleGlobal (TOBL,LaPhase);
         end;
-        TRY
-          MiseAplatouv (TOBdevis,TOBL,TOBOuvrage,TOBPLat,true,FALSE,true,true);
-          for indice1 := 0 to TOBPlat.detail.count -1 do
-          begin
-           // VARIANTE
-           if IsVariante (TOBPLat.detail[Indice1]) then continue;
-       		 if TOBPLat.detail[Indice1].GetValue('GL_QTEFACT') = 0 then continue;
-           //gestion de la non-prise en compte des lignes Cotraitantes
-           if (TOBPLat.detail[Indice1].GetString('GLC_NATURETRAVAIL')='001') then continue;
-           if (TOBPLat.detail[Indice1].GetValue('GL_TYPEARTICLE')='PRE') then
-           begin
-       		 	TOBPLat.detail[Indice1].PutValue('BNP_TYPERESSOURCE',RenvoieTypeRes(TOBPLat.detail[Indice1].GetValue('GL_ARTICLE')));
-           end;
-           if TOBL.GEtValue('GLC_DOCUMENTLIE')<> '' then
-           begin
-       		 	TOBPLat.detail[Indice1].PutValue('GLC_DOCUMENTLIE',TOBL.GEtValue('GLC_DOCUMENTLIE'));
-           end;
-           // -- Recalcul des elements de la ligne en enlevant les frais de chantier
-           ReajusteLigneDevisPourCtrEtude(TOBPLat.detail[Indice1],TOBdevis.getValue('GP_COEFFR'));
-           // --
-           CodeArticle := TOBPlat.detail[Indice1].GetValue('GL_CODEARTICLE');
-           if (TOBPLat.detail[Indice1].getvalue('GL_TYPEARTICLE')='POU') then RemplacePourcent(TOBPlat.detail[Indice1],TOBDevis);
-           if ((ModeTraitement and 4)=4) then TOBI := findlaTOB (TOBPlat.detail[Indice1],TOBDet,nil)
-                                         else TOBI := findlaTOB (TOBPlat.detail[Indice1],TOBDet,ListPhase);
-           if TOBI = nil then
-           BEGIN
-            if ((ModeTraitement and 4)=4) then InsereInterm (TobDevis,TOBPlat.detail[indice1],TOBDet,nil)
-                                          else InsereInterm (TobDevis,TOBPlat.detail[Indice1],TOBDet,ListPhase);
 
-           END ELSE
-           BEGIN
-              CumuleInterm (TOBDevis,TOBPlat.detail[Indice1],TOBI);
-           end;
-          end;
-        FINALLY
-          TOBPlat.clearDetail;
-          CurrentOuv.InitValeurs;
+      end else
+      begin
+        if (copy(TOBL.GetValue('GL_TYPELIGNE'), 1,2)='DP') and ((ModeTraitement and 2)=2) then
+        BEGIN
+          TOBI := InserePhaseInterm (TOBDevis,TOBL,TOBINTERMEDIAIRE);
+          ListPhase.Add (TOBI);
+          continue;
         END;
-        continue;
-       END;
+        if (copy(TOBL.GetValue('GL_TYPELIGNE'),1,2)='TP') and ((ModeTraitement and 1)<>1) and (ListPhase.count > 0) then
+        BEGIN
+          ListPhase.delete (ListPhase.Count-1);
+          continue;
+        END;
+        if ((TOBL.GetValue('GL_TYPEARTICLE')='OUV') OR (TOBL.GetValue('GL_TYPEARTICLE')='ARP')) and (TOBL.GetValue('GL_INDICENOMEN')>0) then
+        BEGIN
+          TOBDet := TOBIntermediaire; // pointe sur le pere
+          if ((ModeTraitement and 4)=4) then
+          begin
+            CurrentOuv.dupliquer(TOBL,false,true);
+            TOBI := InsereOuvrageInterm (TOBL,TOBDet,ListPhase); // pointe la fille
+            TobDet := TOBI;
+          end;
+          TRY
+            MiseAplatouv (TOBdevis,TOBL,TOBOuvrage,TOBPLat,true,FALSE,true,true);
+            for indice1 := 0 to TOBPlat.detail.count -1 do
+            begin
+              // VARIANTE
+              if IsVariante (TOBPLat.detail[Indice1]) then continue;
+              if TOBPLat.detail[Indice1].GetValue('GL_QTEFACT') = 0 then continue;
+              //gestion de la non-prise en compte des lignes Cotraitantes
+              if (TOBPLat.detail[Indice1].GetString('GLC_NATURETRAVAIL')='001') then continue;
+              if (TOBPLat.detail[Indice1].GetValue('GL_TYPEARTICLE')='PRE') then
+              begin
+                TOBPLat.detail[Indice1].PutValue('BNP_TYPERESSOURCE',RenvoieTypeRes(TOBPLat.detail[Indice1].GetValue('GL_ARTICLE')));
+              end;
+              if TOBL.GEtValue('GLC_DOCUMENTLIE')<> '' then
+              begin
+                TOBPLat.detail[Indice1].PutValue('GLC_DOCUMENTLIE',TOBL.GEtValue('GLC_DOCUMENTLIE'));
+              end;
+              // -- Recalcul des elements de la ligne en enlevant les frais de chantier
+              ReajusteLigneDevisPourCtrEtude(TOBPLat.detail[Indice1],TOBdevis.getValue('GP_COEFFR'));
+              // --
+              CodeArticle := TOBPlat.detail[Indice1].GetValue('GL_CODEARTICLE');
+              if (TOBPLat.detail[Indice1].getvalue('GL_TYPEARTICLE')='POU') then RemplacePourcent(TOBPlat.detail[Indice1],TOBDevis);
+              if ((ModeTraitement and 4)=4) then TOBI := findlaTOB (TOBPlat.detail[Indice1],TOBDet,nil)
+                                            else TOBI := findlaTOB (TOBPlat.detail[Indice1],TOBDet,ListPhase);
+              if TOBI = nil then
+              BEGIN
+                if ((ModeTraitement and 4)=4) then InsereInterm (TobDevis,TOBPlat.detail[indice1],TOBDet,nil)
+                                              else InsereInterm (TobDevis,TOBPlat.detail[Indice1],TOBDet,ListPhase);
 
-    if (TOBL.GetValue('GL_TYPEARTICLE')='MAR') OR
-    	 (TOBL.GetValue('GL_TYPEARTICLE')='PRE') or
-       (TOBL.GetValue('GL_TYPEARTICLE')='FRA') or
-       ((TOBL.GetValue('GL_TYPEARTICLE')='ARP') and (TOBL.GetValue('GL_INDICENOMEN')=0)) then
-       BEGIN
-       if TOBL.GetValue('GL_QTEFACT') = 0 then continue;
-       ReajusteLigneDevisPourCtrEtude(TOBL,TOBdevis.getValue('GP_COEFFR'));
-       TOBI := findlaTOB (TOBL,TOBIntermediaire,ListPhase);
-       if TOBI = nil then
+              END ELSE
+              BEGIN
+                CumuleInterm (TOBDevis,TOBPlat.detail[Indice1],TOBI);
+              end;
+            end;
+          FINALLY
+            TOBPlat.clearDetail;
+            CurrentOuv.InitValeurs;
+          END;
+          continue;
+        END;
+
+        if (TOBL.GetValue('GL_TYPEARTICLE')='MAR') OR
+        (TOBL.GetValue('GL_TYPEARTICLE')='PRE') or
+        (TOBL.GetValue('GL_TYPEARTICLE')='FRA') or
+        ((TOBL.GetValue('GL_TYPEARTICLE')='ARP') and (TOBL.GetValue('GL_INDICENOMEN')=0)) then
+        BEGIN
+          if TOBL.GetValue('GL_QTEFACT') = 0 then continue;
+          ReajusteLigneDevisPourCtrEtude(TOBL,TOBdevis.getValue('GP_COEFFR'));
+          TOBI := findlaTOB (TOBL,TOBIntermediaire,ListPhase);
+          if TOBI = nil then
           BEGIN
-          InsereInterm (TOBDevis,TOBL,TOBIntermediaire,ListPhase);
+            InsereInterm (TOBDevis,TOBL,TOBIntermediaire,ListPhase);
           END ELSE
           BEGIN
-          CumuleInterm (TOBDevis,TOBL,TOBI);
+            CumuleInterm (TOBDevis,TOBL,TOBI);
           end;
-       END;
-    if (TOBL.GetValue('GL_TYPEARTICLE')='POU') then
-       BEGIN
-       // remplacement de l'article de type pourcentage en article std marchandise
-       RemplacePourcent(TOBL,TOBDevis);
-       ReajusteLigneDevisPourCtrEtude(TOBL,TOBdevis.getValue('GP_COEFFR'));
-       TOBI := findlaTOB (TOBL,TOBIntermediaire,ListPhase);
-       if TOBI = nil then
+        END;
+        if (TOBL.GetValue('GL_TYPEARTICLE')='POU') then
+        BEGIN
+          // remplacement de l'article de type pourcentage en article std marchandise
+          RemplacePourcent(TOBL,TOBDevis);
+          ReajusteLigneDevisPourCtrEtude(TOBL,TOBdevis.getValue('GP_COEFFR'));
+          TOBI := findlaTOB (TOBL,TOBIntermediaire,ListPhase);
+          if TOBI = nil then
           BEGIN
-          InsereInterm (TOBDevis,TOBL,TOBIntermediaire,ListPhase);
+            InsereInterm (TOBDevis,TOBL,TOBIntermediaire,ListPhase);
           END ELSE
           BEGIN
-          CumuleInterm (TOBDevis,TOBL,TOBI);
+            CumuleInterm (TOBDevis,TOBL,TOBI);
           end;
-       END;
+        END;
+      end;
     end;
 
     //paragraphe à blanc...
@@ -1802,42 +2149,42 @@ for Indice := 0 to TobDevis.detail.count -1 do
 
     if ((ModeTraitement and 1)=1) then
     begin
-       ListPhase.delete (ListPhase.Count-1);
+      ListPhase.delete (ListPhase.Count-1);
     end;
 
-// generation des frais de chantier
-for Indice := 0 to TobFrais.detail.count -1 do
+    // generation des frais de chantier
+    for Indice := 0 to TobFrais.detail.count -1 do
     begin
-    TOBL := TOBFrais.detail[Indice];
-    // VARIANTE
-    if IsVariante (TOBL) then continue;
-    // --
-    TOBL.PutValue('GL_DATELIVRAISON',iDate2099);
-    AddLesSupLigne (TOBL,false);
-    if ((ModeTraitement and 1)=1) and (Indice = 0) then
-    begin
-      TOBI := TOB.Create ('LA LIGNE',TOBINTERMEDIAIRE,-1);
-      AddChampInterm (Tobi);
-      TOBI.PutValue('TYPE','PHA');
-      TOBI.PutValue('LIBELLE','Frais de chantier');
-      TOBI.PutValue ('PROVENANCE','FRAIS');
-      if fLivChantier then TOBI.PutValue('IDENTIFIANTWOL',-1)
-                      else TOBI.PutValue('IDENTIFIANTWOL',0);
-      ListPhase.Add (TOBI);
-    end;
-    if (copy(TOBL.GetValue('GL_TYPELIGNE'), 1,2)='DP') and ((ModeTraitement and 2)=2) then
-       BEGIN
-       TOBI := InserePhaseInterm (TOBfrais,TOBL,TOBINTERMEDIAIRE,TtpFrais);
-       ListPhase.Add (TOBI);
-       continue;
-       END;
-    if (copy(TOBL.GetValue('GL_TYPELIGNE'),1,2)='TP') and ((ModeTraitement and 1)<>1) and (ListPhase.count > 0) then
-       BEGIN
-       ListPhase.delete (ListPhase.Count-1);
-       continue;
-       END;
-    if (TOBL.GetValue('GL_TYPEARTICLE')='OUV') OR (TOBL.GetValue('GL_TYPEARTICLE')='ARP') then
-       BEGIN
+      TOBL := TOBFrais.detail[Indice];
+      // VARIANTE
+      if IsVariante (TOBL) then continue;
+      // --
+      TOBL.PutValue('GL_DATELIVRAISON',iDate2099);
+      AddLesSupLigne (TOBL,false);
+      if ((ModeTraitement and 1)=1) and (Indice = 0) then
+      begin
+        TOBI := TOB.Create ('LA LIGNE',TOBINTERMEDIAIRE,-1);
+        AddChampInterm (Tobi);
+        TOBI.PutValue('TYPE','PHA');
+        TOBI.PutValue('LIBELLE','Frais de chantier');
+        TOBI.PutValue ('PROVENANCE','FRAIS');
+        if fLivChantier then TOBI.PutValue('IDENTIFIANTWOL',-1)
+                        else TOBI.PutValue('IDENTIFIANTWOL',0);
+        ListPhase.Add (TOBI);
+      end;
+      if (copy(TOBL.GetValue('GL_TYPELIGNE'), 1,2)='DP') and ((ModeTraitement and 2)=2) then
+      BEGIN
+        TOBI := InserePhaseInterm (TOBfrais,TOBL,TOBINTERMEDIAIRE,TtpFrais);
+        ListPhase.Add (TOBI);
+        continue;
+      END;
+      if (copy(TOBL.GetValue('GL_TYPELIGNE'),1,2)='TP') and ((ModeTraitement and 1)<>1) and (ListPhase.count > 0) then
+      BEGIN
+        ListPhase.delete (ListPhase.Count-1);
+        continue;
+      END;
+      if (TOBL.GetValue('GL_TYPEARTICLE')='OUV') OR (TOBL.GetValue('GL_TYPEARTICLE')='ARP') then
+      BEGIN
         TOBDet := TOBIntermediaire; // pointe sur le pere
         if ((ModeTraitement and 4)=4) then
         begin
@@ -1849,65 +2196,65 @@ for Indice := 0 to TobFrais.detail.count -1 do
           MiseAplatouv (TOBFrais,TOBL,TOBOuvrageFrais,TOBPLat,true,false,true,true);
           for indice1 := 0 to TOBPlat.detail.count -1 do
           begin
-           // VARIANTE
-           if IsVariante (TOBPLat.detail[Indice1]) then continue;
-       		 if TOBPLat.detail[Indice1].GetValue('GL_QTEFACT') = 0 then continue;
-           // --
-          // pour mettre en place le coef de FR du devis
-           AppliqueCoeffrSurLigneFrais (TOBPlat.detail[Indice1],TOBdevis.getValue('GP_COEFFR'));
-           if (TOBPLat.detail[Indice1].getvalue('GL_TYPEARTICLE')='POU') then RemplacePourcent(TOBPlat.detail[Indice1],TOBDevis);
-           if ((ModeTraitement and 4)=4) then TOBI := findlaTOB (TOBPlat.detail[Indice1],TOBDet,nil)
-                                         else TOBI := findlaTOB (TOBPlat.detail[Indice1],TOBDet,ListPhase);
-           if TOBI = nil then
-           BEGIN
-            if ((ModeTraitement and 4)=4) then InsereInterm (TobDevis,TOBPlat.detail[indice1],TOBDet,nil,TtpFrais)
-                                          else InsereInterm (TobDevis,TOBPlat.detail[Indice1],TOBDet,ListPhase,TtpFrais);
+            // VARIANTE
+            if IsVariante (TOBPLat.detail[Indice1]) then continue;
+            if TOBPLat.detail[Indice1].GetValue('GL_QTEFACT') = 0 then continue;
+            // --
+            // pour mettre en place le coef de FR du devis
+            AppliqueCoeffrSurLigneFrais (TOBPlat.detail[Indice1],TOBdevis.getValue('GP_COEFFR'));
+            if (TOBPLat.detail[Indice1].getvalue('GL_TYPEARTICLE')='POU') then RemplacePourcent(TOBPlat.detail[Indice1],TOBDevis);
+            if ((ModeTraitement and 4)=4) then TOBI := findlaTOB (TOBPlat.detail[Indice1],TOBDet,nil)
+                                          else TOBI := findlaTOB (TOBPlat.detail[Indice1],TOBDet,ListPhase);
+            if TOBI = nil then
+            BEGIN
+              if ((ModeTraitement and 4)=4) then InsereInterm (TobDevis,TOBPlat.detail[indice1],TOBDet,nil,TtpFrais)
+                            else InsereInterm (TobDevis,TOBPlat.detail[Indice1],TOBDet,ListPhase,TtpFrais);
 
-           END ELSE
-           BEGIN
+            END ELSE
+            BEGIN
               CumuleInterm (TOBDevis,TOBPlat.detail[Indice1],TOBI,TtpFrais);
-           end;
+            end;
           end;
         FINALLY
           TOBPlat.clearDetail;
           CurrentOuv.InitValeurs;
         END;
         continue;
-       END;
-    if (TOBL.GetValue('GL_TYPEARTICLE')='MAR') OR
-    	 (TOBL.GetValue('GL_TYPEARTICLE')='PRE') OR
-    	 (TOBL.GetValue('GL_TYPEARTICLE')='FRA') then
-       BEGIN
-       if TOBL.GetValue('GL_QTEFACT') = 0 then continue;
-      // pour mettre en place le coef de FG du devis
-       AppliqueCoeffRSurLigneFrais (TOBL,TOBdevis.getValue('GP_COEFFR'));
-       TOBI := findlaTOB (TOBL,TOBIntermediaire,ListPhase);
-       if TOBI = nil then
-          BEGIN
+      END;
+      if (TOBL.GetValue('GL_TYPEARTICLE')='MAR') OR
+      (TOBL.GetValue('GL_TYPEARTICLE')='PRE') OR
+      (TOBL.GetValue('GL_TYPEARTICLE')='FRA') then
+      BEGIN
+        if TOBL.GetValue('GL_QTEFACT') = 0 then continue;
+        // pour mettre en place le coef de FG du devis
+        AppliqueCoeffRSurLigneFrais (TOBL,TOBdevis.getValue('GP_COEFFR'));
+        TOBI := findlaTOB (TOBL,TOBIntermediaire,ListPhase);
+        if TOBI = nil then
+        BEGIN
           InsereInterm (TOBDevis,TOBL,TOBIntermediaire,ListPhase,TtpFrais);
-          END ELSE
-          BEGIN
+        END ELSE
+        BEGIN
           CumuleInterm (TOBDevis,TOBL,TOBI,TtpFrais);
-          end;
-       END;
-    if (TOBL.GetValue('GL_TYPEARTICLE')='POU') then
-       BEGIN
-       // remplacement de l'article de type pourcentage en article std marchandise
-       RemplacePourcent(TOBL,TOBDevis);
-       TOBI := findlaTOB (TOBL,TOBIntermediaire,ListPhase);
-       if TOBI = nil then
-          BEGIN
+        end;
+      END;
+      if (TOBL.GetValue('GL_TYPEARTICLE')='POU') then
+      BEGIN
+        // remplacement de l'article de type pourcentage en article std marchandise
+        RemplacePourcent(TOBL,TOBDevis);
+        TOBI := findlaTOB (TOBL,TOBIntermediaire,ListPhase);
+        if TOBI = nil then
+        BEGIN
           InsereInterm (TOBDevis,TOBL,TOBIntermediaire,ListPhase,TtpFrais);
-          END ELSE
-          BEGIN
+        END ELSE
+        BEGIN
           CumuleInterm (TOBDevis,TOBL,TOBI,TtpFrais);
-          end;
-       END;
+        end;
+      END;
     end;
-FINALLY
-TOBPLAT.free;
-listPhase.Clear;
-end;
+  FINALLY
+    TOBPLAT.free;
+    listPhase.Clear;
+  end;
 end;
 
 procedure IndiceLaTob(TOBTrait : TOB; var Numligne : integer;NumPere : integer);

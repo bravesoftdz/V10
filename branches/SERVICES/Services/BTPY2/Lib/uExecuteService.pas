@@ -69,7 +69,6 @@ type
     TSLTRAFileQty                  : TStringList;
     AdoQryY2                       : AdoQry;
     AdoQryBTP                      : AdoQry;
-    LogValues                      : T_WSLogValues;
     BTPValues                      : T_WSBTPValues;
     Y2Values                       : T_WSY2Values;
     NewAna                         : boolean;
@@ -114,7 +113,8 @@ type
     IniFilePath   : string;
     LogFilePath   : string;
     SecondTimeout : integer;
-    
+    LogValues     : T_WSLogValues;
+
     procedure CreateObjects;
     procedure FreeObjects;
     function ServiceExecute: Boolean;
@@ -605,8 +605,7 @@ begin
           CommonSendData := '';
           BtpSendData    := SetDataToSend(AdoQryParam.FieldsList, AdoQryParam.TSLResult[Cpt]);
           Y2SendData     := GetY2DataFromCache(AdoQryParam.FieldsList, AdoQryParam.TSLResult[Cpt]);
-          if LogValues.DebugEvents > 0 then TServicesLog.WriteLog(ssbylLog, Format('%s - TSvcSyncBTPY2Execute.AddUpdateValues - BtpSendData : %s - Y2SendData : %s', [WSCDS_DebugMsg, BtpSendData, Y2SendData]), ServiceName_BTPY2, LogValues, 0);
-
+          if LogValues.DebugEvents = 2 then TServicesLog.WriteLog(ssbylLog, Format('%s - TSvcSyncBTPY2Execute.AddUpdateValues - BtpSendData : %s - Y2SendData : %s', [WSCDS_DebugMsg, BtpSendData, Y2SendData]), ServiceName_BTPY2, LogValues, 0);
           if BtpSendData <> Y2SendData then // Les données ou colonnes sont différentes, calcul des champs communs (ainsi que les données) et on renvoie
           begin
             SameValue := (Y2SendData <> '');
@@ -1545,7 +1544,8 @@ begin
       {EVERYTIME} 4: Result := True;
     else
       begin
-        TServicesLog.WriteLog(ssbylLog, Format('ATTENTION, la fréquence "%s" associée à la table "%s" du fichier de configuration est inconnue. Le traitement n''a pas été effectué pour cette dernière.', [Action, TableName]), ServiceName_BTPY2, LogValues, 3);
+        TServicesLog.WriteLog(ssbylLog, Format('ATTENTION, la fréquence "%s" associée à la table "%s" du fichier de configuration est inconnue. Le traitement n''a pas été effectué pour cette dernière.'
+                                              , [Action, TableName]), ServiceName_BTPY2, LogValues, 3);
         Result := False;
       end;
     end;
@@ -2511,15 +2511,19 @@ begin
   SettingFile := TIniFile.Create(IniFilePath);
   try
     Section := 'GLOBALSETTINGS';
-    SecondTimeout          := SettingFile.ReadInteger(Section, 'SecondTimeout', 0);
-    LogValues.LogLevel     := SettingFile.ReadInteger(Section, 'LogLevel', 0);
-    LogValues.LogMoMaxSize := SettingFile.ReadInteger(Section, 'LogMoMaxSize', 0);
-    LogValues.DebugEvents  := SettingFile.ReadInteger(Section, 'DebugEvents', 0);
-    LogValues.OneLogPerDay := (SettingFile.ReadInteger(Section, 'OneLogPerDay', 0) = 1);
-    LogValues.LogMaxQty    := 0;
-    LogValues.LogPath      := LogFilePath;
-    LogValues.Download     := (SettingFile.ReadInteger(Section, 'Download', 0) = 1);
-    LogValues.Upload       := (SettingFile.ReadInteger(Section, 'Upload', 0) = 1);
+    SecondTimeout                  := SettingFile.ReadInteger(Section, 'SecondTimeout', 0);
+    LogValues.LogLevel             := SettingFile.ReadInteger(Section, 'LogLevel', 0);
+    LogValues.LogMoMaxSize         := SettingFile.ReadInteger(Section, 'LogMoMaxSize', 0);
+    LogValues.DebugEvents          := SettingFile.ReadInteger(Section, 'DebugEvents', 0);
+    LogValues.OneLogPerDay         := (SettingFile.ReadInteger(Section, 'OneLogPerDay', 0) = 1);
+    LogValues.LogMaxQty            := 0;
+    LogValues.LogPath              := LogFilePath;
+    LogValues.Download             := (SettingFile.ReadInteger(Section, 'Download', 0) = 1);
+    LogValues.Upload               := (SettingFile.ReadInteger(Section, 'Upload', 0) = 1);
+    LogValues.DebugFilesDirectory  := SettingFile.ReadString(Section, 'DebugFilesDirectory'    , '');
+    LogValues.ExecutionPeriodDays  := SettingFile.ReadString(Section, 'ExecutionPeriodDays'    , '');
+    LogValues.ExecutionPeriodStart := SettingFile.ReadString(Section, 'ExecutionPeriodStart'    , '');
+    LogValues.ExecutionPeriodEnd   := SettingFile.ReadString(Section, 'ExecutionPeriodEnd'    , '');
     Section := 'UPDATEFREQUENCY';
     AddFrequencySetting('CHANCELL');
     AddFrequencySetting('CHOIXCOD');
@@ -2859,6 +2863,9 @@ var
   end;
 
 begin
+  {$IFDEF TSTSRV}
+  if not TServicesLog.CanExecuteFromPeriod(LogValues, ServiceName_BTPY2) then exit;
+  {$ENDIF TSTSRV}
   if LogValues.DebugEvents > 0 then TServicesLog.WriteLog(ssbylLog, Format('%s - TSvcSyncBTPY2Execute.ServiceExecute', [WSCDS_DebugMsg]), ServiceName_BTPY2, LogValues, 0);
   Result      := True;
   LogFilePath := TServicesLog.CreateLog(LogValues, ServiceName_BTPY2); //LogsManagement;

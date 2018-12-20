@@ -147,6 +147,7 @@ procedure ExcelFormat(CurrentSheet:OleVariant ; LigneFrom, ColonneFrom,LigneTo,C
 procedure ExcelSize(CurrentSheet:OleVariant ; LigneFrom, ColonneFrom,LigneTo,ColonneTo: Integer; Size : integer);
 procedure ExcelFontColor(CurrentSheet:OleVariant ; LigneFrom, ColonneFrom,LigneTo,ColonneTo: Integer; FontColor : Tcolor);
 procedure ExcelAligment(CurrentSheet:OleVariant ; LigneFrom, ColonneFrom,LigneTo,ColonneTo: Integer; Aligment : XlsAligment);
+procedure ExcelRangeFormat (WorkBook:OleVariant ; NomFeuille,NomRange:string; ThisValue: variant; Ligne : integer=1; Colonne : integer=1) ;
 //
 procedure ExcelInfoFontRange(WorkBook:OleVariant ; NomFeuille,NomRange: string; var result : TinfoFont);
 procedure ExcelSetFontRange(WorkBook:OleVariant ; NomFeuille,NomRange: string; InfoFont : TInfoFont)  ; overload;
@@ -1231,6 +1232,25 @@ begin
       EXCEPT
 //      	PGIError('La définition '+NomRange+' n''existe pas dans la feuille '+NomFeuille+' du fichier EXCEL');
 //        raise ;
+      END;
+    end;
+  end;
+end;
+procedure ExcelRangeFormat (WorkBook:OleVariant ; NomFeuille,NomRange:string; ThisValue: variant; Ligne : integer=1; Colonne : integer=1) ;
+var WS      : variant;
+    Cellule : variant;
+begin
+	if (ligne <= 0) or (colonne<= 0) then exit;
+  if Not varIsEmpty(WorkBook) then
+  begin
+    WorkBook.Sheets[NomFeuille].select ;
+    WS := WorkBook.ActiveSheet;
+    if not VarIsEmpty(WS) then
+    begin
+    	TRY
+      	Cellule := WS.Range[NomRange];
+      	Cellule.cells[Ligne,Colonne].NumberFormat := ThisValue;
+      EXCEPT
       END;
     end;
   end;

@@ -115,7 +115,9 @@ type
     	procedure SetValeursOuv(TOBL: TOB; valeurs: T_Valeurs);
     	function AfficheSousDetail(TOBL: TOB): boolean;
       procedure GSAffectSoustraitPOC(Sender: tobject);
-      procedure GSPaieSTPOC (Sender : TObject); 
+      procedure GSPaieSTPOC (Sender : TObject);
+      procedure DeduitMontantPieceTrait(TOBL : TOB);
+
     public
     	constructor create (laForm : Tform);
       destructor destroy; override;
@@ -219,6 +221,8 @@ uses facture,
      ,FactRetenues
      ,ULiquidTva2014
      ,UspecifPOC
+     , CommonTools
+     , ErrorsManagement
      ;
 
 
@@ -294,6 +298,8 @@ begin
       begin
         OneTOB := TOB.create('PIECERG', TOBRG, -1);
         OneTOB.addchampsupValeur ('INDICERG',0);
+        OneTOB.AddChampSupValeur ('CAUTIONAVANT',0);
+        OneTOB.AddChampSupValeur ('CAUTIONAVANTDEV',0);
         OneTOB.AddChampSupValeur ('CAUTIONUTIL',0);
         OneTOB.AddChampSupValeur ('CAUTIONUTILDEV',0);
         OneTOB.AddChampSupValeur ('CAUTIONAPRES',0);
@@ -809,7 +815,7 @@ begin
     TT := TOBSSTRAIT.detail[Indice];
     if VH_GC.BTCODESPECIF = '001' then
     begin
-      TT.SetBoolean('BPI_AUTOLIQUID',(Pos(TT.GetString('BPI_FAMILLETAXE'),GetParamSocSecur('SO_CODETVALIQUIDST',''))>0));
+      TT.SetBoolean('BPI_AUTOLIQUID',Tools.StringInList(TT.GetString('BPI_FAMILLETAXE'),GetParamSocSecur('SO_CODETVALIQUIDST','')));
     end;
   	AddChampsSupTrait (TT);
   end;
@@ -837,15 +843,21 @@ end;
 
 function GetSqlPieceTrait : string;
 begin
-  result := 'SELECT PIECETRAIT.*, T_LIBELLE AS LIBELLE, BPI_TYPEPAIE AS TYPEPAIE, 0 AS FACTURE, '+
-  					'0 AS FACTURAPA, 0 AS FACTURPEV , 0 AS REGLE , '+
-  					'0 AS TOTALFRAIS , 0 AS MONTANTREGLABLE, 0 AS MONTANTFACT, '+
+  result := 'SELECT PIECETRAIT.*, '+
+            'T_LIBELLE AS LIBELLE, '+
+            '(SELECT DISTINCT BPI_TYPEPAIE FROM PIECEINTERV WHERE BPI_NATUREPIECEG=BPE_NATUREPIECEG AND '+
+            'BPI_SOUCHE=BPE_SOUCHE AND BPI_NUMERO=BPE_NUMERO AND BPI_INDICEG=BPE_INDICEG AND '+
+            'BPI_TIERSFOU=BPE_FOURNISSEUR) AS TYPEPAIE, '+
+            '0 AS FACTURE, '+
+  					'0 AS FACTURAPA, '+
+            '0 AS FACTURPEV , '+
+            '0 AS REGLE , '+
+  					'0 AS TOTALFRAIS , '+
+            '0 AS MONTANTREGLABLE, '+
+            '0 AS MONTANTFACT, '+
             '" " AS FIXED '+
             'FROM PIECETRAIT '+
-            'LEFT JOIN TIERS ON T_NATUREAUXI="FOU" AND T_TIERS=BPE_FOURNISSEUR '+
-            'LEFT JOIN PIECEINTERV ON BPI_NATUREPIECEG=BPE_NATUREPIECEG AND '+
-            'BPI_SOUCHE=BPE_SOUCHE AND BPI_NUMERO=BPE_NUMERO AND BPI_INDICEG=BPE_INDICEG AND '+
-            'BPI_TIERSFOU=BPE_FOURNISSEUR ';
+            'LEFT JOIN TIERS ON T_NATUREAUXI="FOU" AND T_TIERS=BPE_FOURNISSEUR ';
 end;
 
 procedure LoadLaTOBPieceTrait(TOBpieceTrait : TOB; cledoc : r_Cledoc; TypeInterv : String);
@@ -1306,20 +1318,7 @@ var i, Numero, Indice: integer;
   okok : boolean;
 begin
   if TOBSSTrait = nil then Exit;
-
   if TOBSSTrait.Detail.Count = 0 then Exit;
-  {*
-  i:=0;
-  repeat
-    TOBP := TOBSSTrait.Detail[i];
-    if TOBP.GetDouble('NBUSED') > 0 then TOBP.SetString('UTILISE','X');
-    if (TOBP.getvalue('UTILISE')='-') then
-    begin
-    	TOBP.free;
-    end else inc(I);
-  until i >= TOBSSTrait.Detail.Count;
-  *}
-  //
   Nature := TOBPiece.GetValue('GP_NATUREPIECEG');
   Souche := TOBPiece.GetValue('GP_SOUCHE');
   Numero := TOBPiece.GetValue('GP_NUMERO');
@@ -1345,6 +1344,7 @@ begin
   END;
   if not okok then
   begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_UpdatePIECEINTERV);
     V_PGI.IoError := oeUnknown;
   end;
 end;
@@ -1417,6 +1417,7 @@ begin
   END;
   if not okok then
   begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_UpdatePIECETRAIT);
     V_PGI.IoError := oeUnknown;
   end;
 end;
@@ -2927,8 +2928,14 @@ begin
         GestionDetailOuvrage(TFFacture(FF),fTOBpiece,TOBL.GetValue('GL_NUMLIGNE'));
       end;
     end;
-
-    if FF is TFFacture then TFFacture(FF).CalculeLaSaisie(-1,-1,true);
+    if FF is TFFActure then
+    begin
+      TFFacture(FF).TheTOBBases.ClearDetail;
+      TFFacture(FF).TheTOBBasesL.ClearDetail;
+      TOBPieceTrait.ClearDetail;
+      TFFacture(FF).TheEches.ClearDetail;
+    	TFFacture(FF).CalculeLaSaisie(-1,-1,true);
+    end;
     NettoiePieceTrait (TFFacture(FF).ThePieceTrait );
   	SetSaisie;
     GS.EndUpdate;
@@ -3145,7 +3152,7 @@ begin
   TT.putValue('BPI_TYPEPAIE','001');
   TT.putValue('BPI_DATECONTRAT',V_PGI.DateEntree);
   TT.SetString('BPI_FAMILLETAXE',GetInfoMarcheST(fTOBpiece.GetString('GP_AFFAIRE'),Fournisseur,CodeMarche,'FAMILLETAXE1'));
-  TT.SetBoolean('BPI_AUTOLIQUID',(Pos(TT.GetString('BPI_FAMILLETAXE'),GetParamSocSecur('SO_CODETVALIQUIDST',''))>0));
+  TT.SetBoolean('BPI_AUTOLIQUID',Tools.StringInList(TT.GetString('BPI_FAMILLETAXE'), GetParamSocSecur('SO_CODETVALIQUIDST','')));
   TT.SetString('BPI_TIERSFOU',Fournisseur);
   TT.SetString('BPI_CODEMARCHE',CodeMarche);
   TT.SetDouble('NBUSED',1);
@@ -3571,6 +3578,11 @@ begin
       begin
         GetSommeAcomptes(TOBAcomptes, XP, XD);
         Mtreste := ARRONDI(TOBPT.GetDouble('BPE_MONTANTREGL') - XD,DEV.Decimale);
+        if MtReste < 0 then
+        begin
+          PgiError('Le montant de l''acompte > montant résiduel du par le client');
+          V_PGI.ioerror := oeUnknown; 
+        end;
         if Mtreste = 0 then Continue;
         //
         if IIEnt = -1 then
@@ -4058,6 +4070,40 @@ begin
   TOBParam.free;
   end;
 //
+end;
+
+procedure TPieceCotrait.DeduitMontantPieceTrait(TOBL: TOB);
+var TOBPT : TOB;
+    X : double;
+begin
+  TOBPT := TOBPieceTrait.findFirst(['BPE_FOURNISSEUR'],[TOBL.GetString('GL_FOURNISSEUR')],true);
+  if TOBPT <> nil then
+  begin
+    X:=arrondi(TOBPT.GetValue('BPE_TOTALHTDEV')-TOBL.GetDouble('GL_TOTALHTDEV'),fDEV.Decimale);
+    TOBPT.PutValue('BPE_TOTALHTDEV',X) ;
+    X:=arrondi(TOBPT.GetValue('BPE_TOTALTTCDEV')-TOBL.GetDouble('GL_TOTALTTCDEV'),fDEV.Decimale);
+    TOBPT.PutValue('BPE_TOTALTTCDEV',X) ;
+    X:=arrondi(TOBPT.GetValue('BPE_MONTANTPA')-TOBL.GetDouble('GL_MONTANTPA'),fDEV.Decimale);
+    TOBPT.PutValue('BPE_MONTANTPA',X) ;
+    TOBPT.PutValue('MONTANTREGLABLE',  TOBPT.GetValue('BPE_TOTALTTCDEV'));
+    TOBPT.PutValue('MONTANTFACT',      TOBPT.GetDouble('BPE_TOTALTTCDEV'));
+    if TOBPT.GetDouble('BPE_TOTALTTCDEV')=0 then
+    begin
+      TOBPT.free;
+    end;
+  end;
+  TOBPT := TOBPieceTrait.findFirst(['BPE_FOURNISSEUR'],[''],true);
+  if TOBPT <> nil then
+  begin
+    X:=arrondi(TOBPT.GetValue('BPE_TOTALHTDEV')+TOBL.GetDouble('GL_TOTALHTDEV'),fDEV.Decimale);
+    TOBPT.PutValue('BPE_TOTALHTDEV',X) ;
+    X:=arrondi(TOBPT.GetValue('BPE_TOTALTTCDEV')+TOBL.GetDouble('GL_TOTALTTCDEV'),fDEV.Decimale);
+    TOBPT.PutValue('BPE_TOTALTTCDEV',X) ;
+    X:=arrondi(TOBPT.GetValue('BPE_MONTANTPA')+TOBL.GetDouble('GL_MONTANTPA'),fDEV.Decimale);
+    TOBPT.PutValue('BPE_MONTANTPA',X) ;
+    TOBPT.PutValue('MONTANTREGLABLE',  TOBPT.GetValue('BPE_TOTALTTCDEV'));
+    TOBPT.PutValue('MONTANTFACT',      TOBPT.GetDouble('BPE_TOTALTTCDEV'));
+  end;
 end;
 
 { TInfoSSTrait }

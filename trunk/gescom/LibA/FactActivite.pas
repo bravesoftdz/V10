@@ -28,6 +28,9 @@ Procedure CalculPRLigneAct (TobLigne, TobDetAct, TobArt : TOB);
 
 implementation
 
+uses
+  ErrorsManagement
+  ;
 
 procedure EtudieActivite(NaturePiece : String;Action : TActionFiche;duplicpiece : boolean; Var GereActivite,DelActivite : Boolean) ;
 BEGIN
@@ -48,36 +51,44 @@ procedure ValideActivite (TobPiece, TobPiece_O, TobArticles : TOB; GereActivite,
 Var  NumPiece : integer;
     stSQL : string;
 BEGIN
-if not(ctxAffaire in V_PGI.PGIContexte) and not(ctxGCAFF in V_PGI.PGIContexte) then Exit;
-        // si option facture éclatée par assistant, on appel fct adéquate
-if (GetParamSoc('SO_AFFACTPARRES') <> 'SAN')
-   then  begin
-   if (TobPiece <> NIL)  and
-   ( (TOBPIECE.GetValue('GP_NATUREPIECEG') = 'FAC') or
-     (TOBPIECE.GetValue('GP_NATUREPIECEG') = 'FRE') or
-     (TOBPIECE.GetValue('GP_NATUREPIECEG') = 'AVC') )
-      then MajFactEclat (TobPiece);
-   end;
-
-
-if (V_PGI.IoError<>oeOk)  then Exit;
-if Not(GereActivite) then Exit;
-// Suppression de l'activité sur la pièce précédente
-if (TOBPiece_O <> Nil) And (DelActivite) then
-   BEGIN
-   if (TobPiece_O.Detail.Count <> 0)  then
-      BEGIN
+  if not(ctxAffaire in V_PGI.PGIContexte) and not(ctxGCAFF in V_PGI.PGIContexte) then Exit;
+          // si option facture éclatée par assistant, on appel fct adéquate
+  if (GetParamSoc('SO_AFFACTPARRES') <> 'SAN') then
+  begin
+    if     (TobPiece <> NIL)
+       and (   (TOBPIECE.GetValue('GP_NATUREPIECEG') = 'FAC')
+            or (TOBPIECE.GetValue('GP_NATUREPIECEG') = 'FRE')
+            or (TOBPIECE.GetValue('GP_NATUREPIECEG') = 'AVC'))
+      then
+        MajFactEclat (TobPiece);
+  end;
+  if (V_PGI.IoError <> oeOk)  then
+  begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateACTIVITE);
+    Exit;
+  end;
+  if Not(GereActivite) then Exit;
+  // Suppression de l'activité sur la pièce précédente
+  if (TOBPiece_O <> Nil) And (DelActivite) then
+  begin
+    if (TobPiece_O.Detail.Count <> 0)  then
+    begin
       NumPiece := TobPiece_O.GetValue('GP_NUMERO');
       stSQL := 'DELETE from ACTIVITE where ACT_NATUREPIECEG="' + TobPiece_O.GetValue('GP_NATUREPIECEG')+
                '" And ACT_SOUCHE="'+ TobPiece_O.GetValue('GP_SOUCHE') +
                '" And ACT_NUMERO=' + IntToStr(NumPiece) +
                '  And ACT_INDICEG='+ IntToStr(TobPiece_O.GetValue('GP_INDICEG'));
-      if (NumPiece <> 0) then BEGIN ExecuteSQL (stSQL); if MajDel then DelActivite:=False; END;
-      END;
-   END;
-// Création de l'activité sur la nouvelle pièce
-if TobPiece <> Nil then
-   PieceToActivite (Tobpiece,TobArticles,GereActivite,Reliquat);
+      if (NumPiece <> 0) then
+      begin
+        ExecuteSQL (stSQL);
+        if MajDel then
+          DelActivite := False;
+      end;
+    end;
+  end;
+  // Création de l'activité sur la nouvelle pièce
+  if TobPiece <> Nil then
+     PieceToActivite (Tobpiece,TobArticles,GereActivite,Reliquat);
 END;
 
 

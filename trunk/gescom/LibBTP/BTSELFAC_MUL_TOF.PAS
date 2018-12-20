@@ -121,7 +121,7 @@ Type
       procedure ControleChamp(Champ, Valeur: String);
     procedure Definifacturation(NaturePieceG, SoucheG: string; Numero,IndiceG: integer);
     function AcompteNonRegle (Naturepieceg,Souche : string; numero,indiceg : integer) : boolean;
-    function ExisteFacturation(DevisPrinc: string): boolean;
+    //function ExisteFacturation(DevisPrinc: string): boolean;
     //
   end ;
 
@@ -222,7 +222,6 @@ begin
 end ;
 
 procedure TOF_BTSELFAC_MUL.ControleChamp(Champ : String;Valeur : String);
-var St_Plus : string ;
 begin
   if Champ = 'ANTERIORITE' then
   begin
@@ -357,12 +356,14 @@ var Affaire,Naturepieceg,Souche,TypeFac,Sql : string;
     CBtnTxt         : PCustBtnText;
     NatS,SoucheS: string;
     NumS,indiceS : Integer;
+    OkTriDevis    : Boolean;
 begin
 	if not ControleArticleEcartFact then
   BEGIN
 //    PgiError (TraduireMemoire('L''article d''écart est invalide ou non renseigné#13#10Veuillez le définir'),Traduirememoire('Gestion d''écart'));
     exit;
   END;
+  OkTriDevis := GetParamSocSecur('SO_TRIDEVIS', false);
   if ModeTraitement = TmtCloture then
   begin
     if not ConfirmationCloture then exit;
@@ -387,6 +388,7 @@ begin
     Numero := Q.FindField('GP_NUMERO').asInteger ;
     IndiceG := Q.FindField('GP_INDICEG').asInteger ;
   end;
+
   fTypeFacturation := TypeFac;
   if (Pos(TypeFac,'AVA;DAC;')>0) then
   begin
@@ -434,8 +436,9 @@ begin
   if not RecupSaisie then
   begin
     RefPieceSel := EncoderefSel (NaturePieceg,Souche,Numero,IndiceG);
-
-    QQ := OpenSql ('SELECT BMF_DEVISPRINC FROM BTMEMOFACTURE WHERE BMF_DEVIS="'+RefPieceSel+'"',true);
+    Sql := 'SELECT BMF_DEVISPRINC FROM BTMEMOFACTURE WHERE BMF_DEVIS="' + RefPieceSel + '"';
+    if OkTriDevis then sql := Sql + ' ORDER BY BMF_NUMERO ASC';
+    QQ := OpenSql (sql,true);
     if not QQ.eof then
     begin
       // on change la reference de la piece initiale par le devis initial de la facture
@@ -445,7 +448,8 @@ begin
     // Phase 1 -- On recup les devis d'une facture existante
     if DevisPrinc <> '' then
     begin
-      Sql := 'SELECT * FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="'+DevisPrinc+'"';
+      Sql := 'SELECT * FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="' + DevisPrinc + '"';
+      If OkTriDevis then sql := Sql + ' ORDER BY BMF_NUMERO ASC';
       TOBFacture.LoadDetailDBFromSQL ('BTMEMOFACTURE',Sql,false);
       TRY
         RefPieceSel := DevisPrinc;
@@ -482,10 +486,12 @@ begin
           MessAttente.Show;
           MessAttente.Refresh;
           DevisPrinc := EncoderefSel(NaturepieceG,Souche,Numero,IndiceG);
-          Sql := 'SELECT ##TOP 1## BMF_DEVISPRINC FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="'+DevisPrinc+'"';
+          Sql := 'SELECT ##TOP 1## BMF_DEVISPRINC FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="' + DevisPrinc + '"';
+          If OkTriDevis then sql := Sql + ' ORDER BY BMF_NUMERO ASC';
           if ExisteSQL(Sql) then
           begin
-            Sql := 'SELECT * FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="'+DevisPrinc+'"';
+            Sql := 'SELECT * FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="' + DevisPrinc + '"';
+            If OkTriDevis then sql := Sql + ' ORDER BY BMF_NUMERO ASC';
             TOBFacture.LoadDetailDBFromSQL ('BTMEMOFACTURE',Sql,false);
             TRY
               RefPieceSel := DevisPrinc;
@@ -835,7 +841,7 @@ begin
   result := false;
   req := 'SELECT ##TOP 1## BLF_NUMORDRE FROM LIGNEFAC WHERE BLF_NATUREPIECEG="'+
          TOBL.GetValue('GP_NATUREPIECEG')+'" AND BLF_SOUCHE="'+TOBL.GetValue('GP_SOUCHE')+'" '+
-         'AND BLF_NUMERO='+InttoStr(TOBL.GetValue('GP_NUMERO'))+' AND BLF_INDICEG='+InttoStr(TOBL.GetValue('GP_INDICEG'));
+         'AND BLF_NUMERO='+InttoStr(TOBL.GetValue('GP_NUMERO'))+' AND BLF_INDICEG='+InttoStr(TOBL.GetValue('GP_INDICEG')) + ' AND BLF_MTCUMULEFACT <> 0';
   if ExisteSql(Req) then BEGIN result := True; Exit; END;
   req := 'SELECT ##TOP 1## BST_NUMEROSIT FROM BSITUATIONS WHERE BST_SSAFFAIRE="'+ TOBL.GetValue('GP_AFFAIREDEVIS')+'"';
   if ExisteSql(Req) then BEGIN result := True; Exit; END;
@@ -1055,6 +1061,7 @@ begin
   END;
 end;
 
+{*
 function TOF_BTSELFAC_MUL.ExisteFacturation (DevisPrinc : string) : boolean;
 var cledoc : R_CLEDOC;
     ZZ,SQL  :string;
@@ -1067,8 +1074,9 @@ begin
   cledoc.Indice := StrToInt(READTOKENST(ZZ));
 
   SQL := 'SELECT 1 FROM LIGNEFAC WHERE '+WherePiece (cledoc,ttdLignefac,false) + ' AND BLF_MTCUMULEFACT <> 0';
-  result :=  ExisteSQL(SQL); 
+  result :=  ExisteSQL(SQL);
 end;
+*}
 
 
 function TOF_BTSELFAC_MUL.ExisteFacturationOld(var Affaire,Naturepieceg,Souche: string; var Numero, Indice: integer): TResultS;
@@ -1540,6 +1548,10 @@ var QQ : TQuery;
     TOBMF : TOB;
 begin
   TOBAFACTURER.ClearDetail;
+  //
+  Num     := 0;
+  Indice  := 0;
+  //
   if Avancement then
   begin
     SQL := 'SELECT BST_NATUREPIECE,BST_SOUCHE,BST_NUMEROFAC FROM BSITUATIONS WHERE BST_NATUREPIECE="FBP" AND '+
@@ -1605,8 +1617,9 @@ end;
 
 function ExisteSituationProv (Avancement : Boolean; NaturePieceg,Souche: string; Numero,IndiceG : integer;
                                                var NatS,SoucheS : string; var NumS,indiceS : integer) : boolean;
-var QQ : TQuery;
-    SQl,RefDossier,SqlDoc : String;
+var QQ      : TQuery;
+    SQl     : string;
+    SqlDoc  : String;
 begin
   NatS := ''; SoucheS := '';
   NumS := 0; IndiceS := 0;
@@ -1664,7 +1677,6 @@ begin
 end;
 
 function TOF_BTSELFAC_MUL.AcompteNonRegle(Naturepieceg, Souche: string;numero, indiceg: integer): boolean;
-var NonOk,pass : boolean;
 begin
   result := false;
   If (ExisteSql ('SELECT 1 FROM PIECE WHERE GP_ATTACHEMENT<>"" AND '+

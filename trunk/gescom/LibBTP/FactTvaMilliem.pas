@@ -74,7 +74,13 @@ Function READTOKENINT (var TheChaine : string; Separateur : string) : string;
 procedure ValideMillieme (TOBMilliemes : TOB);
 
 implementation
-uses Facture,FactTOB,FactUtil;
+uses
+  Facture
+  , FactTOB
+  , FactUtil
+  , ErrorsManagement
+  , CommonTools
+  ;
 
 { TREPARTTVAMILL }
 
@@ -416,13 +422,23 @@ begin
 end;
 
 procedure TREPARTTVAMILL.Ecrit;
+var
+  Msg  : string;
+  okok : boolean;
 begin
   if not fUsable then exit;
   Delete;
 	SetDocument;
-	if not fTOBRepart.InsertDB (nil,true) then
+  try
+    okok :=  fTOBRepart.InsertDB (nil,true);
+  except
+    on E: Exception do
+      Msg := E.Message;
+  end;
+  if not okok then
   begin
     MessageValid := 'Erreur mise à jour Répartition millième';
+    TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s de la répartition de la TVA au 1/1000 (BTPIECEMILIEME)%s.', [TUtilErrorsManagement.GetRecalcError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
     V_PGI.IOerror := OeUnknown;
   end;
 end;

@@ -574,7 +574,9 @@ uses
   UtilBTPVerdon in '..\..\Services\BTPVerdon\Lib\UtilBTPVerdon.pas',
   ExpEcrVerdon_TOF in '..\..\Services\BTPVerdon\Lib\ExpEcrVerdon_TOF.pas',
   UWinSystem in '..\..\COMMUN\LIB\UWinSystem.pas',
-  ControlIniFile in '..\LibBTP\ControlIniFile.pas';
+  ControlIniFile in '..\LibBTP\ControlIniFile.pas',
+  UtilsOuvragesPlat in '..\LibBTP\UtilsOuvragesPlat.pas',
+  ErrorsManagement in '..\..\commun\Lib\ErrorsManagement.pas';
 
 {$R *.RES}
 

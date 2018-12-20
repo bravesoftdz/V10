@@ -54,40 +54,73 @@ uses UtilsTOB;
 
 
 procedure CumuleprevufactureAutre (TOBTMP: TOB; NaturePiece : string; MontantPa,MontantPr,MontantPV : double);
-var LocNaturePiece : string;
+Var FactureAutre  : Double;
+    TotalMoAutPA  : Double;
+    TotalMoAutPR  : Double;
+    TotalMoAutPV  : Double;
 begin
 
-  if (Pos(NaturePiece ,'FBT;B00;ABT;FAC;AVC;FBC;FBP;ABC;')>0) Then
+  if (Pos(NaturePiece,'FPR;FBT;FBP;FBC;FAC;DAC')>0) or (Pos(NaturePiece,'ABT;ABC;AVC')>0) Then
   begin
-     TOBTMP.PutValue('FACTURE_AUTRE', TOBTMP.GetValue('FACTURE_AUTRE')+MontantPV);
+     FactureAutre := TOBTMP.GetDouble('FACTURE_AUTRE');
+     FactureAutre := FactureAutre + MontantPV;
+     //
+     TOBTMP.PutValue('FACTURE_AUTRE', FactureAutre);
   end
   else
   begin
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_AUTPA', TOBTMP.GetValue('PREVU_'+NaturePiece+'_AUTPA')+MontantPA);
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_AUTPR', TOBTMP.GetValue('PREVU_'+NaturePiece+'_AUTPR')+MontantPR);
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_AUTPV', TOBTMP.GetValue('PREVU_'+NaturePiece+'_AUTPV')+MontantPV);
+     TotalMoAutPa   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_MOSALPA');
+     TotalMoAutPa   := TotalMoAutPa + MontantPA;
+     //
+     TotalMoAutPR   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_MOSALPR');
+     TotalMoAutPR   := TotalMoAutPR + MontantPR;
+     //
+     TotalMoAutPV   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_MOSALPV');
+     TotalMoAutPV   := TotalMoAutPV + MontantPV;
+     //
+     TOBTMP.PutValue('PREVU_'+NaturePiece+'_AUTPA', TotalMoAutPa);
+     TOBTMP.PutValue('PREVU_'+NaturePiece+'_AUTPR', TotalMoAutPR);
+     TOBTMP.PutValue('PREVU_'+NaturePiece+'_AUTPV', TotalMoAutPV);
   end;
 
 end;
 
 procedure CumuleprevufactureSalarie (TOBTMP : TOB ; NaturePiece : string; MontantPa,MontantPr,MontantPV,TpsPrevu : double);
-var LocNaturePiece  : string;
+var FactureSalarie  : Double;
     TotalMoSalPA    : Double;
     TotalMoSalPR    : Double;
     TotalMoSalPV    : Double;
     TotalMoSal      : Double;
 begin
 
-  if (Pos(NaturePiece,'FBT;B00;FBP;FBC')>0) or (NaturePiece = 'FAC') Then
-     TOBTMP.PutValue('FACTURE_SALARIE', TOBTMP.GetValue('FACTURE_SALARIE')+MontantPV)
-  else if (Pos(NaturePiece,'ABT;AVC;ABC')>0) or (NaturePiece = 'ABP')  then
-     TOBTMP.PutValue('FACTURE_SALARIE', TOBTMP.GetValue('FACTURE_SALARIE')+MontantPV)
+  //FV1 : 21/11/2018 - FS#3376 - SCETEC - Les prévisionnels ne sont plus gérés dans les cumuls prévus
+  if (Pos(NaturePiece,'FPR;FBT;FBP;FBC;FAC;DAC')>0) or (Pos(NaturePiece,'ABT;ABC;AVC')>0) Then
+  begin
+     FactureSalarie := TOBTMP.GetDouble('FACTURE_SALARIE');
+     FactureSalarie := FactureSalarie + MontantPV;
+     //
+     TOBTMP.PutValue('FACTURE_SALARIE', FactureSalarie);
+  end
   else
   begin
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_MOSALPA',TOBTMP.GetValue('PREVU_'+NaturePiece+'_MOSALPA') + MontantPA);
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_MOSALPR',TOBTMP.GetValue('PREVU_'+NaturePiece+'_MOSALPR') + MontantPR);
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_MOSALPV',TOBTMP.GetValue('PREVU_'+NaturePiece+'_MOSALPV') + MontantPV);
-     TOBTMP.PutValue('TPS_PREVU_'+NaturePiece+'_MOSAL',TOBTMP.GetValue('TPS_PREVU_'+NaturePiece+'_MOSAL') + TpsPRevu);
+     TotalMoSalPa   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_MOSALPA');
+     TotalMoSalPa   := TotalMoSalPa + MontantPA;
+     //
+     TotalMoSalPR   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_MOSALPR');
+     TotalMoSalPR   := TotalMoSalPR + MontantPR;
+     //
+     TotalMoSalPV   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_MOSALPV');
+     TotalMoSalPV   := TotalMoSalPV + MontantPV;
+     //
+     TotalMoSal     := TOBTMP.Getdouble('TPS_PREVU_'+NaturePiece+'_MOSAL');
+     TotalMoSal     := TotalMoSal + TpsPRevu;
+     //
+     //FV1 - 16/11/2018 : FS#3368 - DELABOUDINIERE - Erreur sur Tableau de Bord sur contrat : Impossible de convertir un variant...
+     TOBTMP.PutValue('PREVU_'+NaturePiece+'_MOSALPA', TotalMoSalPa);
+     TOBTMP.PutValue('PREVU_'+NaturePiece+'_MOSALPR', TotalMoSalPR);
+     TOBTMP.PutValue('PREVU_'+NaturePiece+'_MOSALPV', TotalMoSalPV);
+     TOBTMP.PutValue('TPS_PREVU_'+NaturePiece+'_MOSAL', TotalMoSal);
+     //FV1 - 16/11/2018 : FS#3368 - DELABOUDINIERE - Erreur sur Tableau de Bord sur contrat : Impossible de convertir un variant...
   end;
 
 end;
@@ -102,7 +135,7 @@ Begin
     MAJ_PremiereLigne(TypeMontant + NaturePres + TypeMt, TOBTMP);
   end else
   begin
-    MtAvant := TOBTMP.GetValue(TypeMontant + NaturePres + TypeMt);
+    MtAvant := TOBTMP.GetDouble(TypeMontant + NaturePres + TypeMt);
     MtAvant := Arrondi(MtAvant, V_PGI.OkDecV);
     MtApres := MtAvant + Montant;
     MtApres := Arrondi(MtApres, V_PGI.OkDecV);
@@ -122,151 +155,252 @@ end;
 
 
 procedure CumuleprevufactureInterimaire (TOBTMP : TOB ; NaturePiece : string; MontantPa,MontantPr,MontantPV,TpsPrevu : double);
-var LocNaturePiece : string;
+var FactureInterim  : Double;
+    TotalMoIntPA    : Double;
+    TotalMoIntPR    : Double;
+    TotalMoIntPV    : Double;
+    TotalMoInt      : Double;
 begin
 
-  if (Pos(NaturePiece,'FBT;B00;FBP;FBC')>0) or (Pos(NaturePiece,'ABT;ABP;ABC')>0) or (NaturePiece = 'FAC') or (NaturePiece = 'AVC') Then
+  //if (Pos(NaturePiece,'FAC;FBT;B00;FBP;FBC;DAC')>0) or (Pos(NaturePiece,'AVC;ABT;ABP;ABC')>0) Then
+  if (Pos(NaturePiece,'FPR;FBT;FBP;FBC;FAC;DAC')>0) or (Pos(NaturePiece,'ABT;ABC;AVC')>0) Then
   begin
-     TOBTMP.PutValue('FACTURE_INTERIM', TOBTMP.GetValue('FACTURE_INTERIM')+MontantPV);
+     FactureInterim := TOBTMP.GetDouble('FACTURE_INTERIM');
+     FactureInterim := FactureInterim + MontantPV;
+     //
+     TOBTMP.PutValue('FACTURE_INTERIM', FactureInterim);
   end
   else
   begin
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_MOINTPA',TOBTMP.GetValue('PREVU_'+NaturePiece+'_MOINTPA') + MontantPA);
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_MOINTPR',TOBTMP.GetValue('PREVU_'+NaturePiece+'_MOINTPR') + MontantPR);
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_MOINTPV',TOBTMP.GetValue('PREVU_'+NaturePiece+'_MOINTPV') + MontantPV);
-     TOBTMP.PutValue('TPS_PREVU_'+NaturePiece+'_MOINT',TOBTMP.GetValue('TPS_PREVU_'+NaturePiece+'_MOINT') + TpsPRevu);
+    //FV1 - 16/11/2018 : FS#3368 - DELABOUDINIERE - Erreur sur Tableau de Bord sur contrat : Impossible de convertir un variant...
+    //
+    TotalMoIntPa   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_MOINTPA');
+    TotalMoIntPa   := TotalMoIntPa + MontantPA;
+    //
+    TotalMoIntPR   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_MOINTPR');
+    TotalMoIntPR   := TotalMoIntPR + MontantPR;
+    //
+    TotalMoIntPV   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_MOINTPV');
+    TotalMoIntPV   := TotalMoIntPV + MontantPV;
+    //
+    TotalMoInt     := TOBTMP.Getdouble('TPS_PREVU_'+NaturePiece+'_MOINT');
+    TotalMoInt     := TotalMoInt + TpsPRevu;
+    //
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_MOINTPA', TotalMoIntPa);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_MOINTPR', TotalMoIntPR);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_MOINTPV', TotalMoIntPV);
+    TOBTMP.PutValue('TPS_PREVU_'+NaturePiece+'_MOINT', TotalMoInt);
+    //FV1 - 16/11/2018 : FS#3368 - DELABOUDINIERE - Erreur sur Tableau de Bord sur contrat : Impossible de convertir un variant...
   end;
 end;
 
 procedure CumuleprevufactureLocation (TOBTMP : TOB ; NaturePiece : string; MontantPa,MontantPr,MontantPV : double);
-var LocNaturePiece : string;
+var FactureLocation: Double;
+    TotalLocPA    : Double;
+    TotalLocPR    : Double;
+    TotalLocPV    : Double;
 begin
 
-  if (Pos(NaturePiece ,'FBT;B00;FBP;FBC')>0) or (Pos(NaturePiece,'ABT;ABP;ABC')>0) or (NaturePiece = 'FAC') or (NaturePiece = 'AVC') Then
+  //if (Pos(NaturePiece ,'FAC;FBT;B00;FBP;FBC;DAC')>0) or (Pos(NaturePiece,'AVC;ABT;ABP;ABC')>0) Then
+  if (Pos(NaturePiece,'FPR;FBT;FBP;FBC;FAC;DAC')>0) or (Pos(NaturePiece,'ABT;ABC;AVC')>0) Then
   begin
-     TOBTMP.PutValue('FACTURE_LOCATION', TOBTMP.GetValue('FACTURE_LOCATION')+MontantPV);
+     FactureLocation := TOBTMP.GetDouble('FACTURE_LOCATION');
+     FactureLocation := FactureLocation + MontantPV;
+     //
+     TOBTMP.PutValue('FACTURE_LOCATION', FactureLocation);
   end
   else
   begin
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_LOCPA',TOBTMP.GetValue('PREVU_'+NaturePiece+'_LOCPA') + MontantPA);
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_LOCPR',TOBTMP.GetValue('PREVU_'+NaturePiece+'_LOCPR') + MontantPR);
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_LOCPV',TOBTMP.GetValue('PREVU_'+NaturePiece+'_LOCPV') + MontantPV);
+    //FV1 - 16/11/2018 : FS#3368 - DELABOUDINIERE - Erreur sur Tableau de Bord sur contrat : Impossible de convertir un variant...
+    //
+    TotalLocPa   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_LOCPA');
+    TotalLocPa   := TotalLocPa + MontantPA;
+    //
+    TotalLocPR   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_LOCPR');
+    TotalLocPR   := TotalLocPR + MontantPR;
+    //
+    TotalLocPV   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_LOCPV');
+    TotalLocPV   := TotalLocPV + MontantPV;
+    //
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_LOCPA', TotalLocPA);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_LOCPR', TotalLocPR);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_LOCPV', TotalLocPV);
+    //FV1 - 16/11/2018 : FS#3368 - DELABOUDINIERE - Erreur sur Tableau de Bord sur contrat : Impossible de convertir un variant...
   end;
 end;
 
 procedure CumuleprevufactureMateriel (TOBTMP : TOB; NaturePiece : string; MontantPa,MontantPr,MontantPV : double);
-var LocNaturePiece : string;
+var FactureMateriel: Double;
+    TotalMatPA    : Double;
+    TotalMatPR    : Double;
+    TotalMatPV    : Double;
 begin
-  if (Pos(NaturePiece,'FBT;B00;FBP;FBC')>0) or (Pos(NaturePiece,'ABT;ABP;ABC')>0) or (NaturePiece = 'FAC') or (NaturePiece = 'AVC') Then
+
+  //if (Pos(NaturePiece,'FAC,FBT;B00;FBP;FBC;DAC')>0) or (Pos(NaturePiece,'AVC,ABT;ABP;ABC')>0) Then
+  if (Pos(NaturePiece,'FPR;FBT;FBP;FBC;FAC;DAC')>0) or (Pos(NaturePiece,'ABT;ABC;AVC')>0) Then
   begin
-     TOBTMP.PutValue('FACTURE_MATERIEL', TOBTMP.GetValue('FACTURE_MATERIEL')+MontantPV);
+     FactureMateriel := TOBTMP.GetDouble('FACTURE_MATERIEL');
+     FactureMateriel := FactureMateriel + MontantPV;
+     //
+     TOBTMP.PutValue('FACTURE_MATERIEL', FactureMateriel);
   end else
   begin
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_MATPA',TOBTMP.GetValue('PREVU_'+NaturePiece+'_MATPA') + MontantPA);
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_MATPR',TOBTMP.GetValue('PREVU_'+NaturePiece+'_MATPR') + MontantPR);
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_MATPV',TOBTMP.GetValue('PREVU_'+NaturePiece+'_MATPV') + MontantPV);
+    //FV1 - 16/11/2018 : FS#3368 - DELABOUDINIERE - Erreur sur Tableau de Bord sur contrat : Impossible de convertir un variant...
+    //
+    TotalMatPa   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_MATPA');
+    TotalMatPa   := TotalMatPa + MontantPA;
+    //
+    TotalMatPR   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_MATPR');
+    TotalMatPR   := TotalMatPR + MontantPR;
+    //
+    TotalMatPV   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_MATPV');
+    TotalMatPV   := TotalMatPV + MontantPV;
+    //
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_MATPA', TotalMatPa);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_MATPR', TotalMatPR);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_MATPV', TotalMatPV);
+   //FV1 - 16/11/2018 : FS#3368 - DELABOUDINIERE - Erreur sur Tableau de Bord sur contrat : Impossible de convertir un variant...
   end;
 end;
 
 procedure CumuleprevufactureOutillage (TOBTMP : TOB; NaturePiece : string; MontantPa,MontantPr,MontantPV : double);
-var LocNaturePiece : string;
+var FactureOutil  : Double;
+    TotalOutPA    : Double;
+    TotalOutPR    : Double;
+    TotalOutPV    : Double;
 begin
-  if (Pos(NaturePiece,'FBT;B00;FBP;FBC')>0) or (Pos(NaturePiece,'ABT;ABP;ABC')>0) or (NaturePiece = 'FAC') or (NaturePiece = 'AVC') Then
+
+  //if (Pos(NaturePiece,'FAC;FBT;B00;FBP;FBC;DAC')>0) or (Pos(NaturePiece,'AVC;ABT;ABP;ABC')>0) Then
+  if (Pos(NaturePiece,'FPR;FBT;FBP;FBC;FAC;DAC')>0) or (Pos(NaturePiece,'ABT;ABC;AVC')>0) Then
   begin
-     TOBTMP.PutValue('FACTURE_OUTIL', TOBTMP.GetValue('FACTURE_OUTIL')+MontantPV);
+     FactureOutil := TOBTMP.GetDouble('FACTURE_OUTIL');
+     FactureOutil := FactureOutil + MontantPV;
+     //
+     TOBTMP.PutValue('FACTURE_OUTIL', FactureOutil);
   end else
   begin
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_OUTPA',TOBTMP.GetValue('PREVU_'+NaturePiece+'_OUTPA') + MontantPA);
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_OUTPR',TOBTMP.GetValue('PREVU_'+NaturePiece+'_OUTPR') + MontantPR);
-     TOBTMP.PutValue('PREVU_'+NaturePiece+'_OUTPV',TOBTMP.GetValue('PREVU_'+NaturePiece+'_OUTPV') + MontantPV);
+    //FV1 - 16/11/2018 : FS#3368 - DELABOUDINIERE - Erreur sur Tableau de Bord sur contrat : Impossible de convertir un variant...
+    //
+    TotalOutPa   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_OUTPA');
+    TotalOutPa   := TotalOutPa + MontantPA;
+    //
+    TotalOutPR   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_OUTPR');
+    TotalOutPR   := TotalOutPR + MontantPR;
+    //
+    TotalOutPV   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_OUTPV');
+    TotalOutPV   := TotalOutPV + MontantPV;
+    //
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_OUTPA', TotalOutPa);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_OUTPR', TotalOutPR);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_OUTPV', TotalOutPV);
   end;
+  //
 end;
 
 procedure CumuleprevufactureSousTraitance (TOBTMP : TOB; NaturePiece : string ;MontantPa,MontantPr,MontantPV,TpsPrevu : double);
-var LocNaturePiece : string;
+var FactureSt : Double;
+    TotalStPA : Double;
+    TotalStPR : Double;
+    TotalStPV : Double;
+    TotalSt   : Double;
 begin
-  if (Pos(NaturePiece,'FBT;B00;FBP;FBC')>0) or (Pos(NaturePiece,'ABT;ABP;ABC')>0) or (NaturePiece = 'FAC') or (NaturePiece = 'AVC') Then
+
+  //if (Pos(NaturePiece,'FAC;FBT;B00;FBP;FBC;DAC')>0) or (Pos(NaturePiece,'AVC;ABT;ABP;ABC')>0) Then
+  if (Pos(NaturePiece,'FPR;FBT;FBP;FBC;FAC;DAC')>0) or (Pos(NaturePiece,'ABT;ABC;AVC')>0) Then
   begin
-     TOBTMP.PutValue('FACTURE_ST', TOBTMP.GetValue('FACTURE_ST')+MontantPV);
+     FactureSt := TOBTMP.GetDouble('FACTURE_ST');
+     FactureSt := FactureSt + MontantPV;
+     //
+     TOBTMP.PutValue('FACTURE_ST', FactureSt);
   end
   else
   begin
+    TotalStPa   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_STPA');
+    TotalStPa   := TotalStPa + MontantPA;
+    //
+    TotalStPR   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_STPR');
+    TotalStPR   := TotalStPR + MontantPR;
+    //
+    TotalStPV   := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_STPV');
+    TotalStPV   := TotalStPV + MontantPV;
+    //
+    TotalSt     := TOBTMP.Getdouble('TPS_PREVU_'+NaturePiece+'_ST');
+    TotalSt     := TotalSt + TpsPRevu;
+    //
     //FV1 - 23/10/2017 - FS#2704 - AVENEL - En tableau de bord message impossible de convertir type String en type Double
-    If TOBTMP.FieldExists('PREVU_'+NaturePiece+'_STPA') then
-      TOBTMP.PutValue('PREVU_'+NaturePiece+'_STPA',TOBTMP.GetValue('PREVU_'+NaturePiece+'_STPA') + MontantPA)
-    else
-      TOBTMP.AddChampSupValeur('PREVU_'+NaturePiece+'_STPA', MontantPA);
-    //
-    If TOBTMP.FieldExists('PREVU_'+NaturePiece+'_STPR') then
-      TOBTMP.PutValue('PREVU_'+NaturePiece+'_STPR',TOBTMP.GetValue('PREVU_'+NaturePiece+'_STPR') + MontantPR)
-    else
-     TOBTMP.AddChampSupValeur('PREVU_'+NaturePiece+'_STPR', MontantPR);
-    //
-    If TOBTMP.FieldExists('PREVU_'+NaturePiece+'_STPV') then
-      TOBTMP.PutValue('PREVU_'+NaturePiece+'_STPV',TOBTMP.GetValue('PREVU_'+NaturePiece+'_STPV') + MontantPV)
-    else
-      TOBTMP.AddChampSupValeur('PREVU_'+NaturePiece+'_STPV', MontantPV);
-    //
-    If TOBTMP.FieldExists('PREVU_'+NaturePiece+'_ST') then
-      TOBTMP.PutValue('TPS_PREVU_'+NaturePiece+'_ST',TOBTMP.GetValue('TPS_PREVU_'+NaturePiece+'_ST') + TpsPrevu)
-    else
-      TOBTMP.AddChampSupValeur('TPS_PREVU_'+NaturePiece+'_ST', TpsPrevu);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_STPA',TotalStPa);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_STPR',TotalStPR);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_STPV',TotalStPV);
+    TOBTMP.PutValue('TPS_PREVU_'+NaturePiece+'_ST', TotalSt);
     //
   end;
 end;
 
 procedure CumuleprevufactureFourniture (TOBTMP : TOB; NaturePiece : string ; MontantPa,MontantPr,MontantPV : double);
-var LocNaturePiece : string;
+Var FactureFourniture : Double;
+    TotalFournPA : Double;
+    TotalFournPR : Double;
+    TotalFournPV : Double;
 begin
-  if (Pos(NaturePiece,'FBT;B00;FBP;FBC')>0) or (Pos(NaturePiece,'ABT;ABP;ABC')>0) or (NaturePiece = 'FAC') or (NaturePiece = 'AVC') Then
+
+  //if (Pos(NaturePiece,'FAC,FBT;B00;FBP;FBC;DAC')>0) or (Pos(NaturePiece,'AVC,ABT;ABP;ABC')>0) Then
+  if (Pos(NaturePiece,'FPR;FBT;FBP;FBC;FAC;DAC')>0) or (Pos(NaturePiece,'ABT;ABC;AVC')>0) Then
   begin
-     TOBTMP.PutValue('FACTURE_FOURNITURE', TOBTMP.GetValue('FACTURE_FOURNITURE')+MontantPV);
-  end else
+     FactureFourniture := TOBTMP.GetDouble('FACTURE_FOURNITURE');
+     FactureFourniture := FactureFourniture + MontantPV;
+     //
+     TOBTMP.PutValue('FACTURE_FOURNITURE', FactureFourniture);
+  end
+  else
   begin
     //FV1 - 23/10/2017 - FS#2704 - AVENEL - En tableau de bord message impossible de convertir type String en type Double
-    if TOBTMP.FieldExists('PREVU_'+NaturePiece+'_FOURNPA') then
-      TOBTMP.PutValue('PREVU_'+NaturePiece+'_FOURNPA', TOBTMP.GetValue('PREVU_'+NaturePiece+'_FOURNPA') +  MontantPA)
-    else
-      TOBTMP.AddChampSupValeur('PREVU_'+NaturePiece+'_FOURNPA',MontantPA);
+    TotalFournPa  := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_FOURNPA');
+    TotalFournPa  := TotalFournPa + MontantPA;
     //
-    if TOBTMP.FieldExists('PREVU_'+NaturePiece+'_FOURNPR') then
-      TOBTMP.PutValue('PREVU_'+NaturePiece+'_FOURNPR', TOBTMP.GetValue('PREVU_'+NaturePiece+'_FOURNPR') + MontantPR)
-    else
-      TOBTMP.AddChampSupValeur('PREVU_'+NaturePiece+'_FOURNPR', MontantPR);
+    TotalFournPR  := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_FOURNPR');
+    TotalFournPR  := TotalFournPR + MontantPR;
     //
-    if TOBTMP.FieldExists('PREVU_'+NaturePiece+'_FOURNPV') then
-      TOBTMP.PutValue('PREVU_'+NaturePiece+'_FOURNPV', TOBTMP.GetValue('PREVU_'+NaturePiece+'_FOURNPV') + MontantPV)
-    else
-      TOBTMP.AddChampSupValeur('PREVU_'+NaturePiece+'_FOURNPV', MontantPV);
+    TotalFournPV  := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_FOURNPV');
+    TotalFournPV  := TotalFournPV + MontantPV;
+    //
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_FOURNPA', TotalFournPA);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_FOURNPR', TotalFournPR);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_FOURNPV', TotalFournPV);
     //
   end;
 end;
 
 //FV1 : 04/02/2014 - FS#863 - SCETEC : Distinguer les frais au niveau des champs de prévisionnel
 procedure CumuleprevufactureFrais (TOBTMP : TOB; NaturePiece : string ; MontantPa,MontantPr,MontantPV : double);
-var LocNaturePiece : string;
+Var FactureFrais : Double;
+    TotalFraisPA : Double;
+    TotalFraisPR : Double;
+    TotalFraisPV : Double;
 begin
-  if (Pos(NaturePiece,'FBT;B00;FBP;FBC')>0) or (Pos(NaturePiece,'ABT;ABP;ABC')>0) or (NaturePiece = 'FAC') or (NaturePiece = 'AVC') Then
+
+  //if (Pos(NaturePiece,'FBT;B00;FBP;FBC;DAC;FAC')>0) or (Pos(NaturePiece,'ABT;ABP;ABC;AVC')>0) Then
+  if (Pos(NaturePiece,'FPR;FBT;FBP;FBC;FAC;DAC')>0) or (Pos(NaturePiece,'ABT;ABC;AVC')>0) Then
   begin
-     TOBTMP.PutValue('FACTURE_FRAIS', TOBTMP.GetValue('FACTURE_FRAIS')+MontantPV);
+     FactureFrais := TOBTMP.GetDouble('FACTURE_FRAIS');
+     FactureFrais := FactureFrais + MontantPV;
+     //
+     TOBTMP.PutValue('FACTURE_FRAIS', FactureFrais);
   end
   else
   begin
     //FV1 - 23/10/2017 - FS#2704 - AVENEL - En tableau de bord message impossible de convertir type String en type Double
-    if TOBTMP.FieldExists('PREVU_'+NaturePiece+'_FRAISPA') then
-      TOBTMP.PutValue('PREVU_'+NaturePiece+'_FRAISPA',TOBTMP.GetValue('PREVU_'+NaturePiece+'_FRAISPA') + MontantPA)
-    else
-      TOBTMP.AddChampSupValeur('PREVU_'+NaturePiece+'_FRAISPA',  MontantPA);
-
-    if TOBTMP.FieldExists('PREVU_'+NaturePiece+'_FRAISPR') then
-      TOBTMP.PutValue('PREVU_'+NaturePiece+'_FRAISPR',TOBTMP.GetValue('PREVU_'+NaturePiece+'_FRAISPR') + MontantPR)
-    else
-      TOBTMP.AddChampSupValeur('PREVU_'+NaturePiece+'_FRAISPR', MontantPR);
+    TotalFraisPa  := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_FRAISPA');
+    TotalFraisPa  := TotalFraisPa + MontantPA;
     //
-    if TOBTMP.FieldExists('PREVU_'+NaturePiece+'_FRAISPV') then
-      TOBTMP.PutValue('PREVU_'+NaturePiece+'_FRAISPV',TOBTMP.GetValue('PREVU_'+NaturePiece+'_FRAISPV') + MontantPV)
-    else
-      TOBTMP.AddChampSupValeur('PREVU_'+NaturePiece+'_FRAISPV',  MontantPV);
+    TotalFraisPR  := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_FRAISPR');
+    TotalFraisPR  := TotalFraisPR + MontantPR;
+    //
+    TotalFraisPV  := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_FRAISPV');
+    TotalFraisPV  := TotalFraisPV + MontantPV;
+    //
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_FRAISPA',TotalFraisPa);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_FRAISPR',TotalFraisPR);
+    TOBTMP.PutValue('PREVU_'+NaturePiece+'_FRAISPV',TotalFraisPV);
     //
   end;
 end;
@@ -541,6 +675,7 @@ Begin
     Repartition_Eclatement('PREVU_',  NaturePres, '_PA', MontantPA, TOBTMP);
     Repartition_Eclatement('PREVU_',  NaturePres, '_PR', MontantPR, TOBTMP);
     Repartition_Eclatement('PREVU_',  NaturePres, '_PV', MontantPV, TOBTMP);
+
 end;
 
 Procedure ChargeCumulPrevuFacture(TypeRes, NaturePiece : String; TOBTMP : TOB; MontantPa,MontantPr,MontantPV,TpsPrevu : Double);
@@ -595,6 +730,7 @@ begin
          'AND GL_SOUCHE="' + TOBPiece.GetValue('GP_SOUCHE') + '" ' +
          'AND GL_NUMERO=' + IntToStr(TOBPiece.GetValue('GP_NUMERO')) + ' '+
          'AND GL_INDICEG=' + IntToStr(TOBPiece.GetValue('GP_INDICEG')) + ' '+
+         'AND GL_TOTALHTDEV <> 0 ' +
          'ORDER BY GL_NUMLIGNE';
   QQ := OpenSql (req,true);
   TOBLigne.loadDetailDb ('LIGNE','','',QQ,false);
@@ -678,6 +814,7 @@ begin
          'AND BLO_SOUCHE="' + TOBPiece.GetValue('GP_SOUCHE') + '" ' +
          'AND BLO_NUMERO=' + IntToStr(TOBPiece.GetValue('GP_NUMERO')) + ' '+
          'AND BLO_INDICEG=' + IntToStr(TOBPiece.GetValue('GP_INDICEG')) + ' '+
+         'AND BLO_PUHTDEV <> 0 ' +
          'ORDER BY BLO_NUMLIGNE,BLO_N1,BLO_N2,BLO_N3,BLO_N4,BLO_N5';
   QQ := OpenSql (req,true);
   TOBLocOuvrage.loadDetailDb ('LIGNEOUV','','',QQ,false);
@@ -701,6 +838,7 @@ begin
          'AND BOP_SOUCHE="' + TOBPiece.GetValue('GP_SOUCHE') + '" ' +
          'AND BOP_NUMERO=' + IntToStr(TOBPiece.GetValue('GP_NUMERO')) + ' '+
          'AND BOP_INDICEG=' + IntToStr(TOBPiece.GetValue('GP_INDICEG')) + ' '+
+         'AND BOP_TOTALHTDEV <> 0 ' +
          'ORDER BY BOP_NUMORDRE';
 
   QQ := OpenSql (req,true);
@@ -741,9 +879,9 @@ var MontantPa : Double;
     MontantFC : Double;
     MontantFR : Double;
     //
-    TotalMtPA : Double;
-    TotalMtPR : Double;
-    TotalMtPV : Double;
+    //TotalMtPA : Double;
+    //TotalMtPR : Double;
+    //TotalMtPV : Double;
     //
     TotalMtFG : Double;
     TotalMtFC : Double;
@@ -753,14 +891,14 @@ var MontantPa : Double;
     DPR       : Double;
     PUHT      : Double;
     //
-    QteduDetail: Double;
+    //QteduDetail: Double;
     //
     NumeroPiece: Integer;
     //
     TypeArticle: String;
     //
     LigneLog   : String;
-    NoLig      : Integer;
+    //NoLig      : Integer;
 Begin
 
   LigneLog := '';
@@ -854,14 +992,14 @@ Begin
   end;
 
   //Ajout FV1 03/06/2013 : Montant prévu dispatch par nature de pièce
-  TotalMtPA := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_PA');
-  TotalMtPA := TotalMTPA + MontantPA;
+  //TotalMtPA := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_PA');
+  //TotalMtPA := TotalMTPA + MontantPA;
 
-  TotalMtPR := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_PR');
-  TotalMtPR := TotalMTPR + MontantPR;
+  //TotalMtPR := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_PR');
+  //TotalMtPR := TotalMTPR + MontantPR;
 
-  TotalMtPV := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_PV');
-  TotalMtPV := TotalMTPV + MontantPV;
+  //TotalMtPV := TOBTMP.GetDouble('PREVU_'+NaturePiece+'_PV');
+  //TotalMtPV := TotalMTPV + MontantPV;
 
 // BRL 13/08 : ces 3 montants ne concernent que la prévision de chantier PBT
   if NaturePiece = 'PBT' then
@@ -893,7 +1031,7 @@ Begin
 
   ChargeCumulPrevuFacture(TypeRes, NaturePiece, TOBTMP,MontantPa,MontantPr,MontantPV,Tps_Prevu);
 
-  if not ((Pos(NaturePiece,'FBT;B00;FBP;FBC')>0) or (Pos(NaturePiece,'ABT;ABP;ABC')>0) or (NaturePiece = 'FAC') or (NaturePiece = 'AVC')) Then
+  if not ((Pos(NaturePiece,'FBT;B00;FBP;FBC;DAC')>0) or (Pos(NaturePiece,'ABT;ABP;ABC')>0) or (NaturePiece = 'FAC') or (NaturePiece = 'AVC')) Then
   begin
     if (TypeRes <> 'FOU') and (TOBTMP.GetValue('CEclatNatPrest') = 'X') then
     begin
@@ -1003,12 +1141,13 @@ begin
     if (Pos (TOBL.GetValue('GL_TYPEARTICLE'),'OUV;OU1;ARP') > 0) and (TOBL.GetValue('GL_INDICENOMEN')>0) then
     begin
       If (TOBL.GetString('GL_NATUREPIECEG') = 'FBT') OR
-         (TOBL.GetString('GL_NATUREPIECEG') = 'B00') OR
+         //(TOBL.GetString('GL_NATUREPIECEG') = 'B00') OR
          (TOBL.GetString('GL_NATUREPIECEG') = 'FBP') OR
          (TOBL.GetString('GL_NATUREPIECEG') = 'FBC') OR
          (TOBL.GetString('GL_NATUREPIECEG') = 'ABC') OR
          (TOBL.GetString('GL_NATUREPIECEG') = 'ABT') OR
-         (TOBL.GetString('GL_NATUREPIECEG') = 'ABP') OR
+         //(TOBL.GetString('GL_NATUREPIECEG') = 'ABP') OR
+         (TOBL.GetString('GL_NATUREPIECEG') = 'DAC') OR
          (TOBL.GetString('GL_NATUREPIECEG') = 'FAC') OR
          (TOBL.GetString('GL_NATUREPIECEG') = 'AVC') then
         TraiteOuvrageTBPlat(TOBTMP,TOBL,TOBOuvrage)
@@ -1033,12 +1172,13 @@ begin
   ChargelesLignesTB (TOBLIgnes,TOBPiece);
   //
   If  (NaturePiece = 'FBT') OR
-      (NaturePiece = 'B00') OR
+      //(NaturePiece = 'B00') OR
       (NaturePiece = 'FBC') OR
       (NaturePiece = 'ABC') OR
       (NaturePiece = 'FBP') OR
       (NaturePiece = 'ABT') OR
-      (NaturePiece = 'ABP') OR
+      //(NaturePiece = 'ABP') OR
+      (NaturePiece = 'DAC') OR
       (NaturePiece = 'FAC') OR
       (NaturePiece = 'AVC') then
     ChargelesOuvragesTBPlat (TOBOuvrages,TOBLignes)
@@ -1083,8 +1223,9 @@ begin
   begin
     if NaturePiece = 'FBT' then
     begin
-      WherePiece := '(GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","FBC","ABC") OR (GP_NATUREPIECEG In ("FBP","FPR","DAC","DAP") AND (GP_VIVANTE="X"))) ' +
-      'AND GP_AFFAIRE="'+TOBTMP.GetValue('BCO_AFFAIRE') + '"';
+      //WherePiece := '(GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","FBC","ABC") OR (GP_NATUREPIECEG In ("FBP","FPR","DAC","DAP") AND (GP_VIVANTE="X"))) ' +
+      WherePiece := '(GP_NATUREPIECEG IN ("FBT","ABT","FAC","AVC","FBC","ABC") OR (GP_NATUREPIECEG In ("FBP","FPR","DAC") AND (GP_VIVANTE="X"))) ' +
+                    'AND GP_AFFAIRE="'+TOBTMP.GetValue('BCO_AFFAIRE') + '"';
   	  //WherePiece := ' ((GP_NATUREPIECEG="'+NaturePiece+'") OR (GP_NATUREPIECEG="B00") OR ((GP_NATUREPIECEG="FBP") AND (GP_VIVANTE="X"))) '+
       //'AND GP_AFFAIRE="'+TOBTMP.GetValue('BCO_AFFAIRE') + '"';
     end else

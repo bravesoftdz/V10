@@ -178,7 +178,7 @@ procedure DestruitPrepaFact(Nature, Souche  : String;  Numero  : Integer);
 Function CtrlOkReliquat(TOBL : TOB; Prefixe : String) : Boolean;
 procedure AnnuleSituation (TOBpiece,TOBOUvrage,TOBPieceRg : TOB);
 Function FormatMultiValComboforSQL(Champ : String) : String;
-function ExRichToString (TheObj : ThRichEdit) : string;
+function ExRichToString (TheObj : THRichEditOLE) : string;
 function GetPiecesVenteBTP (ForWhat : integer = 3; ForPlus : boolean=true): string;
 
 type
@@ -215,6 +215,7 @@ uses
   , UtilWord
   , wCommuns
   , CommonTools
+  , ErrorsManagement
   ;
 
 function GetPiecesVenteBTP (ForWhat : integer = 3; ForPlus : boolean=true): string;
@@ -232,24 +233,26 @@ begin
   end;
 end;
 
-function ExRichToString (TheObj : ThRichEdit) : string;
+function ExRichToString (TheObj : ThRichEditOle) : string;
 var Ipos : integer;
 begin
+
   result := RichToString(TheObj);
 
   Ipos := Pos(''#$D#$A'\par '#$D#$A'\par \',result);
   While Ipos >0 do
   begin
-    result := StringReplace (result,''#$D#$A'\par '#$D#$A'\par \',''#$D#$A'\par \',[]);
+    result := StringReplace(result, ''#$D#$A'\par '#$D#$A'\par \', ''#$D#$A'\par \', [rfReplaceAll]);
     Ipos := Pos(''#$D#$A'\par '#$D#$A'\par \',result);
   end;
 
-  Ipos := Pos(' '#$D#$A'\par '#$D#$A'\par }',REsult);
+  Ipos := Pos(' '#$D#$A'\par '#$D#$A'\par }',Result);
   While Ipos >0 do
   begin
-    result := StringReplace (result,' '#$D#$A'\par '#$D#$A'\par }',' '#$D#$A'\par }',[]);
+    result := StringReplace (result,' '#$D#$A'\par '#$D#$A'\par }', ''#$D#$A'\par }', [rfReplaceAll]);
     Ipos := Pos(' '#$D#$A'\par '#$D#$A'\par }',result);
   end;
+
 end;
 
 
@@ -561,7 +564,7 @@ if (CodeAffaire <> '') then
    NbPiece := SelectPieceAffaire(CodeAffaire, 'AFF', CleDocAffaire);
    if NbPiece = 1 then
       begin
-      Req := 'UPDATE AFFAIRE SET AFF_MULTIPIECES = "-" WHERE AFF_AFFAIRE='+'"'+CodeAffaire+'"';//MODIFBTP190101
+      Req := 'UPDATE AFFAIRE SET AFF_MULTIPIECES = "-", AFF_DATEMODIF="' + USDATETIME(NowH) + '" WHERE AFF_AFFAIRE='+'"'+CodeAffaire+'"';//MODIFBTP190101
       if (ExecuteSQL(Req) < 1) then result := false;
       end;
    end;
@@ -589,38 +592,38 @@ Var CodeAffaire, Req, annee : string;
     Acompte,Regl : double;
 BEGIN
 
-CodeAffaire := TobPiece.GetValue('GP_AFFAIRE');
-// Contrôle nombre de devis pour l'affaire si code affaire renseigné sinon toujours -1
-// Attention la pièce courante est déjà créée donc SelectPieceAffaire renvoie au moins 1
-if (CodeAffaire <> '') and (TobPiece.Getvalue ('GP_NATUREPIECEG') = VH_GC.AFNatAffaire) then
-  NbPiece := SelectPieceAffaire(CodeAffaire, 'AFF', CleDocAffaire) // Lancement avec AFF pour lecture des devis
-else
-  NbPiece := -1;
-// Chargement clé document pour la pièce en cours
-FillChar(CleDocAffaire,Sizeof(CleDocAffaire),#0) ;
-CleDocAffaire.NaturePiece:= TOBPIECE.GetValue('GP_NATUREPIECEG');
-CleDocAffaire.DatePiece:= TOBPIECE.GetValue('GP_DATEPIECE');
-CleDocAffaire.Souche:= TOBPIECE.GetValue('GP_SOUCHE');
-CleDocAffaire.NumeroPiece:= TOBPIECE.GetValue('GP_NUMERO');
-CleDocAffaire.Indice:= TOBPIECE.GetValue('GP_INDICEG');
-Annee:=FormatDateTime('yy',CleDocAffaire.DatePiece) ;
+  CodeAffaire := TobPiece.GetValue('GP_AFFAIRE');
+  // Contrôle nombre de devis pour l'affaire si code affaire renseigné sinon toujours -1
+  // Attention la pièce courante est déjà créée donc SelectPieceAffaire renvoie au moins 1
+  if (CodeAffaire <> '') and (TobPiece.Getvalue ('GP_NATUREPIECEG') = VH_GC.AFNatAffaire) then
+    NbPiece := SelectPieceAffaire(CodeAffaire, 'AFF', CleDocAffaire) // Lancement avec AFF pour lecture des devis
+  else
+    NbPiece := -1;
+  // Chargement clé document pour la pièce en cours
+  FillChar(CleDocAffaire,Sizeof(CleDocAffaire),#0) ;
+  CleDocAffaire.NaturePiece:= TOBPIECE.GetValue('GP_NATUREPIECEG');
+  CleDocAffaire.DatePiece:= TOBPIECE.GetValue('GP_DATEPIECE');
+  CleDocAffaire.Souche:= TOBPIECE.GetValue('GP_SOUCHE');
+  CleDocAffaire.NumeroPiece:= TOBPIECE.GetValue('GP_NUMERO');
+  CleDocAffaire.Indice:= TOBPIECE.GetValue('GP_INDICEG');
+  Annee:=FormatDateTime('yy',CleDocAffaire.DatePiece) ;
 
-// création TOB Affaire
-TOBAffaire:=TOB.Create('AFFAIRE',Nil,-1) ;
-RemplirTOBAffaire(CodeAffaire,TobAffaire);
-TOBAffaire2:=TOB.Create('AFFAIRE',Nil,-1);
-TOBAffaire2.Dupliquer (TOBAffaire, True, true);
-ReinitEltAffaire (TOBAffaire2);
-if CodeAffaire = '' then
-begin
-	TOBAffaire.PutValue('AFF_GENERAUTO', 'DIR');
-	TOBAffaire2.PutValue('AFF_GENERAUTO', 'DIR');
-end;
-// Récupération code sous-affaire du devis
-Req := 'SELECT GP_NUMERO, GP_AFFAIREDEVIS,GP_REFINTERNE FROM PIECE WHERE GP_AFFAIRE = "'+ CodeAffaire +
-         '" AND GP_NATUREPIECEG = "' + CleDocAffaire.NaturePiece + '" AND GP_NUMERO = '+ IntToStr(CleDocAffaire.NumeroPiece);
-Q := OpenSQL(Req, True,-1,'',true);
-if Not Q.EOF then
+  // création TOB Affaire
+  TOBAffaire:=TOB.Create('AFFAIRE',Nil,-1) ;
+  RemplirTOBAffaire(CodeAffaire,TobAffaire);
+  TOBAffaire2:=TOB.Create('AFFAIRE',Nil,-1);
+  TOBAffaire2.Dupliquer (TOBAffaire, True, true);
+  ReinitEltAffaire (TOBAffaire2);
+  if CodeAffaire = '' then
+  begin
+    TOBAffaire.PutValue('AFF_GENERAUTO', 'DIR');
+    TOBAffaire2.PutValue('AFF_GENERAUTO', 'DIR');
+  end;
+  // Récupération code sous-affaire du devis
+  Req := 'SELECT GP_NUMERO, GP_AFFAIREDEVIS,GP_REFINTERNE FROM PIECE WHERE GP_AFFAIRE = "'+ CodeAffaire +
+           '" AND GP_NATUREPIECEG = "' + CleDocAffaire.NaturePiece + '" AND GP_NUMERO = '+ IntToStr(CleDocAffaire.NumeroPiece);
+  Q := OpenSQL(Req, True,-1,'',true);
+  if Not Q.EOF then
     begin
     Codessaff:=Q.FindField('GP_AFFAIREDEVIS').AsString;
     end else
@@ -628,127 +631,128 @@ if Not Q.EOF then
     Codessaff := '';
     end;
 
-Ferme(Q);
-Numpiece:= CleDocAffaire.NumeroPiece;
+  Ferme(Q);
+  Numpiece:= CleDocAffaire.NumeroPiece;
 
-if NbPiece = 2 then
-    begin
-    if (Action = taCreat) or (Duplic = True) then
-       begin
-       Req := 'SELECT GP_NUMERO, GP_AFFAIREDEVIS,GP_REFINTERNE FROM PIECE WHERE GP_AFFAIRE = "'+ CodeAffaire +
-           '" AND GP_NATUREPIECEG = "' + CleDocAffaire.NaturePiece + '" AND GP_NUMERO <> '+ IntToStr(CleDocAffaire.NumeroPiece);
-       Q := OpenSQL(Req, True,-1,'',true);
-       if Not Q.EOF then
-          begin
-          Numpiece:= Q.FindField('GP_NUMERO').AsInteger;
-          Codessaff:=Q.FindField('GP_AFFAIREDEVIS').AsString;
-          end else
-          begin
-          Numpiece := 0;
-          Codessaff := '';
-          end;
-       Ferme(Q);
-       end;
-    // En création d'avenant, on met à jour le code sous-affaire
-    // avec le nouveau code affaire créé
-    if (CodeAffaireAvenant <> '00') then
-       begin
-       CodeAffaireAvenant := codessaff;
-       end;
-
-    end;  // fin du traitement particulier pour le deuxième devis
-
-// BRL FQ10118 6/10/03
-// maj affaire multipièces
-if  (TobPiece.Getvalue ('GP_NATUREPIECEG') = VH_GC.AFNatAffaire) and (CodeAffaire <> '') then
-    begin
-    if NbPiece > 1 then MultiPiece:='X'
-    else                MultiPiece:='-';
-    Req := 'UPDATE AFFAIRE SET AFF_MULTIPIECES = "'+MultiPiece+'" WHERE AFF_AFFAIRE='+'"'+CodeAffaire+'"';
-    ExecuteSQL(Req);
-    end;
-
-GetMontantsAcomptes (TOBAcomptes,Acompte,regl);
-
-// Traitement de création d'un nouveau devis
-  if CledocAffaire.Naturepiece = 'DAP' then
-    begin
-    Codessaff := CodeAffaire;
-    Req := 'UPDATE AFFAIRE SET '+
-           'AFF_DATEMODIF ="'+ USDATETIME(NowH) +'"'+
-           'WHERE AFF_AFFAIRE ="'+Codessaff+'"';
-    ExecuteSQL(Req);
-  end else if (Action = taCreat) or (Duplic = True) then {or ((Action = taModif) and (V_PGI.SAV)) : pour recréer fiche affaire-devis cf pb partage beneteau}
-  begin
-      // création sous-affaire pour nouveau devis
-      if (CodeAffaireAvenant = '00') then
-         begin // cas d'un devis initial
-         Codessaff := Format ('%.8d',[CleDocAffaire.NumeroPiece]);
-         Codessaff := 'Z'+CleDocAffaire.NaturePiece+CledocAffaire.Souche+Codessaff+'00';
+  if NbPiece = 2 then
+      begin
+      if (Action = taCreat) or (Duplic = True) then
+         begin
+         Req := 'SELECT GP_NUMERO, GP_AFFAIREDEVIS,GP_REFINTERNE FROM PIECE WHERE GP_AFFAIRE = "'+ CodeAffaire +
+             '" AND GP_NATUREPIECEG = "' + CleDocAffaire.NaturePiece + '" AND GP_NUMERO <> '+ IntToStr(CleDocAffaire.NumeroPiece);
+         Q := OpenSQL(Req, True,-1,'',true);
+         if Not Q.EOF then
+         begin
+            Numpiece:= Q.FindField('GP_NUMERO').AsInteger;
+            Codessaff:=Q.FindField('GP_AFFAIREDEVIS').AsString;
          end else
-         begin // cas d'un avenant
-         Codessaff := Copy(CodeAffaireAvenant,2,14);
-         Avenant := '01';
-         Part0 := 'Z'+Codessaff+Avenant;
-        // boucle pour verifier si la sous-affaire existe déjà
-         while (existeaffaire (Part0,'') = true) Do
-             begin
-             i := StrToInt (Avenant);
-             Inc(i);
-             Avenant := Format ('%.2d',[i]);
-             Part0 := 'Z'+Codessaff+Avenant;
-             end;
-         Codessaff := Part0;
+         begin
+            Numpiece := 0;
+            Codessaff := '';
+         end;
+         Ferme(Q);
+         end;
+      // En création d'avenant, on met à jour le code sous-affaire
+      // avec le nouveau code affaire créé
+      if (CodeAffaireAvenant <> '00') then
+         begin
+         CodeAffaireAvenant := codessaff;
          end;
 
-      BTPCodeAffaireDecoupe(Codessaff, Part0, Part1, Part2, Part3,Avenant,taConsult,False);
-      TOBAffaire2.PutValue('AFF_AFFAIRE', Codessaff);
-      TOBAffaire2.PutValue('AFF_AFFAIRE0', 'Z');
-      TOBAffaire2.PutValue('AFF_AFFAIRE1', Part1);
-      TOBAffaire2.PutValue('AFF_AFFAIRE2', Part2);
-      TOBAffaire2.PutValue('AFF_AFFAIRE3', Part3);
-      TOBAffaire2.PutValue('AFF_AVENANT', Avenant);
-      TOBAffaire2.PutValue('AFF_AFFAIREINIT', CodeAffaire);
-      TOBAffaire2.PutValue('AFF_AFFAIREREF', CodeAffaire);
-      TOBAffaire2.PutValue('AFF_TIERS', TOBPIECE.GetValue('GP_TIERS'));
-      TOBAffaire2.PutValue('AFF_LIBELLE', TOBPIECE.GetValue('GP_REFINTERNE'));
-      if ModeTrait = 'ETUTODEV' then TOBAffaire2.PutValue('AFF_ETATAFFAIRE','ACP');
+      end;  // fin du traitement particulier pour le deuxième devis
 
-      if CodeEtat <> '' then
-        TOBAffaire2.PutValue('AFF_ETATAFFAIRE', CodeEtat);
-
-      if CleDocAffaire.NaturePiece = 'DE' then TOBAffaire2.PutValue('AFF_ETATAFFAIRE','ENC');
-      // AJOUT LS POUR GESTION LIGNE A ZERO
-      TOBAffaire2.PutValue('AFF_OKSIZERO', TOBPIECE.GetValue('AFF_OKSIZERO'));
-      // AJOUT BRL POUR TYPE DE FACTURATION
-      TOBAffaire2.PutValue('AFF_GENERAUTO', TOBPIECE.GetValue('AFF_GENERAUTO'));
-      // --
-      if Acompte <> 0 then TOBAffaire2.PutValue('AFF_ACOMPTE',Acompte);
-      TOBAffaire2.InsertDB(Nil);
-    end else
-    begin
-      // Traitement de modification d'un devis
-      // maj dans sous-affaire
-    Req := 'UPDATE AFFAIRE SET '+
-           'AFF_OKSIZERO="'+TOBPiece.getValue('AFF_OKSIZERO')+'",'+
-           'AFF_GENERAUTO ='+'"'+ TOBPiece.getValue('AFF_GENERAUTO') +'",'+
-           'AFF_AFFAIREREF ='+'"'+ CodeAffaire +'",'+
-           'AFF_AFFAIREINIT ='+'"'+ CodeAffaire +'",'+
-           'AFF_ACOMPTE='+StringReplace(FloatToStr(acompte),',','.',[rfReplaceAll])+' '+
-           'WHERE AFF_AFFAIRE ='+'"'+Codessaff+'"';
+  // BRL FQ10118 6/10/03
+  // maj affaire multipièces
+  if  (TobPiece.Getvalue ('GP_NATUREPIECEG') = VH_GC.AFNatAffaire) and (CodeAffaire <> '') then
+      begin
+      if NbPiece > 1 then MultiPiece:='X'
+      else                MultiPiece:='-';
+    Req := 'UPDATE AFFAIRE SET AFF_MULTIPIECES = "'+MultiPiece+'", AFF_DATEMODIF="' + USDATETIME(NowH) + '" WHERE AFF_AFFAIRE='+'"'+CodeAffaire+'"';
       ExecuteSQL(Req);
-    end;
+      end;
 
-  // Maj code sous-affaire dans pièce
-Req := 'UPDATE PIECE SET GP_AFFAIREDEVIS ='+'"'+ Codessaff+'" WHERE '+WherePiece(CleDocAffaire,ttdPiece,False) ;
-ExecuteSQL(Req);
-TOBPiece.PutValue('GP_AFFAIREDEVIS', Codessaff);
+  GetMontantsAcomptes (TOBAcomptes,Acompte,regl);
 
-  // suppression des TOB Affaire
-TOBAffaire.free;
-TOBAffaire := Nil;
-TOBAffaire2.free;
-TOBAffaire2 := Nil;
+  // Traitement de création d'un nouveau devis
+    if CledocAffaire.Naturepiece = 'DAP' then
+      begin
+      Codessaff := CodeAffaire;
+      Req := 'UPDATE AFFAIRE SET '+
+             'AFF_DATEMODIF ="'+ USDATETIME(NowH) +'"'+
+             'WHERE AFF_AFFAIRE ="'+Codessaff+'"';
+      ExecuteSQL(Req);
+    end else if (Action = taCreat) or (Duplic = True) then {or ((Action = taModif) and (V_PGI.SAV)) : pour recréer fiche affaire-devis cf pb partage beneteau}
+    begin
+        // création sous-affaire pour nouveau devis
+        if (CodeAffaireAvenant = '00') then
+           begin // cas d'un devis initial
+           Codessaff := Format ('%.8d',[CleDocAffaire.NumeroPiece]);
+           Codessaff := 'Z'+CleDocAffaire.NaturePiece+CledocAffaire.Souche+Codessaff+'00';
+           end else
+           begin // cas d'un avenant
+           Codessaff := Copy(CodeAffaireAvenant,2,14);
+           Avenant := '01';
+           Part0 := 'Z'+Codessaff+Avenant;
+          // boucle pour verifier si la sous-affaire existe déjà
+           while (existeaffaire (Part0,'') = true) Do
+               begin
+               i := StrToInt (Avenant);
+               Inc(i);
+               Avenant := Format ('%.2d',[i]);
+               Part0 := 'Z'+Codessaff+Avenant;
+               end;
+           Codessaff := Part0;
+           end;
+
+        BTPCodeAffaireDecoupe(Codessaff, Part0, Part1, Part2, Part3,Avenant,taConsult,False);
+        TOBAffaire2.PutValue('AFF_AFFAIRE', Codessaff);
+        TOBAffaire2.PutValue('AFF_AFFAIRE0', 'Z');
+        TOBAffaire2.PutValue('AFF_AFFAIRE1', Part1);
+        TOBAffaire2.PutValue('AFF_AFFAIRE2', Part2);
+        TOBAffaire2.PutValue('AFF_AFFAIRE3', Part3);
+        TOBAffaire2.PutValue('AFF_AVENANT', Avenant);
+        TOBAffaire2.PutValue('AFF_AFFAIREINIT', CodeAffaire);
+        TOBAffaire2.PutValue('AFF_AFFAIREREF', CodeAffaire);
+        TOBAffaire2.PutValue('AFF_TIERS', TOBPIECE.GetValue('GP_TIERS'));
+        TOBAffaire2.PutValue('AFF_LIBELLE', TOBPIECE.GetValue('GP_REFINTERNE'));
+        if ModeTrait = 'ETUTODEV' then TOBAffaire2.PutValue('AFF_ETATAFFAIRE','ACP');
+
+        if CodeEtat <> '' then
+          TOBAffaire2.PutValue('AFF_ETATAFFAIRE', CodeEtat);
+
+        if CleDocAffaire.NaturePiece = 'DE' then TOBAffaire2.PutValue('AFF_ETATAFFAIRE','ENC');
+        // AJOUT LS POUR GESTION LIGNE A ZERO
+        TOBAffaire2.PutValue('AFF_OKSIZERO', TOBPIECE.GetValue('AFF_OKSIZERO'));
+        // AJOUT BRL POUR TYPE DE FACTURATION
+        TOBAffaire2.PutValue('AFF_GENERAUTO', TOBPIECE.GetValue('AFF_GENERAUTO'));
+        // --
+        if Acompte <> 0 then TOBAffaire2.PutValue('AFF_ACOMPTE',Acompte);
+        TOBAffaire2.InsertDB(Nil);
+      end else
+      begin
+        // Traitement de modification d'un devis
+        // maj dans sous-affaire
+      Req := 'UPDATE AFFAIRE SET '+
+             'AFF_OKSIZERO="'+TOBPiece.getValue('AFF_OKSIZERO')+'",'+
+             'AFF_GENERAUTO ='+'"'+ TOBPiece.getValue('AFF_GENERAUTO') +'",'+
+             'AFF_AFFAIREREF ='+'"'+ CodeAffaire +'",'+
+             'AFF_AFFAIREINIT ='+'"'+ CodeAffaire +'",'+
+             'AFF_ACOMPTE='+StringReplace(FloatToStr(acompte),',','.',[rfReplaceAll])+', '+
+             'AFF_DATEMODIF="' + USDATETIME(NowH) + '"' +
+             'WHERE AFF_AFFAIRE ='+'"'+Codessaff+'"';
+        ExecuteSQL(Req);
+      end;
+
+    // Maj code sous-affaire dans pièce
+  Req := 'UPDATE PIECE SET GP_AFFAIREDEVIS ='+'"'+ Codessaff+'" WHERE '+WherePiece(CleDocAffaire,ttdPiece,False) ;
+  ExecuteSQL(Req);
+  TOBPiece.PutValue('GP_AFFAIREDEVIS', Codessaff);
+
+    // suppression des TOB Affaire
+  TOBAffaire.free;
+  TOBAffaire := Nil;
+  TOBAffaire2.free;
+  TOBAffaire2 := Nil;
 END;
 
 function MajMontantAcompte(TOBPiece,TOBAcomptes : TOB) : boolean;
@@ -1470,6 +1474,7 @@ Var i               : integer;
     TOBLN           : TOB;
     TOBMEMFAC       : TOB;
     RefPieceSel : string;
+    Msg         : string;
   //
   //
   //
@@ -1746,13 +1751,9 @@ Var i               : integer;
   end;
 
 Begin
-  //
   FillChar(DocArecalc,SizeOf(DocArecalc),#0);
-  //
   Repartition := GetParamSocSecur('SO_PIECEREPART', False);
-  //
   Avancement := (Pos(RenvoieTypeFact(TOBPiece.GetValue('GP_AFFAIREDEVIS')),'AVA;DAC;')>0);
-  //
   TOBLIGNEFAC := TOB.create ('LES LIGNES FACTURATION',nil,-1);
   TOBLS := TOB.Create ('LIGNE',nil,-1);
   TOBLD := TOB.Create ('LIGNE',nil,-1);
@@ -1762,299 +1763,387 @@ Begin
   //
   NaturePiece := TOBPiece.GetValue('GP_NATUREPIECEG');
   Situations := ((Pos(TOBPiece.GetValue('AFF_GENERAUTO'),'AVA;DIR;')>0) or (TOBPiece.GetValue('AFF_GENERAUTO')=''));
-
+  Msg := '';
   // Après modification de facture,
   // Si situation, Maj lignes du devis
   TRY
-    if (Pos(NaturePiece,'FBT;DAC;FBP;BAC;')>0) and (TOBPiece.GetValue('GP_AFFAIREDEVIS')<>'') then
-  begin
-      IsLastSituation := DerniereSituation (TobPiece);
-      if (not IsLastSituation) and (Situations) then GetSituationSuivante (TobPiece,DocArecalc);
-      //
-    for i:=0 to TOBPiece.Detail.Count-1 do
-    begin
-
-      TOBL:=TOBPiece.Detail[i] ;
-
-      if IsSousDetail(TOBL) then continue;
-      //
-        TOBLD.InitValeurs;
-        TOBLF.InitValeurs;
-        TOBLS.InitValeurs;
-        
-        //Si on a changé la valeur de la ligne
-      if (TOBL <> Nil) and (TOBL.GetValue('QTECHANGE')='X') then
+    try
+      if (Pos(NaturePiece,'FBT;DAC;FBP;BAC;')>0) and (TOBPiece.GetValue('GP_AFFAIREDEVIS')<>'') then
       begin
-        if TOBL.GetValue ('GL_TYPELIGNE') <> 'ART' Then Continue;
-          //
-        StPrec:=TOBL.GetValue('GL_PIECEPRECEDENTE') ;
-          StOrig:=TOBL.GetValue('GL_PIECEORIGINE') ;
-          //
-          if (StPrec <> '') and (IsLastSituation) then
+        IsLastSituation := DerniereSituation (TobPiece);
+        if (not IsLastSituation) and (Situations) then GetSituationSuivante (TobPiece,DocArecalc);
+        //
+        for i:=0 to TOBPiece.Detail.Count-1 do
         begin
-            OKOK := false;
-            // On ne remet a jour l'avancement au niveau du devis que si le document traité est bien la derniere situation
-          DecodeRefPiece(StPrec,CD) ;
-          Req := 'SELECT * FROM LIGNE WHERE '+ WherePiece (CD,ttdLigne,true,True);
-          QQ:= OpenSql (Req,true,-1,'',true);
-          if not QQ.eof then
+
+          TOBL:=TOBPiece.Detail[i] ;
+
+          if IsSousDetail(TOBL) then continue;
+          //
+            TOBLD.InitValeurs;
+            TOBLF.InitValeurs;
+            TOBLS.InitValeurs;
+        
+            //Si on a changé la valeur de la ligne
+          if (TOBL <> Nil) and (TOBL.GetValue('QTECHANGE')='X') then
           begin
-              TOBLD.SelectDB ('',QQ);
-              OKOK := True;
-            end;
-            Ferme(QQ);
-            if Okok then
+            if TOBL.GetValue ('GL_TYPELIGNE') <> 'ART' Then Continue;
+              //
+            StPrec:=TOBL.GetValue('GL_PIECEPRECEDENTE') ;
+              StOrig:=TOBL.GetValue('GL_PIECEORIGINE') ;
+              //
+              if (StPrec <> '') and (IsLastSituation) then
             begin
-            //
-            if Avancement then
-            begin
-            	if TOBL.getValue('GL_QTEPREVAVANC')=0 then
-              begin
-              	Pourcent := Arrondi(TOBL.GetValue('BLF_POURCENTAVANC'),2);
-              end else
-              begin
-              	Pourcent := Arrondi(TOBL.GetValue('GL_QTESIT')/TOBL.GetValue('GL_QTEPREVAVANC')*100,2);
-              end;
-                TOBLD.PutValue('GL_QTEPREVAVANC',TOBL.GetValue('GL_QTESIT'));
-                TOBLD.PutValue('GL_QTESIT',TOBL.GetValue('GL_QTESIT'));
-                TOBLD.PutValue('GL_POURCENTAVANC',Pourcent);
-            end else
-            begin
-                TOBLD.PutValue('GL_QTEPREVAVANC',TOBLD.GetValue('GL_QTEPREVAVANC')-TOBL.GetValue('OLD_QTESIT')+TOBL.GetValue('GL_QTEFACT'));
-                TOBLD.PutValue('GL_QTESIT',TOBLD.GetValue('GL_QTEPREVAVANC'));
-            end;
-              TOBLD.UpdateDB (false);
-            //
-              OKOK := false;
-              Req := 'SELECT *, '' AS PIECEPRECEDENTE FROM LIGNEFAC WHERE '+ WherePiece (CD,ttdLigneFac,true,True);
+                OKOK := false;
+                // On ne remet a jour l'avancement au niveau du devis que si le document traité est bien la derniere situation
+              DecodeRefPiece(StPrec,CD) ;
+              Req := 'SELECT * FROM LIGNE WHERE '+ WherePiece (CD,ttdLigne,true,True);
               QQ:= OpenSql (Req,true,-1,'',true);
               if not QQ.eof then
               begin
-                TOBLF.SelectDB ('',QQ);
-                OKOK := True;
-              end;
-              ferme (QQ);
-              if OKOK then
-              begin
-                if avancement then
+                  TOBLD.SelectDB ('',QQ);
+                  OKOK := True;
+                end;
+                Ferme(QQ);
+                if Okok then
                 begin
-                  TOBLF.PutValue('BLF_QTEDEJAFACT',  TOBL.GetValue('BLF_QTECUMULEFACT'));
-                TOBLF.PutValue('BLF_QTECUMULEFACT',TOBL.GetValue('BLF_QTECUMULEFACT'));
                 //
-                  TOBLF.PutValue('BLF_MTDEJAFACT',   TOBL.GetValue('BLF_MTCUMULEFACT'));
-                  TOBLF.PutValue('BLF_MTCUMULEFACT', TOBL.GetValue('BLF_MTCUMULEFACT'));
-                //
-                  if TOBL.GetValue('BLF_MTMARCHE') <> 0 then
+                if Avancement then
+                begin
+                  if TOBL.getValue('GL_QTEPREVAVANC')=0 then
                   begin
-                Pourcent := arrondi((TOBL.GetValue('BLF_MTCUMULEFACT') / TOBL.GetValue('BLF_MTMARCHE')) * 100,2);
+                    Pourcent := Arrondi(TOBL.GetValue('BLF_POURCENTAVANC'),2);
                   end else
                   begin
-                    Pourcent := 100;
+                    Pourcent := Arrondi(TOBL.GetValue('GL_QTESIT')/TOBL.GetValue('GL_QTEPREVAVANC')*100,2);
                   end;
-                TOBLF.PutValue('BLF_POURCENTAVANC',Pourcent);
-                if TOBLF.GetValue('BLF_QTEDEJAFACT') <> 0 then
-                begin
-                  TOBLF.UpdateDB (false);
+                    TOBLD.PutValue('GL_QTEPREVAVANC',TOBL.GetValue('GL_QTESIT'));
+                    TOBLD.PutValue('GL_QTESIT',TOBL.GetValue('GL_QTESIT'));
+                    TOBLD.PutValue('GL_POURCENTAVANC',Pourcent);
                 end else
                 begin
-                  TOBLF.DeleteDB (false);
+                    TOBLD.PutValue('GL_QTEPREVAVANC',TOBLD.GetValue('GL_QTEPREVAVANC')-TOBL.GetValue('OLD_QTESIT')+TOBL.GetValue('GL_QTEFACT'));
+                    TOBLD.PutValue('GL_QTESIT',TOBLD.GetValue('GL_QTEPREVAVANC'));
                 end;
+                  TOBLD.UpdateDB (false);
+                //
+                  OKOK := false;
+                  Req := 'SELECT *, '' AS PIECEPRECEDENTE FROM LIGNEFAC WHERE '+ WherePiece (CD,ttdLigneFac,true,True);
+                  QQ:= OpenSql (Req,true,-1,'',true);
+                  if not QQ.eof then
+                  begin
+                    TOBLF.SelectDB ('',QQ);
+                    OKOK := True;
+                  end;
+                  ferme (QQ);
+                  if OKOK then
+                  begin
+                    if avancement then
+                    begin
+                      TOBLF.PutValue('BLF_QTEDEJAFACT',  TOBL.GetValue('BLF_QTECUMULEFACT'));
+                    TOBLF.PutValue('BLF_QTECUMULEFACT',TOBL.GetValue('BLF_QTECUMULEFACT'));
+                    //
+                      TOBLF.PutValue('BLF_MTDEJAFACT',   TOBL.GetValue('BLF_MTCUMULEFACT'));
+                      TOBLF.PutValue('BLF_MTCUMULEFACT', TOBL.GetValue('BLF_MTCUMULEFACT'));
+                    //
+                      if TOBL.GetValue('BLF_MTMARCHE') <> 0 then
+                      begin
+                    Pourcent := arrondi((TOBL.GetValue('BLF_MTCUMULEFACT') / TOBL.GetValue('BLF_MTMARCHE')) * 100,2);
+                      end else
+                      begin
+                        Pourcent := 100;
+                      end;
+                    TOBLF.PutValue('BLF_POURCENTAVANC',Pourcent);
+                    if TOBLF.GetValue('BLF_QTEDEJAFACT') <> 0 then
+                    begin
+                      TOBLF.UpdateDB (false);
+                    end else
+                    begin
+                      TOBLF.DeleteDB (false);
+                    end;
+                    end
+                    else
+                    begin
+                      PrevFact := TOBL.GetDouble('OLD_QTESITUATION');
+                      CurrFact := TOBL.GetDouble('BLF_QTESITUATION');
+                      DejaFact := TOBLF.GetDouble('BLF_QTEDEJAFACT');
+                      DejaFact := DejaFact - prevFact + Currfact;
+                      //
+                      TOBLF.SetDouble('BLF_QTEDEJAFACT',Dejafact);
+                      TOBLF.SetDouble('BLF_QTECUMULEFACT',TOBLF.GetDouble('BLF_QTEDEJAFACT'));
+                      // --------------------
+                      PrevFact := TOBL.GetDouble('OLD_MTSITUATION');
+                      CurrFact := TOBL.GetDouble('BLF_MTSITUATION');
+                      DejaFact := TOBLF.GetDouble('BLF_MTDEJAFACT');
+                      //
+                      DejaFact := DejaFact - prevFact + Currfact;
+                      //
+                      TOBLF.SetDouble('BLF_MTDEJAFACT',   DejaFact);
+                      TOBLF.SetDouble('BLF_MTCUMULEFACT', TOBLF.GetDouble('BLF_MTDEJAFACT'));
+                      TOBLF.UpdateDB (false);
+                      //
+                  end;
+                  end;
+                  //
+                  if IsOuvrage(TOBL) and (TOBL.getValue('GL_INDICENOMEN')>0) then
+                    MajLigneDevisOuv (TOBL,TOBOUvrage,Avancement);
+                  end;
+              end
+              else if (DocArecalc.NumeroPiece<>0) and (Situations) and (not IsLastSituation) and (StPrec <> '')  then
+              begin
+
+                OkCont := True;
+
+                // S'il y a une situation suivante --> mise a jour du deja facture + recalcul de la ligne
+                Req := 'SELECT * FROM LIGNE WHERE ' + WherePiece (DocArecalc,ttdLigne,false) + ' AND GL_PIECEORIGINE="' + StOrig + '"';
+                QQ:= OpenSql (Req,true,-1,'',true);
+                if not QQ.eof then
+                  TOBLS.SelectDB ('',QQ)
+                else
+                  OkCont := false;
+                ferme (QQ);
+
+                if OkCont then
+                begin
+                  Req := 'SELECT *, '' AS PIECEPRECEDENTE FROM LIGNEFAC WHERE ' + WherePiece (DocArecalc,ttdLignefac,false);
+                  Req := Req + ' AND ' + 'BLF_NUMORDRE="' + TOBLS.GetString('GL_NUMORDRE') + '" AND BLF_UNIQUEBLO=0';
+                  QQ:= OpenSql (Req,true,-1,'',true);
+                  if not QQ.eof then
+                    TOBLF.SelectDB ('',QQ)
+                  else
+                    OkCont := False;
+                  ferme (QQ);
+              end;
+
+                if not OkCont then continue;
+
+                  if Avancement then
+                  begin
+                    // calcul des elements de la situation suivante
+                  TOBLF.SetDouble('BLF_MTDEJAFACT',   TOBL.GetDouble('BLF_MTCUMULEFACT'));
+                  TOBLF.SetDouble('BLF_MTSITUATION',  TOBLF.GetDouble('BLF_MTCUMULEFACT')-  TOBLF.GetDouble('BLF_MTDEJAFACT'));
+                  TOBLF.SetDouble('BLF_QTEDEJAFACT',  TOBL.GetDouble('BLF_QTECUMULEFACT'));
+                  TOBLF.SetDouble('BLF_QTESITUATION', TOBLF.GetDouble('BLF_QTECUMULEFACT')- TOBLF.GetDouble('BLF_QTEDEJAFACT'));
+                    //
+                  TOBLS.SetDouble('GL_QTEFACT',       TOBLF.GetDouble('BLF_QTESITUATION'));
+                  TOBLS.SetDouble('GL_QTERESTE',      TOBLF.GetDouble('BLF_QTESITUATION'));
+                  TOBLS.SetDouble('GL_QTESTOCK',      TOBLF.GetDouble('BLF_QTESITUATION'));
+                  TOBLS.SetDouble('GL_QTERELIQUAT',   0);
+                  //--- GUINIER ---
+                  if CtrlOkReliquat(TOBLS, 'GL') then
+                  begin
+                    TOBLS.SetDouble('GL_MTRESTE',     TOBLF.GetDouble('BLF_MTSITUATION'));
+                    TOBLS.SetDouble('GL_MTRELIQUAT',  0);
+                  end;
+                  //
+                    TOBLF.UpdateDB (false);
+                  TOBLS.UpdateDB (false);
                 end
                 else
-                begin
-                  PrevFact := TOBL.GetDouble('OLD_QTESITUATION');
-                  CurrFact := TOBL.GetDouble('BLF_QTESITUATION');
-                  DejaFact := TOBLF.GetDouble('BLF_QTEDEJAFACT');
-                  DejaFact := DejaFact - prevFact + Currfact;
+                  begin
+                  TOBLF.SetDouble('BLF_MTDEJAFACT', TOBL.GetDouble('BLF_MTDEJAFACT')+TOBL.GetDouble('BLF_MTSITUATION'));
+                    TOBLF.SetDouble('BLF_QTEDEJAFACT',TOBL.GetDouble('BLF_QTEDEJAFACT')+TOBL.GetDouble('BLF_QTESITUATION'));
                   //
-                  TOBLF.SetDouble('BLF_QTEDEJAFACT',Dejafact);
-                  TOBLF.SetDouble('BLF_QTECUMULEFACT',TOBLF.GetDouble('BLF_QTEDEJAFACT'));
-                  // --------------------
-                  PrevFact := TOBL.GetDouble('OLD_MTSITUATION');
-                  CurrFact := TOBL.GetDouble('BLF_MTSITUATION');
-                  DejaFact := TOBLF.GetDouble('BLF_MTDEJAFACT');
-                  //
-                  DejaFact := DejaFact - prevFact + Currfact;
-                  //
-                  TOBLF.SetDouble('BLF_MTDEJAFACT',   DejaFact);
-                  TOBLF.SetDouble('BLF_MTCUMULEFACT', TOBLF.GetDouble('BLF_MTDEJAFACT'));
-                  TOBLF.UpdateDB (false);
-                  //
-              end;
-              end;
-              //
-              if IsOuvrage(TOBL) and (TOBL.getValue('GL_INDICENOMEN')>0) then
-                MajLigneDevisOuv (TOBL,TOBOUvrage,Avancement);
-              end;
-          end
-          else if (DocArecalc.NumeroPiece<>0) and (Situations) and (not IsLastSituation) and (StPrec <> '')  then
-          begin
-
-            OkCont := True;
-
-            // S'il y a une situation suivante --> mise a jour du deja facture + recalcul de la ligne
-            Req := 'SELECT * FROM LIGNE WHERE ' + WherePiece (DocArecalc,ttdLigne,false) + ' AND GL_PIECEORIGINE="' + StOrig + '"';
-            QQ:= OpenSql (Req,true,-1,'',true);
-            if not QQ.eof then
-              TOBLS.SelectDB ('',QQ)
-            else
-              OkCont := false;
-            ferme (QQ);
-
-            if OkCont then
-            begin
-              Req := 'SELECT *, '' AS PIECEPRECEDENTE FROM LIGNEFAC WHERE ' + WherePiece (DocArecalc,ttdLignefac,false);
-              Req := Req + ' AND ' + 'BLF_NUMORDRE="' + TOBLS.GetString('GL_NUMORDRE') + '" AND BLF_UNIQUEBLO=0';
-              QQ:= OpenSql (Req,true,-1,'',true);
-              if not QQ.eof then
-                TOBLF.SelectDB ('',QQ)
-              else
-                OkCont := False;
-              ferme (QQ);
-          end;
-
-            if not OkCont then continue;
-
-              if Avancement then
-              begin
-                // calcul des elements de la situation suivante
-              TOBLF.SetDouble('BLF_MTDEJAFACT',   TOBL.GetDouble('BLF_MTCUMULEFACT'));
-              TOBLF.SetDouble('BLF_MTSITUATION',  TOBLF.GetDouble('BLF_MTCUMULEFACT')-  TOBLF.GetDouble('BLF_MTDEJAFACT'));
-              TOBLF.SetDouble('BLF_QTEDEJAFACT',  TOBL.GetDouble('BLF_QTECUMULEFACT'));
-              TOBLF.SetDouble('BLF_QTESITUATION', TOBLF.GetDouble('BLF_QTECUMULEFACT')- TOBLF.GetDouble('BLF_QTEDEJAFACT'));
+                    TOBLF.UpdateDB (false);
+            end;
                 //
-              TOBLS.SetDouble('GL_QTEFACT',       TOBLF.GetDouble('BLF_QTESITUATION'));
-              TOBLS.SetDouble('GL_QTERESTE',      TOBLF.GetDouble('BLF_QTESITUATION'));
-              TOBLS.SetDouble('GL_QTESTOCK',      TOBLF.GetDouble('BLF_QTESITUATION'));
-              TOBLS.SetDouble('GL_QTERELIQUAT',   0);
-              //--- GUINIER ---
-              if CtrlOkReliquat(TOBLS, 'GL') then
-              begin
-                TOBLS.SetDouble('GL_MTRESTE',     TOBLF.GetDouble('BLF_MTSITUATION'));
-                TOBLS.SetDouble('GL_MTRELIQUAT',  0);
+                if Repartition      then CreateTobSituationSuivante(TOBLS, TOBLF);
+                //
+                  if IsOuvrage(TOBL) then MajOuvSituationSuiv(TOBL,TOBOUvrage,DocArecalc,Avancement);
+
+          end;
               end;
-              //
-                TOBLF.UpdateDB (false);
-              TOBLS.UpdateDB (false);
-            end
-            else
-              begin
-              TOBLF.SetDouble('BLF_MTDEJAFACT', TOBL.GetDouble('BLF_MTDEJAFACT')+TOBL.GetDouble('BLF_MTSITUATION'));
-                TOBLF.SetDouble('BLF_QTEDEJAFACT',TOBL.GetDouble('BLF_QTEDEJAFACT')+TOBL.GetDouble('BLF_QTESITUATION'));
-              //
-                TOBLF.UpdateDB (false);
-        end;
+          //
             //
-            if Repartition      then CreateTobSituationSuivante(TOBLS, TOBLF);
             //
-              if IsOuvrage(TOBL) then MajOuvSituationSuiv(TOBL,TOBOUvrage,DocArecalc,Avancement);
-
-      end;
-          end;
-      //
-        //
-        //
-        if (TOBL <> Nil) then
-      begin
-        if (TOBL.getValue('BLF_MTMARCHE') <> 0) or (TOBL.getValue('BLF_MTSITUATION')<>0) then
-        begin
-            TOBLN := TOB.Create ('LIGNEFAC',TOBLIGNEFAC,-1);
-            SetLigneFacture (TOBL,TOBLN);
-            if IsOuvrage(TOBL) then MajLignesFacOuvr(TOBL, TOBOUvrage);
-            if Repartition then TOBLN.AddChampSupValeur('PIECEPRECEDENTE', TOBL.GetString('GL_PIECEPRECEDENTE'));
-        end;
-      end;
-      //
-    end;
-    //
-    if TOBLIGNEFAC.detail.count > 0 then TOBLIGNEFAC.InsertDB (nil);
-    //
-      //On recalcul les répartitions avec les nouvelles modifications....
-      if Repartition then
-      begin
-        if TOBSITSUITE.detail.count > 0 then
-        begin
-          //on charge la tob temporaire dans la tob finale
-          For ind_2 := 0 TO TobSitSuite.detail.count -1 do
+            if (TOBL <> Nil) then
           begin
-            TOBLN := TOB.Create ('LIGNEFAC',TOBLIGNEFAC,-1);
-            TOBLN.Dupliquer(TOBSITSUITE.detail[ind_2], False, True);
+            if (TOBL.getValue('BLF_MTMARCHE') <> 0) or (TOBL.getValue('BLF_MTSITUATION')<>0) then
+            begin
+                TOBLN := TOB.Create ('LIGNEFAC',TOBLIGNEFAC,-1);
+                SetLigneFacture (TOBL,TOBLN);
+                if IsOuvrage(TOBL) then MajLignesFacOuvr(TOBL, TOBOUvrage);
+                if Repartition then TOBLN.AddChampSupValeur('PIECEPRECEDENTE', TOBL.GetString('GL_PIECEPRECEDENTE'));
+            end;
           end;
-          TOBSITSUITE.ClearDetail;
+          //
         end;
-        //on supprimme d'abord les enregistrements correspondant à la pièce en cours....
-        DestruitPrepaFact(TobPiece.GetString('GP_NATUREPIECEG'), Tobpiece.GetString('GP_SOUCHE'), TobPiece.GetInteger('GP_NUMERO'));
-        //Rechargement du fichier de répartition
-        ChargePieceRepart(TOBPIECE.GetString('GP_AFFAIREDEVIS'), TOBLIGNEFAC);
-      end;
+        //
+        if TOBLIGNEFAC.detail.count > 0 then TOBLIGNEFAC.InsertDB (nil);
+        //
+          //On recalcul les répartitions avec les nouvelles modifications....
+          if Repartition then
+          begin
+            if TOBSITSUITE.detail.count > 0 then
+            begin
+              //on charge la tob temporaire dans la tob finale
+              For ind_2 := 0 TO TobSitSuite.detail.count -1 do
+              begin
+                TOBLN := TOB.Create ('LIGNEFAC',TOBLIGNEFAC,-1);
+                TOBLN.Dupliquer(TOBSITSUITE.detail[ind_2], False, True);
+              end;
+              TOBSITSUITE.ClearDetail;
+            end;
+            //on supprimme d'abord les enregistrements correspondant à la pièce en cours....
+            DestruitPrepaFact(TobPiece.GetString('GP_NATUREPIECEG'), Tobpiece.GetString('GP_SOUCHE'), TobPiece.GetInteger('GP_NUMERO'));
+            //Rechargement du fichier de répartition
+            ChargePieceRepart(TOBPIECE.GetString('GP_AFFAIREDEVIS'), TOBLIGNEFAC);
+          end;
 
-      //
-      ReajusteCautionDocOrigine (TOBPIECE,TOBPieceRG,true,TOBPieceRG_O);
-      // Reajustement de BSITUATION si besoin est
+          //
+          ReajusteCautionDocOrigine (TOBPIECE,TOBPieceRG,true,TOBPieceRG_O);
+          // Reajustement de BSITUATION si besoin est
 
-      req := 'SELECT * FROM BSITUATIONS WHERE BST_NATUREPIECE="'+TOBPIece.GetValue('GP_NATUREPIECEG')+'" AND ';
-      req := Req + 'BST_SOUCHE="'+TOBPIece.GetVAlue('GP_SOUCHE')+'" AND BST_NUMEROFAC="'+inttoStr(TOBPiece.GetValue('GP_NUMERO'))+'"';
-      QQ := OpenSql(Req,true,-1,'',true);
-      if not QQ.eof then
+          req := 'SELECT * FROM BSITUATIONS WHERE BST_NATUREPIECE="'+TOBPIece.GetValue('GP_NATUREPIECEG')+'" AND ';
+          req := Req + 'BST_SOUCHE="'+TOBPIece.GetVAlue('GP_SOUCHE')+'" AND BST_NUMEROFAC="'+inttoStr(TOBPiece.GetValue('GP_NUMERO'))+'"';
+          QQ := OpenSql(Req,true,-1,'',true);
+          if not QQ.eof then
+          begin
+            GetMontantsAcomptes (TOBAcomptes,MontantAcompte,MontantRegl);
+            GetMontantRG (TOBPieceRG,TOBBasesRG,XD,XP,DEV,True,True);
+            GetcumultaxesRG (TOBBasesRG,TOBPieceRG,TXD,TXP,DEV);
+            TOBSit := TOB.create ('BSITUATIONS',nil,-1);
+            TOBSIt.SelectDB ('',QQ);
+            TTC := TOBPiece.GetValue('GP_TOTALTTCDEV') - XD - TXD;
+            TOBSIt.putvalue('BST_MONTANTHT',TOBPiece.GetValue('GP_TOTALHTDEV'));
+            TOBSIt.putvalue('BST_MONTANTTVA',TTC - TOBPiece.GetValue('GP_TOTALHTDEV'));
+            TOBSIt.putvalue('BST_MONTANTTTC',TTC);
+            TOBSIT.PutValue('BST_MONTANTREGL',MontantRegl);
+            TOBSIT.PutValue('BST_MONTANTACOMPTE',MontantAcompte);
+            TOBSit.SetAllModifie (true);
+            TOBSIT.UpdateDB (false);
+            TOBSIT.free;
+          end;
+          ferme (QQ);
+      end else if (NaturePiece='B00') and (TOBpiece.GetString('GP_ATTACHEMENT')<>'') and (GetparamSocSecur('SO_BTACPT1SIT',false)) then
       begin
-        GetMontantsAcomptes (TOBAcomptes,MontantAcompte,MontantRegl);
-        GetMontantRG (TOBPieceRG,TOBBasesRG,XD,XP,DEV,True,True);
-        GetcumultaxesRG (TOBBasesRG,TOBPieceRG,TXD,TXP,DEV);
-        TOBSit := TOB.create ('BSITUATIONS',nil,-1);
-        TOBSIt.SelectDB ('',QQ);
-        TTC := TOBPiece.GetValue('GP_TOTALTTCDEV') - XD - TXD;
-        TOBSIt.putvalue('BST_MONTANTHT',TOBPiece.GetValue('GP_TOTALHTDEV'));
-        TOBSIt.putvalue('BST_MONTANTTVA',TTC - TOBPiece.GetValue('GP_TOTALHTDEV'));
-        TOBSIt.putvalue('BST_MONTANTTTC',TTC);
-        TOBSIT.PutValue('BST_MONTANTREGL',MontantRegl);
-        TOBSIT.PutValue('BST_MONTANTACOMPTE',MontantAcompte);
-        TOBSit.SetAllModifie (true);
-        TOBSIT.UpdateDB (false);
-        TOBSIT.free;
-      end;
-      ferme (QQ);
-    end else if (NaturePiece='B00') and (TOBpiece.GetString('GP_ATTACHEMENT')<>'') and (GetparamSocSecur('SO_BTACPT1SIT',false)) then
-    begin
-      // cas d'un acompte sur devis et considéré comme 1ere Situation
-      DecodeRefPiece(TOBpiece.getString('GP_ATTACHEMENT'),CD);
-      RefPieceSel := EncoderefSel (CD.NaturePiece,CD.Souche ,CD.NumeroPiece ,CD.Indice);
+        // cas d'un acompte sur devis et considéré comme 1ere Situation
+        DecodeRefPiece(TOBpiece.getString('GP_ATTACHEMENT'),CD);
+        RefPieceSel := EncoderefSel (CD.NaturePiece,CD.Souche ,CD.NumeroPiece ,CD.Indice);
 
-      DossierFac := ''; Avancement := false; NbSit := 0;
+        DossierFac := ''; Avancement := false; NbSit := 0;
 
-      QQ := OpenSql ('SELECT GP_AFFAIREDEVIS,AFF_GENERAUTO,'+        // DEVIS
-                     '(SELECT COUNT(*) FROM BSITUATIONS WHERE BST_SSAFFAIRE=GP_AFFAIREDEVIS) AS NBSIT '+
-                     'FROM PIECE '+
-                     'LEFT JOIN AFFAIRE ON AFF_AFFAIRE=GP_AFFAIREDEVIS '+
-                     'WHERE '+ WherePiece(CD,ttdPiece,false),true,1,'',true);
-      if not QQ.eof then
+        QQ := OpenSql ('SELECT GP_AFFAIREDEVIS,AFF_GENERAUTO,'+        // DEVIS
+                       '(SELECT COUNT(*) FROM BSITUATIONS WHERE BST_SSAFFAIRE=GP_AFFAIREDEVIS) AS NBSIT '+
+                       'FROM PIECE '+
+                       'LEFT JOIN AFFAIRE ON AFF_AFFAIRE=GP_AFFAIREDEVIS '+
+                       'WHERE '+ WherePiece(CD,ttdPiece,false),true,1,'',true);
+        if not QQ.eof then
+        begin
+          Avancement := (Pos(QQ.fields[1].AsString ,'AVA;DAC;')>0);
+          NbSit := QQ.fields[2].AsInteger;
+          DossierFac := QQ.fields[0].AsString;
+        end;
+        ferme (QQ);
+        if Avancement then
+        begin
+          TOBSit := TOB.create ('BSITUATIONS',nil,-1);
+          TOBMEMFAC := TOB.create ('BTMEMOFACTURE',nil,-1);
+          TRY
+            if (NbSit = 0) and (DossierFac<>'') then
+            begin
+              TOBSit.SetString('BST_NATUREPIECE',TOBPiece.getString('GP_NATUREPIECEG'));
+              TOBSit.SetString('BST_SOUCHE',TOBPiece.getString('GP_SOUCHE'));
+              TOBSit.SetInteger('BST_NUMEROFAC',TOBPiece.getInteger('GP_NUMERO'));
+              if GetparamSocSecur('SO_BTACPTSIT0',false) then TOBSit.SetInteger('BST_NUMEROSIT',0) else TOBSit.SetInteger('BST_NUMEROSIT',1); 
+              TOBSit.PutValue('BST_DATESIT',TOBPiece.getValue('GP_DATEPIECE'));
+              TOBSit.SetString('BST_AFFAIRE',TOBPiece.getString('GP_AFFAIRE'));
+              TOBSit.SetString('BST_SSAFFAIRE',DossierFac);
+              TOBSit.SetDouble('BST_MONTANTHT',TOBpiece.getDouble('GP_TOTALHTDEV'));
+              TOBSit.SetDouble('BST_MONTANTTTC',TOBpiece.getDouble('GP_TOTALTTCDEV'));
+              TOBSit.SetDouble('BST_MONTANTTVA',TOBSit.getDouble('BST_MONTANTTTC')-TOBSit.getDouble('BST_MONTANTHT'));
+              TOBSit.SetBoolean('BST_VIVANTE',true);
+              TOBSit.SetInteger('BST_INDICESIT',0);
+              TOBSIT.SetAllModifie(true);
+              TOBSit.InsertDB(nil);
+              //
+            end else if (NbSit = 1) and (Dossierfac <> '') then
+            begin
+              QQ := OpenSql ('SELECT * FROM BSITUATIONS WHERE BST_SSAFFAIRE="'+DossierFac+'"',true,1,'',true);
+              if not QQ.eof then
+              begin
+                TOBSIT.SelectDB('',QQ);
+              end;
+              ferme (QQ);
+              if (TOBSIT.GetString('BST_NATUREPIECE')= TOBPiece.getString('GP_NATUREPIECEG')) and
+                 (TOBSIT.GetString('BST_SOUCHE')= TOBPiece.getString('GP_SOUCHE')) and
+                 (TOBSIT.GetInteger('BST_NUMEROFAC')= TOBPiece.getInteger('GP_NUMERO')) then
+              begin
+                TOBSit.SetDouble('BST_MONTANTHT',TOBpiece.getDouble('GP_TOTALHTDEV'));
+                TOBSit.SetDouble('BST_MONTANTTTC',TOBpiece.getDouble('GP_TOTALTTCDEV'));
+                TOBSit.SetDouble('BST_MONTANTTVA',TOBSit.getDouble('BST_MONTANTTTC')-TOBSit.getDouble('BST_MONTANTHT'));
+                TOBSit.UpdateDB(false);
+              end;
+            end;
+            // ----
+            QQ := OpenSql ('SELECT 1 FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="'+RefPieceSel+'" AND '+
+                           'BMF_AFFAIRE= "'+TOBPiece.getString('GP_AFFAIRE')+'" AND '+
+                           'BMF_DEVIS="'+RefPieceSel+'"',true,1,'',true);
+            if QQ.eof then
+            begin
+              TOBMEMFAC.SetString('BMF_DEVISPRINC',RefPieceSel);
+              TOBMEMFAC.SetInteger('BMF_NUMORDRE',1);
+              TOBMEMFAC.SetString('BMF_DEVIS',RefPieceSel);
+              TOBMEMFAC.SetString('BMF_AFFAIRE',TOBPiece.getString('GP_AFFAIRE'));
+              TOBMEMFAC.SetString('BMF_AFFAIRE1',TOBPiece.getString('GP_AFFAIRE1'));
+              TOBMEMFAC.SetString('BMF_AFFAIRE2',TOBPiece.getString('GP_AFFAIRE2'));
+              TOBMEMFAC.SetString('BMF_AFFAIRE3',TOBPiece.getString('GP_AFFAIRE3'));
+              TOBMEMFAC.SetString('BMF_NATUREPIECEG',CD.NaturePiece);
+              TOBMEMFAC.SetString('BMF_SOUCHE',CD.Souche);
+              TOBMEMFAC.SetInteger('BMF_NUMERO',CD.NumeroPiece);
+              TOBMEMFAC.SetInteger('BMF_INDICEG',CD.Indice);
+              TOBMEMFAC.SetAllModifie(true);
+              TOBMEMFAC.InsertDB(nil);  
+            end;
+            ferme (QQ);
+          FINALLY
+            TOBSit.free;
+            TOBMEMFAC.free;
+          END;
+        end;
+      end else if (NaturePiece='DBT') and (Avancement) and (TOBpiece.GetString('GP_ATTACHEMENT')<>'') and (GetparamSocSecur('SO_BTACPT1SIT',false)) then
       begin
-        Avancement := (Pos(QQ.fields[1].AsString ,'AVA;DAC;')>0);
-        NbSit := QQ.fields[2].AsInteger;
-        DossierFac := QQ.fields[0].AsString;
-      end;
-      ferme (QQ);
-      if Avancement then
-      begin
+        DecodeRefPiece(TOBpiece.getString('GP_ATTACHEMENT'),CD);
+        DossierFac := TOBPiece.getString('GP_AFFAIREDEVIS'); Avancement := false; NbSit := 0;
+        RefPieceSel := EncoderefSel (TOBPiece.getString('GP_NATUREPIECEG'),TOBPiece.getString('GP_SOUCHE') ,TOBPiece.getInteger('GP_NUMERO') ,TOBPiece.getInteger('GP_INDICEG'));
+
         TOBSit := TOB.create ('BSITUATIONS',nil,-1);
         TOBMEMFAC := TOB.create ('BTMEMOFACTURE',nil,-1);
         TRY
+          Marche := 0; TTC := 0; TVA := 0;
+          //
+          QQ := openSql ('SELECT GP_TOTALHTDEV,GP_TOTALTTCDEV FROM PIECE WHERE '+WherePiece (CD,ttdPiece,false),true,1,'',true);
+          if not QQ.eof then
+          begin
+            Marche := QQ.fields[0].AsFloat;
+            TTC := QQ.fields[1].AsFloat;
+            TVA := TTC - Marche ;
+          end;
+          ferme(QQ);
+
+          QQ := OpenSql ('SELECT COUNT(*) FROM BSITUATIONS WHERE BST_SSAFFAIRE="'+TOBPiece.getString('GP_AFFAIREDEVIS')+'"',true,-1,'',true);
+          if not QQ.eof then
+          begin
+            NbSit := QQ.fields[0].AsInteger;
+          end;
+          ferme (QQ);
+        
           if (NbSit = 0) and (DossierFac<>'') then
           begin
-            TOBSit.SetString('BST_NATUREPIECE',TOBPiece.getString('GP_NATUREPIECEG'));
-            TOBSit.SetString('BST_SOUCHE',TOBPiece.getString('GP_SOUCHE'));
-            TOBSit.SetInteger('BST_NUMEROFAC',TOBPiece.getInteger('GP_NUMERO'));
+            TOBSit.SetString('BST_NATUREPIECE',CD.NaturePiece);
+            TOBSit.SetString('BST_SOUCHE',CD.Souche);
+            TOBSit.SetInteger('BST_NUMEROFAC',CD.NumeroPiece);
             if GetparamSocSecur('SO_BTACPTSIT0',false) then TOBSit.SetInteger('BST_NUMEROSIT',0) else TOBSit.SetInteger('BST_NUMEROSIT',1); 
-            TOBSit.PutValue('BST_DATESIT',TOBPiece.getValue('GP_DATEPIECE'));
+            TOBSit.PutValue('BST_DATESIT',CD.DatePiece);
             TOBSit.SetString('BST_AFFAIRE',TOBPiece.getString('GP_AFFAIRE'));
-            TOBSit.SetString('BST_SSAFFAIRE',DossierFac);
-            TOBSit.SetDouble('BST_MONTANTHT',TOBpiece.getDouble('GP_TOTALHTDEV'));
-            TOBSit.SetDouble('BST_MONTANTTTC',TOBpiece.getDouble('GP_TOTALTTCDEV'));
-            TOBSit.SetDouble('BST_MONTANTTVA',TOBSit.getDouble('BST_MONTANTTTC')-TOBSit.getDouble('BST_MONTANTHT'));
+            TOBSit.SetString('BST_SSAFFAIRE',TOBPiece.getString('GP_AFFAIREDEVIS'));
+            TOBSit.SetDouble('BST_MONTANTHT',Marche);
+            TOBSit.SetDouble('BST_MONTANTTTC',TTC);
+            TOBSit.SetDouble('BST_MONTANTTVA',TVA);
             TOBSit.SetBoolean('BST_VIVANTE',true);
             TOBSit.SetInteger('BST_INDICESIT',0);
             TOBSIT.SetAllModifie(true);
-            TOBSit.InsertDB(nil);
-            //
+            TOBSit.InsertDB(nil)
           end else if (NbSit = 1) and (Dossierfac <> '') then
           begin
             QQ := OpenSql ('SELECT * FROM BSITUATIONS WHERE BST_SSAFFAIRE="'+DossierFac+'"',true,1,'',true);
@@ -2063,17 +2152,17 @@ Begin
               TOBSIT.SelectDB('',QQ);
             end;
             ferme (QQ);
-            if (TOBSIT.GetString('BST_NATUREPIECE')= TOBPiece.getString('GP_NATUREPIECEG')) and
-               (TOBSIT.GetString('BST_SOUCHE')= TOBPiece.getString('GP_SOUCHE')) and
-               (TOBSIT.GetInteger('BST_NUMEROFAC')= TOBPiece.getInteger('GP_NUMERO')) then
+            if (TOBSIT.GetString('BST_NATUREPIECE')= CD.NaturePiece) and
+               (TOBSIT.GetString('BST_SOUCHE')= CD.Souche) and
+               (TOBSIT.GetInteger('BST_NUMEROFAC')= CD.NumeroPiece) then
             begin
-              TOBSit.SetDouble('BST_MONTANTHT',TOBpiece.getDouble('GP_TOTALHTDEV'));
-              TOBSit.SetDouble('BST_MONTANTTTC',TOBpiece.getDouble('GP_TOTALTTCDEV'));
-              TOBSit.SetDouble('BST_MONTANTTVA',TOBSit.getDouble('BST_MONTANTTTC')-TOBSit.getDouble('BST_MONTANTHT'));
+              TOBSit.SetDouble('BST_MONTANTHT',Marche);
+              TOBSit.SetDouble('BST_MONTANTTTC',TTC);
+              TOBSit.SetDouble('BST_MONTANTTVA',TVA);
               TOBSit.UpdateDB(false);
             end;
           end;
-          // ----
+          //
           QQ := OpenSql ('SELECT 1 FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="'+RefPieceSel+'" AND '+
                          'BMF_AFFAIRE= "'+TOBPiece.getString('GP_AFFAIRE')+'" AND '+
                          'BMF_DEVIS="'+RefPieceSel+'"',true,1,'',true);
@@ -2086,12 +2175,12 @@ Begin
             TOBMEMFAC.SetString('BMF_AFFAIRE1',TOBPiece.getString('GP_AFFAIRE1'));
             TOBMEMFAC.SetString('BMF_AFFAIRE2',TOBPiece.getString('GP_AFFAIRE2'));
             TOBMEMFAC.SetString('BMF_AFFAIRE3',TOBPiece.getString('GP_AFFAIRE3'));
-            TOBMEMFAC.SetString('BMF_NATUREPIECEG',CD.NaturePiece);
-            TOBMEMFAC.SetString('BMF_SOUCHE',CD.Souche);
-            TOBMEMFAC.SetInteger('BMF_NUMERO',CD.NumeroPiece);
-            TOBMEMFAC.SetInteger('BMF_INDICEG',CD.Indice);
+            TOBMEMFAC.SetString('BMF_NATUREPIECEG',TOBPiece.getString('GP_NATUREPIECEG'));
+            TOBMEMFAC.SetString('BMF_SOUCHE',TOBPiece.getString('GP_SOUCHE'));
+            TOBMEMFAC.SetInteger('BMF_NUMERO',TOBPiece.getInteger('GP_NUMERO'));
+            TOBMEMFAC.SetInteger('BMF_INDICEG',TOBPiece.getInteger('GP_INDICEG'));
             TOBMEMFAC.SetAllModifie(true);
-            TOBMEMFAC.InsertDB(nil);  
+            TOBMEMFAC.InsertDB(nil);
           end;
           ferme (QQ);
         FINALLY
@@ -2099,92 +2188,12 @@ Begin
           TOBMEMFAC.free;
         END;
       end;
-    end else if (NaturePiece='DBT') and (Avancement) and (TOBpiece.GetString('GP_ATTACHEMENT')<>'') and (GetparamSocSecur('SO_BTACPT1SIT',false)) then
-    begin
-      DecodeRefPiece(TOBpiece.getString('GP_ATTACHEMENT'),CD);
-      DossierFac := TOBPiece.getString('GP_AFFAIREDEVIS'); Avancement := false; NbSit := 0;
-      RefPieceSel := EncoderefSel (TOBPiece.getString('GP_NATUREPIECEG'),TOBPiece.getString('GP_SOUCHE') ,TOBPiece.getInteger('GP_NUMERO') ,TOBPiece.getInteger('GP_INDICEG'));
-
-      TOBSit := TOB.create ('BSITUATIONS',nil,-1);
-      TOBMEMFAC := TOB.create ('BTMEMOFACTURE',nil,-1);
-      TRY
-        Marche := 0; TTC := 0; TVA := 0;
-        //
-        QQ := openSql ('SELECT GP_TOTALHTDEV,GP_TOTALTTCDEV FROM PIECE WHERE '+WherePiece (CD,ttdPiece,false),true,1,'',true);
-        if not QQ.eof then
-        begin
-          Marche := QQ.fields[0].AsFloat;
-          TTC := QQ.fields[1].AsFloat;
-          TVA := TTC - Marche ;
-        end;
-        ferme(QQ);
-
-        QQ := OpenSql ('SELECT COUNT(*) FROM BSITUATIONS WHERE BST_SSAFFAIRE="'+TOBPiece.getString('GP_AFFAIREDEVIS')+'"',true,-1,'',true);
-        if not QQ.eof then
-        begin
-          NbSit := QQ.fields[0].AsInteger;
-        end;
-        ferme (QQ);
-        
-        if (NbSit = 0) and (DossierFac<>'') then
-        begin
-          TOBSit.SetString('BST_NATUREPIECE',CD.NaturePiece);
-          TOBSit.SetString('BST_SOUCHE',CD.Souche);
-          TOBSit.SetInteger('BST_NUMEROFAC',CD.NumeroPiece);
-          if GetparamSocSecur('SO_BTACPTSIT0',false) then TOBSit.SetInteger('BST_NUMEROSIT',0) else TOBSit.SetInteger('BST_NUMEROSIT',1); 
-          TOBSit.PutValue('BST_DATESIT',CD.DatePiece);
-          TOBSit.SetString('BST_AFFAIRE',TOBPiece.getString('GP_AFFAIRE'));
-          TOBSit.SetString('BST_SSAFFAIRE',TOBPiece.getString('GP_AFFAIREDEVIS'));
-          TOBSit.SetDouble('BST_MONTANTHT',Marche);
-          TOBSit.SetDouble('BST_MONTANTTTC',TTC);
-          TOBSit.SetDouble('BST_MONTANTTVA',TVA);
-          TOBSit.SetBoolean('BST_VIVANTE',true);
-          TOBSit.SetInteger('BST_INDICESIT',0);
-          TOBSIT.SetAllModifie(true);
-          TOBSit.InsertDB(nil)
-        end else if (NbSit = 1) and (Dossierfac <> '') then
-        begin
-          QQ := OpenSql ('SELECT * FROM BSITUATIONS WHERE BST_SSAFFAIRE="'+DossierFac+'"',true,1,'',true);
-          if not QQ.eof then
-          begin
-            TOBSIT.SelectDB('',QQ);
-          end;
-          ferme (QQ);
-          if (TOBSIT.GetString('BST_NATUREPIECE')= CD.NaturePiece) and
-             (TOBSIT.GetString('BST_SOUCHE')= CD.Souche) and
-             (TOBSIT.GetInteger('BST_NUMEROFAC')= CD.NumeroPiece) then
-          begin
-            TOBSit.SetDouble('BST_MONTANTHT',Marche);
-            TOBSit.SetDouble('BST_MONTANTTTC',TTC);
-            TOBSit.SetDouble('BST_MONTANTTVA',TVA);
-            TOBSit.UpdateDB(false);
-          end;
-        end;
-        //
-        QQ := OpenSql ('SELECT 1 FROM BTMEMOFACTURE WHERE BMF_DEVISPRINC="'+RefPieceSel+'" AND '+
-                       'BMF_AFFAIRE= "'+TOBPiece.getString('GP_AFFAIRE')+'" AND '+
-                       'BMF_DEVIS="'+RefPieceSel+'"',true,1,'',true);
-        if QQ.eof then
-        begin
-          TOBMEMFAC.SetString('BMF_DEVISPRINC',RefPieceSel);
-          TOBMEMFAC.SetInteger('BMF_NUMORDRE',1);
-          TOBMEMFAC.SetString('BMF_DEVIS',RefPieceSel);
-          TOBMEMFAC.SetString('BMF_AFFAIRE',TOBPiece.getString('GP_AFFAIRE'));
-          TOBMEMFAC.SetString('BMF_AFFAIRE1',TOBPiece.getString('GP_AFFAIRE1'));
-          TOBMEMFAC.SetString('BMF_AFFAIRE2',TOBPiece.getString('GP_AFFAIRE2'));
-          TOBMEMFAC.SetString('BMF_AFFAIRE3',TOBPiece.getString('GP_AFFAIRE3'));
-          TOBMEMFAC.SetString('BMF_NATUREPIECEG',TOBPiece.getString('GP_NATUREPIECEG'));
-          TOBMEMFAC.SetString('BMF_SOUCHE',TOBPiece.getString('GP_SOUCHE'));
-          TOBMEMFAC.SetInteger('BMF_NUMERO',TOBPiece.getInteger('GP_NUMERO'));
-          TOBMEMFAC.SetInteger('BMF_INDICEG',TOBPiece.getInteger('GP_INDICEG'));
-          TOBMEMFAC.SetAllModifie(true);
-          TOBMEMFAC.InsertDB(nil);
-        end;
-        ferme (QQ);
-      FINALLY
-        TOBSit.free;
-        TOBMEMFAC.free;
-      END;
+    except
+      on E: Exception do
+      begin
+        TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s des situations (%s).', [TUtilErrorsManagement.GetUpdateError, E.Message]));
+        V_PGI.ioError := oeUnknown;
+      end;
     end;
   FINALLY
     TOBLIGNEFAC.Free;
@@ -3833,15 +3842,15 @@ begin
 end;
 }
 procedure GenereLivraisonClients (ThePieceGenere : TOB;Action : TActionFiche;transfoPiece,DuplicPiece: boolean;DemandeDate: boolean = true;CompteRendu : boolean=true; TOBresult : TOB= nil) ;
-var Livraison : TGenereLivraison;
-    indice : integer;
-    TOBL : TOB;
-    IOOK : TIOErr;
+var
+  Livraison : TGenereLivraison;
+  indice : integer;
+  TOBL : TOB;
+  IOOK : TIOErr;
+  Msg  : string;
+  okok : boolean;
 begin
-	//
-	//if (Action <> taModif) or (DuplicPiece = True) or (TransfoPiece = false) then exit;
 	if (Action = taModif) and (TransfoPiece = false) and (not DuplicPiece)  then exit;
-  //
 	// Si c'est pas une reception ou une facture fournisseur ---> Get out
 	if Pos(ThePieceGenere.GetValue('GP_NATUREPIECEG'),GetPieceAchat (false,false,false)) = 0 then exit;
   Livraison := TGenereLivraison.create ;
@@ -3876,7 +3885,15 @@ begin
       end;
     end;
 		if Livraison.TheLignesALivrer.detail.count > 0 then Livraison.AjusteLesLignes;
-    IOOK := Transactions(Livraison.GenereThepieces,1);
+    try
+      Transactions(Livraison.GenereThepieces,1);
+    except
+      on E: Exception do
+      begin
+        TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s de la livraison (%s).', [TUtilErrorsManagement.GetGeneratEror, E.Message]));
+        V_PGI.IOError := OeUnknown;
+      end;
+    end;
   FINALLY
     FreeAndNil(Livraison);
   END;
@@ -4489,6 +4506,7 @@ begin
     if not TOBDepot.fieldExists('_LIVRE') then AddChampsSupDispoAff (TOBDepot);
     QteDispo := TOBDepot.GetValue('GQ_PHYSIQUE') - TOBDepot.GetValue('_LIVRE') -
                 TOBDepot.GetValue('GQ_PREPACLI') ;
+
     if CoefUSUV <> 0 then
     begin
     	QteDispo := (QteDispo * CoefUSUV);// + QteResteALivrer;
@@ -4496,10 +4514,18 @@ begin
     begin
     	QteDispo := (QteDispo * FUS / FUV);// + QteResteALivrer;
     end;
+
     if QteDispo < 0 then QteDispo := 0;
+
     // Passage US - UV
     if (QteLivrable > QteDispo) then QteLivrable := QteDispo;
-    PUA := TOBdepot.GetValue('GQ_PMAP') / CoefUSUV;
+
+    //FV1 : 22/11/20108 - FS#3337 - TESTS BL : Erreur lors de la génération de livraison
+    if CoefUSUV <> 0 then
+      PUA := TOBdepot.GetDouble('GQ_PMAP') / CoefUSUV
+    else
+      PUA := TOBdepot.GetDouble('GQ_PMAP');
+
     if (not FromDispoGlob) and (not FromDispoArt) then
     begin
     	TOBDepot.free;

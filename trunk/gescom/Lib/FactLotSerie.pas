@@ -311,129 +311,15 @@ begin
   EstAvoir := (GetInfoParPiece(NaturePiece, 'GPP_ESTAVOIR') = 'X');
   if Sens = 'ENT' then EntreeSerie := not (EstAvoir) else EntreeSerie := EstAvoir;
   TOBDispoSerie := TOB.Create('', nil, -1);
-  if TOBDispoSerie = nil then
-  begin
-    V_PGI.IoError := oeUnknown;
-    exit;
-  end;
-  if not Inverse then
-  begin
-    if EntreeSerie then
-    begin // Entrée de numéro série
-      for i := 0 to TOBSerLig.Detail.Count - 1 do
-      begin
-        TOBLS := TOBSerLig.Detail[i];
-        if TOBLS.GetValue('GLS_TENUESTOCK') <> 'X' then Continue;
-        NumSerie := TOBLS.GetValue('GLS_IDSERIE');
-        TOBDS := TOB.Create('DISPOSERIE', TOBDispoSerie, -1);
-        if TOBDS = nil then
-        begin
-          V_PGI.IoError := oeUnknown;
-          TOBDispoSerie.free;
-          exit;
-        end;
-        TOBDS.PutValue('GQS_IDSERIE', NumSerie);
-        TOBDS.PutValue('GQS_ARTICLE', RefUnique);
-        TOBDS.PutValue('GQS_DEPOT', Depot);
-        TOBDS.PutValue('GQS_NUMEROLOT', TOBLS.GetValue('GLS_NUMEROLOT'));
-        TOBDS.PutValue('GQS_ENRESERVECLI', '-');
-        TOBDS.PutValue('GQS_ENPREPACLI', '-');
-      end;
-      if TOBDispoSerie.Detail.Count > 0 then
-        if not TOBDispoSerie.InsertDBByNivel(False) then V_PGI.IoError := oeUnknown;
-    end else
-    begin // Sortie de numéro série
-      WhereSerie := '';
-      St := '';
-      for i := 0 to TOBSerLig.Detail.Count - 1 do
-      begin
-        TOBLS := TOBSerLig.Detail[i];
-        if TOBLS.GetValue('GLS_TENUESTOCK') <> 'X' then Continue;
-        NumSerie := TOBLS.GetValue('GLS_IDSERIE');
-        St := 'GQS_IDSERIE="' + NumSerie + '" ';
-        if WhereSerie = '' then WhereSerie := '(GQS_ARTICLE="' + TOBLS.GetValue('GLS_ARTICLE') + '" AND ' + St + ')'
-        else WhereSerie := WhereSerie + ' OR ' + '(GQS_ARTICLE="' + TOBLS.GetValue('GLS_ARTICLE') + '" AND ' + St + ')';
-      end;
-      if WhereSerie <> '' then
-      begin
-        QQ := OpenSQl('Select * From DISPOSERIE Where ' + WhereSerie, True,-1, '', True);
-        if not QQ.EOF then TOBDispoSerie.LoadDetailDB('DISPOSERIE', '', '', QQ, False);
-        Ferme(QQ);
-        if TOBDispoSerie.Detail.Count > 0 then
-        begin
-          ResaCli := (Pos('RC', ColPlus) > 0);
-          PrepaCli := (Pos('PRE', ColPlus) > 0);
-          if (ResaCli) or (PrepaCli) then
-          begin
-            for i := 0 to TOBDispoSerie.Detail.Count - 1 do
-            begin
-              if (ResaCli) then TOBDispoSerie.Detail[i].PutValue('GQS_ENRESERVECLI', 'X')
-              else TOBDispoSerie.Detail[i].PutValue('GQS_ENPREPACLI', 'X');
-            end;
-            if not TOBDispoSerie.UpdateDB(False) then V_PGI.IoError := oeUnknown;
-          end else if not TOBDispoSerie.DeleteDB(False) then V_PGI.IoError := oeUnknown;
-        end;
-      end;
-    end;
-  end else
-  begin // Inversion gestion stock série
-    if EntreeSerie then
-    begin // Inversion entrée de numéro série
-      WhereSerie := '';
-      St := '';
-      for i := 0 to TOBSerLig.Detail.Count - 1 do
-      begin
-        TOBLS := TOBSerLig.Detail[i];
-        if TOBLS.GetValue('GLS_TENUESTOCK') <> 'X' then Continue;
-        if TOBLS.GetValue('GLS_RANG') = 1 then Continue;
-        NumSerie := TOBLS.GetValue('GLS_IDSERIE');
-        St := 'GQS_IDSERIE="' + NumSerie + '" ';
-        if WhereSerie = '' then WhereSerie := 'GQS_ARTICLE="' + RefUnique + '" AND (' + St
-        else WhereSerie := WhereSerie + ' OR ' + St;
-      end;
-      if St <> '' then WhereSerie := WhereSerie + ')';
-      QQ := OpenSQl('Select * From DISPOSERIE Where ' + WhereSerie, True,-1, '', True);
-      if not QQ.EOF then TOBDispoSerie.LoadDetailDB('DISPOSERIE', '', '', QQ, False);
-      Ferme(QQ);
-      if TOBDispoSerie.Detail.Count > 0 then
-      begin
-        if not TOBDispoSerie.DeleteDB(False) then V_PGI.IoError := oeUnknown;
-      end;
-    end else
-    begin // Inversion sortie de numéro série
-      ResaCli := (Pos('RC', ColPlus) > 0);
-      PrepaCli := (Pos('PRE', ColPlus) > 0);
-      if (ResaCli) or (PrepaCli) then
-      begin
-        WhereSerie := '';
-        St := '';
+  try
+    if not Inverse then
+    begin
+      if EntreeSerie then
+      begin // Entrée de numéro série
         for i := 0 to TOBSerLig.Detail.Count - 1 do
         begin
           TOBLS := TOBSerLig.Detail[i];
           if TOBLS.GetValue('GLS_TENUESTOCK') <> 'X' then Continue;
-          if TOBLS.GetValue('GLS_RANG') = 1 then Continue;
-          NumSerie := TOBLS.GetValue('GLS_IDSERIE');
-          St := 'GQS_IDSERIE="' + NumSerie + '" ';
-          if WhereSerie = '' then WhereSerie := '(GQS_ARTICLE="' + TOBLS.GetValue('GLS_ARTICLE') + '" AND ' + St + ')'
-          else WhereSerie := WhereSerie + ' OR ' + '(GQS_ARTICLE="' + TOBLS.GetValue('GLS_ARTICLE') + '" AND ' + St + ')';
-        end;
-        QQ := OpenSQl('Select * From DISPOSERIE Where ' + WhereSerie, True,-1, '', True);
-        if not QQ.EOF then TOBDispoSerie.LoadDetailDB('DISPOSERIE', '', '', QQ, False);
-        Ferme(QQ);
-        for i := 0 to TOBDispoSerie.Detail.Count - 1 do
-        begin
-          if (ResaCli) then TOBDispoSerie.Detail[i].PutValue('GQS_ENRESERVECLI', '-')
-          else TOBDispoSerie.Detail[i].PutValue('GQS_ENPREPACLI', '-');
-        end;
-        if TOBDispoSerie.Detail.Count > 0 then
-          if not TOBDispoSerie.UpdateDB(False) then V_PGI.IoError := oeUnknown;
-      end else
-      begin
-        for i := 0 to TOBSerLig.Detail.Count - 1 do
-        begin
-          TOBLS := TOBSerLig.Detail[i];
-          if TOBLS.GetValue('GLS_TENUESTOCK') <> 'X' then Continue;
-          if TOBLS.GetValue('GLS_RANG') = 1 then Continue;
           NumSerie := TOBLS.GetValue('GLS_IDSERIE');
           TOBDS := TOB.Create('DISPOSERIE', TOBDispoSerie, -1);
           if TOBDS = nil then
@@ -443,18 +329,130 @@ begin
             exit;
           end;
           TOBDS.PutValue('GQS_IDSERIE', NumSerie);
-          TOBDS.PutValue('GQS_ARTICLE', TOBLS.GetValue('GLS_ARTICLE'));
+          TOBDS.PutValue('GQS_ARTICLE', RefUnique);
           TOBDS.PutValue('GQS_DEPOT', Depot);
           TOBDS.PutValue('GQS_NUMEROLOT', TOBLS.GetValue('GLS_NUMEROLOT'));
           TOBDS.PutValue('GQS_ENRESERVECLI', '-');
           TOBDS.PutValue('GQS_ENPREPACLI', '-');
         end;
         if TOBDispoSerie.Detail.Count > 0 then
-          if not TOBDispoSerie.InsertOrUpdateDb(False) then V_PGI.IoError := oeUnknown;
+          if not TOBDispoSerie.InsertDBByNivel(False) then V_PGI.IoError := oeUnknown;
+      end else
+      begin // Sortie de numéro série
+        WhereSerie := '';
+        St := '';
+        for i := 0 to TOBSerLig.Detail.Count - 1 do
+        begin
+          TOBLS := TOBSerLig.Detail[i];
+          if TOBLS.GetValue('GLS_TENUESTOCK') <> 'X' then Continue;
+          NumSerie := TOBLS.GetValue('GLS_IDSERIE');
+          St := 'GQS_IDSERIE="' + NumSerie + '" ';
+          if WhereSerie = '' then WhereSerie := '(GQS_ARTICLE="' + TOBLS.GetValue('GLS_ARTICLE') + '" AND ' + St + ')'
+          else WhereSerie := WhereSerie + ' OR ' + '(GQS_ARTICLE="' + TOBLS.GetValue('GLS_ARTICLE') + '" AND ' + St + ')';
+        end;
+        if WhereSerie <> '' then
+        begin
+          QQ := OpenSQl('Select * From DISPOSERIE Where ' + WhereSerie, True,-1, '', True);
+          if not QQ.EOF then TOBDispoSerie.LoadDetailDB('DISPOSERIE', '', '', QQ, False);
+          Ferme(QQ);
+          if TOBDispoSerie.Detail.Count > 0 then
+          begin
+            ResaCli := (Pos('RC', ColPlus) > 0);
+            PrepaCli := (Pos('PRE', ColPlus) > 0);
+            if (ResaCli) or (PrepaCli) then
+            begin
+              for i := 0 to TOBDispoSerie.Detail.Count - 1 do
+              begin
+                if (ResaCli) then TOBDispoSerie.Detail[i].PutValue('GQS_ENRESERVECLI', 'X')
+                else TOBDispoSerie.Detail[i].PutValue('GQS_ENPREPACLI', 'X');
+              end;
+              if not TOBDispoSerie.UpdateDB(False) then V_PGI.IoError := oeUnknown;
+            end else if not TOBDispoSerie.DeleteDB(False) then V_PGI.IoError := oeUnknown;
+          end;
+        end;
+      end;
+    end else
+    begin // Inversion gestion stock série
+      if EntreeSerie then
+      begin // Inversion entrée de numéro série
+        WhereSerie := '';
+        St := '';
+        for i := 0 to TOBSerLig.Detail.Count - 1 do
+        begin
+          TOBLS := TOBSerLig.Detail[i];
+          if TOBLS.GetValue('GLS_TENUESTOCK') <> 'X' then Continue;
+          if TOBLS.GetValue('GLS_RANG') = 1 then Continue;
+          NumSerie := TOBLS.GetValue('GLS_IDSERIE');
+          St := 'GQS_IDSERIE="' + NumSerie + '" ';
+          if WhereSerie = '' then WhereSerie := 'GQS_ARTICLE="' + RefUnique + '" AND (' + St
+          else WhereSerie := WhereSerie + ' OR ' + St;
+        end;
+        if St <> '' then WhereSerie := WhereSerie + ')';
+        QQ := OpenSQl('Select * From DISPOSERIE Where ' + WhereSerie, True,-1, '', True);
+        if not QQ.EOF then TOBDispoSerie.LoadDetailDB('DISPOSERIE', '', '', QQ, False);
+        Ferme(QQ);
+        if TOBDispoSerie.Detail.Count > 0 then
+        begin
+          if not TOBDispoSerie.DeleteDB(False) then V_PGI.IoError := oeUnknown;
+        end;
+      end else
+      begin // Inversion sortie de numéro série
+        ResaCli := (Pos('RC', ColPlus) > 0);
+        PrepaCli := (Pos('PRE', ColPlus) > 0);
+        if (ResaCli) or (PrepaCli) then
+        begin
+          WhereSerie := '';
+          St := '';
+          for i := 0 to TOBSerLig.Detail.Count - 1 do
+          begin
+            TOBLS := TOBSerLig.Detail[i];
+            if TOBLS.GetValue('GLS_TENUESTOCK') <> 'X' then Continue;
+            if TOBLS.GetValue('GLS_RANG') = 1 then Continue;
+            NumSerie := TOBLS.GetValue('GLS_IDSERIE');
+            St := 'GQS_IDSERIE="' + NumSerie + '" ';
+            if WhereSerie = '' then WhereSerie := '(GQS_ARTICLE="' + TOBLS.GetValue('GLS_ARTICLE') + '" AND ' + St + ')'
+            else WhereSerie := WhereSerie + ' OR ' + '(GQS_ARTICLE="' + TOBLS.GetValue('GLS_ARTICLE') + '" AND ' + St + ')';
+          end;
+          QQ := OpenSQl('Select * From DISPOSERIE Where ' + WhereSerie, True,-1, '', True);
+          if not QQ.EOF then TOBDispoSerie.LoadDetailDB('DISPOSERIE', '', '', QQ, False);
+          Ferme(QQ);
+          for i := 0 to TOBDispoSerie.Detail.Count - 1 do
+          begin
+            if (ResaCli) then TOBDispoSerie.Detail[i].PutValue('GQS_ENRESERVECLI', '-')
+            else TOBDispoSerie.Detail[i].PutValue('GQS_ENPREPACLI', '-');
+          end;
+          if TOBDispoSerie.Detail.Count > 0 then
+            if not TOBDispoSerie.UpdateDB(False) then V_PGI.IoError := oeUnknown;
+        end else
+        begin
+          for i := 0 to TOBSerLig.Detail.Count - 1 do
+          begin
+            TOBLS := TOBSerLig.Detail[i];
+            if TOBLS.GetValue('GLS_TENUESTOCK') <> 'X' then Continue;
+            if TOBLS.GetValue('GLS_RANG') = 1 then Continue;
+            NumSerie := TOBLS.GetValue('GLS_IDSERIE');
+            TOBDS := TOB.Create('DISPOSERIE', TOBDispoSerie, -1);
+            if TOBDS = nil then
+            begin
+              V_PGI.IoError := oeUnknown;
+              TOBDispoSerie.free;
+              exit;
+            end;
+            TOBDS.PutValue('GQS_IDSERIE', NumSerie);
+            TOBDS.PutValue('GQS_ARTICLE', TOBLS.GetValue('GLS_ARTICLE'));
+            TOBDS.PutValue('GQS_DEPOT', Depot);
+            TOBDS.PutValue('GQS_NUMEROLOT', TOBLS.GetValue('GLS_NUMEROLOT'));
+            TOBDS.PutValue('GQS_ENRESERVECLI', '-');
+            TOBDS.PutValue('GQS_ENPREPACLI', '-');
+          end;
+          if TOBDispoSerie.Detail.Count > 0 then
+            if not TOBDispoSerie.InsertOrUpdateDb(False) then V_PGI.IoError := oeUnknown;
+        end;
       end;
     end;
+  finally
+    TOBDispoSerie.free;
   end;
-  TOBDispoSerie.free;
   {$ENDIF}
 end;
 

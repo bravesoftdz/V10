@@ -76,6 +76,8 @@ FactVariante
   ,AGLInitBTP
   ,UmessageIS
   ,UCumulCollectifs
+  , ErrorsManagement
+  , CommonTools
   ;
 
 type
@@ -279,10 +281,11 @@ END;
 Procedure G_CreerLesTOB ;
 BEGIN
 TOBMessages := TOB.Create ('LES MESSAGES',nil,-1);
-TOBGenere:=TOB.Create('PIECE',Nil,-1) ;
-TOBRefPiece:=TOB.Create('PIECE',Nil,-1) ;
+TOBGenere   :=TOB.Create('PIECE',Nil,-1) ;
+TOBRefPiece :=TOB.Create('PIECE',Nil,-1) ;
 // Modif BTP
-AddLesSupEntete (TOBGenere);AddLesSupEntete (TOBRefPiece);
+AddLesSupEntete (TOBGenere);
+AddLesSupEntete (TOBRefPiece);
 // ---
 TOBRef:=TOB.Create('LIGNE',Nil,-1) ;
 TOBArticles:=TOB.Create('',Nil,-1) ;
@@ -738,6 +741,7 @@ Var Q : TQuery ;
     i  : integer ;
     TOBDocP,TOBInsere,TOBPiece : TOB ;
     CautionU,CautionUdev : double;
+    CautionAU,CautionAUdev : double;
 BEGIN
 if TOBL.getValue('GL_TYPELIGNE')<>'RG' then exit;
 TOBPiece := TOBL.Parent;
@@ -757,13 +761,15 @@ for i:= 0 to TOBDocP.detail.count -1 do
     TOBInsere.putValue('PRG_CAUTIONMTUDEV',0);
 //
     CautionU :=0; CautionUdev := 0;
-    GetCautionAlreadyUsed (TOBPiece,TOBL,TOBL.GEtValue('GL_PIECEPRECEDENTE'),CautionU,CautionUdev);
+    GetCautionAlreadyUsed (TOBPiece,TOBL,TOBL.GEtValue('GL_PIECEPRECEDENTE'),CautionAU,CautionAUdev,CautionU,CautionUdev);
     (*
     CautionU := CautionU - TOBDOCP.detail[i].GEtValue('PRG_MTTTCRG');
     if CautionU < 0 then CautionU := 0;
     CautionUDev := CautionUDev - TOBDOCP.detail[i].GEtValue('PRG_MTTTCRGDEV');
     if CautionUDev < 0 then CautionUDev := 0;
     *)
+    TOBInsere.AddChampSupValeur ('CAUTIONAVANT',CautionAU);
+    TOBInsere.AddChampSupValeur ('CAUTIONAVANTDEV',CautionAUDev);
     TOBInsere.AddChampSupValeur ('CAUTIONUTIL',CautionU);
     TOBInsere.AddChampSupValeur ('CAUTIONUTILDEV',CautionUDev);
     TOBInsere.AddChampSupValeur ('CAUTIONAPRES',0);
@@ -1165,7 +1171,8 @@ Procedure G_AlimNewPiece ( TOBPiece : TOB ; DupPiece : Boolean; ModeGenere : str
 Var NewSouchePiece : String;
     i_ind : integer;
 BEGIN
-TOBGenere.ClearDetail ; TOBGenere.InitValeurs ;
+TOBGenere.ClearDetail ;
+TOBGenere.InitValeurs ;
 if DupPiece then
 	Begin
    TOBGenere.Dupliquer(TOBPiece,False,True);
@@ -1205,6 +1212,9 @@ TOBGenere.PutValue('GP_VENTEACHAT',VenteAchat) ;
 TOBGenere.PutValue('GP_DATETAUXDEV',TOBPiece.GetValue('GP_DATETAUXDEV')) ;
 TOBGenere.PutValue('GP_REFINTERNE',TOBPiece.GetValue('GP_REFINTERNE')) ;
 TOBGenere.PutValue('GP_REFEXTERNE',TOBPiece.GetValue('GP_REFEXTERNE')) ;
+//FV1 : 06/12/2018 - FS#3336 - TESTS BL : En validation de devis, la date de livraison saisie n'est pas reprise dans la commande
+TOBGenere.PutValue('GP_DATELIVRAISON',TOBPiece.GetValue('GP_DATELIVRAISON')) ;
+//
 TOBGenere.PutValue('GP_RIB',TOBPiece.GetValue('GP_RIB')) ;
 // MODIF BTP
 TOBGenere.PutValue('GP_ARRONDILIGNE',TOBPiece.GetValue('GP_ARRONDILIGNE')) ;
@@ -1271,7 +1281,7 @@ BEGIN
 FillChar(OldEcr,Sizeof(OldEcr),#0) ; FillChar(OldStk,Sizeof(OldStk),#0) ;
 if VH_GC.GCIfDefCEGID then
   RechLibTiersCegid (VenteAchat,TobTiers,TOBGenere,TobAdresses);
-if Not PassationComptable(TOBGenere,TOBOuvrage, TOBOuvragesP,TOBBases,TOBBasesL,TOBEches,TOBPieceTrait,nil,TOBTiers,TOBArticles,TOBCpta,TOBAcomptes,TOBPorcs,TOBPIECERG,TOBBasesRG,TOBAnaP,TOBAnaS,nil,TOBVTECOLL,DEV,OldEcr,OldStk,Not(bContinuOnError))
+if Not PassationComptable(TOBGenere,TOBOuvrage, TOBOuvragesP,TOBBases,TOBBasesL,TOBEches,TOBPieceTrait,nil,TOBTiers,TOBArticles,TOBCpta,TOBAcomptes,TOBPorcs,TOBPIECERG,TOBBasesRG,TOBAnaP,TOBAnaS,nil,TOBVTECOLL,nil,DEV,OldEcr,OldStk,Not(bContinuOnError))
    then V_PGI.IoError:=oeLettrage ;
 LibereParamTimbres;
 END ;
@@ -2705,10 +2715,17 @@ END ;
 procedure T_GenVal.AddLesSupEnteteBtp (TOBPIECE : TOB);
 begin
 if not (TOBPiece.FieldExists ('AFF_GENERAUTO')) then TOBPIece.addchampSupValeur ('AFF_GENERAUTO','',true);
-if not (TOBPiece.FieldExists ('AFF_OKSIZERO')) then TOBPIece.addchampSupValeur ('AFF_OKSIZERO','',true);
-if not (TOBPiece.FieldExists ('RUPTMILLIEME')) then TOBPIece.addchampSupValeur ('RUPTMILLIEME','',true);
+if not (TOBPiece.FieldExists ('AFF_OKSIZERO'))  then TOBPIece.addchampSupValeur ('AFF_OKSIZERO','',true);
+if not (TOBPiece.FieldExists ('RUPTMILLIEME'))  then TOBPIece.addchampSupValeur ('RUPTMILLIEME','',true);
 end;
 
+{***********A.G.L.***********************************************
+Auteur  ...... : 
+Créé le ...... : 06/12/2018
+Modifié le ... :   /  /    
+Description .. : 
+Mots clefs ... : 
+*****************************************************************}
 Procedure T_GenVal.G_GenereParTiers ;
 Var i,k,LastI,iacc : integer ;
     TOBL,TOBPiece,TOBPieceTiers,NewL,TOBTP,TOBSOUSTRAIT : TOB ;
@@ -2765,12 +2782,14 @@ TOBPieceTiers:=TOB.Create('PieceMemeTiers',Nil,-1) ;
     LoadPiece (LocCledoc,TOBpiece);
     if ModeTraitement = 'ETUTODEV' then
     begin
-      TOBPiece.SetString('GP_AFFAIRE',TOBSource.Detail[i].GetString('GP_AFFAIRE'));
+      TOBPiece.SetString('GP_AFFAIRE', TOBSource.Detail[i].GetString('GP_AFFAIRE'));
       TOBPiece.SetString('GP_AFFAIRE1',TOBSource.Detail[i].GetString('GP_AFFAIRE1'));
       TOBPiece.SetString('GP_AFFAIRE2',TOBSource.Detail[i].GetString('GP_AFFAIRE2'));
       TOBPiece.SetString('GP_AFFAIRE3',TOBSource.Detail[i].GetString('GP_AFFAIRE3'));
-      TOBPiece.SetString('GP_AVENANT',TOBSource.Detail[i].GetString('GP_AVENANT'));
+      TOBPiece.SetString('GP_AVENANT', TOBSource.Detail[i].GetString('GP_AVENANT'));
     end;
+    // Modified by f.vautrain 06/12/2018 15:38:32 - FS#3336 - TESTS BL : En validation de devis, la date de livraison saisie n'est pas reprise dans la commande
+    TOBPiece.SetDateTime('GP_DATELIVRAISON', TOBSource.Detail[i].GetDateTime('GP_DATELIVRAISON'));
   END;
 
   for i:=0 to TOBPieceTiers.Detail.Count-1 do
@@ -2910,16 +2929,6 @@ TOBPieceTiers:=TOB.Create('PieceMemeTiers',Nil,-1) ;
            G_ChargeLesAdresses(TOBPiece);
            G_LigneVersPieceGenere(TOBL,DupPiece) ;
            END ;
-        //FV1 : 22/06/2015 -FS#1393 - SOTRELEC - problème génération d'avoir global à partir facture sans code affaire en en-tête
-        {if (ModeTraitement = 'GENAVOIRGLOBAL') then
-        begin
-          TOBL.SetString('GL_AFFAIRE', TOBPiece.GetString('GP_AFFAIRE'));
-          TOBL.SetString('GL_AFFAIRE1',TOBPiece.GetString('GP_AFFAIRE1'));
-          TOBL.SetString('GL_AFFAIRE2',TOBPiece.GetString('GP_AFFAIRE2'));
-          TOBL.SetString('GL_AFFAIRE3',TOBPiece.GetString('GP_AFFAIRE3'));
-          TOBL.SetString('GL_AVENANT', TOBPiece.GetString('GP_AVENANT'));
-        end
-        else}
         if (ModeTraitement = 'GENEREFF') AND (TobL.GetString('GL_AFFAIRE')<> TOBGenere.GetSTring('GP_AFFAIRE')) then
         begin
           TOBGenere.SetString('GP_AFFAIRE','');
@@ -3422,144 +3431,180 @@ Function RegroupeLesPieces ( TOBSource : TOB ; NewNat : String ; Eclate,DeGroupe
                               NewDate : TDateTime = 0; AvecCompteRendu : Boolean = True; AlimListePiece : Boolean = False;
                               ContinuOnError : Boolean = False;RepriseAffaireEntete:boolean=false;
                               TraitFinTravaux:boolean=false;CodeAffCde:string='';WithVariantes: boolean=false;NewAffaire:string='';ModeTrait : string=''; MontantHtRef : Double = 0; MontantTTCRef : double= 0; NumfacRef : string='') : integer ;
-Var StSort,CodeTiers,StRendu : String ;
-    TOBPiece : TOB ;
-    i,k,NbErr  : integer ;
-    io   : TIoErr ;
-    GenVal : T_GenVal ;
-    zdeb,zfin,OldNat : string;
-    ValideNumP : T_ValideNumP;
+Var
+  StSort,CodeTiers,StRendu : String ;
+  TOBPiece : TOB ;
+  i,k,NbErr  : integer ;
+  io   : TIoErr ;
+  GenVal : T_GenVal ;
+  zdeb,zfin,OldNat : string;
+  ValideNumP : T_ValideNumP;
+  Msg : string;
 BEGIN
-Result:=0 ; io:=oeok; NbErr := 0;
-{Initialisations}
-zdeb := FormatDateTime('ttttt',NowH);
-NewNature:=NewNat ; Commentaires:=AvecComment ; bDuplicPiece := False; bContinuOnError := ContinuOnError;
-EclateParPiece := Eclate;
-bContremarque:=False;
-RepriseAffaireRef := RepriseAffaireEntete;
-// Modif BTP
-FinTravaux := TraitFinTravaux;
-ForceNumero := false;
-WithLiaisonInterDoc := false;
-// Gestion controle facture Achat en génération
-FillChar(CleCfa,Sizeof(CleCfa),#0);
-CleCfa.MontantHt := MontantHtRef;
-CleCFA.MontantTTC := MontantTTCRef;
-CleCFA.NumfacFou := NumfacRef;
-// --
-// Modif MODE
-CodeAff:=CodeAffCde;
-G_InitLiaisonOrli;
-// -----
-if NewDate>0 then LaNewDate:=NewDate else LaNewDate:=V_PGI.DateEntree ;
-G_InitGenere(ChoixEclateDomaine) ;
-{Tri préalable des infos d'origine}
-{$IFDEF BTP}
-  DefiniTriEtRuptureBtp ( TOBSource,stSort);
-{$ELSE}
-  StSort:='GP_TIERS;GP_FACTUREHT;GP_REGIMETAXE;GP_TVAENCAISSEMENT;GP_DEVISE;GP_SAISIECONTRE;GP_ESCOMPTE;GP_DATEPIECE;GP_NUMERO;' ;
-{$ENDIF}
-  TOBSource.Detail.Sort(StSort) ;
+  Result:=0 ; io:=oeok; NbErr := 0;
+  {Initialisations}
+  zdeb := FormatDateTime('ttttt',NowH);
+  NewNature:=NewNat ; Commentaires:=AvecComment ; bDuplicPiece := False; bContinuOnError := ContinuOnError;
+  EclateParPiece := Eclate;
+  bContremarque:=False;
+  RepriseAffaireRef := RepriseAffaireEntete;
+  // Modif BTP
+  FinTravaux := TraitFinTravaux;
+  ForceNumero := false;
+  WithLiaisonInterDoc := false;
+  // Gestion controle facture Achat en génération
+  FillChar(CleCfa,Sizeof(CleCfa),#0);
+  CleCfa.MontantHt := MontantHtRef;
+  CleCFA.MontantTTC := MontantTTCRef;
+  CleCFA.NumfacFou := NumfacRef;
+  // --
+  // Modif MODE
+  CodeAff:=CodeAffCde;
+  G_InitLiaisonOrli;
+  // -----
+  if NewDate>0 then LaNewDate:=NewDate else LaNewDate:=V_PGI.DateEntree ;
+  G_InitGenere(ChoixEclateDomaine) ;
+  {Tri préalable des infos d'origine}
+  {$IFDEF BTP}
+    DefiniTriEtRuptureBtp ( TOBSource,stSort);
+  {$ELSE}
+    StSort:='GP_TIERS;GP_FACTUREHT;GP_REGIMETAXE;GP_TVAENCAISSEMENT;GP_DEVISE;GP_SAISIECONTRE;GP_ESCOMPTE;GP_DATEPIECE;GP_NUMERO;' ;
+  {$ENDIF}
+    TOBSource.Detail.Sort(StSort) ;
 
-  {Création des TOB}
-  G_CreerLesTOB ;
+    {Création des TOB}
+    G_CreerLesTOB ;
 
-  if TOBSource.Detail.Count>0 then OldNat:=TOBSource.Detail[0].GetValue('GP_NATUREPIECEG') else OldNat:='';
+    if TOBSource.Detail.Count>0 then OldNat:=TOBSource.Detail[0].GetValue('GP_NATUREPIECEG') else OldNat:='';
 
-  //FV1 : 17/06/2015 - FS#1393 - SOTRELEC - problème génération d'avoir global à partir facture sans code affaire en en-tête (Debut)
-  {if ModeTrait = 'GENAVOIRGLOBAL' then
-  begin
-    G_ChargeChampsRuptavoirGlobal(OldNat);
-  end
-  //FV1 : 17/06/2015 - FS#1393 - SOTRELEC - problème génération d'avoir global à partir facture sans code affaire en en-tête (fin)
-  else }
-  if ModeTrait <> 'GENEREFF' then // Modification BRL 29/07/2014 : pas de rupture en génération automatique depuis BSV
-    G_ChargeChampsRupt(OldNat) ;
-  {Lecture des pièces}
-  for i:=0 to TOBSource.Detail.Count-1 do
-  BEGIN
-    TOBPiece:=TOBSource.Detail[i] ;
-    RegroupeLesAcomptesBTP (TOBPiece,TOBAcomptesGen);
-    CodeTiers:=TOBPiece.GetValue('GP_TIERS') ;
-    if TTiers.IndexOf(CodeTiers)<0 then TTiers.Add(CodeTiers) ;
-  END ;
+    //FV1 : 17/06/2015 - FS#1393 - SOTRELEC - problème génération d'avoir global à partir facture sans code affaire en en-tête (Debut)
+    {if ModeTrait = 'GENAVOIRGLOBAL' then
+    begin
+      G_ChargeChampsRuptavoirGlobal(OldNat);
+    end
+    //FV1 : 17/06/2015 - FS#1393 - SOTRELEC - problème génération d'avoir global à partir facture sans code affaire en en-tête (fin)
+    else }
+    if ModeTrait <> 'GENEREFF' then // Modification BRL 29/07/2014 : pas de rupture en génération automatique depuis BSV
+      G_ChargeChampsRupt(OldNat) ;
+    {Lecture des pièces}
+    for i:=0 to TOBSource.Detail.Count-1 do
+    BEGIN
+      TOBPiece:=TOBSource.Detail[i] ;
+      RegroupeLesAcomptesBTP (TOBPiece,TOBAcomptesGen);
+      CodeTiers:=TOBPiece.GetValue('GP_TIERS') ;
+      if TTiers.IndexOf(CodeTiers)<0 then TTiers.Add(CodeTiers) ;
+    END ;
 
-  for k:=0 to TTiers.Count-1 do
-  BEGIN
-    CodeTiers:=TTiers[k] ;
-    GenVal:=T_GenVal.Create ;
-    GenVal.CodeTiers:=CodeTiers ; GenVal.TOBSource:=TOBSource ;
-    GenVal.DeGroupeRemise:=DeGroupeRemise ;
-    GenVal.ChoixEclateDomaine:=ChoixEclateDomaine ;
-    GenVal.WithVariantes := WithVariantes;
-    GenVal.NewAffaire := NewAffaire;
-    GenVal.ModeTraitement := ModeTrait;
-// PA 02/10/2001
-    if EclateParPiece then // si éclatement on peut déterminer le nombre de pièces et réserver les numéro pour génération multi-utilisateur
-        begin
-        ValideNumP := T_ValideNumP.Create;
-        ValideNumP.TOBSource := TOBSource; ValideNumP.CodeTiers := CodeTiers;
-        ValideNumP.PrepareNumPieceTiers;
-        ValideNumP.DatePiece := 0;
-        if  NewDate > 0 then ValideNumP.DatePiece := NewDate;
-        io:=Transactions(ValideNumP.G_ValideNumPieceTiers,5) ;
-        ValideNumP.Free;
-        end;
-    if io=oeOk then io:=Transactions(GenVal.G_GenereParTiers,0);
-    GenVal.Free ;
-    Case io of
-      oeOk : G_MajEvent ;
-      oeUnknown  : BEGIN
-                   if Not (FromShellOLE) And Not(ContinuOnError) then MessageAlerte('ATTENTION : La génération ne s''est pas complètement effectuée') ;
-                   Result:=1 ; if Not(ContinuOnError) then Break else begin Inc(NbErr); io:=oeOk; end;
-                   END ;
-      oeSaisie   : BEGIN
-                   if Not (FromShellOLE) And Not(ContinuOnError) then MessageAlerte('ATTENTION : Certaines pièces déjà en cours de traitement n''ont pas été enregistrées !') ;
-                   Result:=2 ; if Not(ContinuOnError) then Break else begin Inc(NbErr); io:=oeOk; end;
-                   END ;
-      oeLettrage : BEGIN
-                   if Not (FromShellOLE) And Not(ContinuOnError) then MessageAlerte('ATTENTION : Certaines pièces ne peuvent pas passer en comptabilité et n''ont pas été enregistrées !') ;
-                   Result:=3 ; if Not(ContinuOnError) then Break else begin Inc(NbErr); io:=oeOk; end;
-                   END ;
-      oeStock    : BEGIN
-                   if Not (FromShellOLE) And Not(ContinuOnError) then MessageAlerte('ATTENTION : Stock insuffisant pour certaines pièces qui n''ont pas été enregistrées !') ;
-                   Result:=4 ; if Not(ContinuOnError) then Break else begin Inc(NbErr); io:=oeOk; end;
-                   END ;
-       END ;
-    // Modif MODE
-    if (CodeAff <> '') and (io <> oeOk) then
-       BEGIN
-       StRendu := DateTimeToStr(Now) + ' ERREUR n°' + IntToStr(Ord(io)) + ' Affectation n°' + CodeAff
-                + ' Tiers n°' + CodeTiers + ' Pièces n°';
-       for i := 0 to TOBSource.Detail.Count - 1 do
+    for k:=0 to TTiers.Count-1 do
+    BEGIN
+      CodeTiers:=TTiers[k] ;
+      GenVal:=T_GenVal.Create ;
+      GenVal.CodeTiers:=CodeTiers ; GenVal.TOBSource:=TOBSource ;
+      GenVal.DeGroupeRemise:=DeGroupeRemise ;
+      GenVal.ChoixEclateDomaine:=ChoixEclateDomaine ;
+      GenVal.WithVariantes := WithVariantes;
+      GenVal.NewAffaire := NewAffaire;
+      GenVal.ModeTraitement := ModeTrait;
+  // PA 02/10/2001
+      if EclateParPiece then // si éclatement on peut déterminer le nombre de pièces et réserver les numéro pour génération multi-utilisateur
+          begin
+          ValideNumP := T_ValideNumP.Create;
+          ValideNumP.TOBSource := TOBSource; ValideNumP.CodeTiers := CodeTiers;
+          ValideNumP.PrepareNumPieceTiers;
+          ValideNumP.DatePiece := 0;
+          if  NewDate > 0 then ValideNumP.DatePiece := NewDate;
+          io:=Transactions(ValideNumP.G_ValideNumPieceTiers,5) ;
+          ValideNumP.Free;
+          end;
+      if io=oeOk then io:=Transactions(GenVal.G_GenereParTiers,0);
+      GenVal.Free ;
+      Msg := TUtilErrorsManagement.GetGenericMessage;
+      Msg := Tools.iif(Msg <> '', Format(' (%s)', [Msg]), '');
+      Case io of
+        oeOk : G_MajEvent ;
+        oeUnknown  : begin
+                       if Not (FromShellOLE) And Not(ContinuOnError) then
+                         MessageAlerte(Format('ATTENTION : La génération ne s''est pas complètement effectuée%s.', [Msg]));
+                       Result:=1 ;
+                       if Not(ContinuOnError) then
+                          Break
+                       else
+                       begin
+                         Inc(NbErr);
+                         io:=oeOk;
+                       end;
+                     end;
+        oeSaisie   : begin
+                       if Not (FromShellOLE) And Not(ContinuOnError) then
+                         MessageAlerte(Format('ATTENTION : Certaines pièces déjà en cours de traitement n''ont pas été enregistrées%s !', [Msg]));
+                       Result:=2 ;
+                       if Not(ContinuOnError) then
+                          Break
+                       else
+                       begin
+                         Inc(NbErr);
+                         io:=oeOk;
+                       end;
+                     end;
+        oeLettrage : begin
+                       if Not (FromShellOLE) And Not(ContinuOnError) then
+                         MessageAlerte(Format('ATTENTION : Certaines pièces ne peuvent pas passer en comptabilité et n''ont pas été enregistrées%s !', [Msg]));
+                       Result:=3 ;
+                       if Not(ContinuOnError) then
+                         Break
+                       else
+                       begin
+                         Inc(NbErr);
+                         io:=oeOk;
+                       end;
+                     end;
+        oeStock    : begin
+                       if Not (FromShellOLE) and Not(ContinuOnError) then
+                         MessageAlerte(Format('ATTENTION : Stock insuffisant pour certaines pièces qui n''ont pas été enregistrées%s !', [Msg]));
+                       Result:=4 ;
+                       if Not(ContinuOnError) then
+                         Break
+                       else
+                       begin
+                         Inc(NbErr);
+                         io:=oeOk;
+                       end;
+                     end;
+         END ;
+      // Modif MODE
+      if (CodeAff <> '') and (io <> oeOk) then
          BEGIN
-         if TOBSource.Detail[i].GetValue('GP_TIERS') <> CodeTiers then Continue;
-         StRendu := StRendu + IntToStr(TOBSource.Detail[i].GetValue('GP_NUMERO'))
-           + '/' + IntToStr(TOBSource.Detail[i].GetValue('GP_INDICEG')) + ' ';
+         StRendu := DateTimeToStr(Now) + ' ERREUR n°' + IntToStr(Ord(io)) + ' Affectation n°' + CodeAff
+                  + ' Tiers n°' + CodeTiers + ' Pièces n°';
+         for i := 0 to TOBSource.Detail.Count - 1 do
+           BEGIN
+           if TOBSource.Detail[i].GetValue('GP_TIERS') <> CodeTiers then Continue;
+           StRendu := StRendu + IntToStr(TOBSource.Detail[i].GetValue('GP_NUMERO'))
+             + '/' + IntToStr(TOBSource.Detail[i].GetValue('GP_INDICEG')) + ' ';
+           END;
+         if V_PGI.TransacErrorMessage <> '' then StRendu := StRendu + ' => ' + V_PGI.TransacErrorMessage;
+         LogAGL(StRendu);
          END;
-       if V_PGI.TransacErrorMessage <> '' then StRendu := StRendu + ' => ' + V_PGI.TransacErrorMessage;
-       LogAGL(StRendu);
-       END;
-    // -----
-  END ;
+      // -----
+    END ;
   
-{Libérations}
-G_FreeLesTOB(AlimListePiece) ;
-zfin := FormatDateTime('ttttt',NowH);
-{Compte rendu}
-if ((AvecCompteRendu) and (PremNum>0) and (io=oeOk)) then
-   BEGIN
-   StRendu:='Le traitement s''est correctement effectué. #13#10'+IntToStr(NbP)+' pièce(s) générée(s) de nature '
-           +RechDom('GCNATUREPIECEG',NewNat,False)+' du N° '+IntToStr(PremNum)+' au N° '+IntToStr(LastNum) ;
-   if VH_GC.GCIfDefCEGID then
-	StRendu := StRendu + '#13#10 Traitement de '+zdeb+' à '+zfin ;
-   if (NbErr<>0) And (ContinuOnError) then  StRendu := StRendu + '#13#10 Nombre de Tiers non traités :' + IntToStr(NbErr);
-   PGIInfo(StRendu,'Compte-rendu de génération') ;
-   END ;
-if ((AlimListePiece) and (PremNum>0) and (io=oeOk)) then
-   BEGIN
-   if TheTob <> Nil then TheTob.Free; TheTob := TOBListePiece;
-   END;
+  {Libérations}
+  G_FreeLesTOB(AlimListePiece) ;
+  zfin := FormatDateTime('ttttt',NowH);
+  {Compte rendu}
+  if ((AvecCompteRendu) and (PremNum>0) and (io=oeOk)) then
+     BEGIN
+     StRendu:='Le traitement s''est correctement effectué. #13#10'+IntToStr(NbP)+' pièce(s) générée(s) de nature '
+             +RechDom('GCNATUREPIECEG',NewNat,False)+' du N° '+IntToStr(PremNum)+' au N° '+IntToStr(LastNum) ;
+     if VH_GC.GCIfDefCEGID then
+    StRendu := StRendu + '#13#10 Traitement de '+zdeb+' à '+zfin ;
+     if (NbErr<>0) And (ContinuOnError) then  StRendu := StRendu + '#13#10 Nombre de Tiers non traités :' + IntToStr(NbErr);
+     PGIInfo(StRendu,'Compte-rendu de génération') ;
+     END ;
+  if ((AlimListePiece) and (PremNum>0) and (io=oeOk)) then
+     BEGIN
+     if TheTob <> Nil then TheTob.Free; TheTob := TOBListePiece;
+     END;
 END ;
 
 {***********A.G.L.***********************************************
@@ -3775,6 +3820,7 @@ var TOBSource             : TOB;
     LesTOBSSTRAIT         : TOB;
     Ok_Reliquat           : Boolean;
     MtLivrable            : Double;
+    Msg                   : string;
 {$ENDIF}
     // --
 
@@ -4222,7 +4268,7 @@ BEGIN
     	     (GenereMode = 'VALIDDECIS') or
            (GenereMode = 'VALIDDECISECLAT')  then
         begin
-          NewTOBP.PutValue('GP_DATELIVRAISON',TOBL.GetValue('GL_DATELIVRAISON'));
+          NewTOBP.PutValue('GP_DATELIVRAISON', TOBL.GetValue('GL_DATELIVRAISON'));
           DatePiece:=NewTOBP.GetValue('GP_DATELIVRAISON');
         end;
         // récupération du mode de livraison --> Suivi dans les pièces suivantes
@@ -4405,7 +4451,7 @@ BEGIN
     begin
       if (iLigne=1) or (DateLigne>DatePiece) then
       Begin
-        NewTOBP.PutValue('GP_DATELIVRAISON',DateLigne) ;
+        NewTOBP.PutValue('GP_DATELIVRAISON', DateLigne) ;
         DatePiece:=DateLigne;
       End;
     end;
@@ -4592,34 +4638,27 @@ BEGIN
 {$ENDIF}
   // --
   io:=Transactions(GenPiece.GenereLesPieces,0) ;
+  Result := (io = oeOk);
+  Msg    := TUtilErrorsManagement.GetGenericMessage;
+  Msg    := Tools.iif(Msg <> '', Format(' (%s)', [Msg]), '');
   Case io of
-     oeOk       : BEGIN
-                  G_MajEvent;
-                  StRendu:='Le traitement s''est correctement effectué. #13#10'+IntToStr(NbP)+' pièce(s) générée(s) de nature '
-                             +RechDom('GCNATUREPIECEG',NewNature,False)+' du N° '+IntToStr(PremNum)+' au N° '+IntToStr(LastNum) ;
-                  if CompteRendu then PGIInfo(StRendu,'Compte-rendu de génération') ;
-                  // Modif BTP
-                  if TOBResult <> nil then
-                  begin
-                    repeat
-                      GenPiece.TOBResult.detail[0].ChangeParent(TOBresult,-1);
-                    until GenPiece.TOBResult.detail.count = 0;
+     oeOk       : begin
+                    G_MajEvent;
+                    StRendu := Format('Le traitement s''est correctement effectué. #13#10 %s pièce(s) générée(s) de nature %s du N° %s au N° %s.'
+                                      , [IntToStr(NbP), RechDom('GCNATUREPIECEG',NewNature,False), IntToStr(PremNum), IntToStr(LastNum)]);
+                    if CompteRendu then
+                      PGIInfo(StRendu,'Compte-rendu de génération') ;
+                    // Modif BTP
+                    if TOBResult <> nil then
+                    begin
+                      repeat
+                        GenPiece.TOBResult.detail[0].ChangeParent(TOBresult,-1);
+                      until GenPiece.TOBResult.detail.count = 0;
+                    end;
                   end;
-                  // --
-                  result:=true;
-                  END ;
-      oeUnknown : BEGIN
-                  MessageAlerte('ATTENTION : La génération ne s''est pas complètement effectuée');
-                  result:=false;
-                  END;
-      oeSaisie  : BEGIN
-                  MessageAlerte('ATTENTION : Certaines pièces déjà en cours de traitement n''ont pas été enregistrées !') ;
-                  result:=false;
-                  END ;
-     oeLettrage : BEGIN
-                  MessageAlerte('ATTENTION : Certaines pièces ne peuvent pas passer en comptabilité et n''ont pas été enregistrées !') ;
-                  result:=false;
-                  END ;
+      oeUnknown : MessageAlerte(Format('ATTENTION : La génération ne s''est pas complètement effectuée%s.', [Msg]));
+      oeSaisie  : MessageAlerte(Format('ATTENTION : Certaines pièces déjà en cours de traitement n''ont pas été enregistrées%s !', [Msg]));
+     oeLettrage : MessageAlerte(Format('ATTENTION : Certaines pièces ne peuvent pas passer en comptabilité et n''ont pas été enregistrées%s !', [Msg]));
      END ;
 
   {Libérations}
@@ -4858,34 +4897,33 @@ BEGIN
     if (NewCodeTiers <> '') or (NewCodeAff <> '') then PieceVersLigne (TOBGenere,NewL);
     if (NewCodeAff <> '')  then AffaireVersLigne (TobGenere,NewL,TobAffNew);
   END ;
-
-//G_GenereLaPiece(TOBPiece,nil,nil);
-G_GenereLaPiece(TOBPiece,nil,TOBPieceTrait);
+  G_GenereLaPiece(TOBPiece,nil,TOBPieceTrait);
 
 END ;
 
 function  AjouteLignesToPiece (TOBLIgnes,ThePiece : TOB; GenereMode:String;WithLiaisonDoc : boolean=false;CompteRendu : boolean=true;TOBResult : TOB=nil) : boolean;
-var io:TIoErr ;
-    stRendu : string;
-    NaturePiece : string;
-    NumPiece : integer;
-    Gestionreliquat : boolean;
-    Remise , Escompte : double;
-    TrierPar,RuptureCol : string;
-    AvecComment,MajPrix,UpdateDev : boolean;
-    Indice,IndiceNomen : integer;
-    TOBL,OLDTOBPiece,TOBAffaire : TOB;
-    QQ : Tquery;
-    cledoc : R_Cledoc;
-    MaxLig,MaxNumOrdre : integer;
-//    IndLig,IndOrdre : integer;
-    Qte       : double;
-    Mt        : Double;
-    DateLigne : TDateTime;
-    XX : TPieceModifie;
-    CodeTiers : string;
-    created : Boolean;
-    ok_ReliquatMt : Boolean;
+var
+  io:TIoErr ;
+  stRendu : string;
+  NaturePiece : string;
+  NumPiece : integer;
+  Gestionreliquat : boolean;
+  Remise , Escompte : double;
+  TrierPar,RuptureCol : string;
+  AvecComment,MajPrix,UpdateDev : boolean;
+  Indice,IndiceNomen : integer;
+  TOBL,OLDTOBPiece,TOBAffaire : TOB;
+  QQ : Tquery;
+  cledoc : R_Cledoc;
+  MaxLig,MaxNumOrdre : integer;
+  Qte       : double;
+  Mt        : Double;
+  DateLigne : TDateTime;
+  XX : TPieceModifie;
+  CodeTiers : string;
+  created : Boolean;
+  ok_ReliquatMt : Boolean;
+  Msg : string;
 
    Function InitMode:Boolean;
    BEGIN
@@ -5130,33 +5168,22 @@ begin
     XX.UpdateDev := UpdateDev;
     XX.WithLiaison := WithLiaisonDoc  ;
     XX.TOBAffaire := TOBAffaire;
-    //
     XX.CompleteLaPiece; // lance le traitement de completion
-    // --
-      Case io of
-        oeOk      : BEGIN
-                    G_MajEvent;
-                    StRendu:='Le traitement s''est correctement effectué. '
-                               +RechDom('GCNATUREPIECEG',NewNature,False)+' N° '+IntToStr(TOBGenere.getValue('GP_NUMERO'))+' complété(e)' ;
-                    if CompteRendu then PGIInfo(StRendu,'Compte-rendu de génération') ;
-                    // --
-                    result:=true;
-                    END ;
-        oeUnknown : BEGIN
-                    MessageAlerte('ATTENTION : La génération ne s''est pas complètement effectuée');
-                    result:=false;
-                    END;
-        oeSaisie  : BEGIN
-                    MessageAlerte('ATTENTION : Certaines pièces déjà en cours de traitement n''ont pas été enregistrées !') ;
-                    result:=false;
-                    END ;
-       oeLettrage : BEGIN
-                    MessageAlerte('ATTENTION : Certaines pièces ne peuvent pas passer en comptabilité et n''ont pas été enregistrées !') ;
-                    result:=false;
-                    END ;
-       END ;
-
-
+    Result := (io = oeOk);
+    Msg    := TUtilErrorsManagement.GetGenericMessage;
+    Msg    := Tools.iif(Msg <> '', Format(' (%s)', [Msg]), '');
+    Case io of
+      oeOk       : begin
+                     G_MajEvent;
+                     StRendu := Format('Le traitement s''est correctement effectué. %s N° %s complété(e).'
+                                       , [RechDom('GCNATUREPIECEG',NewNature,False), IntToStr(TOBGenere.getValue('GP_NUMERO'))]);
+                     if CompteRendu then
+                      PGIInfo(StRendu,'Compte-rendu de génération') ;
+                   end;
+      oeUnknown  : MessageAlerte(Format('ATTENTION : La génération ne s''est pas complètement effectuée%s.', [Msg]));
+      oeSaisie   : MessageAlerte(Format('ATTENTION : Certaines pièces déjà en cours de traitement n''ont pas été enregistrées%s !.', [Msg]));
+      oeLettrage : MessageAlerte(Format('ATTENTION : Certaines pièces ne peuvent pas passer en comptabilité et n''ont pas été enregistrées%s !.', [Msg]));
+    end;
   FINALLY
     if QQ <> nil then Ferme (QQ);
    {Libérations}

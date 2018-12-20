@@ -49,12 +49,17 @@ Const
 
 implementation
 
-Uses FactNomen
-     ,FactureBtp,UtilPgi,saisutil,FactOuvrage,UentCommun
-    ,CbpMCD
-    ,CbpEnumerator
-
-     ;
+Uses
+  FactNomen
+  , FactureBtp
+  , UtilPgi
+  , saisutil
+  , FactOuvrage
+  , UentCommun
+  , CbpMCD
+  , CbpEnumerator
+  , ErrorsManagement
+  ;
 
 Function CalcRatioVA ( QualVTE,QualACH : String ) : double ;
 Var TOBM : TOB ;
@@ -1630,21 +1635,28 @@ Suite ........ : - des lots et tout ce qui est rattaché à TOB_Article
 Mots clefs ... : STOCK DIFFERENTIEL
 *****************************************************************}
 function  ValideArticleEtStock(TOB_Article : TOB; NaturePieceg : string): boolean;
-var NbArt, NbDisp, NbAutre : integer;
-    TOBArt,TOBDisp,TOBDispLot,TOBAutre : TOB;
-    InsertOk : Boolean;
-    lesChamps : string;
-    okok : boolean;
+var
+  NbArt, NbDisp, NbAutre : integer;
+  TOBArt,TOBDisp,TOBDispLot,TOBAutre : TOB;
+  InsertOk : Boolean;
+  lesChamps : string;
+  okok : boolean;
+  ItemCode : string;
 begin
   Result := True;
   lesChamps := GetInfoParPiece(NaturePieceG, 'GPP_MAJPRIXVALO');
-  For NbArt:=0 to TOB_Article.Detail.Count-1 do
+  For NbArt :=0 to TOB_Article.Detail.Count-1 do
   begin
     if Not Result then Break;
+    ItemCode := TOB_Article.GetString('GA_CODEARTICLE');
     //Valide les articles (en général MAJ GA_DPA et GA_PMAP)
     TOBArt := TOB_Article.Detail[NbArt] ;
-    if Not UpdateMaTOB(TOBArt,LesChamps) then begin Result := False; Break; end;
-
+    if Not UpdateMaTOB(TOBArt,LesChamps) then
+    begin
+      TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('Erreur lors de la mise à jour de l''aricle %s.', [ItemCode]));
+      Result := False;
+      Break;
+    end;
     For NbDisp:=0 to TOBArt.Detail.Count-1 do
     begin
       if Not Result then Break;
@@ -1652,46 +1664,53 @@ begin
       InsertOk := False;
       TOBDisp := TOBArt.Detail[NbDisp];
       if TOBDisp.FieldExists('NEW_ENREG') then
-        if TOBDisp.GetValue('NEW_ENREG')='X' then InsertOk := InsertMaTOB(TOBDisp,LesChamps);
+      begin
+        if TOBDisp.GetValue('NEW_ENREG')='X' then
+          InsertOk := InsertMaTOB(TOBDisp,LesChamps);
+      end;
       if Not InsertOk then
       begin
         okok := false;
-        TRY
+        try
           okok := UpdateMaTOB(TOBDisp,LesChamps);
-        EXCEPT
+        except
           on E: Exception do
-          begin
             PgiError('Erreur SQL : ' + E.Message, 'Mise à jour Article/Stock');
+        end;
+        if Not okok then
+        begin
+          TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('Erreur lors de la mise à jour des stock de l''article %s.', [ItemCode]));
+          Result := False;
+          Break;
+        end;
       end;
-        END;
-        if Not okok then begin Result := False; Break; end;
-      end;
-
       For NbAutre:=0 to TOBDisp.Detail.Count-1 do
       begin
-        //Valide les lots ou tout ce qui peut-être attaché à TOBDispo.
-        //if Not TOBDisp.Detail[NbAutre].InsertOrUpdateDB(False) then
-        //begin Result := False; Break; end;
-
         InsertOk := False;
         TOBDispLot := TOBDisp.Detail[NbAutre];
         if TOBDispLot.FieldExists('NEW_ENREG') then
-          if TOBDispLot.GetValue('NEW_ENREG')='X' then InsertOk := InsertMaTOB(TOBDispLot,LesChamps);
+        begin
+          if TOBDispLot.GetValue('NEW_ENREG')='X' then
+            InsertOk := InsertMaTOB(TOBDispLot,LesChamps);
+        end;
         if Not InsertOk then
         begin
           okok := false;
-          TRY
+          try
             okok := UpdateMaTOB(TOBDispLot,LesChamps)
-          EXCEPT
+          except
             on E: Exception do
-            begin
               PgiError('Erreur SQL : ' + E.Message, 'Mise à jour Article/Stock');
+          end;
+          if Not okok then
+          begin
+            TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('Erreur lors de la mise à jour des stock de l''article %s.', [ItemCode]));
+            Result := False;
+            Break;
+          end;
         end;
-          END;
-          if Not okok then begin Result := False; Break; end;
       end;
     end;
-  end;
   end;
 end;
 

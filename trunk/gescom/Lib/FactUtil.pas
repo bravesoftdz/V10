@@ -251,6 +251,7 @@ function IsParagrapheStd (TOBL : TOB ; niveau : integer) : boolean; overload;
 function IsSousTotal (TOBL : TOB) : boolean;
 function IsSousDetail (TOBL : TOB) : boolean;
 function IsLignefacture (TOBL : TOB) : boolean;
+Function OKLigneMetre (TOBO, TobMetres : TOB) : Boolean;
 //
 {$IFDEF BTP}
 procedure ReactualisePr (TOBA : TOB);
@@ -304,7 +305,9 @@ uses FactComm, FactSpec, Facture, TiersUtil, FactCpta, NomenUtil, FactNomen, Dep
   wCommuns,
   Ucotraitance,
   PiecesRecalculs,
-  FactRetenues ;
+  FactRetenues
+  , ErrorsManagement
+  ;
 
 
 function IsLigneFromCentralis ( TOBL : TOB) : boolean;
@@ -2161,9 +2164,9 @@ begin
   *)
   PuNet := TOBLig.GetValue('GL_MONTANTHT');
   if VH_GC.GCMargeArticle = 'PMA' then PxValo := TOBLig.GetValue('GL_PMAP') else
-    if VH_GC.GCMargeArticle = 'PMR' then PxValo := TOBLig.GetValue('GL_PMRP') else
-    if VH_GC.GCMargeArticle = 'DPA' then PxValo := TOBLig.GetValue('GL_DPA') else
-    if VH_GC.GCMargeArticle = 'DPR' then PxValo := TOBLig.GetValue('GL_DPR') else PxValo := 0;
+  if VH_GC.GCMargeArticle = 'PMR' then PxValo := TOBLig.GetValue('GL_PMRP') else
+  if VH_GC.GCMargeArticle = 'DPA' then PxValo := TOBLig.GetValue('GL_DPA') else
+  if VH_GC.GCMargeArticle = 'DPR' then PxValo := TOBLig.GetValue('GL_DPR') else PxValo := 0;
   // C'est nouveau on calcule la marge incluant la tva trop drole..
   (*
   if TOBP.GetValue('GP_FACTUREHT') = 'X' then EntPuNet := TOBP.GetValue('GP_TOTALHT')
@@ -2171,9 +2174,9 @@ begin
   *)
   EntPuNet := TOBP.GetValue('GP_TOTALHT');
   if VH_GC.GCMargeArticle = 'PMA' then EntPxValo := TOBP.GetValue('GP_MONTANTPA') else
-    if VH_GC.GCMargeArticle = 'PMR' then EntPxValo := TOBP.GetValue('GP_MONTANTPR') else
-    if VH_GC.GCMargeArticle = 'DPA' then EntPxValo := TOBP.GetValue('GP_MONTANTPA') else
-    if VH_GC.GCMargeArticle = 'DPR' then EntPxValo := TOBP.GetValue('GP_MONTANTPR') else EntPxValo := 0;
+  if VH_GC.GCMargeArticle = 'PMR' then EntPxValo := TOBP.GetValue('GP_MONTANTPR') else
+  if VH_GC.GCMargeArticle = 'DPA' then EntPxValo := TOBP.GetValue('GP_MONTANTPA') else
+  if VH_GC.GCMargeArticle = 'DPR' then EntPxValo := TOBP.GetValue('GP_MONTANTPR') else EntPxValo := 0;
 
   // VARIANTE
   (* if copy(TOBLIG.GetValue('GL_TYPELIGNE'), 1, 2) <> 'TP' then *)
@@ -2219,7 +2222,7 @@ begin
             end;
           end;
       end else
-        if Champ = 'STOCNET' then
+      if Champ = 'STOCNET' then
       begin
         if TOBLig.GetValue('GL_TYPEDIM') = 'GEN' then StChamp := MontreIStockGen(TOBArt, TOBLig, Champ)
         else StChamp := MontreIStock(TOBArt, TOBLig, Champ);
@@ -2228,7 +2231,7 @@ begin
         Info.Cells[0, Num - 1] := Lib;
         Info.Cells[1, Num - 1] := StChamp;
       end else
-        if Champ = 'CLTAFF' then //mcd 27/05/03 AFFAIRE
+      if Champ = 'CLTAFF' then //mcd 27/05/03 AFFAIRE
       begin
         QQ := OPENSQL('SELECT T_LIBELLE From TIERS WHERE T_TIERS= (SELECT AFF_TIERS FROM AFFAIRE WHERE AFF_AFFAIRE="'
           + TOBLig.GetValue('GL_AFFAIRE') + '")', True,-1, '', True);
@@ -2240,8 +2243,8 @@ begin
         Info.Cells[1, Num - 1] := StChamp;
         Ferme(QQ);
       end else
-        // Modif BTP
-        if Champ = 'TPS_CUMUL' then
+      // Modif BTP
+      if Champ = 'TPS_CUMUL' then
       begin
         if TpsCumule <> 0 then stChamp := StrF00(TpsCUmule, 3) + ' H'
         else stchamp := StrF00(0, 3);
@@ -2251,8 +2254,8 @@ begin
         Info.Cells[0, Num - 1] := Lib;
         Info.Cells[1, Num - 1] := StChamp;
       end else
-        // Modif BTP
-        if Champ = 'MARGE_POU' then
+      // Modif BTP
+      if Champ = 'MARGE_POU' then
       begin
         if GestionMarq then
         begin
@@ -2272,7 +2275,7 @@ begin
         Info.Cells[0, Num - 1] := Lib;
         Info.Cells[1, Num - 1] := StChamp;
       end else
-        if Champ = 'MARGE_MONT' then
+      if Champ = 'MARGE_MONT' then
       begin
         MtMarge := (PuNet - PxValo);
         stChamp := STrF00(MtMarge, V_PGI.OkDecV);
@@ -2281,7 +2284,7 @@ begin
         Info.Cells[0, Num - 1] := Lib;
         Info.Cells[1, Num - 1] := StChamp;
       end else
-        if Champ = 'MARGE_COEF' then
+      if Champ = 'MARGE_COEF' then
       begin
         if Pxvalo <> 0 then stChamp := StrF00(arrondi((PuNet / Pxvalo), 4), 4)
         else stchamp := StrF00(0, 4);
@@ -2290,7 +2293,7 @@ begin
         Info.Cells[0, Num - 1] := Lib;
         Info.Cells[1, Num - 1] := StChamp;
       end else
-        if Champ = 'ENTMARGE_POU' then
+      if Champ = 'ENTMARGE_POU' then
       begin
         if EntPuNet <> 0 then stChamp := StrF00(arrondi(((EntPuNet - EntPxValo) / EntPuNet) * 100, 2), V_PGI.OkDecV)
         else stchamp := StrF00(0, V_PGI.OkDecV);
@@ -2300,7 +2303,7 @@ begin
         Info.Cells[0, Num - 1] := Lib;
         Info.Cells[1, Num - 1] := StChamp;
       end else
-        if Champ = 'ENTMARGE_MONT' then
+      if Champ = 'ENTMARGE_MONT' then
       begin
         MtMarge := (EntPuNet - EntPxValo);
         stChamp := STrF00(MtMarge, V_PGI.OkDecV);
@@ -2309,7 +2312,7 @@ begin
         Info.Cells[0, Num - 1] := Lib;
         Info.Cells[1, Num - 1] := StChamp;
       end else
-        if Champ = 'ENTMARGE_COEF' then
+      if Champ = 'ENTMARGE_COEF' then
       begin
         if EntPxvalo <> 0 then stChamp := StrF00(arrondi((EntPuNet / EntPxvalo), 2), V_PGI.OkDecQ)
         else stchamp := StrF00(0, V_PGI.OkDecQ);
@@ -2318,7 +2321,7 @@ begin
         Info.Cells[0, Num - 1] := Lib;
         Info.Cells[1, Num - 1] := StChamp;
       end else
-        if Champ = 'MARGEPV_POU' then
+      if Champ = 'MARGEPV_POU' then
       begin
         if PuNet <> 0 then stChamp := StrF00(arrondi(((PuNet - PxValo) / PuNet) * 100, 2), V_PGI.OkDecV)
         else stchamp := StrF00(0, V_PGI.OkDecV);
@@ -2968,8 +2971,10 @@ begin
       end;
 
     TOBL.PutValue('GL_LIBELLE',  LibA);
-    TOBL.PutValue('GL_BLOCNOTE', TOBA.GetValue('GA_BLOCNOTE'));
 
+    //FV1 - 20/11/2018 : FS#3366 - DURAND SAS - Le descriptif article est chargé à tort dans les documents d'achat
+    //TOBL.PutValue('GL_BLOCNOTE', TOBA.GetValue('GA_BLOCNOTE'));
+    //FIN - 20/*11/2018 : FS#3366 - DURAND SAS - Le descriptif article est chargé à tort dans les documents d'achat
     //
     TOBL.putValue('BNP_TYPERESSOURCE',TOBA.GetValue('BNP_TYPERESSOURCE'));
     //
@@ -3373,27 +3378,31 @@ var TOBA: TOB;
   Nam: string;
 begin
   TOBG := TOB.Create('', nil, -1);
-  for i := 0 to TOBArticles.Detail.Count - 1 do
-  begin
-    TOBA := TOBArticles.Detail[i];
-    if TOBA.FieldExists('DPANEW') then
+  try
+    for i := 0 to TOBArticles.Detail.Count - 1 do
     begin
-      OldDP := TOBA.GetValue('GCA_DPA');
-      NewDP := TOBA.GetValue('DPANEW');
-      if Arrondi(OldDP - NewDP, V_PGI.OkDecV) <> 0 then
+      TOBA := TOBArticles.Detail[i];
+      if TOBA.FieldExists('DPANEW') then
       begin
-        TOBC := TOB.Create('CATALOGU', TOBG, -1);
-        for j := 1 to TOBC.NbChamps do
+        OldDP := TOBA.GetValue('GCA_DPA');
+        NewDP := TOBA.GetValue('DPANEW');
+        if Arrondi(OldDP - NewDP, V_PGI.OkDecV) <> 0 then
         begin
-          Nam := TOBC.GetNomChamp(j);
-          if TOBA.FieldExists(Nam) then TOBC.PutValue(Nam, TOBA.GetValue(Nam));
+          TOBC := TOB.Create('CATALOGU', TOBG, -1);
+          for j := 1 to TOBC.NbChamps do
+          begin
+            Nam := TOBC.GetNomChamp(j);
+            if TOBA.FieldExists(Nam) then TOBC.PutValue(Nam, TOBA.GetValue(Nam));
+          end;
+          TOBC.PutValue('GCA_DPA', NewDP);
         end;
-        TOBC.PutValue('GCA_DPA', NewDP);
       end;
     end;
+    if TOBG.Detail.Count > 0 then
+      TOBG.UpdateDB;
+  finally
+    TOBG.Free;
   end;
-  if TOBG.Detail.Count > 0 then TOBG.UpdateDB;
-  TOBG.Free;
 end;
 
 function ConvertSaisieEF(XSais: Double; ModeOppose: boolean): Double;
@@ -3745,7 +3754,6 @@ begin
       TOBACC := TOBAcomptes.Detail[i];
       TOBACC.PutValue('GAC_PIECEPRECEDENTE', EncoderefPiece (TOBACC));
     end;
-//    
     TOBRACC := TOB.Create('LESACOMPTES', nil, -1);
     for i := 0 to TOBAcomptes_O.detail.count - 1 do
     begin
@@ -3783,6 +3791,7 @@ begin
       if not okok then
       begin
         V_PGI.IoError := oeUnknown;
+        TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateACOMPTES);
         Exit;
       end;
     end;
@@ -3821,6 +3830,7 @@ begin
   END;
   if not okok then
   begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateACOMPTES);
     V_PGI.IoError := oeUnknown;
   end;
 end;
@@ -3991,6 +4001,7 @@ var Q       : Tquery;
     IndiceRg,NumSituation: integer;
     TOBL, TOBB,TOBCautionsfac,TOBFacture: TOB;
     CautionU,CautionUdev,CautionApres,CautionApresDev : double;
+    CautionAU,CautionAUdev : double;
     isAvanc : boolean;
     CleDoc  : R_cledoc;
 begin
@@ -4012,6 +4023,8 @@ begin
 	  TOBPIeceRG.detail[i].addchampsupValeur('INDICERG', 0);
     TOBPieceRg.detail[i].addchampsupValeur('PIECEPRECEDENTE', '');
     TOBPieceRg.detail[i].AddChampSupValeur ('NUMORDRE',0);
+    TOBPieceRg.detail[i].AddChampSupValeur ('CAUTIONAVANT',0);
+    TOBPieceRg.detail[i].AddChampSupValeur ('CAUTIONAVANTDEV',0);
     TOBPieceRg.detail[i].AddChampSupValeur ('CAUTIONUTIL',0);
     TOBPieceRg.detail[i].AddChampSupValeur ('CAUTIONUTILDEV',0);
     TOBPieceRg.detail[i].AddChampSupValeur ('CAUTIONAPRES',0);
@@ -4061,10 +4074,12 @@ begin
         begin
           if (TOBPiece.getString('GP_NATUREPIECEG')<>'DBT') then
           begin
-            GetCautionAlreadyUsed (TOBPiece,TOBL,TOBL.GEtValue('GL_PIECEPRECEDENTE'),CautionU,CautionUdev,TOBB.getString('PRG_FOURN'));
+            GetCautionAlreadyUsed (TOBPiece,TOBL,TOBL.GEtValue('GL_PIECEPRECEDENTE'),CautionAU,CautionAUdev,CautionU,CautionUdev,TOBB.getString('PRG_FOURN'));
             TOBB.AddChampSupValeur ('NUMORDRE',TOBL.GEtValue('GL_NUMORDRE'));
             TOBB.SetDouble ('CAUTIONUTIL',CautionU);
             TOBB.SetDouble ('CAUTIONUTILDEV',CautionUDev);
+            TOBB.SetDouble ('CAUTIONAVANT',CautionAU);
+            TOBB.SetDouble ('CAUTIONAVANTDEV',CautionAUDev);
           end;
         end;
   	    TOBB := TOBPIeceRG.findnext(['PRG_NUMLIGNE'], [TOBL.GetValue('GL_NUMORDRE')], true);
@@ -4146,6 +4161,7 @@ begin
   END;
   if not okok then
   begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_UpdatePIECERG);
     V_PGI.IoError := oeUnknown;
   end;
 end;
@@ -4179,10 +4195,18 @@ begin
       TOBB.PutValue('PBR_NUMERO', Numero);
       TOBB.PutValue('PBR_INDICEG', Indice);
       TOBB.Putvalue('PBR_NUMLIGNE', TOBL.getValue('GL_NUMORDRE'));
-      if not TOBB.InsertDB(nil) then V_PGI.IoError := oeUnknown;
+      if not TOBB.InsertDB(nil) then
+      begin
+        TUtilErrorsManagement.SetGenericMessage(TemErr_UpdatePIEDBASERG);
+        V_PGI.IoError := oeUnknown;
+        break;
+      end;
       TOBB := TOBBasesRG.findnext(['INDICERG'], [IndiceRg], true);
     end;
-    TOBL := TOBPiece.findNext(['GL_TYPELIGNE'], ['RG'], true);
+    if V_PGI.ioError = oeOk then
+      TOBL := TOBPiece.findNext(['GL_TYPELIGNE'], ['RG'], true)
+    else
+      break;
   end;
 end;
 // -----
@@ -5156,6 +5180,47 @@ begin
     Nature := TOBL.getValue('BLO_NATUREPIECEG');
   end;
   result := (Valeur <> 0) and (Nature='DBT');
+end;
+
+Function OKLigneMetre (TOBO, TobMetres : TOB) : Boolean;
+Var TOBM        : TOB;
+    Prefixe     : string;
+    IndiceNomen : Integer;
+begin
+
+  Result := False;
+
+  if TOBMetres = nil then Exit;
+  //
+  Prefixe := GetPrefixeTable(TOBO);
+  //
+  if Prefixe = 'GL' then
+  begin
+    if TOBO.GetString('GL_TYPELIGNE')='SD' then
+    begin
+      TOBM := TOBmetres.FindFirst(['UNIQUEBLO'],[TOBO.GetValue('UNIQUEBLO')],true);
+    end else
+    begin
+      TOBM := TOBmetres.FindFirst(['NUMORDRE'],[TOBO.GetValue('GL_NUMORDRE')],true);
+    end;
+  end else
+  begin
+    TOBM := TOBmetres.FindFirst(['UNIQUEBLO'],[TOBO.GetValue('BLO_UNIQUEBLO')],true);
+  end;
+  //
+  if TOBM = Nil then Exit;
+  //
+  If PGIAsk('Confirmez-vous la suppression du fichier métré associé ?', 'Gestion des métrés Simples') = MrNO then
+  Begin
+    Result := True;
+    Exit;
+  end;
+
+  //Suppression de l'enregistrement dans la tob....
+  TOBM.ClearDetail;
+
+  FreeAndNil(TOBM);
+
 end;
 
 function IsReferenceLivr (TOBL : TOB) : boolean;

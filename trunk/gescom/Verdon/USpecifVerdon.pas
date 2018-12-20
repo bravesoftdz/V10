@@ -1,6 +1,7 @@
 unit USpecifVerdon;
 
 interface
+
 uses
   Classes,
   SysUtils,
@@ -46,10 +47,13 @@ procedure LibereDestinatairesVerdon;
 
 implementation
 
-uses Facture,
-     FactTOB,
-     UtilsMail
-     ;
+uses
+  Facture
+  , FactTOB
+  , UtilsMail
+  , ErrorsManagement
+  ;
+  
 procedure LibereDestinatairesVerdon;
 begin
   TOBDestVERDON.free;
@@ -148,7 +152,8 @@ begin
   TOBAFFaire.PutValue ('AFF_LIBELLE',XX.TDESCAFFAIRE.Text);
   if not TOBAFFaire.InsertDB(nil) then
   begin
-    V_PGI.IOError := oeUnknown; 
+    V_PGI.IOError := oeUnknown;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_CreafAFFFromDBT);
   end;
   //
   if V_PGI.IOError = OeOK then

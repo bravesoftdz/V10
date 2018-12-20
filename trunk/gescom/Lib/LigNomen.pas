@@ -652,7 +652,9 @@ begin
 
   result := false;
 
-  if TobNomen.Detail.Count <= 0 then exit;
+  // FV1 - 07/11/2018 : FS#3349 - GROUPE LB - Message d'erreur pour accéder à la valorisation de l'article via CTRL+O
+  if (TobNomen = nil) or (TobNomen.Detail.Count <= 0) then exit;
+  // FV1 - 07/11/2018 : FS#3349 - GROUPE LB - Message d'erreur pour accéder à la valorisation de l'article via CTRL+O
 
   if not Emploi then
     CasEmploi_Open      := False
@@ -1666,22 +1668,31 @@ begin
     OldQte := TOB(G_NLIG.Objects[SGN_NumLig, ARow]).GetDouble('BLO_QTEFACT');
     if NewQte <> OldQte then
     begin
-  //Si on modifie la quantité à la main (en principe) on demande si l'on désire supprimer le fichier XLS associé...
-    if TheMetreShare.AutorisationMetre(TOBPIece.GetValue('GP_NATUREPIECEG')) then
-    begin
-      if (not ISFromExcel(TOB(G_NLIG.Objects[SGN_NumLig, ARow]))) then
+    //
+    // Modified by f.vautrain 06/12/2018 16:20:02 :
+    //
+      If OkLigneMetre(TOB(G_NLIG.Objects[SGN_NumLig, ARow]), TOBmetres) then
       begin
-        if not (TheMetreShare.QteModifie(TOB(G_NLIG.Objects[SGN_NumLig, ARow]),TOBLigPiece.getValue('GL_NUMORDRE'),OldQte,NewQte,True)) then
-        begin
-            G_NLIG.Cells[SGN_QTE,ARow] := Strf00(oldqte,V_PGI.OkdecQ);
-          TOBLig.detail[Arow -1].PutValue('GL_QTEFACT', Valeur(G_NLIG.Cells[SGN_QTE,ARow]));
-        end;
-      end
-      else
-      begin
-        G_NLIG.Cells[SGN_QTE,ARow] := FloatToStr(NewQte);
+        G_NLIG.Cells[SGN_QTE,ARow] := Strf00(oldqte,V_PGI.OkdecQ);
+        TOBLig.detail[Arow -1].PutValue('GL_QTEFACT', Valeur(G_NLIG.Cells[SGN_QTE,ARow]));
       end;
-    end;
+      //
+      //Si on modifie la quantité à la main (en principe) on demande si l'on désire supprimer le fichier XLS associé...
+      if TheMetreShare.AutorisationMetre(TOBPIece.GetValue('GP_NATUREPIECEG')) then
+      begin
+        if (not ISFromExcel(TOB(G_NLIG.Objects[SGN_NumLig, ARow]))) then
+        begin
+          if not (TheMetreShare.QteModifie(TOB(G_NLIG.Objects[SGN_NumLig, ARow]),TOBLigPiece.getValue('GL_NUMORDRE'),OldQte,NewQte,True)) then
+          begin
+            G_NLIG.Cells[SGN_QTE,ARow] := Strf00(oldqte,V_PGI.OkdecQ);
+            TOBLig.detail[Arow -1].PutValue('GL_QTEFACT', Valeur(G_NLIG.Cells[SGN_QTE,ARow]));
+          end;
+        end
+        else
+        begin
+          G_NLIG.Cells[SGN_QTE,ARow] := FloatToStr(NewQte);
+        end;
+      end;
     end;
   //if not TheMetreShare.QteModifie (TOB(G_NLIG.Objects[SGN_NumLig, ARow])) then
   //BEGIN
@@ -5410,16 +5421,10 @@ Var TobLigne : TOB;
     SauveQte : Double;
 Begin
 
-  Result := Tobl.GetValue('BLO_QTEFACT');
+  If TOBL = nil then exit;
 
-  SauveQte := Tobl.GetValue('BLO_QTEFACT');
-
-  if IsExcelLaunched then
-  Begin
-    PGIBox ('Vous devez fermer préalablement les instances d''EXCEL', 'Gestion des métrés');
-    Result := SauveQte;
-    Exit;
-  end;
+  Result      := TOBL.GetDouble('BLO_QTEFACT');
+  SauveQte    := Result;
 
   If TheMetreShare <> nil then   // restitution du contexte en retour ---
   begin
@@ -5429,26 +5434,34 @@ Begin
     begin
       if TheMetreShare.OkExcel then
       begin
-      //**** Nouvelle Version *****
-        self.Enabled := False;
-        Result := TheMetreShare.GereMetreXLS(TobPiece, TOBL, TOBLig, TOBLigPiece, OkClick);    //Piece/Lignes/Ouvrages     
-        self.Enabled := True;
-    end
-    else
+        //**** Nouvelle Version *****
+        //self.Enabled := False;
+        Result := TheMetreShare.GereMetreXLS(TobPiece, TOBL, TOBLig, TOBLigPiece, OkClick);    //Piece/Lignes/Ouvrages
+        //self.Enabled := True;
+      end
+      else
       begin
         if OkClick then
         begin
-          self.Enabled := False;
-    result := GereMetre (TOBL,TOBMetres,Action,'BLO');
-          self.Enabled := True;
+          //self.Enabled := False;
+          result := GereMetre (TOBL,TOBMetres,Action,'BLO');
+          //self.Enabled := True;
         end;
       end;
     end;
   end;
 
-  if (SauveQte <> 0) and ((Result = 0) OR (Result = 1)) then Result := SauveQte;
+  if (SauveQte <> 0) and ((Result = 0) OR (Result = 1)) then
+    Result := SauveQte
+  else
+    Result := Arrondi(Result,V_PGI.OkDecQ);
+
+  TOBL.putValue('GL_QTEFACT',  FloatToStr(Result));
+  TOBL.putValue('GL_QTESTOCK', FloatToStr(Result));
+  TOBL.putValue('GL_QTERESTE', FloatToStr(Result));
 
 end;
+
 
 procedure TFLigNomen.VariablesDocumentClick(Sender: TObject);
 Var TypeVarDoc : String;

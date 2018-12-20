@@ -625,6 +625,18 @@ begin
 end;
 
 function TGenFacAvanc.GenereLaFacture: boolean;
+
+  procedure SupprimeLesRg(TOBPIECE : TOB);
+  var II : Integer;
+  begin
+    for II := TOBPiece.detail.count -1 downto 0 do
+    begin
+      if TOBPiece.detail[II].GetString('GL_TYPELIGNE') <> 'RG' then continue;
+      TOBPiece.detail[II].Free;
+      break;
+    end;
+  end;
+
 var XX : TFsplashScreen;
 		ecart : boolean;
     MtPaiement,XP,XD,TheMontantRGTTC,TOTALRETENUHT,TOTALRETENUTTC,TheMontantTimbres : double;
@@ -673,6 +685,12 @@ begin
           end;
         end;
         // application de la retenue de garantie en provenance d ela fiche affaire
+        if TOBPIECERG.detail.count > 0 then
+        begin
+          PGIError('ARRET DE GENERATION : Une RG à été positionnée dans le devis.#13#13 Merci de la supprimer avant de relancer le traitement');
+          Result := false;
+          Exit;
+        end;
         AppliqueRGPOC (TOBfacture,TOBAffaire,TOBPorcs,TOBTiers,TOBPIECERG,DEV,NumSituation);
         RecalculeRG(TOBPorcs,TOBFacture, TOBPieceRG, TOBBases, TOBBasesRG,TOBpieceTrait, DEV);
         // ----
@@ -910,6 +928,7 @@ Var Q : TQuery ;
     i  : integer ;
     TOBDocP,TOBInsere,TOBPiece : TOB ;
     CautionU,CautionUdev : double;
+    CautionAU,CautionAUdev : double;
 BEGIN
   if TOBL.getValue('GL_TYPELIGNE')<>'RG' then exit;
   TOBPiece := TOBL.Parent;
@@ -929,9 +948,11 @@ BEGIN
     TOBInsere.putValue('PRG_CAUTIONMTUDEV',0);
     //
     CautionU :=0; CautionUdev := 0;
-    GetCautionAlreadyUsed (TOBPiece,TOBL,TOBL.GEtValue('GL_PIECEPRECEDENTE'),CautionU,CautionUdev,TOBInsere.getString('PRG_FOURN'),true);
+    GetCautionAlreadyUsed (TOBPiece,TOBL,TOBL.GEtValue('GL_PIECEPRECEDENTE'),CautionAU,CautionAUdev,CautionU,CautionUdev,TOBInsere.getString('PRG_FOURN'),true);
     TOBInsere.AddChampSupValeur ('CAUTIONUTIL',CautionU);
     TOBInsere.AddChampSupValeur ('CAUTIONUTILDEV',CautionUDev);
+    TOBInsere.AddChampSupValeur ('CAUTIONAVANT',CautionAU);
+    TOBInsere.AddChampSupValeur ('CAUTIONAVANTDEV',CautionAUDev);
     TOBInsere.AddChampSupValeur ('CAUTIONAPRES',0);
     TOBInsere.AddChampSupValeur ('CAUTIONAPRESDEV',0);
     //
@@ -1399,7 +1420,7 @@ Procedure TGenFacAvanc.GenereCompta ;
 Var OldEcr,OldStk : RMVT ;
 BEGIN
   FillChar(OldEcr,Sizeof(OldEcr),#0) ; FillChar(OldStk,Sizeof(OldStk),#0) ;
-  if Not PassationComptable(TOBFacture,TOBOuvrage ,TOBOuvragesP,TOBBases,TOBBasesL,TOBEches,TOBPieceTrait,TOBAffaireInterv,TOBTiers,TOBArticles,TOBCpta,TOBAcomptes,TOBPorcs,TOBPIECERG,TOBBasesRG,TOBAnaP,TOBAnaS,TOBSousTrait,TOBVTECOLL,DEV,OldEcr,OldStk,false)
+  if Not PassationComptable(TOBFacture,TOBOuvrage ,TOBOuvragesP,TOBBases,TOBBasesL,TOBEches,TOBPieceTrait,TOBAffaireInterv,TOBTiers,TOBArticles,TOBCpta,TOBAcomptes,TOBPorcs,TOBPIECERG,TOBBasesRG,TOBAnaP,TOBAnaS,TOBSousTrait,TOBVTECOLL,nil,DEV,OldEcr,OldStk,false)
      then V_PGI.IoError:=oeLettrage ;
 END ;
 

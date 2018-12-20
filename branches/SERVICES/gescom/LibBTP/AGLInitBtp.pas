@@ -516,6 +516,23 @@ begin
       Mess:=TexteMessage[1];
     end;
   end;
+
+  //FV1 - 11/10/2018 - FS#3261 - Euro Energie - Si aucun devis sélectionner mettre un message au moment de la validation
+  if TFMul(F).Fliste.nbSelected = 0 then
+  begin
+    if Parms[2] = VH_GC.AFNatProposition then
+    begin
+      PGIError('Aucune Etude sélectionnée', 'Erreur de Sélection');
+    end
+    else
+    begin
+      PGIError('Aucun devis sélectionné', 'Erreur de Sélection');
+    end;
+    Exit;
+  end;
+  //Fin FV1 - 11/10/2018 - FS#3261
+
+
   if (PGIAskAF (Mess, F.Caption)<>mrYes) then exit;
   SourisSablier;
 
@@ -1122,6 +1139,15 @@ begin
   F:=TForm(Longint(Parms[0]));
 
   if (TFMul(F).FListe=nil) then exit;
+
+  //FV1 - 11/10/2018 - FS#3261 - Euro Energie - Si aucun devis sélectionner mettre un message au moment de la validation
+  if TFMul(F).Fliste.nbSelected = 0 then
+  begin
+    PGIError('Aucun Appel d''offre de sélectionné', 'Erreur de Sélection');
+    Exit;
+  end;
+  //Fin FV1 - 11/10/2018 - FS#3261
+
   if (PGIAskAF (TexteMessage[7], F.Caption)<>mrYes) then exit;
 
   SourisSablier;

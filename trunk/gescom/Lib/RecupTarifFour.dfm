@@ -216,6 +216,7 @@ inherited FRecupTarifFour: TFRecupTarifFour
           Font.Style = []
           ParentFont = False
           TabOrder = 1
+          OnClick = CBCreationArticleClick
         end
         object chkFamSsFam: TCheckBox
           Left = 10
@@ -385,7 +386,7 @@ inherited FRecupTarifFour: TFRecupTarifFour
           Top = 21
           Width = 85
           Height = 21
-          ItemHeight = 0
+          ItemHeight = 13
           TabOrder = 0
           OnChange = HChamp1Change
           TagDispatch = 0
@@ -435,7 +436,7 @@ inherited FRecupTarifFour: TFRecupTarifFour
           Top = 20
           Width = 85
           Height = 21
-          ItemHeight = 0
+          ItemHeight = 13
           TabOrder = 0
           OnChange = HChamp2Change
           TagDispatch = 0
@@ -485,7 +486,7 @@ inherited FRecupTarifFour: TFRecupTarifFour
           Top = 20
           Width = 85
           Height = 21
-          ItemHeight = 0
+          ItemHeight = 13
           TabOrder = 0
           OnChange = HChamp3Change
           TagDispatch = 0

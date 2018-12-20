@@ -97,6 +97,8 @@ type
     procedure ConstitueTableTiersBTP;
     procedure CreateRealTable(NomTable: string);
     procedure InitChampsUniqueBAST;
+    procedure DropProcedure(Nom: string);
+    procedure CreateProcedurePOC;
 
   public
     property CodeStatus : integer read fCodeStatus write SetCodeStatus;
@@ -2531,6 +2533,16 @@ begin
   //
 end;
 
+procedure TMajStructBTP.DropProcedure (Nom : string);
+var SQL : string;
+begin
+  SQL := 'SELECT 1 FROM [DBO].sysobjects where name ="'+Nom+'"';
+  if ExisteSQL(SQL) then
+  begin
+    ExecuteSQL('DROP PROCEDURE DBO.'+Nom);
+  end;
+end;
+
 
 
 procedure TMajStructBTP.DropFunction(NomF:String);
@@ -2546,6 +2558,58 @@ begin
     ExecuteSql('DROP FUNCTION DBO.'+NomF);
   end;
 end;
+
+procedure TMajStructBTP.CreateProcedurePOC;
+var SQL : string;
+begin
+  SQL := 'CREATE PROCEDURE [dbo].[POC_UPDATECPTA] '+
+         '( '+
+         '@IDZEDOC as int '+
+         ') '+
+         'AS '+
+         'BEGIN '+
+         'IF @IDZEDOC IS NULL '+
+         'BEGIN '+
+         '   PRINT "ERROR: Vous devez passer le ID BSV." '+
+         '   RETURN '+
+         'END '+
+         'DECLARE @piece varchar(255) '+
+         'DECLARE @ECRCPTA varchar (255) '+
+         'SELECT @ECRCPTA = (SELECT GP_REFCOMPTABLE FROM PIECE WHERE GP_BSVREF= @IDZEDOC) '+
+         'if @ECRCPTA is not null '+
+         'BEGIN '+
+         'UPDATE ECRITURE SET E_LIBREBOOL1="X" WHERE E_TYPEMVT="TTC" AND E_ECHE="X" AND E_JOURNAL=DBO.READTOKEN(@ECRCPTA,1,";") AND '+
+         'E_NUMEROPIECE=DBO.READTOKEN(@ECRCPTA,3,";") AND E_QUALIFPIECE=DBO.READTOKEN(@ECRCPTA,4,";") '+
+         'AND E_NATUREPIECE=DBO.READTOKEN(@ECRCPTA,5,";") '+
+         'END '+
+         'END';
+  ExecuteSQL(Sql);
+  //
+  SQL := 'CREATE PROCEDURE [dbo].[POC_CONTROLECPTA] '+
+         '( '+
+         '@IDZEDOC as int '+
+         ') '+
+         'AS '+
+         'BEGIN '+
+         'IF @IDZEDOC IS NULL '+
+         'BEGIN '+
+         '   PRINT "ERROR: Vous devez passer le ID BSV." '+
+         '   RETURN '+
+         'END '+
+         'DECLARE @piece varchar(255) '+
+         'DECLARE @ECRCPTA varchar (255) '+
+         'SELECT @ECRCPTA = (SELECT GP_REFCOMPTABLE FROM PIECE WHERE GP_BSVREF= @IDZEDOC) '+
+         'if @ECRCPTA is not null '+
+         'BEGIN '+
+         'SELECT E_LIBREBOOL1,* FROM ECRITURE WHERE E_TYPEMVT="TTC" AND E_ECHE="X" AND '+
+         'E_JOURNAL=DBO.READTOKEN(@ECRCPTA,1,";") AND E_NUMEROPIECE=DBO.READTOKEN(@ECRCPTA,3,";") AND '+
+         'E_QUALIFPIECE=DBO.READTOKEN(@ECRCPTA,4,";") AND E_NATUREPIECE=DBO.READTOKEN(@ECRCPTA,5,";") '+
+         'END '+
+         'END';
+  ExecuteSQL(Sql);
+  //
+end;
+
 
 procedure TMajStructBTP.CreateFunctionDecoupage;
 var Sql : string;
@@ -2584,8 +2648,11 @@ end;
 procedure TMajStructBTP.CreateSqlFunctions;
 begin
   DropFunction('ReadToken');
+  DropProcedure ('POC_UPDATECPTA');
+  DropProcedure ('POC_CONTROLECPTA');
   //
   CreateFunctionDecoupage;
+  CreateProcedurePOC;
 end;
 
 procedure TMajStructBTP.CreateRealTable (NomTable : string);
@@ -3091,10 +3158,15 @@ begin
     ExecuteSQL('DELETE FROM PARAMSOC WHERE SOC_NOM="SO_SO_NUMMENSUELCPTANNUEL"');
     ExecuteSQL('DELETE FROM PARAMSOC WHERE SOC_NOM="SO_NUMMENSUELCPTANNUEL"');
   end;
+  if VersionBaseDest < '998.ZZZZC' then
+  Begin
+    ExecuteSQL('DELETE FROM PARAMSOC WHERE SOC_NOM="SO_BTINTAUTOLIQUIDATION"');
+  end;
   // A faire systématiquement ---
   ExecuteSQL('UPDATE MENU SET MN_ACCESGRP="'+StringOfChar('0',100)+'" WHERE MN_ACCESGRP IS NULL');
   ExecuteSQL('UPDATE MENU SET MN_ACCESGRP="'+StringOfChar('-',100)+'" WHERE MN_VERSIONDEV="X" AND MN_1<>0');
   ExecuteSQL('UPDATE MENU SET MN_VERSIONDEV="-" WHERE MN_VERSIONDEV="X"');
+  //
 end;
 
 procedure TMajStructBTP.ControleTableEchange;

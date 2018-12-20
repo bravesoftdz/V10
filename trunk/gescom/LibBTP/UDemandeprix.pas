@@ -89,7 +89,10 @@ uses UtilTOBPiece,facture,factTOB, Grids,BTPUtil,
      PiecesRecalculs,
      SAISUTIL,
      NomenUtil,
-     UtilPgi;
+     UtilPgi
+     , ErrorsManagement
+     , CommonTools
+     ;
 
 procedure InitDemandePrix (TOBPieceDemPrix,TOBArticleDemPrix,TOBfournDemprix,TOBDetailDemprix : TOB);
 begin
@@ -168,9 +171,12 @@ begin
 end;
 
 procedure ValidelesDemPrix (TOBPiece,TOBPieceDemPrix,TOBArticleDemPrix,TOBFournDemPrix,TOBDetailDemPrix : TOB; FromSaisie : boolean = false);
-var Indice,II : integer;
-		TOBB,TOBTT,TOBPA : TOB;
-    ARecalc,Okok : boolean;
+var
+  Indice,II : integer;
+	TOBB,TOBTT,TOBPA : TOB;
+  ARecalc,Okok : boolean;
+  TobDet : TOB;
+  ErrorMsg : string;
 begin
   Arecalc := false;
   for Indice := 0 to TOBPieceDemprix.detail.count -1 do
@@ -181,22 +187,32 @@ begin
     TOBPieceDemprix.detail[Indice].SetInteger('BPP_INDICEG',TOBPiece.GetInteger('GP_INDICEG'));
     //
     TOBPieceDemprix.detail[Indice].SetAllModifie(true);
-    if not TOBpieceDemPrix.detail[Indice].insertDB(nil) then V_PGI.IOError := oeUnknown ;
+    if not TOBpieceDemPrix.detail[Indice].insertDB(nil) then
+    begin
+      V_PGI.IOError := oeUnknown ;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_InsertDEMANDEPRIX);
+    end;
   end;
   if V_PGI.IOError <> OeOk then Exit;
 
   for Indice := 0 to TOBArticleDemPrix.detail.count -1 do
   begin
-    if TOBArticleDemPrix.Detail[Indice].GetInteger('BDP_UNIQUE') = 0 then continue;
-    TOBArticleDemprix.detail[Indice].SetString('BDP_NATUREPIECEG',TOBPiece.getString('GP_NATUREPIECEG'));
-    TOBArticleDemprix.detail[Indice].SetString('BDP_SOUCHE',TOBPiece.getString('GP_SOUCHE'));
-    TOBArticleDemprix.detail[Indice].SetInteger('BDP_NUMERO',TOBPiece.GetInteger ('GP_NUMERO'));
-    TOBArticleDemprix.detail[Indice].SetInteger('BDP_INDICEG',TOBPiece.GetInteger('GP_INDICEG'));
-    TOBArticleDemprix.detail[Indice].SetAllModifie(true);
-    if not TOBArticleDemprix.detail[Indice].InsertDB (nil) then V_PGI.Ioerror := OeUnknown;
+    TobDet := TOBArticleDemprix.detail[Indice];
+    if TobDet.GetInteger('BDP_UNIQUE') = 0 then continue;
+    TobDet.SetString('BDP_NATUREPIECEG',TOBPiece.getString('GP_NATUREPIECEG'));
+    TobDet.SetString('BDP_SOUCHE',TOBPiece.getString('GP_SOUCHE'));
+    TobDet.SetInteger('BDP_NUMERO',TOBPiece.GetInteger ('GP_NUMERO'));
+    TobDet.SetInteger('BDP_INDICEG',TOBPiece.GetInteger('GP_INDICEG'));
+    TobDet.SetAllModifie(true);
+    ErrorMsg := Format('Erreur lors de la création de demande de prix pour l''article %s (ligne %s)', [TobDet.GetString('BDP_ARTICLE'), TobDet.GetString('BDP_NUMLIGNE')]);
+    if not TobDet.InsertDB (nil) then
+    begin
+      V_PGI.Ioerror := OeUnknown;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, ErrorMsg);
+    end;
     if not FromSaisie then
     begin
-      TOBTT := FindFournDemPrix (TOBArticleDemprix.detail[Indice],TOBFournDemprix);
+      TOBTT := FindFournDemPrix (TobDet, TOBFournDemprix);
       if TOBTT <> nil then
       begin
         TOBPA := TOBTT.FindFirst(['BD1_SELECTED'], ['X'], True);
@@ -205,7 +221,7 @@ begin
           Arecalc := true;
           okok := false;
           TRY
-            okok := MiseAjoutLigneDoc (TOBPiece,TOBArticleDemPrix.detail[Indice],TOBPA);
+            okok := MiseAjoutLigneDoc (TOBPiece, TobDet, TOBPA);
           EXCEPT
             on E: Exception do
             begin
@@ -215,6 +231,7 @@ begin
           if not okok then
           begin
             V_PGI.IOError := oeUnknown;
+            TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, ErrorMsg);
             break;
           end;
         end;
@@ -222,12 +239,13 @@ begin
     end;
   end;
   if V_PGI.IOError <> OeOk then Exit;
-
   for Indice := 0 to TOBFournDemprix.detail.count -1 do
   begin
     for II := 0 to TOBFournDemprix.detail[Indice].detail.count -1 do
     begin
       TOBB := TOBFournDemprix.detail[Indice].detail[II];
+      ErrorMsg := Format('Erreur lors de la création du fournisseur %s associés au détail de la demande de prix pour l''article %s (ligne %s)'
+                         , [TobB.GetString('BD1_TIERS'), TOBDetailDemprix.detail[Indice].GetString('BDP_ARTICLE'), TOBDetailDemprix.detail[Indice].GetString('BDP_NUMLIGNE')]);
       if TOBB.GetInteger('BD1_UNIQUE') = 0 then continue;
       TOBB.SetString('BD1_NATUREPIECEG',TOBPiece.getString('GP_NATUREPIECEG'));
       TOBB.SetString('BD1_SOUCHE',TOBPiece.getString('GP_SOUCHE'));
@@ -243,8 +261,15 @@ begin
           PgiError('Erreur SQL : ' + E.Message, 'Demande de prix');
         end;
       END;
-      if not okok then V_PGI.IOError := oeUnknown;
+      if not okok then
+      begin
+        V_PGI.IOError := oeUnknown;
+        TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, ErrorMsg);
+        break;
+      end;
     end;
+    if V_PGI.ioError <> oeOk then
+      break;
   end;
   if V_PGI.IOError <> OeOk then Exit;
 
@@ -268,7 +293,11 @@ begin
           PgiError('Erreur SQL : ' + E.Message, 'Demande de prix');
         end;
       END;
-      if not okok then V_PGI.IOError := oeUnknown;
+      if not okok then
+      begin
+        V_PGI.IOError := oeUnknown;
+        TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, 'Erreur lors de la création de l''en-tête de la demande de prix.');
+      end;
     end;
   end;
   if V_PGI.IOError <> OeOk then Exit;
@@ -283,7 +312,11 @@ begin
         PgiError('Erreur SQL : ' + E.Message, 'Recalcul demande prix');
       end;
     END;
-    if not okok  then V_PGI.IOError := oeUnknown;
+    if not okok  then
+    begin
+      V_PGI.IOError := oeUnknown;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_RecalcDemandeDePrix);
+    end;
   end;
 end;
 

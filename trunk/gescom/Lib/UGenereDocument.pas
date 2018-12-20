@@ -8,7 +8,7 @@ uses
   ,uEntCommun
   ,UtilConso,
   Db, {$IFNDEF DBXPRESS} dbTables, {$ELSE} uDbxDataSet, {$ENDIF}
-  FactSpec, AffaireUtil, BTPUtil,UtilPhases
+  FactSpec, AffaireUtil, BTPUtil,UtilPhases,CommonTools
   ;
 
 type
@@ -55,6 +55,8 @@ type
     TOBBasesRG:TOB;
     TOBSSTRAIT:TOB;
     TOBEnteteScan : TOB;
+    TOBREPARTTVA : TOB;
+    ZTOBREPARTTVA : TOB;
     TOBProv : TOB;   // liste des BLS (génération de facture)
     //
     GereReliquat : boolean;
@@ -64,6 +66,7 @@ type
     VenteAchat : string;
     GestionConso : TGestionPhase;
     DocFromBSV : Boolean;
+    fBAP : boolean;
     procedure creeTOB;
     procedure LibereTOB;
     procedure Reinit;
@@ -85,6 +88,7 @@ type
     procedure ConstituePieceFromBast(TOBBAST : TOB; DateFac : TDateTime);
     procedure ChargeTiers(NatureAuxi, Tiers: string);
     function ChargeTOBA(RefUnique, stDepot: string): TOB;
+    procedure ValideLaRepartTVA(TOBPiece, TOBREPARTTVA: TOB);
 
   public
     constructor create; overload;
@@ -94,6 +98,8 @@ type
     property result : Tresult read fResult;
     property TOBArticlePlus : TOB read TOBArticlePlusPlus write TOBArticlePlusPlus;
     property TOBPROVFAC : TOB read TOBProv write TOBProv;
+    property GTOBREPARTVA : TOB read ZTOBREPARTTVA write ZTOBREPARTTVA;
+    property BAP : boolean read fBAP write fBAP;
   end;
 
 
@@ -253,11 +259,20 @@ begin
   //
   DEV.Code := TOBPIECE.GetValue('GP_DEVISE');
   GetInfosDevise(DEV);
+  DEV.Taux := GetTaux(DEV.Code, DEV.DateTaux, CleDoc.DatePiece);
   //
+  if ZTOBREPARTTVA <> nil then
+  begin
+    II := 0;
+    repeat
+      ZTOBREPARTTVA.detail[II].ChangeParent(TOBREPARTTVA,-1);
+    until ZTOBREPARTTVA.detail.count = 0;
+  end;
 end;
 
 constructor TGenerePiece.create;
 begin
+  fBAP := false;
   GestionConso := TGestionPhase.create;
   fResult := Tresult.Create;
   FillChar(OldEcr,Sizeof(OldEcr),#0) ; FillChar(OldStk,Sizeof(OldStk),#0) ;
@@ -303,11 +318,13 @@ begin
   TOBPieceRG := TOB.create('PIECERRET', nil, -1);
   TOBBasesRG := TOB.create('BASESRG', nil, -1);
   TOBSSTRAIT := TOB.Create ('LES SOUS TRAITS',nil,-1);
+  TOBREPARTTVA := TOB.Create ('LES REPARTTVA',nil,-1);
 end;
 
 destructor TGenerePiece.destroy;
 begin
   GestionConso.free;
+  TOBREPARTTVA.free;
   LibereTOB;
   inherited;
 end;
@@ -316,6 +333,7 @@ function TGenerePiece.GenereDocFromBAST (TOBBAST : TOB; DateFac : TdateTime) : T
 begin
   DocFromBSV := false;
   Result := fResult;
+  fBAP := True;
   //
   Reinit;
   TRY
@@ -347,6 +365,7 @@ begin
 end;
 
 function TGenerePiece.GenereDocument(TOBPRov: TOB): Tresult;
+var TT : TOB;
 begin
   DocFromBSV := True;
   Reinit;
@@ -354,6 +373,7 @@ begin
   TRY
     if fResult.ErrorResult = OeOk then
     begin
+      TT := TOBPiece;
       RenumerotePiece ;
       RecalculeLeDocument;
       InitToutModif;
@@ -390,6 +410,7 @@ BEGIN
   TOBPieceRG.SetAllModifie (true);
   TOBBasesRG.SetAllModifie (true);
   TOBVTECOLLECTIF.SetAllModifie(true);
+  TOBREPARTTVA.SetAllModifie(true);
 END ;
 
 procedure TGenerePiece.LibereTOB;
@@ -438,7 +459,7 @@ end;
 
 procedure TGenerePiece.RecalculeLeDocument;
 var II,Imax : Integer;
-    Coef,CoefTaxe,SumTaxe,MaxBase,SumCalcB,SumCalcT : Double;
+    Coef,CoefTaxe,SumTaxe,MaxBase,SumCalcB,SumCalcT,Sumbase : Double;
     TobB : TOB;
 begin
   fResult.ErrorResult := oeUnknown;
@@ -456,84 +477,118 @@ begin
 //
 	if (VenteAchat = 'ACH') and (TOBPiece.GetString('GP_NATUREPIECEG')='FF') and (DocFromBSV) then
   begin
-    Imax := -1; MaxBase := 0; SumTaxe := 0;
-    for II := 0 to TOBBases.Detail.Count - 1 do
+    if (TOBREPARTTVA <> nil) and (TOBREPARTTVA.detail.count > 0) then
     begin
-      TobB := TOBBases.Detail[II];
-      SumTaxe := SumTaxe + TobB.GetDouble('GPB_VALEURDEV');
-      if TobB.GetDouble('GPB_BASEDEV') > MaxBase then
+      Imax := -1; MaxBase := 0; SumTaxe := 0; Sumbase := 0;
+      for II := 0 to TOBREPARTTVA.Detail.Count - 1 do
       begin
-        Imax := II;
-        MaxBase := TobB.GetDouble('GPB_BASEDEV');
+        TobB := TOBREPARTTVA.Detail[II];
+        SumTaxe := SumTaxe + TobB.GetDouble('BP8_MONTANTTAXE');
+        SumBase := SumBase + TobB.GetDouble('BP8_BASEHT');
+        if TobB.GetDouble('BP8_BASEHT') > MaxBase then
+        begin
+          Imax := II;
+          MaxBase := TobB.GetDouble('BP8_BASEHT');
+        end;
       end;
-    end;
-    //
-    if (TOBPiece.GetDouble('GP_TOTALTTCDEV')<> TOBEnteteScan.GetDouble('B10_TOTALTTC')) or
-       (TOBPiece.GetDouble('GP_TOTALHTDEV')<> TOBEnteteScan.GetDouble('B10_TOTALHT')) or
-       (SumTaxe<> TOBEnteteScan.GetDouble('B10_TOTALTAXE')) then
-    begin
+      SumTaxe := ARRONDI(SumTaxe,DEV.Decimale);
+      SumBase := ARRONDI(SumBase,DEV.Decimale);
       //
-      if TOBEnteteScan.GetDouble('B10_TOTALTTC') = 0 then
+      if (TOBPiece.GetDouble('GP_TOTALTTCDEV')<> SumTaxe+SumBase) or
+         (TOBPiece.GetDouble('GP_TOTALHTDEV')<> SumBase) then
       begin
-        TOBPiece.setDouble('GP_TOTALTTCDEV',TOBEnteteScan.GetDouble('B10_TOTALHT'));
-        TOBPiece.setDouble('GP_TOTALHTDEV',TOBEnteteScan.GetDouble('B10_TOTALHT'));
-      end else
-      begin
-        TOBPiece.setDouble('GP_TOTALTTCDEV',TOBEnteteScan.GetDouble('B10_TOTALTTC'));
-        TOBPiece.setDouble('GP_TOTALHTDEV',TOBEnteteScan.GetDouble('B10_TOTALHT'));
+        //
+        TOBPiece.setDouble('GP_TOTALTTCDEV',SumTaxe+SumBase);
+        TOBPiece.setDouble('GP_TOTALHTDEV',SumBase);
+        TOBPiece.PutValue ('GP_TOTALHT',DeviseToEuro (TOBPiece.GetValue ('GP_TOTALHTDEV'), DEV.Taux, DEV.Quotite)) ;
+        TOBPiece.PutValue ('GP_TOTALTTC',DeviseToEuro (TOBPiece.GetValue ('GP_TOTALTTCDEV'), DEV.Taux, DEV.Quotite)) ;
+        // ----
+        VH_GC.ModeGestionEcartComptable := 'CPA'; {DBR CPA}
       end;
-      if  TOBEnteteScan.GetDouble('B10_TOTALHT') = 0 then Coef := 1
-                                                     else Coef := TOBPiece.GetDouble('GP_TOTALHTDEV')/ TOBEnteteScan.GetDouble('B10_TOTALHT');
-      if TOBEnteteScan.GetDouble('B10_TOTALTAXE') = 0 then CoefTaxe := 1
-                                                      else CoefTaxe := SumTaxe/ TOBEnteteScan.GetDouble('B10_TOTALTAXE');
+
       //
-      SumCalcB := 0;
-      SumCalcT := 0;
+      Imax := -1; MaxBase := 0; SumTaxe := 0;
       for II := 0 to TOBBases.Detail.Count - 1 do
       begin
         TobB := TOBBases.Detail[II];
-        TobB.SetDouble ('GPB_BASEDEV',ARRONDI(TobB.getDouble ('GPB_BASEDEV') * Coef,DEV.decimale));
-        TobB.SetDouble ('GPB_VALEURDEV',ARRONDI(TobB.getDouble ('GPB_VALEURDEV') * CoefTaxe,DEV.decimale));
-        SumCalcB := SumCalcB + TobB.getDouble ('GPB_BASEDEV');
-        SumCalcT := SumCalcT + TobB.getDouble ('GPB_VALEURDEV');
-      end;
-      SumCalcB := ARRONDI(SumCalcB,DEV.decimale);
-      SumCalcT := ARRONDI(SumCalcT,DEV.decimale);
-      if (SumCalcB <> TOBEnteteScan.GetDouble('B10_TOTALHT')) and (Imax <> -1)  then
-      begin
-        TOBBases.detail[Imax].SetDouble('GPB_BASEDEV', TOBBases.detail[Imax].GetDouble('GPB_BASEDEV') + (TOBEnteteScan.GetDouble('B10_TOTALHT')-SumCalcB)) ;
-      end;
-      if (SumCalcT <> TOBEnteteScan.GetDouble('B10_TOTALTAXE')) and (Imax <> -1)  then
-      begin
-        TOBBases.detail[Imax].SetDouble('GPB_VALEURDEV', TOBBases.detail[Imax].GetDouble('GPB_VALEURDEV') + (TOBEnteteScan.GetDouble('B10_TOTALTAXE')-SumCalcT)) ;
-      end;
-      
-      if DEV.Code<>V_PGI.DevisePivot then
-      begin
-        for II := 0 to TOBBases.detail.count -1 do
+        SumTaxe := SumTaxe + TobB.GetDouble('GPB_VALEURDEV');
+        if TobB.GetDouble('GPB_BASEDEV') > MaxBase then
         begin
-          TOBBases.detail[II].SetDouble ('GPB_BASETAXE',DeviseToEuro (TOBBases.detail[II].GetDouble ('GPB_BASEDEV'), DEV.Taux, DEV.Quotite)) ;
-          TOBBases.detail[II].SetDouble ('GPB_VALEURTAXE',DeviseToEuro (TOBBases.detail[II].GetDouble ('GPB_VALEURDEV'), DEV.Taux, DEV.Quotite)) ;
+          Imax := II;
+          MaxBase := TobB.GetDouble('GPB_BASEDEV');
         end;
-        TOBPiece.PutValue ('GP_TOTALHT',DeviseToEuro (TOBPiece.GetValue ('GP_TOTALHTDEV'), DEV.Taux, DEV.Quotite)) ;
-        TOBPiece.PutValue ('GP_TOTALTTC',DeviseToEuro (TOBPiece.GetValue ('GP_TOTALTTCDEV'), DEV.Taux, DEV.Quotite)) ;
-      end else
-      begin
-        for II := 0 to TOBBases.detail.count -1 do
-        begin
-          TOBBases.detail[II].SetDouble ('GPB_BASETAXE',TOBBases.detail[II].GetDouble ('GPB_BASEDEV')) ;
-          TOBBases.detail[II].SetDouble ('GPB_VALEURTAXE',TOBBases.detail[II].GetDouble ('GPB_VALEURDEV')) ;
-        end;
-        TOBPiece.PutValue ('GP_TOTALHT',TOBPiece.GetValue ('GP_TOTALHTDEV')) ;
-        TOBPiece.PutValue ('GP_TOTALTTC', TOBPiece.GetValue('GP_TOTALTTCDEV'));
       end;
-      // ----
-      VH_GC.ModeGestionEcartComptable := 'CPA'; {DBR CPA}
+    end else
+    begin
+      //
+      if (TOBPiece.GetDouble('GP_TOTALTTCDEV')<> TOBEnteteScan.GetDouble('B10_TOTALTTC')) or
+         (TOBPiece.GetDouble('GP_TOTALHTDEV')<> TOBEnteteScan.GetDouble('B10_TOTALHT')) or
+         (SumTaxe<> TOBEnteteScan.GetDouble('B10_TOTALTAXE')) then
+      begin
+        //
+        if TOBEnteteScan.GetDouble('B10_TOTALTTC') = 0 then
+        begin
+          TOBPiece.setDouble('GP_TOTALTTCDEV',TOBEnteteScan.GetDouble('B10_TOTALHT'));
+          TOBPiece.setDouble('GP_TOTALHTDEV',TOBEnteteScan.GetDouble('B10_TOTALHT'));
+        end else
+        begin
+          TOBPiece.setDouble('GP_TOTALTTCDEV',TOBEnteteScan.GetDouble('B10_TOTALTTC'));
+          TOBPiece.setDouble('GP_TOTALHTDEV',TOBEnteteScan.GetDouble('B10_TOTALHT'));
+        end;
+        if  TOBEnteteScan.GetDouble('B10_TOTALHT') = 0 then Coef := 1
+                                                       else Coef := TOBPiece.GetDouble('GP_TOTALHTDEV')/ TOBEnteteScan.GetDouble('B10_TOTALHT');
+        if TOBEnteteScan.GetDouble('B10_TOTALTAXE') = 0 then CoefTaxe := 1
+                                                        else CoefTaxe := SumTaxe/ TOBEnteteScan.GetDouble('B10_TOTALTAXE');
+        //
+        SumCalcB := 0;
+        SumCalcT := 0;
+        for II := 0 to TOBBases.Detail.Count - 1 do
+        begin
+          TobB := TOBBases.Detail[II];
+          TobB.SetDouble ('GPB_BASEDEV',ARRONDI(TobB.getDouble ('GPB_BASEDEV') * Coef,DEV.decimale));
+          TobB.SetDouble ('GPB_VALEURDEV',ARRONDI(TobB.getDouble ('GPB_VALEURDEV') * CoefTaxe,DEV.decimale));
+          SumCalcB := SumCalcB + TobB.getDouble ('GPB_BASEDEV');
+          SumCalcT := SumCalcT + TobB.getDouble ('GPB_VALEURDEV');
+        end;
+        SumCalcB := ARRONDI(SumCalcB,DEV.decimale);
+        SumCalcT := ARRONDI(SumCalcT,DEV.decimale);
+        if (SumCalcB <> TOBEnteteScan.GetDouble('B10_TOTALHT')) and (Imax <> -1)  then
+        begin
+          TOBBases.detail[Imax].SetDouble('GPB_BASEDEV', TOBBases.detail[Imax].GetDouble('GPB_BASEDEV') + (TOBEnteteScan.GetDouble('B10_TOTALHT')-SumCalcB)) ;
+        end;
+        if (SumCalcT <> TOBEnteteScan.GetDouble('B10_TOTALTAXE')) and (Imax <> -1)  then
+        begin
+          TOBBases.detail[Imax].SetDouble('GPB_VALEURDEV', TOBBases.detail[Imax].GetDouble('GPB_VALEURDEV') + (TOBEnteteScan.GetDouble('B10_TOTALTAXE')-SumCalcT)) ;
+        end;
+
+        if DEV.Code<>V_PGI.DevisePivot then
+        begin
+          for II := 0 to TOBBases.detail.count -1 do
+          begin
+            TOBBases.detail[II].SetDouble ('GPB_BASETAXE',DeviseToEuro (TOBBases.detail[II].GetDouble ('GPB_BASEDEV'), DEV.Taux, DEV.Quotite)) ;
+            TOBBases.detail[II].SetDouble ('GPB_VALEURTAXE',DeviseToEuro (TOBBases.detail[II].GetDouble ('GPB_VALEURDEV'), DEV.Taux, DEV.Quotite)) ;
+          end;
+          TOBPiece.PutValue ('GP_TOTALHT',DeviseToEuro (TOBPiece.GetValue ('GP_TOTALHTDEV'), DEV.Taux, DEV.Quotite)) ;
+          TOBPiece.PutValue ('GP_TOTALTTC',DeviseToEuro (TOBPiece.GetValue ('GP_TOTALTTCDEV'), DEV.Taux, DEV.Quotite)) ;
+        end else
+        begin
+          for II := 0 to TOBBases.detail.count -1 do
+          begin
+            TOBBases.detail[II].SetDouble ('GPB_BASETAXE',TOBBases.detail[II].GetDouble ('GPB_BASEDEV')) ;
+            TOBBases.detail[II].SetDouble ('GPB_VALEURTAXE',TOBBases.detail[II].GetDouble ('GPB_VALEURDEV')) ;
+          end;
+          TOBPiece.PutValue ('GP_TOTALHT',TOBPiece.GetValue ('GP_TOTALHTDEV')) ;
+          TOBPiece.PutValue ('GP_TOTALTTC', TOBPiece.GetValue('GP_TOTALTTCDEV'));
+        end;
+        // ----
+        VH_GC.ModeGestionEcartComptable := 'CPA'; {DBR CPA}
+      end;
+      //
     end;
   end;
-//
+  //
   GereEcheancesGC(TOBPiece,TOBTiers,TOBEches,TOBAcomptes,TOBPieceRG,TOBPieceTrait,TOBPorcs,taCreat,DEV,False) ;
-
+  //
   fResult.ErrorResult := oeOK;
   fResult.LibError := '';
 end;
@@ -568,6 +623,7 @@ begin
   TOBSSTRAIT.ClearDetail; TOBSSTRAIT.InitValeurs(false);
   TOBDispo.ClearDetail; TOBDispo.InitValeurs(false);
   VH_GC.ModeGestionEcartComptable := '';
+  TOBREPARTTVA.ClearDetail;
 end;
 
 procedure TGenerePiece.RenumerotePiece;
@@ -825,7 +881,8 @@ procedure TgenerePiece.GenereCompta ;
 begin
   fResult.ErrorResult := oeUnknown;
   fResult.LibError := 'Passation comptable';
-  if Not PassationComptable(TOBPiece,TOBOuvrage, TOBOuvragesP,TOBBases,TOBBasesL,TOBEches,TOBPieceTrait,nil,TOBTiers,TOBArticles,TOBCpta,TOBAcomptes,TOBPorcs,TOBPIECERG,TOBBasesRG,TOBAnaP,TOBAnaS,nil,TOBVTECOLLECTIF,DEV,OldEcr,OldStk,false) then
+  if Not PassationComptable(TOBPiece,TOBOuvrage, TOBOuvragesP,TOBBases,TOBBasesL,TOBEches,TOBPieceTrait,nil,
+                            TOBTiers,TOBArticles,TOBCpta,TOBAcomptes,TOBPorcs,TOBPIECERG,TOBBasesRG,TOBAnaP,TOBAnaS,nil,TOBVTECOLLECTIF,TOBREPARTTVA, DEV,OldEcr,OldStk,false,true,FBAP) then
   begin
     V_PGI.IOError := oeLettrage;
     exit;
@@ -865,6 +922,21 @@ begin
   Result:=TobArt;
 end;
 
+procedure TGenerePiece.ValideLaRepartTVA (TOBPiece,TOBREPARTTVA : TOB);
+var II : Integer;
+begin
+  for II := 0 to TOBREPARTTVA.detail.count -1 do
+  begin
+    TOBREPARTTVA.detail[II].SetString('BP8_NATUREPIECEG',TOBPiece.GetString('GP_NATUREPIECEG'));
+    TOBREPARTTVA.detail[II].SetString('BP8_SOUCHE',TOBPiece.GetString('GP_SOUCHE'));
+    TOBREPARTTVA.detail[II].SetString('BP8_NUMERO',TOBPiece.GetString('GP_NUMERO'));
+    TOBREPARTTVA.detail[II].SetString('BP8_INDICEG',TOBPiece.GetString('GP_INDICEG'));
+  end;
+  if not TOBREPARTTVA.InsertDB(nil) then
+  begin
+    V_PGI.IOError := OeUnknown;
+  end;
+end;
 
 procedure TGenerePiece.ValideLeDocument;
 var II : Integer;
@@ -873,10 +945,12 @@ begin
   fResult.LibError := 'Validation de la pièce';
   //
   V_PGI.IOError := oeOk;
+  //
   ValideLaNumerotation;
   if fResult.ErrorResult <> OeOk then Exit;
   ValideLesArticlesFromOuv(TOBarticles,TOBOuvrage);
   //
+  ValideLaRepartTVA (TOBPiece,TOBREPARTTVA);
   InsereLigneRG(TOBPIece, TOBPIeceRG, TOBBASES, TOBBASESRG, TOBTIers, TOBAffaire, nil, -1);
   if V_PGI.IoError=oeOk then ValideLesLignes(TOBPiece,TOBArticles,nil,nil,TOBOuvrage,TOBPieceRG,TOBBasesRG,GereReliquat,false,false,true) ;
   if V_PGI.IoError=oeOk then ValideLesLignesCompl(TOBPiece, nil);
@@ -1573,7 +1647,7 @@ begin
     TOBPiece.SetString('GP_CREEPAR','BST');
     TOBPiece.SetBoolean('GP_RESTITUERG',TOBBAST.getBoolean('BM4_RGLIBER'));
     //
-    if (Pos(TOBBAST.GetString('BM4_FAMILLETAXE1'),VH_GC.AutoLiquiTVAST)>0) then
+    if (Tools.StringInList(TOBBAST.GetString('BM4_FAMILLETAXE1'),VH_GC.AutoLiquiTVAST)) then
     begin
       TOBPiece.SetBoolean('GP_AUTOLIQUID',true);
     end;

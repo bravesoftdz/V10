@@ -137,8 +137,17 @@ begin
 
 	if TOBL <> nil then
   begin
-    NumOrdre  := StrtoInt(TOBL.GetValue(Prefixe + '_NUMORDRE'));
-    if Prefixe = 'BLO' then UniqueBlo := StrtoInt(TOBL.GetValue('BLO_UniqueBLO'));
+    if prefixe = 'GL' then
+    begin
+      if TOBL.getString('GL_TYPELIGNE')='SD' then
+        UniqueBlo := StrtoInt(TOBL.GetValue('UNIQUEBLO'))
+      else
+        NumOrdre  := StrtoInt(TOBL.GetValue(Prefixe + '_NUMORDRE'));
+    end
+    else
+    begin
+      if Prefixe = 'BLO' then UniqueBlo := StrtoInt(TOBL.GetValue('BLO_UniqueBLO'));
+    end;
   end;
 
   result := AddMetresLigne(TOBMetres,NumOrdre, UniqueBlo, Prefixe);
@@ -146,55 +155,57 @@ begin
 end;
 
 procedure loadlesMetres (cledoc: r_cledoc; TOBmetres : TOB);
-var TOBInter      : TOB;
-		TOBII         : TOB;
-    TOBPAPA       : TOB;
-    LastNumOrdre  : integer;
-    LastUniqueBlo : Integer;
-    Q             : Tquery;
-    Indice        : integer;
+var TOBInter  : TOB;
+		TOBII     : TOB;
+    TOBPAPA   : TOB;
+    NumOrdre  : integer;
+    UniqueBlo : Integer;
+    StSQL     : String;
+    Q         : Tquery;
+    Indice    : integer;
 begin
 
-	TOBPAPA := nil;
-
-	LastNumOrdre := 0;
-  //LastUniqueBlo:= 0;
-
-	TOBInter := TOB.Create('LES METRES PLAT',nil,-1);
-
   TRY
-    Q := OpenSQL('SELECT * FROM BLIGNEMETRE WHERE ' + WherePiece(CleDoc, ttdLigneMetre, False), True,-1, '', True);
+    //
+    TOBInter := TOB.Create('LES METRES PLAT',nil,-1);
+    //
+    StSQL := 'SELECT * FROM BLIGNEMETRE WHERE ' + WherePiece(CleDoc, ttdLigneMetre, False);
+    Q := OpenSQL(StSQL, True,-1, '', True);
     TOBInter.LoadDetailDB('BLIGNEMETRE', '', '', Q, False);
     Ferme(Q);
     //
-    if TOBinter.detail.count > 0 then
-    begin
-      indice := 0;
-      repeat
-        TOBII := TOBInter.detail[Indice];
-        if TOBII.GetValue('BLM_NUMORDRE')<>LastNumordre then
+    if TobInter.Detail.count = 0 then exit;
+    //
+    indice := 0;
+    repeat
+      TOBII := TobInter.Detail[Indice];
+      NumOrdre  := TOBII.GetValue('BLM_NUMORDRE');
+      UniqueBlo := TOBII.GetValue('BLM_UNIQUEBLO');
+      //Il semblerait logique de rechercher l'enregistrement dans la tobmetres !!!!
+      if TOBII.GetValue('BLM_NUMORDRE') <> 0 then
+      Begin
+        TOBPAPA   := TOBmetres.FindFirst(['NUMORDRE'],[NumOrdre],true);
+        If TOBPAPA = nil then TOBPAPA := AddMetresLigne(TOBmetres,NumOrdre,UniqueBlo,'GL')
+      End
+      else
+      Begin
+        TOBPAPA   := TOBmetres.FindFirst(['UNIQUEBLO'],[Uniqueblo],true);
+        If TOBPAPA = nil then TOBPAPA := AddMetresLigne(TOBmetres,NumOrdre,UniqueBlo,'BLO');
+      end;
+      //
+      if TOBPAPA <> nil then
+      begin
+        TOBII.ChangeParent(TOBPAPA, -1);
+        if TOBII.getValue('BLM_OPERATION')='+' then
         begin
-          LastNumOrdre  := TOBII.GetValue('BLM_NUMORDRE');
-          LastUniqueBlo := TOBII.GetValue('BLM_UNIQUEBLO');
-          if LastUniqueBlo = 0 then
-            TOBPAPA := AddMetresLigne(TOBmetres,LastNumOrdre,LastUniqueBlo,'GL')
-          else
-            TOBPAPA := AddMetresLigne(TOBmetres,LastNumOrdre,LastUniqueBlo,'BLO')
-        end;
-        if TOBPAPA <> nil then
+          TOBPAPA.putValue('RESULTAT',TOBPAPA.getValue('RESULTAT')+ TOBII.getValue('BLM_VALEUR'))
+        end
+        else if TOBII.getValue('BLM_OPERATION')='-' then
         begin
-          TOBII.ChangeParent(TOBPAPA,-1);
-          if TOBII.getValue('BLM_OPERATION')='+' then
-          begin
-            TOBPAPA.putValue('RESULTAT',TOBPAPA.getValue('RESULTAT')+TOBII.getValue('BLM_VALEUR'))
-          end
-          else if TOBII.getValue('BLM_OPERATION')='-' then
-          begin
-            TOBPAPA.putValue('RESULTAT',TOBPAPA.getValue('RESULTAT')-TOBII.getValue('BLM_VALEUR'))
-          end;
+          TOBPAPA.putValue('RESULTAT',TOBPAPA.getValue('RESULTAT')-TOBII.getValue('BLM_VALEUR'))
         end;
-      until Indice >= TOBInter.detail.count;
-    end;
+      end;
+    until Indice >= TOBInter.detail.count;
   FINALLY
   	FreeAndNil(TOBinter);
   END;
@@ -211,9 +222,18 @@ begin
   else
   Begin
     if Prefixe = 'GL' then
-  	  TOBM := TOBmetres.FindFirst(['NUMORDRE'],[TOBL.GetValue('GL_NUMORDRE')],true)
-    else
-      TOBM := TOBmetres.FindFirst(['NUMORDRE', 'UNIQUEBLO'],[TOBL.GetValue('BLO_NUMORDRE'), TOBL.GetValue('BLO_UNIQUEBLO')],true);
+    begin
+      if TOBL.GetString('GL_TYPELIGNE')='SD' then
+      begin
+        TOBM := TOBmetres.FindFirst(['UNIQUEBLO'],[TOBL.GetValue('UNIQUEBLO')],true);
+      end else
+      begin
+  	    TOBM := TOBmetres.FindFirst(['NUMORDRE'],[TOBL.GetValue('GL_NUMORDRE')],true);
+      end;
+    end else
+    begin
+      TOBM := TOBmetres.FindFirst(['UNIQUEBLO'],[TOBL.GetValue('BLO_UNIQUEBLO')],true);
+    end;
     //
     if TOBM = Nil then TOBM := AddmetresLigne (TOBL,TOBMetres,Prefixe);
   end;
@@ -272,7 +292,7 @@ begin
     end
     else
     begin
-      if TOBOuvrage.FindFirst(['BLO_NUMORDRE', 'BLO_UNIQUEBLO'],[TOBM.getValue('NUMORDRE'),TOBM.getValue('UNIQUEBLO')],true) = nil then
+      if TOBOuvrage.FindFirst(['BLO_UNIQUEBLO'],[TOBM.getValue('UNIQUEBLO')],true) = nil then
         TOBM.PutValue('USED','-')
       else
         SetinfosMetres (TOBpiece,TOBM);
@@ -317,14 +337,14 @@ procedure TOF_BTSAISIEPAGEMETRE.OnArgument (S : String ) ;
 begin
   Inherited ;
 	Validated := false;
-  TOBmetres_O := AddMetresLigne (nil,nil,'');
+  TOBmetres_O := AddMetresLigne (nil,nil,''); //==> à quoi ça sert ????
 	Total := 0;
   Action := taModif;
   fListe := 'BLIGNEMETRE';
   //
   GetComponents;
   TOBmetres   := LaTOB;
-  TOBmetres_O := AddMetresLigne (nil,nil,'');
+  TOBmetres_O := AddMetresLigne (nil,nil,''); //==> à quoi ça sert ????
   TOBmetres_O.dupliquer(TOBmetres,true,true);
   if TOBmetres.detail.count = 0 then AddLigne;
   NumeroteLignes ;

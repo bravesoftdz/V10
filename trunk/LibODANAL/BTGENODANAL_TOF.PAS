@@ -147,9 +147,21 @@ procedure UpdateStatusMoisOD (TOBPiece : TOB);
 
 Implementation
 
-uses DateUtils,ParamSoc,uEntCommun,Ent1,
-     SaisUtil,CalcOLEGenericBTP,utilPGI,galPatience,
-     BTPUtil,StockUtil,EntGC,Wcommuns;
+uses
+  DateUtils
+  , ParamSoc
+  , uEntCommun
+  , Ent1
+  , SaisUtil
+  , CalcOLEGenericBTP
+  , utilPGI
+  , galPatience
+  , BTPUtil
+  , StockUtil
+  , EntGC
+  , Wcommuns
+  , ErrorsManagement
+  ;
 
 
 function EncodeRefAna(TOBTT : TOB) : string;
@@ -203,10 +215,10 @@ begin
     SQl := 'UPDATE BSTATUSANALMOIS SET BAS_STATUSGEN="ATT" WHERE BAS_MOIS="'+ConstitueMois(TheDate)+'"';
     if ExecuteSQL(SQL) < 0 then
     begin
+      TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateBSTATUSANALMOIS);
       V_PGI.IOError := oeUnknown;
     end;
   end;
-
 end;
 
 procedure TOF_BTGENODANAL.OnNew ;

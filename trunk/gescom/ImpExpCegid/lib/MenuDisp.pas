@@ -58,12 +58,28 @@ implementation
 
 {$R *.DFM}
 
-uses MenuSpec;        //Pour CGEP
+uses
+  MenuSpec        //Pour CGEP
+  , CommonTools
+  {$IFNDEF DBXPRESS}
+  , dbTables
+  {$ELSE}
+  , uDbxDataSet
+  {$ENDIF}
+  ;
 
 procedure AfterChangeModule ( NumModule : integer ) ;
 BEGIN
   Case NumModule of
-    4 : BEGIN
+    60 : BEGIN
+         FmenuG.RemoveGroup(60100, True);
+         FmenuG.RemoveGroup(60200, True);
+         FmenuG.RemoveGroup(60800, True);
+         FmenuG.RemoveGroup(60400, True);
+         FmenuG.RemoveGroup(60600, True);
+         FmenuG.RemoveGroup(60700, True);
+         FmenuG.RemoveGroup(60500, True);
+         FmenuG.RemoveGroup(60900, True);
         end;
   End;
 END;
@@ -89,18 +105,48 @@ Suite ........ : True, alors ...
 Mots clefs ... : MENU;OPTION;DISPATCH
 *****************************************************************}
 procedure Dispatch(Num: Integer; PRien: THPanel; var retourforce, sortiehalley: boolean);
+
+  procedure DropProcedure (Nom : string);
+  var SQL : string;
+  begin
+    SQL := 'SELECT 1 FROM [DBO].sysobjects where name ="'+Nom+'"';
+    if ExisteSQL(SQL) then
+    begin
+      ExecuteSQL('DROP PROCEDURE DBO.'+Nom);
+    end;
+  end;
+
+  procedure VerifMenu ;
+  var SQL : string;
+  begin
+    SQL := 'SELECT 1 FROM MENU WHERE MN_1=60 AND MN_TAG=60300';
+    if ExisteSQL(SQL) then
+    begin
+      ExecuteSQL('DELETE FROM MENU WHERE MN_1=60 AND MN_TAG=60300');
+    end;
+    SQL := 'INSERT INTO MENU (MN_1, MN_2, MN_3, MN_4, MN_LIBELLE, MN_TAG, MN_ACCESGRP, MN_SHORTCUT, MN_GROUPINDEX, MN_VERSIONDEV, MN_PERSO, MN_DOMAINE) VALUES '+
+           '(60,10,0,0,"Imports Export CEGID-LSE",60300,"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","",59,"-","-","")';
+    ExecuteSQL(SQL);
+    //
+    SQL := 'SELECT 1 FROM MENU WHERE MN_1=60 AND MN_TAG=60301';
+    if ExisteSQL(SQL) then
+      ExecuteSQL('DELETE FROM MENU WHERE MN_1=60 AND MN_TAG=60302');
+    SQL := 'INSERT INTO MENU (MN_1, MN_2, MN_3, MN_4, MN_LIBELLE, MN_TAG, MN_ACCESGRP, MN_SHORTCUT, MN_GROUPINDEX, MN_VERSIONDEV, MN_PERSO, MN_DOMAINE) VALUES '+
+           '(60,10,1,0,"Imports-Export ",60302,"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","",52,"-","-","")';
+    ExecuteSQL(SQL);
+  end;
+
 begin
   case Num of
     10: BEGIN
-          LanceImportExport;
-          Exit;
-        END;
+          VerifMenu;
+        end;
     11: ; //Après deconnection
     12: ; //Avant connection ou seria
     13: ; //Avant deconnection
     15: ; //Avant formshow
-    16 :;
-
+    16: ;
+    60302 : LanceImportExport;
 
   else HShowMessage('2;?caption?;Fonction non disponible : ;W;O;O;O;', TitreHalley, IntToStr(Num));
   end;
@@ -323,7 +369,7 @@ begin
   FMenuG.OnMajApres := nil;
 
   { Renseigne les n° de modules ( menu ) que l'application doit gérer }
-  FMenuG.SetModules([4], [99]);
+  FMenuG.SetModules([60], [99]);
   FMenuG.OnChangeModule:=AfterChangeModule ;
 
   { Référence à une fonction qui permet de lancer des actions dans le cas ou l'on autorise
@@ -360,9 +406,9 @@ V_PGI.MenuCourant:=0 ;
 V_PGI.VersionReseau:=True ;
 V_PGI.NumVersion:='10.0.0' ;
 V_PGI.NumVersionBase:=998 ;
-V_PGI.NumBuild:='000.001';
+V_PGI.NumBuild:='000.002';
 V_PGI.CodeProduit:='034' ;
-V_PGI.DateVersion:=EncodeDate(2016,10,26);
+V_PGI.DateVersion:=EncodeDate(2018,11,29);
 V_PGI.ImpMatrix := True ;
 V_PGI.OKOuvert:=FALSE ;
 V_PGI.Halley:=TRUE ;

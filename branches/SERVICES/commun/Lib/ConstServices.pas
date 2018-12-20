@@ -4,18 +4,22 @@ interface
 
 type
   T_WSLogValues = Record
-                    LogLevel          : integer;
-                    LogMoMaxSize      : double;
-                    LogMaxQty         : integer;
-                    LogDebug          : integer;
-                    LogDebugMoMaxSize : double;
-                    DebugEvents       : integer;
-                    OneLogPerDay      : boolean;
-                    Download          : boolean;
-                    Upload            : boolean;
-                    LogPath           : string;
-                    TrueValue         : string;
-                    FalseValue        : string;
+                    LogLevel             : integer;
+                    LogMoMaxSize         : double;
+                    LogMaxQty            : integer;
+                    LogDebug             : integer;
+                    LogDebugMoMaxSize    : double;
+                    DebugEvents          : integer;
+                    OneLogPerDay         : boolean;
+                    Download             : boolean;
+                    Upload               : boolean;
+                    LogPath              : string;
+                    TrueValue            : string;
+                    FalseValue           : string;
+                    DebugFilesDirectory  : string;
+                    ExecutionPeriodDays  : string;
+                    ExecutionPeriodStart : string;
+                    ExecutionPeriodEnd   : string;
                   end;
 
   T_SvcTypeLog  = (ssbylNone, ssbylLog, ssbylWindows, ssbylAll);
@@ -26,6 +30,7 @@ type
     class procedure WriteLog(TypeDebug: T_SvcTypeLog; Text, ServiceName: string; LogValues : T_WSLogValues; LineLevel: integer; WithoutDateTime: Boolean=true; AddFileName : string='');
     class function GetAppDataFileName (ServiceName, Extension: string): string;
     class function GetServicesAppDataPath(CreatIfNotExist : Boolean; SubDirectory : string='') : string;
+    class function CanExecuteFromPeriod(LogValues : T_WSLogValues; ServiceName : string) : boolean;
   end;
 
 const
@@ -45,6 +50,8 @@ uses
   , Windows
   , CommonTools
   , UWinSystem
+  , IniFiles
+  , DateUtils
   ;
 
 { TServicesLgo }
@@ -97,7 +104,72 @@ begin
       Result := DataPrg;
   end;
 end;
-  
+
+class function TServicesLog.CanExecuteFromPeriod(LogValues : T_WSLogValues; ServiceName : string) : boolean;
+var
+  dtCurrentDate  : TDateTime;
+  DayNumber      : integer;
+  DayName        : string;
+  CurrentDate    : string;
+  CurrentDateMsg : string;
+  StartDate      : string;
+  EndDate        : string;
+  WithHours      : boolean;
+  OkDay          : boolean;
+  OkHours        : boolean;
+
+  function GetFormatDate(Value : string) : string;
+  begin
+    Result := StringReplace(Value , ' ', '', [rfReplaceAll]);
+    Result := StringReplace(Result, ':', '', [rfReplaceAll]);
+  end;
+
+
+begin
+  Result := True;
+  if LogValues.ExecutionPeriodDays <> '' then
+  begin
+    dtCurrentDate  := Now;
+    CurrentDate    := FormatDateTime('yyyymmdd hh:nn:ss', dtCurrentDate);
+    CurrentDateMsg := DateTimeToStr(dtCurrentDate);
+    CurrentDate    := GetFormatDate(CurrentDate);
+    DayNumber      := DayofWeek(Now)-1;
+    DayNumber      := Tools.iif(DayNumber = 0, 7, DayNumber);
+    DayName        := LongDayNames[DayNumber + 1];            
+    OkDay          := (Pos(IntToStr(DayNumber), LogValues.ExecutionPeriodDays) > 0);
+    OkHours        := True;
+    if OkDay then
+    begin                                                                                                               
+      WithHours := ((Logvalues.ExecutionPeriodStart <> '') and (Logvalues.ExecutionPeriodEnd <> ''));
+      if WithHours then
+      begin
+        if    (Logvalues.ExecutionPeriodStart[3] <> ':')
+           or (Logvalues.ExecutionPeriodStart[6] <> ':')
+           or (Logvalues.ExecutionPeriodEnd[3]   <> ':')
+           or (Logvalues.ExecutionPeriodEnd[6]   <> ':')
+        then
+        begin
+          TServicesLog.WriteLog(ssbylLog, Format('%s - Le format des heures de la plage d''exécution est incorrect dans le fichier de configuration.', [WSCDS_ErrorMsg, Result]), ServiceName, LogValues, 0);
+          OkHours := False;
+        end else
+        begin
+          StartDate := Format('%s %s', [FormatDateTime('yyyymmdd', Now), Logvalues.ExecutionPeriodStart]);
+          EndDate   := Format('%s %s', [FormatDateTime('yyyymmdd', Now), Logvalues.ExecutionPeriodEnd]);
+          if EndDate < StartDate then
+            EndDate := Format('%s %s', [FormatDateTime('yyyymmdd', IncDay(Now)), Logvalues.ExecutionPeriodEnd]);
+          StartDate := GetFormatDate(StartDate);
+          EndDate   := GetFormatDate(EndDate);
+          OkHours   := ((CurrentDate >= StartDate) and (CurrentDate <= EndDate));
+          if not OkHours then
+            TServicesLog.WriteLog(ssbylLog, Format('L''heure "%s" est en dehors de la période d''exécution paramétrée.', [DateTimeToStr(dtCurrentDate)]), ServiceName, LogValues, 0);
+        end;
+      end;
+    end else
+      TServicesLog.WriteLog(ssbylLog, Format('Le %s est en dehors de la période d''exécution paramétrée.', [DayName]), ServiceName, LogValues, 0);
+    Result := (OkDay) and (OkHours);
+  end;
+end;
+
 class function TServicesLog.CreateLog(LogValues : T_WSLogValues; ServiceName : string): string;
 var
   SizeFile    : Extended;
@@ -114,7 +186,7 @@ begin
     if not LogValues.OneLogPerDay then
     begin
       MaxSize := LogValues.LogMoMaxSize;
-      { Si dï¿½passe la taille max, supprime puis crï¿½ï¿½ un nouveau }
+      { Si dépasse la taille max, supprime puis créé un nouveau }
       if (MaxSize > 0) then
       begin
         if FindFirst(Result, faAnyFile, SearchFile) = 0 then
@@ -179,7 +251,7 @@ var
       end;
     end else
     begin
-      { Si pas de log mï¿½tier, on ï¿½crit dans le log windows uniquement pour le dï¿½bug }
+      { Si pas de log métier, on écrit dans le log windows uniquement pour le débug }
       if (LogValues.DebugEvents > 0) and (pos(WSCDS_DebugMsg, Text) > 0 ) then
         WriteWindowsLog;
     end;

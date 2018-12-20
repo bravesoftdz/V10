@@ -59,7 +59,15 @@ function LastTransfert (TOBTRFPOC,TOBT : TOB) : boolean;
 function FindLigneDocFromDetail(TOBPiece,TOBD: TOB): TOB;
 
 implementation
-uses Facture,UtilTOBPiece, Variants,FactOuvrage,FactureBTP;
+uses
+  Facture
+  , UtilTOBPiece
+  , Variants
+  , FactOuvrage
+  , FactureBTP
+  , ErrorsManagement
+  , CommonTools
+  ;
 
 
 function ExisteTransfertSuiv (TOBTRFPOC,TT : TOB) : boolean;
@@ -175,8 +183,11 @@ end;
 
 
 procedure ValideLesTOBTRF (TOBPiece,TOBTRFPOC : TOB);
-var II,JJ : Integer;
-    TOBT,TT : TOB;
+var
+  II,JJ : Integer;
+  TOBT,TT : TOB;
+  Msg  : string;
+  okok : boolean;
 begin
   for II := 0 to TOBTRFPOC.detail.count -1 do
   begin
@@ -197,7 +208,17 @@ begin
       TT.SetAllModifie(true);
     end;
   end;
-  TOBTRFPOC.InsertDBByNivel(false); 
+  try
+    okok := TOBTRFPOC.InsertDBByNivel(false);
+  except
+    on E: Exception do
+      Msg := E.Message;
+  end;
+  if not okok then
+  begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s des transferts%s.', [TUtilErrorsManagement.GetUpdateError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
+    V_PGI.IoError := oeUnknown ;
+  end;
 end;
 
 

@@ -189,6 +189,8 @@ uses
   ,FactRG
   ,FactAdresseBTP      
   ,UCumulCollectifs
+  , ErrorsManagement
+  , CommonTools
   ;
 
 function wMajDevenirPiece(RefOrig, RefDest: string): integer;
@@ -549,6 +551,7 @@ var
   // ----------------------------------------
   Cpt : integer;
   FieldName : string;
+  Msg : string;
 begin
   Result := False;
   Autoliquidation := false;
@@ -849,6 +852,8 @@ begin
                 { Enregistre la pièce et ses lignes }
                 V.CodeEtat := CodeEtat;
                 Error := Transactions(V.ValideMaPiece, 0);
+                Msg   := TUtilErrorsManagement.GetGenericMessage;
+                Msg   := Tools.iif(Msg <> '', Format(' (%s)', [Msg]), '');
                 if Error = oeOk then
                 begin
                   { Ecrit les clés des pièces lignes dans la TobData }
@@ -864,21 +869,16 @@ begin
                     TOBA := TOB.Create ('PIECE',TOBresult,-1);
                     TOBA.dupliquer(V.Tobpiece,false,true);
                   end;
-                end
-                else
-                  PutError(TobData, TraduireMemoire('Impossible d''enregistrer la pièce'));
-              end
-              else
-                PutError(TobData, TraduireMemoire('Impossible d''obtenir un numéro de pièce'));
-            end
-            else
-              PutError(TobData, TraduireMemoire('Génération abandonnée'));
-          end
-          else
-            PutError(TobData, TraduireMemoire('Le tiers') + ' : ' + CodeTiers + ' ' + TraduireMemoire('n''existe pas'));
-        end
-        else
-          PutError(TobData, TraduireMemoire('Impossible de créer la TobPiece'));
+                end else
+                  PutError(TobData, Format(TraduireMemoire('Impossible d''enregistrer la pièce%s.'), [Msg]));
+              end else
+                PutError(TobData, Format(TraduireMemoire('Impossible d''obtenir un numéro de pièce%s.'), [Msg]));
+            end else
+              PutError(TobData, Format(TraduireMemoire('Génération abandonnée%s.'), [Msg]));
+          end else
+            PutError(TobData, Format(TraduireMemoire('Le tiers %s n''existe pas%s'), [CodeTiers, Msg]));
+        end else
+          PutError(TobData, Format(TraduireMemoire('Impossible de créer la TobPiece%s;'), [Msg]));
       end;
     finally
       If tobData.NomTable = 'LA PIECE' then TobData.PutValue('CLEDOC', V.CleDoc.NaturePiece + ';' + V.CleDoc.Souche + ';' + IntToStr(V.CleDoc.NumeroPiece));
@@ -1148,14 +1148,10 @@ BEGIN
   if V_PGI.IoError=oeOk then
   begin
     if not PassationComptable(TobPiece,TOBOuvrage ,TOBOuvragesP, TobBases, TOBBasesL,TobEches, TOBpieceTrait,TOBAffaireInterv,TobTiers, TobArticles, TobCpta, TobAcomptes
-                             , TobPorcs, TOBPieceRG, TOBBasesRG, TOBanaP,TOBAnaS,nil,TOBVTECOL,Dev, OldEcr, OldStk, True) then
+                             , TobPorcs, TOBPieceRG, TOBBasesRG, TOBanaP,TOBAnaS,nil,TOBVTECOL,nil,Dev, OldEcr, OldStk, True) then
       V_PGI.IoError := oeLettrage;
   end;
   LibereParamTimbres;
-// if V_PGI.IoError=oeOk then
-//   ValideLesLots;
-//  if V_PGI.IoError=oeOk then
-//    ValideLesSeries;
   if V_PGI.IoError=oeOk then
     ValideLesAcomptes(TobPiece, TobAcomptes);
   if V_PGI.IoError=oeOk then

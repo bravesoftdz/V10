@@ -63,7 +63,12 @@ Const	MsgCreat: array[1..5] of string 	= (
 
 
 implementation
-uses factouvrage,FactureBTP,UCotraitance;
+uses
+  factouvrage
+  , FactureBTP
+  , UCotraitance
+  , ErrorsManagement
+  ;
 
 Function  ModifieLaPieceAff (TypeModif : T_TypeModifPieceAff; CodeAff : string; TOBPieceRef : TOB; bParle: Boolean; Var Arg : string) : integer;
 Var ModifPieceAff : T_ModifPieceAff;
@@ -531,55 +536,46 @@ END ;
 Procedure T_ModifPieceAff.ValideModifPiece ;
 var Ind : integer;
 BEGIN   // fct ValideLaPiece de Facture.pas
-InitToutModif;
-ValideLaCotation(TOBPiece,TOBBases,TOBEches) ;
-ValideLaPeriode(TOBPiece) ;
+  InitToutModif;
+  ValideLaCotation(TOBPiece,TOBBases,TOBEches) ;
+  ValideLaPeriode(TOBPiece) ;
 
-{Calculs et finitions}
-MajLesComms(TOBPiece) ;
-//modif BTP
-  ZeroFacture (TOBpiece);
-  for Ind := 0 to TOBPiece.detail.count -1 do ZeroLigneMontant (TOBPiece.detail[Ind]);
-  PutValueDetail (TOBpiece,'GP_RECALCULER','X');
-  TOBBases.ClearDetail;
-  TOBBasesL.ClearDetail;
-//---
-CalculFacture(nil,TOBPiece,TOBPieceTrait,TOBSSTRAIT, TOBOuvrage,TOBOuvragesP,TOBBases,TobbasesL,TOBTiers,TOBArticles,TOBPorcs,Nil,Nil,nil,DEV) ;
-CalculeSousTotauxPiece(TOBPiece) ;
+  {Calculs et finitions}
+  MajLesComms(TOBPiece) ;
+  //modif BTP
+    ZeroFacture (TOBpiece);
+    for Ind := 0 to TOBPiece.detail.count -1 do ZeroLigneMontant (TOBPiece.detail[Ind]);
+    PutValueDetail (TOBpiece,'GP_RECALCULER','X');
+    TOBBases.ClearDetail;
+    TOBBasesL.ClearDetail;
+  //---
+  CalculFacture(nil,TOBPiece,TOBPieceTrait,TOBSSTRAIT, TOBOuvrage,TOBOuvragesP,TOBBases,TobbasesL,TOBTiers,TOBArticles,TOBPorcs,Nil,Nil,nil,DEV) ;
+  CalculeSousTotauxPiece(TOBPiece) ;
 
-{Détruit la pièce pour la réécrire}
-{$IFDEF RECALCULAFF}
-// PA - spécif recalcul des affaires/contrat pour ne pas planter si les bases, eche n'existent pas
-DetruitAncienSansVerif (TOBPiece,TOBBases,TOBEches,TOBNomenclature,Nil,TOBAcomptes,TOBPorcs);
-{$ELSE}
-DetruitAncien (TOBPiece,TOBBases,TOBEches,TOBNomenclature,Nil,TOBAcomptes,TOBPorcs,Nil,TOBOuvrage,Nil,Nil,NIl, nil);
-{$ENDIF}
-
-{Enregistrement physique}
-if V_PGI.IoError=oeOk then ValideLesLignes(TOBPiece,TOBArticles,TobCatalogu,TOBNomenclature,TOBouvrage,Nil,NIl,False,True) ;
-if V_PGI.IoError = oeOk then ValideLesBases(TOBPiece,TobBases,TOBBasesL);
-//if V_PGI.IoError=oeOk then ValideLesAdresses(TOBPiece,TOBPiece,TOBAdresses) ;
-{$IFNDEF RECALCULAFF}
-if V_PGI.IoError=oeOk then ValideLesArticles(TOBPiece,TOBArticles) ;
-if V_PGI.IoError=oeOk then ValideLesCatalogues(TOBPiece,TOBCatalogu) ;
-// if V_PGI.IoError=oeOk then G_ValideAnals ;
-// if V_PGI.IoError=oeOk then G_GenereCompta ;
-if V_PGI.IoError=oeOk then ValideLesAcomptes(TOBPiece,TOBAcomptes) ;
-if V_PGI.IoError=oeOk then ValideLesPorcs(TOBPiece,TOBPorcs) ;
-{$ENDIF}
-// 25/11/02 if V_PGI.IoError=oeOk then TOBpiece.InsertDBByNivelTable(False) ;
-if V_PGI.IoError=oeOk then TOBpiece.InsertDBByNivel(False) ;
-(* mcd 25/11/02 ne plus utiliser ...if V_PGI.IoError=oeOk then TOBBases.InsertDBTable(Nil) ;
-if V_PGI.IoError=oeOk then TOBEches.InsertDBTable(Nil) ;
-if V_PGI.IoError=oeOk then TOBAnaP.InsertDBTable(Nil) ;
-if V_PGI.IoError=oeOk then TOBAnaS.InsertDBTable(Nil) ;
-if V_PGI.IoError=oeOk then TOBBases.InsertDBTable(Nil) ;*)
-if V_PGI.IoError=oeOk then TOBEches.InsertDB(Nil) ;
-if V_PGI.IoError=oeOk then TOBAnaP.InsertDB(Nil) ;
-if V_PGI.IoError=oeOk then TOBAnaS.InsertDB(Nil) ;
-if V_PGI.IoError=oeOk then TOBBases.InsertDB(Nil) ;
-if V_PGI.IoError=oeOk then ValideLesNomen(TOBNomenclature) ;
-if V_PGI.IoError=oeOk then ValideLesOuv(TOBOuvrage, TOBPiece);
+  {Détruit la pièce pour la réécrire}
+  {$IFDEF RECALCULAFF}
+  // PA - spécif recalcul des affaires/contrat pour ne pas planter si les bases, eche n'existent pas
+  DetruitAncienSansVerif (TOBPiece,TOBBases,TOBEches,TOBNomenclature,Nil,TOBAcomptes,TOBPorcs);
+  {$ELSE}
+  DetruitAncien (TOBPiece,TOBBases,TOBEches,TOBNomenclature,Nil,TOBAcomptes,TOBPorcs,Nil,TOBOuvrage,Nil,Nil,NIl, nil);
+  {$ENDIF}
+  {Enregistrement physique}
+  if V_PGI.IoError=oeOk then ValideLesLignes(TOBPiece,TOBArticles,TobCatalogu,TOBNomenclature,TOBouvrage,Nil,NIl,False,True) ;
+  if V_PGI.IoError = oeOk then ValideLesBases(TOBPiece,TobBases,TOBBasesL);
+  {$IFNDEF RECALCULAFF}
+  if V_PGI.IoError=oeOk then ValideLesArticles(TOBPiece,TOBArticles) ;
+  if V_PGI.IoError=oeOk then ValideLesCatalogues(TOBPiece,TOBCatalogu) ;
+  if V_PGI.IoError=oeOk then ValideLesAcomptes(TOBPiece,TOBAcomptes) ;
+  if V_PGI.IoError=oeOk then ValideLesPorcs(TOBPiece,TOBPorcs) ;
+  {$ENDIF}
+  if V_PGI.IoError=oeOk then TOBpiece.InsertDBByNivel(False) ;
+  if V_PGI.IoError=oeOk then TOBEches.InsertDB(Nil) ;
+  if V_PGI.IoError=oeOk then TOBAnaP.InsertDB(Nil) ;
+  if V_PGI.IoError=oeOk then TOBAnaS.InsertDB(Nil) ;
+  if V_PGI.IoError=oeOk then TOBBases.InsertDB(Nil) ;
+  if V_PGI.IoError=oeOk then ValideLesNomen(TOBNomenclature) ;
+  if V_PGI.IoError=oeOk then ValideLesOuv(TOBOuvrage, TOBPiece);
+  if (V_PGI.ioError <> oeOk) and (assigned(TErrManagement)) then TErrManagement.ShowError;
 
 END ;
 

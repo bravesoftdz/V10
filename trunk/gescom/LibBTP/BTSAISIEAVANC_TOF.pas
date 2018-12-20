@@ -366,7 +366,10 @@ Type
 
 Implementation
 uses FactTOb,FactUtil,FactVariante,UTofSaisieAvanc,FactComm,FactOuvrage,FactGrp,BTGENFACTURE,FActCommBTP,FactureBTP,Factspec,
-		 UtilArticle,Paramsoc,Factcalc,FactRG, uTOFComm,UCotraitance,Facture,UFonctionsCBP;
+		 UtilArticle,Paramsoc,Factcalc,FactRG, uTOFComm,UCotraitance,Facture,UFonctionsCBP
+     , ErrorsManagement
+     , CommonTools
+     ;
 
 procedure TOF_BTSAISIEAVANC.OnNew ;
 begin
@@ -523,6 +526,7 @@ var IsModified : boolean;
     Clefac : r_cledoc;
     GenereAvoir : boolean;
     NumSit : Integer;
+    Msg : string;
 begin
   Inherited ;
   ErreurEcr := '';
@@ -567,7 +571,12 @@ begin
                   ErreurEcr := ErreurEcr+'#13#10 Le dossier de facturation à été cloturé avec succès';
                   PgiInfo(ErreurEcr);
                   if (CleFac.NumeroPiece <> 0) and (PgiAsk('Désirez-vous ouvrir la facture générée ?')=Mryes) then SaisiePiece(Clefac,taModif);
-                end else  PGIError (ErreurEcr);
+                end else
+                begin
+                  Msg := TUtilErrorsManagement.GetGenericMessage;
+                  Msg := Tools.iif(Msg <> '', Format(' (%s)', [Msg]), '');
+                  PGIError(Format('%s%s', [ErreurEcr, Msg]));
+                end;
               END;
             end;
           end else
@@ -5759,7 +5768,7 @@ begin
     TobPiece := TOBSelect.detail[i];
     CodeAffaire := TOBPiece.GetValue('GP_AFFAIREDEVIS');
     sql := 'UPDATE AFFAIRE SET AFF_ETATAFFAIRE="TER",AFF_DATEFIN="'+usdatetime(DateCloture)+
-    			 '",AFF_DATEGARANTIE="'+UsDateTime(DateFinGarantie)+'" WHERE AFF_AFFAIRE="'+CodeAffaire+'"';
+    			 '",AFF_DATEGARANTIE="'+UsDateTime(DateFinGarantie)+'", AFF_DATEMODIF="' + USDATETIME(NowH) + '" WHERE AFF_AFFAIRE="'+CodeAffaire+'"';
     result := (ExecuteSql (Sql) > 0 );
     if (result) then
     begin
@@ -7040,6 +7049,7 @@ var TOBOUV,TOBO : TOB;
 		IndiceNomen,Indice : Integer;
 begin
   Result := false;
+  //
 	IndiceNomen := TOBL.getValue('GL_INDICENOMEN') -1;
   //FV1 : 27/07/2016
   if TobOuvrages.detail.count = 0 then exit;

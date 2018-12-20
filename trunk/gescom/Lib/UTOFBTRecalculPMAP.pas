@@ -179,7 +179,9 @@ var i       : Integer;
     Valeur  : string;
 begin
   Inherited ;
+
   fNomTable := ConstitueNomTemp;
+
   //Chargement des zones ecran dans des zones programme
   GetObjects;
 

@@ -40,7 +40,10 @@ function BloqueRecupBSV : boolean;
 function DeBloqueRecupBSV : boolean;
 
 implementation
-uses Facture;
+
+uses
+  Facture
+  ;
 
 
 Function CalculGuid : String;

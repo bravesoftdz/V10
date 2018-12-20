@@ -42,6 +42,8 @@ Type
     procedure OnCancel                 ; override ;
   	private
     	TOBData : TOB;
+      DateFac : THEdit;
+      TDateFac: THLabel;
   end ;
 
 function DemandeDateLivraison (TOBpiece : TOB) : Boolean;
@@ -51,11 +53,11 @@ Implementation
 uses saisUtil;
 
 function DemandeDateLivraison (TOBpiece : TOB) : Boolean;
-var TobDates : TOB;
+var TobDates  : TOB;
 begin
   TOBDates := TOB.Create ('LES DATES', nil,-1);
   TOBDates.AddChampSupValeur('RETOUROK','-');
-  TOBDates.AddChampSupValeur('DATFAC',TOBpiece.GetValue('GP_DATELIVRAISON'));
+  TOBDates.AddChampSupValeur('DATFAC', TOBpiece.GetDateTime('GP_DATELIVRAISON'));
   TOBDates.AddChampSupValeur('DATESITUATION','-');
   TOBDates.AddChampSupValeur('ANTERIORITE','-');
   TOBDates.AddChampSupValeur('NUMSIT',0);
@@ -66,7 +68,7 @@ begin
     TheTOB := nil;
     if TOBDates.getValue('RETOUROK')='X' then
     begin
-    	TOBpiece.PutValue('GP_DATELIVRAISON', TOBDates.GetDateTime('DATEFAC'));
+    	TOBpiece.SetDateTime('GP_DATELIVRAISON', TOBDates.GetDateTime('DATFAC'));
     end;
   FINALLY
   	result := (TOBDates.getValue('RETOUROK')='X');
@@ -96,21 +98,27 @@ begin
       Exit;
     end;
   end;
-  if Not IsValidDate(GetControlText('DATEFAC')) Then
+  if Not IsValidDate(DateFac.text) Then
   begin
     PgiInfo ('La date est incorrecte. Merci de la modifier');
     Ecran.ModalResult := 0;
     Exit;
   end;
-  if ( ControleDate (GetControlText('DATEFAC'))<>0) Then
+  if (ControleDate(DateFac.text)<>0) Then
   begin
     PgiInfo ('La date n''est pas dans un exercice ouvert. Merci de la modifier');
     Ecran.ModalResult := 0;
     Exit;
   end;
-  TOBData.SetDateTime ('DATFAC',StrToDate(GetControlText('DATEFAC')));
-  TOBData.SetInteger ('NUMSIT',THSpinEdit(GEtControl('NUMSIT')).Value);
-  TOBData.putValue('RETOUROK','X');
+
+  TOBData.SetDateTime('DATFAC', StrToDate(DateFac.text));
+  TOBData.SetInteger('NUMSIT',  THSpinEdit(GEtControl('NUMSIT')).Value);
+
+  if StrToDate(DateFac.text) = IDate2099 then
+    TOBData.putValue('RETOUROK','-')
+  else
+    TOBData.putValue('RETOUROK','X');
+  
 end ;
 
 procedure TOF_BTDEMANDEDATES.OnLoad ;
@@ -121,18 +129,26 @@ end ;
 procedure TOF_BTDEMANDEDATES.OnArgument (S : String ) ;
 begin
   Inherited ;
+  //
+  DateFac := THEdit(GetControl('DATEFAC'));
+  TDateFac:= THLabel(GetControl('TDATEFAC'));
+
   TOBData := LaTOB;
-  if TOBData.getValue('DATFAC') <> iDate1900 then SetControlText('DATEFAC',TOBData.getValue('DATFAC'))
-                                              else SetControlText('DATEFAC','  /  /    ');
+  //
+  if TOBData.getValue('DATFAC') <> iDate1900 then
+    DateFac.Text := DateToStr(TOBData.GetValue('DATFAC'))
+  else
+    DateFac.text := '  /  /    ';
+  //
   if TOBData.getValue('DATESITUATION')='X' then
   begin
-  	ecran.Caption := TraduireMemoire ('Date de situation');
-    SetControlCaption('TDATEFAC','Date situation');
+  	ecran.Caption     := TraduireMemoire ('Date de situation');
+    TDateFac.Caption  := 'Date situation';
   end;
   if TOBData.getValue('TYPEDATE')<>'' then
   begin
-  	ecran.Caption := TraduireMemoire (TOBData.getValue('TYPEDATE'));
-    SetControlCaption('TDATEFAC',TOBData.getValue('TYPEDATE'));
+  	ecran.Caption     := TraduireMemoire (TOBData.GetString('TYPEDATE'));
+    TDateFac.Caption  := TOBData.getString('TYPEDATE');
   end;
   if TOBData.getValue('ANTERIORITE')='X' then
   begin

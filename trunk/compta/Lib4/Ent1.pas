@@ -7417,6 +7417,7 @@ begin
         begin
           Req:=CleSequence(TypeSouche,CodeSouche,DD,lQuery.FindField('SH_SOUCHEEXO').AsString='X');
           try
+            if not ExistSequence(Req) then CreateSequence (Req,1);
             Result:=GetNextSequence(Req,Nombre,Entite);
           except
             raise Exception.Create(traduirememoire('Problème d''accès au compteur de séquence'));

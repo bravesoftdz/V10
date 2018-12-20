@@ -223,7 +223,11 @@ function ConstitueCodeAffaireSql (Part0,Part1,Part2,Part3,Avenant : string) : st
 //function GetEtatAppelsNonTermine : string;
 
 implementation
-uses utofAfPiece;
+uses
+  utofAfPiece
+  , ErrorsManagement
+  , CommonTools
+  ;
 
 //**********************************************************************************
 //**************** Fonctions de Traitement du Découpage du Code affaire ************
@@ -265,18 +269,18 @@ Begin
       if Part3  <> Nil then Part3.Visible := False;
       if Avenant<> Nil then Avenant.Visible := False;
       if Part1<>Nil then
+      BEGIN
+        FF:=TForm(Part1.Owner) ;
+        for i:=0 to FF.ComponentCount-1 do if FF.Components[i] is THLabel then
         BEGIN
-          FF:=TForm(Part1.Owner) ;
-          for i:=0 to FF.ComponentCount-1 do if FF.Components[i] is THLabel then
-            BEGIN
-            HH:=THLabel(FF.Components[i]) ;
-            if HH.FocusControl=Part1 then
-               BEGIN
-               HH.Visible:=False ;
-               Break ;
-               END ;
-            END ;
-         END;
+          HH:=THLabel(FF.Components[i]) ;
+          if HH.FocusControl=Part1 then
+          BEGIN
+             HH.Visible:=False ;
+             Break ;
+          END ;
+        END ;
+      END;
       Exit;
    END;
 
@@ -316,57 +320,57 @@ Begin
              Code:=Part1;
              if (StPrefixe = 'W') AND (not Ok_SaisieAppel) then
              		begin
-                lng:=GetParamSoc('SO_APPCO1LNG');
+                lng     :=GetParamSoc('SO_APPCO1LNG');
                 TypeCode:=GetParamSoc('SO_APPCO1TYPE');
-                Valeur:=GetParamSoc('SO_APPCO1VALEUR');
-           		  Visible:=True;
-                Libelle:=GetParamSoc('SO_APPCO1LIB');
+                Valeur  :=GetParamSoc('SO_APPCO1VALEUR');
+           		  Visible :=True;
+                Libelle :=GetParamSoc('SO_APPCO1LIB');
                 end
              else
            	  	Begin
-                lng:=VH_GC.CleAffaire.Co1Lng;
+                lng     :=VH_GC.CleAffaire.Co1Lng;
            		  TypeCode:=VH_GC.CleAffaire.Co1Type;
-           	   	Valeur:=VH_GC.CleAffaire.Co1valeur;
-           	  	Visible:=True;
-           	  	Libelle:=VH_GC.CleAffaire.Co1Lib;
+           	   	Valeur  :=VH_GC.CleAffaire.Co1valeur;
+           	  	Visible :=True;
+           	  	Libelle :=VH_GC.CleAffaire.Co1Lib;
            	  	End;
              End;
           2: Begin
              Code:=Part2;
              if (StPrefixe = 'W') AND (not Ok_SaisieAppel) then
             		begin
-                lng:=GetParamSoc('SO_APPCO2LNG');
-                TypeCode:=GetParamSoc('SO_APPCO2TYPE');
-                Valeur:=GetParamSoc('SO_APPCO2VALEUR');
-           	   	Visible:=GetParamSoc('SO_APPCO2VISIBLE');
-                Libelle:=GetParamSoc('SO_APPCO2LIB');
+                lng     := GetParamSoc('SO_APPCO2LNG');
+                TypeCode:= GetParamSoc('SO_APPCO2TYPE');
+                Valeur  := GetParamSoc('SO_APPCO2VALEUR');
+           	   	Visible := GetParamSoc('SO_APPCO2VISIBLE');
+                Libelle := GetParamSoc('SO_APPCO2LIB');
                 end
              else
            		  Begin
-                lng:= VH_GC.CleAffaire.Co2Lng;
-                TypeCode:=VH_GC.CleAffaire.Co2Type;
-                Valeur:=VH_GC.CleAffaire.Co2valeur;
-                Visible:=VH_GC.CleAffaire.Co2Visible;
-                Libelle:=VH_GC.CleAffaire.Co2Lib;
+                lng     := VH_GC.CleAffaire.Co2Lng;
+                TypeCode:= VH_GC.CleAffaire.Co2Type;
+                Valeur  := VH_GC.CleAffaire.Co2valeur;
+                Visible := VH_GC.CleAffaire.Co2Visible;
+                Libelle := VH_GC.CleAffaire.Co2Lib;
                 End;
              End;
           3: Begin
 	           Code:=Part3;
              if (StPrefixe = 'W') AND (not Ok_SaisieAppel) then
             		begin
-                lng:=GetParamSoc('SO_APPCO3LNG');
+                lng     :=GetParamSoc('SO_APPCO3LNG');
                 TypeCode:=GetParamSoc('SO_APPCO3TYPE');
-                Valeur:=GetParamSoc('SO_APPCO3VALEUR');
-             		Visible:=GetParamSoc('SO_APPCO3VISIBLE');
-                Libelle:=GetParamSoc('SO_APPCO3LIB');
+                Valeur  :=GetParamSoc('SO_APPCO3VALEUR');
+             		Visible :=GetParamSoc('SO_APPCO3VISIBLE');
+                Libelle :=GetParamSoc('SO_APPCO3LIB');
                 end
              else
            	  	Begin
-                lng:=VH_GC.CleAffaire.Co3Lng;
+                lng     :=VH_GC.CleAffaire.Co3Lng;
                 TypeCode:=VH_GC.CleAffaire.Co3Type;
-                Valeur:=VH_GC.CleAffaire.Co3valeur;
-                Visible:=VH_GC.CleAffaire.Co3Visible;
-                Libelle:=VH_GC.CleAffaire.Co3Lib;
+                Valeur  :=VH_GC.CleAffaire.Co3valeur;
+                Visible :=VH_GC.CleAffaire.Co3Visible;
+                Libelle :=VH_GC.CleAffaire.Co3Lib;
                 End;
              End;
           else
@@ -385,33 +389,33 @@ Begin
          Code.MaxLength :=lng;
          Code.Width     :=(lng * 8)+10; // Calcul longueur des zones
          if ((Typecode='SAI') And (i=2) And (VH_GC.AFFORMATEXER<>'AUC')) then
-            Code.Width := Code.Width + 15; // séparateurs en plus
+            Code.Width  := Code.Width + 15; // séparateurs en plus
          If (i=2) Then Code.Left:=Part1.Left+Part1.Width+5;
          If (i=3) Then Code.Left:=Part2.Left+Part2.Width+5;
          If (SaisieAffaire) then
             Begin
               if (FTypeAction=taCreat) then
               begin
-                 Code.ReadOnly:= False;
-                 Code.enabled := true;
+                Code.ReadOnly:= False;
+                Code.enabled := true;
               end
               else
               begin
-                 Code.ReadOnly:= True;
-                 Code.enabled := False;
+                Code.ReadOnly:= True;
+                Code.enabled := False;
               end;
             End
          Else // Code affaire depuis une autre saisie
             Begin
               If (FTypeAction <> taConsult) Then
               begin
-                 Code.ReadOnly:= False;
-                 Code.enabled := True;
+                Code.ReadOnly:= False;
+                Code.enabled := True;
               end
               else
               begin
-                 Code.ReadOnly:= True;
-                 Code.enabled := False;
+                Code.ReadOnly:= True;
+                Code.enabled := False;
               end;
             End;
          // spécificitées en fonction du type de zone ...
@@ -2903,7 +2907,7 @@ Begin
     NumNouv := '';
     Req1 := ',AFF_NUMSITUATION=0,AFF_DATESITUATION="'+UsDateTime(Idate1900)+'"';
   end;
-  Req := 'UPDATE AFFAIRE SET AFF_NUMDERGENER ="' + NumNouv+'"'
+  Req := 'UPDATE AFFAIRE SET AFF_NUMDERGENER ="' + NumNouv+'", AFF_DATEMODIF="' + USDATETIME(NowH) + '" '
   + Req1
   +' WHERE AFF_NUMDERGENER="'+NumAnc+'"';
 
@@ -2944,7 +2948,8 @@ Begin
   TobProd:=Nil;
   ChargeTobActivite(TobProd,TobPiece,Aff,NbAff);
   EcrireDansAfCumul(TobProd,TobPiece,Aff,NbAff);
-  TobProd.free;  TobProd:=Nil;
+  TobProd.free;
+  TobProd:=Nil;
   Aff:=Nil;
 end;
 
@@ -3285,40 +3290,46 @@ end;
 
 //  maj du n° piece dans l'affaire (Si saisie manuelle, ne gere pas le multi_affaire)
 Procedure MajAffaire(TobPiece,TOBAcomptes : Tob; CodeAffaireAvenant, typeaction : string;Action : TActionFiche; Duplic:Boolean;SaisieAvanc:boolean; CodeEtat : String='');
-Var CodeAffaire , Req,NumNouv: string;
+Var
+  CodeAffaire , Req,NumNouv: string;
 Begin
-if ((TypeAction = 'VAL') or (TypeAction = 'TRF')) and (TOBPiece = nil) then exit;
-CodeAffaire := TobPiece.GetValue('GP_AFFAIRE');
+  if ((TypeAction = 'VAL') or (TypeAction = 'TRF')) and (TOBPiece = nil) then exit;
+  try
+    CodeAffaire := TobPiece.GetValue('GP_AFFAIRE');
 
-{$IFDEF BTP}
-// Mise à jour sous-affaire pour les devis et les etudes
-if (TobPiece.Getvalue ('GP_NATUREPIECEG') = VH_GC.AFNatAffaire) or
-   (TobPiece.Getvalue ('GP_NATUREPIECEG') = VH_GC.AFNatProposition) or
-   (TobPiece.Getvalue ('GP_NATUREPIECEG') = 'DE') or
-   (TobPiece.Getvalue ('GP_NATUREPIECEG') = 'BCE') or
-   (TobPiece.Getvalue ('GP_NATUREPIECEG') = 'DAP') then
-   begin
-	 MajSousAffaire(TobPiece,TOBAComptes,CodeAffaireAvenant,Action,Duplic,SaisieAvanc,'',CodeEtat);
-   exit;
-   end;
-if TobPiece.Getvalue ('GP_NATUREPIECEG') = 'AFF' then exit;
-{$ENDIF}
+    // Mise à jour sous-affaire pour les devis et les etudes
+    if (TobPiece.Getvalue ('GP_NATUREPIECEG') = VH_GC.AFNatAffaire) or
+       (TobPiece.Getvalue ('GP_NATUREPIECEG') = VH_GC.AFNatProposition) or
+       (TobPiece.Getvalue ('GP_NATUREPIECEG') = 'DE') or
+       (TobPiece.Getvalue ('GP_NATUREPIECEG') = 'BCE') or
+       (TobPiece.Getvalue ('GP_NATUREPIECEG') = 'DAP') then
+       begin
+         MajSousAffaire(TobPiece,TOBAComptes,CodeAffaireAvenant,Action,Duplic,SaisieAvanc,'',CodeEtat);
+         exit;
+       end;
+    if TobPiece.Getvalue ('GP_NATUREPIECEG') = 'AFF' then exit;
 
-// pas de maj de l'affaire depuis une pièce commande ou devis
-if TobPiece.Getvalue ('GP_NATUREPIECEG') = VH_GC.AFNatAffaire then exit;
-if TobPiece.Getvalue ('GP_NATUREPIECEG') = VH_GC.AFNatProposition then exit;
-// pas de maj depuis les pièces d'achat pa le 26/07/2001
-if GetInfoParPiece(TobPiece.Getvalue('GP_NATUREPIECEG'),'GPP_VENTEACHAT') <> 'VEN' then Exit;
-if Codeaffaire = '' then Exit;
+    // pas de maj de l'affaire depuis une pièce commande ou devis
+    if TobPiece.Getvalue ('GP_NATUREPIECEG') = VH_GC.AFNatAffaire then exit;
+    if TobPiece.Getvalue ('GP_NATUREPIECEG') = VH_GC.AFNatProposition then exit;
+    // pas de maj depuis les pièces d'achat pa le 26/07/2001
+    if GetInfoParPiece(TobPiece.Getvalue('GP_NATUREPIECEG'),'GPP_VENTEACHAT') <> 'VEN' then Exit;
+    if Codeaffaire = '' then Exit;
 
-if (TypeAction = 'VAL') or (TypeAction = 'TRF') then
- Begin
-  NumNouv := EncodeRefPiece(TOBPIECE);
-  Req := 'UPDATE AFFAIRE SET AFF_NUMDERGENER ='+'"'+ NumNouv+'"'
-     +' WHERE AFF_AFFAIRE='+'"'+CodeAffaire+'"';
-  ExecuteSQL(Req);
- End;
-
+    if (TypeAction = 'VAL') or (TypeAction = 'TRF') then
+    Begin
+      NumNouv := EncodeRefPiece(TOBPIECE);
+      Req := 'UPDATE AFFAIRE SET AFF_NUMDERGENER ='+'"'+ NumNouv+'"'
+         +' WHERE AFF_AFFAIRE='+'"'+CodeAffaire+'"';
+      ExecuteSQL(Req);
+    End;
+  except
+    on E: Exception do
+    begin
+      V_PGI.ioError := oeUnknown;
+      TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s de l''affaire (%s).', [TUtilErrorsManagement.GetUpdateError, E.Message]));
+    end;
+  end;
 End;
 
 {***********A.G.L.***********************************************

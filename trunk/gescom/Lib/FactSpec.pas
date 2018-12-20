@@ -679,9 +679,13 @@ Mots clefs ... : RELIQUAT;SPECIFIQUE;CONTEXTE;
 *****************************************************************}
 Function BeforeReliquat ( FF : TForm ; TOBPiece,TOBBases,TOBTiers,TOBArticles : TOB ; DEV : RDEVISE ) : boolean ;
 BEGIN
-Result:=True ;
-if ctxScot in V_PGI.PGIContexte then BEGIN Result:=False ; Exit ; END ;
-if ctxAffaire in V_PGI.PGIContexte then ;
+  Result:=True ;
+  if ctxScot in V_PGI.PGIContexte then
+  begin
+    Result := False;
+    Exit;
+  end;
+  if ctxAffaire in V_PGI.PGIContexte then ;
 END ;
 
 Procedure BeforeUpdateAncien(  TOBPiece_O,TOBPiece,TOBAcomptes_O,TobTiers : TOB);

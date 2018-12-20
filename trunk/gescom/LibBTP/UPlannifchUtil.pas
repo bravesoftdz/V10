@@ -39,7 +39,14 @@ function EncodeLienDevCHADel (TOBPL : TOB ) : string;
 procedure SupprimeLienDevCha (TOBL,TOBlien : TOB);
 
 implementation
-uses factouvrage,NomenUtil,Facture,UtilBTPgestChantier;
+uses
+  factouvrage
+  , NomenUtil
+  , Facture
+  , UtilBTPgestChantier
+  , ErrorsManagement
+  , CommonTools
+  ;
 
 
 function EncodeLienDevCHADel (TOBPL : TOB ) : string;
@@ -260,9 +267,10 @@ begin
   end;
   if Pb then
   BEGIN
-    MessageValid := 'Erreur / Lien devis-chantier';
+    V_PGI.IoError := oeUnknown ;
+    MessageValid  := 'Erreur / Lien devis-chantier';
     PgiError(MessageValid);
-    V_PGI.IoError:=oeUnknown ;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, MessageValid);
   END;
 end;
 
@@ -355,7 +363,7 @@ begin
           TheDoc.PutValue('GP_NUMERO',cledoc.NumeroPiece);
           TheDoc.PutValue('GP_INDICEG',cledoc.Indice);
           TheDoc.LoadDB (true);
-          nb := ExecuteSQL ('UPDATE AFFAIRE SET AFF_PREPARE="-" WHERE AFF_AFFAIRE="'+TheDoc.GetValue('GP_AFFAIREDEVIS')+'"');
+          nb := ExecuteSQL ('UPDATE AFFAIRE SET AFF_PREPARE="-", AFF_DATEMODIF="' + USDATETIME(NowH) + '" WHERE AFF_AFFAIRE="'+TheDoc.GetValue('GP_AFFAIREDEVIS')+'"');
           if nb < 0 then begin V_PGI.IoError := oeUnknown; Exit; END;
         end;
       end;

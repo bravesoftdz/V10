@@ -31,6 +31,7 @@ Uses StdCtrls,
      HTB97,
      Vierge,
      UCotraitance,
+     CommonTools,
      BTPUtil ;
 
 Type
@@ -314,7 +315,7 @@ begin
   TOBssTrait.putValue('BPI_TYPEPAIE','002');
   TOBssTrait.putValue('BPI_DATECONTRAT',V_PGI.DateEntree);
   TOBssTrait.SetString('BPI_FAMILLETAXE',GetParamSocSecur('SO_BTTAXESOUSTRAIT','TN'));
-  TOBssTrait.SetBoolean('BPI_AUTOLIQUID',true);
+  TOBssTrait.SetBoolean('BPI_AUTOLIQUID',Tools.StringInList(TOBssTrait.GetString('BPI_FAMILLETAXE'), GetParamSocSecur('SO_CODETVALIQUIDST','')));
 end;
 
 Procedure TOF_BTPIECEINTERV.Charge_InfoBQE(TOBssTrait,TOBBQE : TOB);

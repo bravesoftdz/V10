@@ -253,6 +253,19 @@ begin
     PGIInfo('Vous devez sélectionner les fichiers à importer');
     Exit;
   end;
+
+  if THValComboBox(GetControl('NATUREPIECEG')).Value = '' then
+  begin
+    PGIInfo('Vous devez définir le type de document à générer');
+    THValComboBox(GetControl('NATUREPIECEG')).SetFocus;
+    Exit;
+  end;
+
+  if GetParamSocSecur('SO_BTARTICLEDIV','') = '' then
+  begin
+    PgiError('Vous devez renseigner l''article par défaut des appels d''offres');
+    exit;
+  end;
   //
   THRichEditOLE(GetControl('RAPPORT')).Visible := True;
   THRichEditOLE(GetControl('RAPPORT')).Clear;
@@ -272,7 +285,7 @@ begin
             XX.StartK2000 ;
             XX.Refresh;
             TRY
-              if ConstitueDocument(GetControlText('EMPLIMPORT'),TOBL,THRichEditOLE(GetControl('RAPPORT'))) then
+              if ConstitueDocument(THValComboBox(GetControl('NATUREPIECEG')).Value, GetControlText('EMPLIMPORT'),TOBL,THRichEditOLE(GetControl('RAPPORT'))) then
               begin
                 if not DeplaceFichier(GetControlText('EMPLIMPORT'),TOBL,true) then
                 begin

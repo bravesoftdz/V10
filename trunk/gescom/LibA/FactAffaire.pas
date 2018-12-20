@@ -40,6 +40,10 @@ procedure ChargeExceptionDocAffaire(NaturePiece: string; TobAffaire: Tob);
 
 implementation
 
+uses
+  ErrorsManagement
+  ;
+
 {**********************************************************************
 Auteur  ...... : AB
 Description .. : Lien d'une ligne piéce avec une tache
@@ -328,11 +332,17 @@ begin
       TOBFormuleVarQte.PutValue('AVV_TYPEACTIVITE', TobOrigine.GetValue('ACT_TYPEACTIVITE'));
       TOBFormuleVarQte.PutValue('AVV_NUMERO', 0);
       if not TOBFormuleVarQte.InsertDB(nil) then
+      begin
         V_PGI.IoError := oeSaisie;
+        TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateAFORMULEVARQTE);
+      end;
     end else
     begin
       if not TOBFormuleVarQte.UpdateDB then
+      begin
         V_PGI.IoError := oeUnknown;
+        TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateAFORMULEVARQTE);
+      end;
     end;
   end;
 end;
@@ -558,6 +568,7 @@ begin
       Result := TOBVarQte.DeleteDB;
       if not Result then
       begin
+        TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteAFORMULEVARQTEPrec);
         V_PGI.IoError := oeUnknown;
         Exit;
       end;

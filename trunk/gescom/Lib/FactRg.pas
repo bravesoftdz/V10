@@ -44,7 +44,7 @@ procedure ReinitRGUtilises (TOBPieceRG : TOB);
 function CalculPort (EnHt: boolean;TOBPorcs : TOB) : double;
 function RestitueMontantCautionUtilise (TOBPieceRG : TOB) : boolean;
 procedure EnregistreNumOrdreRG (TOBgenere,TOBPieceRg : TOB);
-procedure GetCautionAlreadyUsed (TOBpiece,TOBL: TOB; PieceOrigine : string;var CautionUSed,CautionUsedDev : double; Intervenant : string ='';NewPiece : Boolean=false);
+procedure GetCautionAlreadyUsed (TOBpiece,TOBL: TOB; PieceOrigine : string;var CautionAUSed,CautionAUsedDev,CautionUSed,CautionUsedDev : double; Intervenant : string ='';NewPiece : Boolean=false);
 procedure GetReliquatCaution (TOBPieceRg : TOB; var RQ,RQDev : double) ;
 procedure GetMontantRGReliquat(TOBPieceRg : TOB; var RGRP,RGRD : double; ForceTTC : boolean=false; UniquementsiTTC : boolean=false) ;
 procedure SupprimeRg (TOBPieceRg,TOBBasesRg : TOB; IndiceRg : integer);
@@ -55,6 +55,7 @@ procedure CalculeRGSimple (TOBPorcs,TOBPIECE,TOBRG,TOBBASES,TOBBASESRG: TOB;DEV:
 procedure CalculeRGSimpleCotrait (TOBPorcs,TOBPIECE,TOBPieceRG,TOBBASES,TOBBASESRG,TOBPieceTrait : TOB;DEV : RDevise);
 function IsRGSimple (TOBPieceRG : TOB) : boolean;
 procedure GetCautionUsedAfter (TOBPiece : TOB; PiecePrec : string;  NumSituation : integer;var CautionApres,CautionApresdev : double ;Intervenant : string = '');
+procedure GetRgFromPrec (TOBpieceRG : TOB; EnHt : boolean; var Xp,Xd : double ; var NumCaution : string; Intervenant : string=''; PourTous : boolean=true);
 procedure GetRg (TOBpieceRG : TOB; EnHt : boolean; Reliquat : boolean;  var Xp,Xd : double ; var NumCaution : string; Intervenant : string=''; PourTous : boolean=true);
 procedure GetRGPRE (TOBRGPRE : TOB ; EnHt : boolean; var Xp,XD : double ; var numcaution : string);
 procedure GetRGCUM (TOBRGPRE,TOBPieceRG : TOB ; EnHt,Reliquat : boolean; var Xp,XD : double ; var numcaution : string);
@@ -213,11 +214,11 @@ begin
   end;
 end;
 
-procedure GetRg (TOBpieceRG : TOB; EnHt : boolean; Reliquat : boolean;  var Xp,Xd : double ; var NumCaution : string; Intervenant : string=''; PourTous : boolean=true);
+procedure GetRgFromPrec (TOBpieceRG : TOB; EnHt : boolean;  var Xp,Xd : double ; var NumCaution : string; Intervenant : string=''; PourTous : boolean=true);
 var Indice : integer;
 		TOBB  : TOB;
     Sens : Integer;
-    MtRGResiduelle,ResiduDev,Residu,mtttcRG,CautionUsed,CautionApres,MtCaution,Ratio : double;
+    MtRGResiduelle,ResiduDev,Residu,mtttcRG,CautionUsed,CautionApres,MtCaution,Ratio,MtCautionA : double;
 begin
   NumCaution := '1111111';
   Sens := 1;
@@ -233,35 +234,125 @@ begin
     begin
       if TOBB.GetDouble ('PRG_MTHTRGDEV') <> 0 then Ratio := TOBB.GetDouble ('PRG_MTTTCRGDEV')/ TOBB.GetDouble ('PRG_MTHTRGDEV');
     end;
-      if Reliquat then
-      begin
-        if (TOBB.GetString ('PRG_NUMCAUTION') <> '') then
-        begin
-		      // gestion de la RG négative --->  rahhhhhh
+    if (TOBB.GetString ('PRG_NUMCAUTION') <> '') then
+    begin
+      // gestion de la RG négative --->  rahhhhhh
 
-          if (TOBB.GetDouble ('PRG_MTTTCRG') < 0)  then
-          begin
-            Sens := -1;
-          end;
-          //
-          mtttcRG := Abs(TOBB.GetDouble ('PRG_MTTTCRG'));
-          CautionUsed := Abs(TOBB.GetDouble ('CAUTIONUTIL'));
-          CautionApres := Abs(TOBB.GetDouble ('CAUTIONAPRES'));
-          MtCaution := Abs(TOBB.GetDouble ('PRG_CAUTIONMT'));
-        MtRGResiduelle := MtttcRG + CautionUsed - MtCaution{- CautionApres};
-          //
-          if MtRGResiduelle < 0 then MtRGResiduelle := 0;
-          if MtRGResiduelle > 0 then NumCaution := '';
+      if (TOBB.GetDouble ('PRG_MTTTCRG') < 0)  then
+      begin
+        Sens := -1;
+      end;
+      //
+      mtttcRG := Abs(TOBB.GetDouble ('PRG_MTTTCRG'));
+      CautionUsed := Abs(TOBB.GetDouble ('CAUTIONUTIL'));
+      CautionApres := Abs(TOBB.GetDouble ('CAUTIONAPRES'));
+      MtCaution := Abs(TOBB.GetDouble ('PRG_CAUTIONMT'));
+      mtCautionA := Abs(TOBB.getValue('CAUTIONAVANT'));
+      MtRGResiduelle := CautionUsed - MtCaution;
+      if MtRGResiduelle < 0 then MtRGResiduelle := 0;
+      MtRGResiduelle := MtRGResiduelle + mtCautionA;
+      //
+      if MtRGResiduelle < 0 then MtRGResiduelle := 0;
+      if MtRGResiduelle > 0 then NumCaution := '';
+      XP := XP + Arrondi(MtRGResiduelle * sens / ratio,V_PGI.OkDecV);
+      //
+      //
+      mtttcRG := Abs(TOBB.GetDouble ('PRG_MTTTCRGDEV'));
+      CautionUsed := Abs(TOBB.GetDouble ('CAUTIONUTILDEV'));
+      CautionApres := Abs(TOBB.GetDouble ('CAUTIONAPRESDEV'));
+      MtCaution := Abs(TOBB.GetDouble ('PRG_CAUTIONMTDEV'));
+      mtCautionA := Abs(TOBB.getValue('CAUTIONAVANTDEV'));
+      MtRGResiduelle := CautionUsed  - MtCaution;
+      if MtRGResiduelle < 0 then MtRGResiduelle := 0;
+      MtRGResiduelle := MtRGResiduelle + mtCautionA;
+      if MtRGResiduelle < 0 then MtRGResiduelle := 0;
+      if MtRGResiduelle > 0 then NumCaution := '';
+      XD := XD + Arrondi(MtRGResiduelle * sens / ratio,V_PGI.okdecV ) ;
+      end else
+      begin
+      if EnHt then
+      begin
+        XD := XD + TOBB.GetDouble ('PRG_MTHTRGDEV');
+        XP := XP + TOBB.GetDouble ('PRG_MTHTRG');
+      end else
+      begin
+        XP := XP + TOBB.GetDouble ('PRG_MTTTCRG');
+        XD := XD + TOBB.GetDouble ('PRG_MTTTCRGDEV');
+      end;
+      if XD <> 0 then NumCaution := '';
+    end;
+  end;
+end;
+
+procedure GetRg (TOBpieceRG : TOB; EnHt : boolean; Reliquat : boolean;  var Xp,Xd : double ; var NumCaution : string; Intervenant : string=''; PourTous : boolean=true);
+var Indice : integer;
+		TOBB  : TOB;
+    Sens : Integer;
+    MtRGResiduelle,ResiduDev,Residu,mtttcRG,CautionUsed,CautionApres,MtCaution,Ratio,MtCautionA : double;
+begin
+  NumCaution := '1111111';
+  Sens := 1;
+  Xp := 0; XD := 0;
+  residu := 0; ResiDuDev := 0;
+  if TOBpieceRG = nil then exit;
+  for Indice := 0 to TOBPieceRG.detail.count - 1 do
+  begin
+    TOBB := TOBPieceRG.detail[Indice];
+    if (not PourTous) and (TOBB.getString('PRG_FOURN') <> Intervenant) then continue;
+    ratio := 1.0;
+    if EnHt then
+    begin
+      if TOBB.GetDouble ('PRG_MTHTRGDEV') <> 0 then Ratio := TOBB.GetDouble ('PRG_MTTTCRGDEV')/ TOBB.GetDouble ('PRG_MTHTRGDEV');
+    end;
+    if Reliquat then
+    begin
+      if (TOBB.GetString ('PRG_NUMCAUTION') <> '') then
+      begin
+        // gestion de la RG négative --->  rahhhhhh
+
+        if (TOBB.GetDouble ('PRG_MTTTCRG') < 0)  then
+        begin
+          Sens := -1;
+        end;
+        //
+        mtttcRG := Abs(TOBB.GetDouble ('PRG_MTTTCRG'));
+        CautionUsed := Abs(TOBB.GetDouble ('CAUTIONUTIL'));
+        CautionApres := Abs(TOBB.GetDouble ('CAUTIONAPRES'));
+        MtCaution := Abs(TOBB.GetDouble ('PRG_CAUTIONMT'));
+        MtCautionA := 0;
+        if (MtCaution - CautionUsed) > 0 then
+        begin
+          mtCautionA := Abs(TOBB.getValue('CAUTIONAVANT'));
+        end;
+        if CautionUsed > MtCaution then
+        begin
+          MtCaution := 0;
+          CautionUsed := 0;
+        end;
+        MtRGResiduelle := MtttcRG + CautionUsed - MtCaution - mtCautionA;
+        //
+        if MtRGResiduelle < 0 then MtRGResiduelle := 0;
+        if MtRGResiduelle > 0 then NumCaution := '';
         XP := XP + Arrondi(MtRGResiduelle * sens / ratio,V_PGI.OkDecV);
-          //
-          //
-          mtttcRG := Abs(TOBB.GetDouble ('PRG_MTTTCRGDEV'));
-          CautionUsed := Abs(TOBB.GetDouble ('CAUTIONUTILDEV'));
-          CautionApres := Abs(TOBB.GetDouble ('CAUTIONAPRESDEV'));
-          MtCaution := Abs(TOBB.GetDouble ('PRG_CAUTIONMTDEV'));
-        MtRGResiduelle := MtttcRG + CautionUsed  - MtCaution{- CautionApres};
-          if MtRGResiduelle < 0 then MtRGResiduelle := 0;
-          if MtRGResiduelle > 0 then NumCaution := '';
+        //
+        //
+        mtttcRG := Abs(TOBB.GetDouble ('PRG_MTTTCRGDEV'));
+        CautionUsed := Abs(TOBB.GetDouble ('CAUTIONUTILDEV'));
+        CautionApres := Abs(TOBB.GetDouble ('CAUTIONAPRESDEV'));
+        MtCaution := Abs(TOBB.GetDouble ('PRG_CAUTIONMTDEV'));
+        MtCautionA := 0;
+        if (MtCaution - CautionUsed) > 0 then
+        begin
+          mtCautionA := Abs(TOBB.getValue('CAUTIONAVANTDEV'));
+        end;
+        if CautionUsed > MtCaution then
+        begin
+          MtCaution := 0;
+          CautionUsed := 0;
+        end;
+        MtRGResiduelle := MtttcRG + CautionUsed  - MtCaution - MtCautionA;
+        if MtRGResiduelle < 0 then MtRGResiduelle := 0;
+        if MtRGResiduelle > 0 then NumCaution := '';
         XD := XD + Arrondi(MtRGResiduelle * sens / ratio,V_PGI.okdecV ) ;
         end else
         begin
@@ -274,10 +365,10 @@ begin
           XP := XP + TOBB.GetDouble ('PRG_MTTTCRG');
           XD := XD + TOBB.GetDouble ('PRG_MTTTCRGDEV');
         end;
-          if XD <> 0 then NumCaution := '';
-        end;
-      end else
-      begin
+        if XD <> 0 then NumCaution := '';
+      end;
+    end else
+    begin
       if EnHt then
       begin
         XD := XD + TOBB.GetDouble ('PRG_MTHTRGDEV');
@@ -287,45 +378,45 @@ begin
         XP := XP + TOBB.GetDouble ('PRG_MTTTCRG');
         XD := XD + TOBB.GetDouble ('PRG_MTTTCRGDEV');
       end;
-        if (TOBB.GetDouble ('PRG_CAUTIONMT') > 0) then
+      if (TOBB.GetDouble ('PRG_CAUTIONMT') > 0) then
+      begin
+        sens := 1;
+        if (TOBB.GetDouble ('PRG_CAUTIONMT') < 0) and
+           (TOBB.GetDouble ('PRG_MTTTCRG') < 0)  then
         begin
-        	sens := 1;
-          if (TOBB.GetDouble ('PRG_CAUTIONMT') < 0) and
-						 (TOBB.GetDouble ('PRG_MTTTCRG') < 0)  then
-          begin
-            Sens := -1;
-          end;
-          //
-          mtttcRG := Abs(TOBB.GetDouble ('PRG_MTTTCRG'));
-          CautionUsed := Abs(TOBB.GetDouble ('CAUTIONUTIL'));
-          CautionApres := Abs(TOBB.GetDouble ('CAUTIONAPRES'));
-          MtCaution := Abs(TOBB.GetDouble ('PRG_CAUTIONMT'));
-          MtRGResiduelle := MtttcRG + CautionUsed - CautionApres - MtCaution;
-
-          if MtRGResiduelle < 0 then MtRGResiduelle := 0;
-          if MtRGResiduelle > 0 then NumCaution := '';
-        Residu := Residu + arrondi(MtRGResiduelle * sens / ratio,V_PGI.okdecV);
-          //
-          Sens := 1;
-          if (TOBB.GetDouble ('PRG_CAUTIONMTDEV') < 0) and
-						 (TOBB.GetDouble ('PRG_MTTTCRGDEV') < 0)  then
-          begin
-            Sens := -1;
-          end;
-          mtttcRG := Abs(TOBB.GetDouble ('PRG_MTTTCRGDEV'));
-          CautionUsed := Abs(TOBB.GetDouble ('CAUTIONUTILDEV'));
-          CautionApres := Abs(TOBB.GetDouble ('CAUTIONAPRESDEV'));
-          MtCaution := Abs(TOBB.GetDouble ('PRG_CAUTIONMTDEV'));
-          MtRGResiduelle := MtttcRG + CautionUsed - CautionApres - MtCaution;
-          if MtRGResiduelle < 0 then MtRGResiduelle := 0;
-          if MtRGResiduelle > 0 then NumCaution := '';
-        ResiduDev := ResiduDev + Arrondi(MtRGResiduelle * sens / ratio,V_PGI.okdecV);
-        end else
-        begin
-          if XD <> 0 then NumCaution := '';
+          Sens := -1;
         end;
+        //
+        mtttcRG := Abs(TOBB.GetDouble ('PRG_MTTTCRG'));
+        CautionUsed := Abs(TOBB.GetDouble ('CAUTIONUTIL'));
+        CautionApres := Abs(TOBB.GetDouble ('CAUTIONAPRES'));
+        MtCaution := Abs(TOBB.GetDouble ('PRG_CAUTIONMT'));
+        MtRGResiduelle := MtttcRG + CautionUsed - CautionApres - MtCaution;
+
+        if MtRGResiduelle < 0 then MtRGResiduelle := 0;
+        if MtRGResiduelle > 0 then NumCaution := '';
+        Residu := Residu + arrondi(MtRGResiduelle * sens / ratio,V_PGI.okdecV);
+        //
+        Sens := 1;
+        if (TOBB.GetDouble ('PRG_CAUTIONMTDEV') < 0) and
+        (TOBB.GetDouble ('PRG_MTTTCRGDEV') < 0)  then
+        begin
+          Sens := -1;
+        end;
+        mtttcRG := Abs(TOBB.GetDouble ('PRG_MTTTCRGDEV'));
+        CautionUsed := Abs(TOBB.GetDouble ('CAUTIONUTILDEV'));
+        CautionApres := Abs(TOBB.GetDouble ('CAUTIONAPRESDEV'));
+        MtCaution := Abs(TOBB.GetDouble ('PRG_CAUTIONMTDEV'));
+        MtRGResiduelle := MtttcRG + CautionUsed - CautionApres - MtCaution;
+        if MtRGResiduelle < 0 then MtRGResiduelle := 0;
+        if MtRGResiduelle > 0 then NumCaution := '';
+        ResiduDev := ResiduDev + Arrondi(MtRGResiduelle * sens / ratio,V_PGI.okdecV);
+      end else
+      begin
+        if XD <> 0 then NumCaution := '';
       end;
     end;
+  end;
 end;
 
 
@@ -404,19 +495,26 @@ begin
   TOBC.Free;
 end;
 
-procedure GetCautionAlreadyUsed (TOBpiece,TOBL: TOB; PieceOrigine : string;var CautionUSed,CautionUsedDev : double; Intervenant : string =''; NewPiece : boolean=false);
+procedure GetCautionAlreadyUsed (TOBpiece,TOBL: TOB; PieceOrigine : string;var CautionAUSed,CautionAUsedDev,CautionUSed,CautionUsedDev : double; Intervenant : string =''; NewPiece : boolean=false);
 var CD : R_CLEDOC;
 		QQ : TQuery;
     TOBSIt : TOB;
     req,Typefacturation : String;
     II : Integer;
+    OKPRENDS : boolean;
+    CautionInit : double;
 begin
+  OKPRENDS := true;
 	CautionUsed := 0;
   CautionUsedDev := 0;
-  if PieceOrigine = '' then exit;
+	CautionAUsed := 0;
+  CautionAUsedDev := 0;
+  CautionInit := 0;
+  //if PieceOrigine = '' then exit;
   TOBSIt := TOB.Create ('LES SITUATIONS',nil,-1);
-  DecodeRefPiece (PieceOrigine,CD);
+  //DecodeRefPiece (PieceOrigine,CD);
   TypeFacturation := RenvoieTypeFact(TOBPiece.GetValue('GP_AFFAIREDEVIS'));
+  (* -------------------------------------------------
   if Typefacturation='AVA' then
   begin
     if NewPiece then
@@ -499,9 +597,64 @@ begin
       ferme (QQ);
     end;
   end;
+  -------------------------------------------- *)
+  if Typefacturation='AVA' then
+  begin
+    if (NewPiece)  then
+    begin
+      REQ := 'SELECT BST_NATUREPIECE,BST_SOUCHE,BST_NUMEROFAC,BST_NUMEROSIT,PRG_NUMLIGNE,PRG_FOURN, '+
+             'PRG_MTHTRG,PRG_MTHTRGDEV,PRG_MTTTCRGDEV,PRG_MTTTCRG,PRG_NUMCAUTION,PRG_CAUTIONMT,PRG_CAUTIONMTDEV,GL_PIECEORIGINE FROM BSITUATIONS '+
+             'LEFT JOIN PIECERG ON PRG_NATUREPIECEG=BST_NATUREPIECE AND '+
+             'PRG_SOUCHE=BST_SOUCHE AND PRG_NUMERO=BST_NUMEROFAC AND PRG_INDICEG=0 '+
+             'LEFT JOIN LIGNE ON GL_NATUREPIECEG=BST_NATUREPIECE AND GL_SOUCHE=BST_SOUCHE AND '+
+             'GL_NUMERO=BST_NUMEROFAC AND GL_INDICEG=0 AND GL_NUMORDRE=PRG_NUMLIGNE '+
+             'WHERE BST_SSAFFAIRE="'+TOBpiece.getValue('GP_AFFAIREDEVIS')+'" AND '+
+             'BST_VIVANTE="X" '+
+             'ORDER BY GL_PIECEORIGINE,PRG_FOURN,BST_NUMEROSIT ';
+    end else
+    begin
+      REQ := 'SELECT BST_NATUREPIECE,BST_SOUCHE,BST_NUMEROFAC,BST_NUMEROSIT,PRG_NUMLIGNE,PRG_FOURN, '+
+             'PRG_MTHTRG,PRG_MTHTRGDEV,PRG_MTTTCRGDEV,PRG_MTTTCRG,PRG_NUMCAUTION,PRG_CAUTIONMT,PRG_CAUTIONMTDEV,GL_PIECEORIGINE FROM BSITUATIONS '+
+             'LEFT JOIN PIECERG ON PRG_NATUREPIECEG=BST_NATUREPIECE AND '+
+             'PRG_SOUCHE=BST_SOUCHE AND PRG_NUMERO=BST_NUMEROFAC AND PRG_INDICEG=0 '+
+             'LEFT JOIN LIGNE ON GL_NATUREPIECEG=BST_NATUREPIECE AND GL_SOUCHE=BST_SOUCHE AND '+
+             'GL_NUMERO=BST_NUMEROFAC AND GL_INDICEG=0 AND GL_NUMORDRE=PRG_NUMLIGNE '+
+             'WHERE BST_SSAFFAIRE="'+TOBpiece.getValue('GP_AFFAIREDEVIS')+'" AND '+
+             'BST_VIVANTE="X" AND '+
+             'BST_NUMEROSIT < '+
+             '('+
+                'SELECT BST_NUMEROSIT FROM BSITUATIONS WHERE '+
+                'BST_NATUREPIECE="'+TOBpiece.getValue('GP_NATUREPIECEG')+'" AND '+
+                'BST_SOUCHE="'+TOBpiece.getValue('GP_SOUCHE')+'" AND '+
+                'BST_NUMEROFAC='+InttoStr(TOBpiece.getValue('GP_NUMERO'))+
+             ') '+
+             'ORDER BY GL_PIECEORIGINE,PRG_FOURN,BST_NUMEROSIT ';
+    end;
+  end;
 
-
+  QQ := OpenSQL(req,true,-1,'',true);
+  while not QQ.eof do
+  begin
+    //
+    if (QQ.findfield('PRG_CAUTIONMT').asFloat<>0) and (OkPRENDS) then OKPRENDS := false;
+    if (OkPrends) and (QQ.findfield('PRG_CAUTIONMT').asFloat=0) then
+    begin
+      CautionAUsed := CautionAUsed + QQ.findField('PRG_MTTTCRG').asFloat  ;
+      CautionAUsedDEV := CautionAUsedDEV + QQ.findField('PRG_MTTTCRGDEV').asFloat;
+    end;
+    //
+    if (CautionInit = 0) and (QQ.findField('PRG_CAUTIONMT').asFloat <>0 ) then CautionInit := QQ.findField('PRG_CAUTIONMT').asFloat; 
+    CautionUsed := CautionUsed + QQ.findField('PRG_MTTTCRG').asFloat  ;
+    CautionUsedDEV := CautionUsedDEV + QQ.findField('PRG_MTTTCRGDEV').asFloat;
+    QQ.next;
+  end;
+  ferme(QQ);
   TOBSIt.free;
+  if CautionInit = 0 then
+  begin
+    CautionAUsed := 0;
+    CautionAUsedDEV := 0;
+  end;
   (*
   req := 'SELECT PRG_CAUTIONMTU,PRG_CAUTIONMTUDEV FROM PIECERG WHERE '+WherePiece (CD,ttdretenuG,true)+
   							 ' AND PRG_NUMLIGNE='+IntToStr(CD.NumLigne)+ 'AND PRG_FOURN="'+Intervenant+'"';
@@ -522,7 +675,7 @@ procedure GetMontantRGReliquat(TOBPieceRg : TOB; var RGRP,RGRD : double; ForceTT
 var Xp,XD : double;
 		indice : integer;
     TOBLoc :TOb;
-    Sens, MtTTCRG,MtCaution,CautionUsed,ratio : double;
+    Sens, MtTTCRG,MtCaution,CautionUsed,ratio,MtCautionA : double;
     //MtTTCRG : double;
     MtHTRG  : Double;
 begin
@@ -557,14 +710,34 @@ begin
       MtTTCRG := Abs(TOBLOC.GetValue('PRG_MTTTCRG'));
       MtCaution := Abs(TOBLOC.getValue('PRG_CAUTIONMT'));
       CautionUsed := Abs(TOBLOC.getValue('CAUTIONUTIL'));
-      XP := (MtTTCRG - (MtCaution - CautionUsed));
+      mtCautionA := 0;
+      if MtCaution - CautionUsed > 0 then
+      begin
+        MtCautionA := Abs(TOBLOC.getValue('CAUTIONAVANT'));
+      end;
+      if CautionUsed > MtCaution then
+      begin
+        MtCaution := 0;
+        CautionUsed := 0;
+      end;
+      XP := (MtTTCRG - (MtCaution - CautionUsed) - MtCautionA);
       if XP < 0 then Xp := 0;
       Xp := Arrondi(XP * Sens / ratio,V_PGI.okdecV);
       //
       MtTTCRG := Abs(TOBLOC.GetValue('PRG_MTTTCRGDEV'));
       MtCaution := Abs(TOBLOC.getValue('PRG_CAUTIONMTDEV'));
       CautionUsed := Abs(TOBLOC.getValue('CAUTIONUTILDEV'));
-      XD := (MtTTCRG - (MtCaution - CautionUsed));
+      MtCautionA := 0;
+      if MtCaution - CautionUsed > 0 then
+      begin
+        MtCautionA := Abs(TOBLOC.getValue('CAUTIONAVANTDEV'));
+      end;
+      if CautionUsed > MtCaution then
+      begin
+        MtCaution := 0;
+        CautionUsed := 0;
+      end;
+      XD := (MtTTCRG - (MtCaution - CautionUsed)- MtCautionA);
       if XD < 0 then XD := 0;
       XD := Arrondi(XD * Sens / ratio,V_PGI.okdecV);
     end;
@@ -1346,6 +1519,7 @@ var EnHt:boolean;
     MyCautionRest : double;
     MaxNumOrdre,Indice : integer;
     Intervenant : string;
+    CautionAUsed , CautionAUsedDev : double;
 begin
   CautionUsed := 0; CautionUsedDev := 0;
   if TOBPieceRG = nil then exit;
@@ -1361,11 +1535,11 @@ begin
       ( Pos(TOBPieceRG.detail[Indice].getValue('PRG_NATUREPIECEG'),'ABT;ABP')=0) then
     begin
       Intervenant := TOBPieceRG.detail[Indice].GetString('PRG_FOURN');
-      GetCautionAlreadyUsed (TOBPiece,TOBLIG,TOBPieceRG.detail[Indice].GetString('PIECEPRECEDENTE'),CautionUsed,CautionUsedDev,Intervenant);
+      GetCautionAlreadyUsed (TOBPiece,TOBLIG,TOBPieceRG.detail[Indice].GetString('PIECEPRECEDENTE'),CautionAUsed,CautionAUsedDev,CautionUsed,CautionUsedDev,Intervenant);
     end;
     if TOBPIeceRG.detail[Indice].GetValue('PRG_CAUTIONMTDEV') <> 0 then
     begin
-      MyCautionRest := TOBPIeceRG.detail[Indice].GetValue('PRG_CAUTIONMTDEV') - CautionUsedDev ;
+      MyCautionRest := TOBPIeceRG.detail[Indice].GetValue('PRG_CAUTIONMTDEV') - CautionUsedDev - CautionAUsed;
     end;
     if MyCautionRest < 0 then MyCautionrest := 0;
     MyResiduRg := TOBPIeceRG.detail[Indice].GetDouble('PRG_MTTTCRGDEV') - MyCautionrest;
@@ -1464,6 +1638,7 @@ end;
 procedure RGVersLigne (TOBPiece,TOBPieceRG,TOBBasesRG,TOBLIG,TOBLigneRG : TOB; Applicretenue: boolean; GenerationFac : boolean=false);
 var EnHt:boolean;
     CautionUsed , CautionUsedDev : double;
+    CautionAUsed , CautionAUsedDev : double;
     MyCautionRest : double;
     MaxNumOrdre : integer;
 begin
@@ -1476,14 +1651,14 @@ begin
   CautionUsed := 0; CautionUsedDev := 0;
   if (GenerationFac) and (TOBPieceRG.fieldExists ('PIECEPRECEDENTE')) and ( Pos(TOBPieceRG.getValue('PRG_NATUREPIECEG'),'ABT;ABP')=0) then
   begin
-	  GetCautionAlreadyUsed (TOBPiece,TOBLIG,TOBPieceRG.getVAlue('PIECEPRECEDENTE'),CautionUsed,CautionUsedDev);
+	  GetCautionAlreadyUsed (TOBPiece,TOBLIG,TOBPieceRG.getVAlue('PIECEPRECEDENTE'),CautionAUsed,CautionAUsedDev,CautionUsed,CautionUsedDev);
   end;
   MyCautionRest:=0;
   EnHt:=(TOBPiece.GetValue('GP_FACTUREHT')='X');
   TOBLIG.Putvalue('GL_TYPELIGNE','RG');
   if TOBPIeceRG.GetValue('PRG_CAUTIONMTDEV') <> 0 then
   begin
-    MyCautionrest := TOBPIeceRG.GetValue('PRG_CAUTIONMTDEV') - CautionUsedDev;
+    MyCautionrest := TOBPIeceRG.GetValue('PRG_CAUTIONMTDEV') - CautionUsedDev - CautionAUsedDev;
     if MyCautionRest < 0 then MyCautionRest := 0;
   end;
   if (TOBPIECERG.GetValue('PRG_NUMCAUTION')<> '') and ( Pos(TOBPiece.getValue('PRG_NATUREPIECEG'),'ABT;ABP')=0) then
@@ -2103,6 +2278,8 @@ TOBRG.PutValue ('PRG_SAISIECONTRE',TOBPIECE.GetValue('GP_SAISIECONTRE'));
 TOBRG.PutValue ('PRG_APPLICABLE','X');
 if Interv <> '' then TOBRG.PutValue ('PRG_FOURN',Interv);
 TOBRG.addchampsupValeur ('INDICERG',0);
+TOBRG.AddChampSupValeur ('CAUTIONAVANT',0);
+TOBRG.AddChampSupValeur ('CAUTIONAVANTDEV',0);
 TOBRG.AddChampSupValeur ('CAUTIONUTIL',0);
 TOBRG.AddChampSupValeur ('CAUTIONUTILDEV',0);
 TOBRG.AddChampSupValeur ('CAUTIONAPRES',0);

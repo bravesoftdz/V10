@@ -33,6 +33,8 @@ Type
      FamilleN1,FamilleN2,FamilleN3 : THvalComboBox;
      FamilleN1Ouv,FamilleN2Ouv,FamilleN3Ouv : THvalComboBox;
      FamilleTarif,SousFamilleTarif : THvalComboBox;
+     TypeArticle  : THMultiValComboBox;
+     TypeArt      : THValComboBox;
      CodeDepot    : THValComboBox;
         procedure OnUpdate ; override ;
         procedure OnLoad ; override ;
@@ -62,15 +64,13 @@ VAR
    XXWhere    : String;
 implementation
 
-uses Grids,UFonctionsCBP;
+uses Grids,UFonctionsCBP, TntStdCtrls;
 
 procedure TOF_BTARTICLE_MUL.OnArgument(st : String );
 var i           : Integer;
     Deb         : Integer;
     Fin         : Integer;
-    indice      : Integer;
     X           : integer;
-    icol        : integer;
     MenuPop     : Tpopupmenu;
     DroitCreat  : boolean ;
     Critere     : string;
@@ -78,20 +78,30 @@ var i           : Integer;
     Valeur      : String;
     ChampMul    : String;
     ValMul      : string;
-    CC          : THlabel;
     TT   : string;
 BEGIN
 Inherited;
 
 	ffirst := True;
 
-  FamilleN1 := THValComboBox (ecran.FindComponent ('GA_FAMILLENIV1'));
-  FamilleN1Ouv := THValComboBox (ecran.FindComponent ('GA_FAMILLENIV1_'));
-  FamilleN2 := THValComboBox (ecran.FindComponent ('GA_FAMILLENIV2'));
-  FamilleN2Ouv := THValComboBox (ecran.FindComponent ('GA_FAMILLENIV2_'));
-  FamilleN3 := THValComboBox (ecran.FindComponent ('GA_FAMILLENIV3'));
-  FamilleN3Ouv := THValComboBox (ecran.FindComponent ('GA_FAMILLENIV3_'));
-
+  FamilleN1     := THValComboBox (ecran.FindComponent ('GA_FAMILLENIV1'));
+  FamilleN1Ouv  := THValComboBox (ecran.FindComponent ('GA_FAMILLENIV1_'));
+  FamilleN2     := THValComboBox (ecran.FindComponent ('GA_FAMILLENIV2'));
+  FamilleN2Ouv  := THValComboBox (ecran.FindComponent ('GA_FAMILLENIV2_'));
+  FamilleN3     := THValComboBox (ecran.FindComponent ('GA_FAMILLENIV3'));
+  FamilleN3Ouv  := THValComboBox (ecran.FindComponent ('GA_FAMILLENIV3_'));
+  //
+  if (ecran.Name = 'BTARTICLE_RECH') Or (ecran.Name = 'BTPREST_RECH') then
+  Begin
+    TypeArt       := THValComboBox(ecran.FindComponent ('GA_TYPEARTICLE'));
+    TypeArt.OnChange := TypeArticleChange;
+  end
+  else
+  begin
+    TypeArticle   := THMultiValComboBox(ecran.FindComponent ('GA_TYPEARTICLE'));
+    TypeArticle.OnChange := TypeArticleChange;
+  end;
+  
   if FamilleN1 <> nil then
   begin
     FamilleN1.OnChange := Famille1Change;
@@ -138,7 +148,7 @@ Inherited;
       TFMul(ecran).SetDBListe ('BTPRESTATIONSMUL');
       Ecran.Caption :='Prestations';
       THEdit(getcontrol('XX_WHERE')).Text := '';
-      THMultiValComboBox (getcontrol('GA_TYPEARTICLE')).Enabled := false;
+      if TypeArticle <> nil then TypeArticle.Enabled := false;
       SetControlVisible ('GA_LIBREART1',False);
       SetControlVisible ('GA_LIBREART2',False);
       SetControlVisible ('GA_LIBREART3',False);
@@ -159,11 +169,13 @@ Inherited;
       ButInsert.Width := 35;
       ButInsert.DropDownAlways := true;
       Ecran.Caption :='Ouvrages';
-      THMultiValComboBox ( getcontrol('GA_TYPEARTICLE')).text := '';
       THEdit(getcontrol('XX_WHERE')).Text := critere;
-      THMultiValComboBox ( getcontrol('GA_TYPEARTICLE')).Plus := 'AND (CO_CODE="NOM" OR CO_CODE="OUV")';
+      //
+      if TypeArticle <> nil then TypeArticle.text := '';
+      if TypeArticle <> nil then TypeArticle.Plus := 'AND (CO_CODE="NOM" OR CO_CODE="OUV")';
+      if TypeArticle <> nil then TypeArticle.Visible := false;
       THlabel(getcontrol('TGA_TYPEARTICLE')).Visible := false;
-      THMultiValComboBox ( getcontrol('GA_TYPEARTICLE')).Visible := false;
+      //
       SetControlVisible ('GA_LIBREART1',False);
       SetControlVisible ('GA_LIBREART2',False);
       SetControlVisible ('GA_LIBREART3',False);
@@ -176,7 +188,7 @@ Inherited;
       Ecran.Caption :='Frais';
       THEdit(getcontrol('XX_WHERE')).Text := '';
       THlabel(getcontrol('TGA_TYPEARTICLE')).Visible := false;
-      THMultiValComboBox ( getcontrol('GA_TYPEARTICLE')).Visible := false;
+      if TypeArticle <> nil then TypeArticle.Visible := false;
       SetControlVisible ('GA_LIBREART1',False);
       SetControlVisible ('GA_LIBREART2',False);
       SetControlVisible ('GA_LIBREART3',False);
@@ -190,8 +202,8 @@ Inherited;
       Critere := Critere + 'AND (GA_TYPEARTICLE NOT LIKE "F%")';
       Critere := Critere + 'AND (GA_TYPEARTICLE NOT LIKE "PR%")' ;
       Critere := Critere + 'AND (GA_TYPEARTICLE NOT LIKE "PA%")' ;
-      THMultiValComboBox ( getcontrol('GA_TYPEARTICLE')).text := '';
-      THMultiValComboBox ( getcontrol('GA_TYPEARTICLE')).Plus := 'AND (CO_CODE="MAR" OR CO_CODE="POU" OR CO_CODE="ARP")';
+      if TypeArticle <> nil then TypeArticle.text := '';
+      if TypeArticle <> nil then TypeArticle.Plus := 'AND (CO_CODE="MAR" OR CO_CODE="POU" OR CO_CODE="ARP")';
       THEdit(getcontrol('XX_WHERE')).Text := Critere;
       Ecran.Caption :='Articles';
       ButInsert := TToolbarButton97 (Getcontrol('Binsert'));
@@ -248,12 +260,8 @@ Inherited;
       ButInsert := TToolbarButton97 (ecran.findcomponent('Binsert'));
       butInsert.OnClick := InsertClick;
     end
-    else
-    BEGIN
-      if (copy(ecran.Name,1,14) = 'BTARTICLE_RECH') then
-      begin
-        THValComboBox(getControl('GA_TYPEARTICLE')).OnChange := TypeArticleChange;
-      end;
+    else if (copy(ecran.Name,1,14) = 'BTARTICLE_RECH') then
+    begin
       TT := st;
       repeat
         Critere := uppercase(Trim(ReadTokenSt(TT)));
@@ -271,23 +279,24 @@ Inherited;
           end;
         end;
       until Critere = '';
+
       //
-      Critere:=THEdit(getcontrol('XX_WHERE')).Text;
-      XXWhere:=THEdit(getcontrol('XX_WHERE')).Text;
+      Critere := THEdit(getcontrol('XX_WHERE')).Text;
+      XXWhere := THEdit(getcontrol('XX_WHERE')).Text;
       //
       Critere := GetPlusTypeArticle (Critere);
       if critere <> '' then
       begin
-        THValComboBox ( getcontrol('GA_TYPEARTICLE')).Plus := Critere;
+        if TypeArt <> nil then TypeArt.Plus  := Critere;
       end;
-
+      //
       ButInsert := TToolbarButton97 (Getcontrol('Binsert'));
       MenuPop := TpopupMenu(GetControl ('POPTYPA'));
       ButInsert.DropdownMenu := MenuPop;
       ButInsert.Width := 35;
       ButInsert.DropDownAlways := true;
       // MODIF LS MULTI-SELECTION
-      SetControlEnabled ('GA_TYPEARTICLE',(pos('FIXEDTYPEART',st)=0));
+      if TypeArt <> nil then TypeArt.Enabled := (pos('FIXEDTYPEART',st)=0);
       MultiSelect := (Pos('MULTISELECTION',st) > 0);
       SetControlVisible('BSELECTALL', MultiSelect);
       {$IFNDEF EAGLCLIENT}
@@ -467,55 +476,55 @@ Ecran.Close ;
 end;
 
 procedure TOF_BTARTICLE_MUL.InsertClick (Sender : Tobject);
-var
-   F : TFMul ;
-   TypeArticle : String;
+var F : TFMul ;
+    TArticle : String;
 begin
-if not (Ecran is TFMul) then exit;
-F:=TFMul(Ecran) ;
-if copy(Ecran.name,1,13) <> 'BTARTICLE_MUL' then
-   BEGIN
-   TypeArticle := THValComboBox (GetControl ('GA_TYPEARTICLE')).Value  ;
-   END else
-   BEGIN
-   TypeArticle := THMultiValComboBox (GetControl ('GA_TYPEARTICLE')).Text  ;
-   END;
-if TypeArticle  <>'RES' then
-  V_PGI.DispatchTT(7,taCreat,'','','GA_STATUTART=GEN;TYPEARTICLE='+TypeArticle)
-else
-  V_PGI.DispatchTT(6,taCreat,'','','TYPEARTICLE='+TypeArticle);
-Ttoolbarbutton97(TFMul(F).FindComponent('Bcherche')).Click  ;
+  //
+  if not (Ecran is TFMul) then exit;
+  //
+  F:=TFMul(Ecran) ;
+  //
+  if (F.Name = 'BTARTICLE_RECH') OR (F.Name = 'BTPREST_RECH') then
+    TArticle := TypeArt.Text
+  else
+    TArticle := TypeArticle.Text;
+  //
+  if Pos(TArticle,'RES')=0 then
+    V_PGI.DispatchTT(7,taCreat,'','','GA_STATUTART=GEN;TYPEARTICLE='+TArticle)
+  else
+    V_PGI.DispatchTT(6,taCreat,'','','TYPEARTICLE=' + TArticle);
+  //
+  Ttoolbarbutton97(TFMul(F).FindComponent('Bcherche')).Click  ;
 end;
 
 procedure TOF_BTARTICLE_MUL.OnUpdate;
-var  F : TFMul ;
-    iCol:integer;
-    CC:THLabel ;
-    MV : THValComboBox;
+var iCol:integer;
 begin
 inherited ;
-if not (Ecran is TFMul) then exit;
-F:=TFMul(Ecran) ;
+  if not (Ecran is TFMul) then exit;
 
-
-if copy(ecran.name,1,13) <>'BTARTICLE_MUL' then
+  if copy(ecran.name,1,13) <> 'BTARTICLE_MUL' then
   begin
-     Mv := THValComboBox (ecran.FindComponent ('GA_TYPEARTICLE'));
-     for iCol := 0 to mv.items.Count-1 do
-     begin
-          if mv.Items.Strings[Icol] = 'Marchandise' then mv.Items.Strings[Icol] := 'Article';
-     end;
+    //Mv := THValComboBox (ecran.FindComponent ('GA_TYPEARTICLE'));
+    for iCol := 0 to TypeArt.items.Count-1 do
+    begin
+      if TypeArt.Items.Strings[Icol] = 'Marchandise' then TypeArt.Items.Strings[Icol] := 'Article';
+    end;
   end;
-RenommageEnteteColonnes;
+
+  RenommageEnteteColonnes;
+
 end;
 
 
 function TOF_BTARTICLE_MUL.GetPlusTypeArticle(Critere: string): string;
-var Indice , Position : integer;
+var Position : integer;
     chaine,ChaineTmp : string;
     first : boolean;
 begin
+
   first := true;
+
   repeat
     Position := pos ('GA_TYPEARTICLE="',Critere);
     if Position > 0 then
@@ -524,18 +533,15 @@ begin
       if chaineTmp <> '' then
       begin
         if First then
-        BEGIN
-          Chaine := ' AND ((CO_CODE="'+ChaineTmp+'")';
-          First := false;
-        END ELSE
-        BEGIN
-          Chaine := chaine + ' OR (CO_CODE="'+ChaineTmp+'")'
-        END;
+          Chaine := ' AND (CO_CODE IN ("' + ChaineTmp + '"'
+        Else
+          Chaine := chaine + ', "' + ChaineTmp + '"';
+        If First then First := false;
       end;
       critere := copy (critere,Position+17,255);
     end;
   until Position <= 0;
-  if chaine  <> '' then Chaine := Chaine + ')';
+  if chaine  <> '' then Chaine := Chaine + '))';
   result := Chaine;
 end;
 
@@ -551,28 +557,28 @@ begin
     if copy(UnType,1,1)='-' then
     begin
       if TheSelection = '' then
-         TheSelection := TheSelection + 'AND ((CC_CODE <> "'+copy(UnType,2,255)+'")'
+        TheSelection := ' AND (CC_CODE NOT IN ("' + copy(UnType,2,255) + '"'
       else
-        TheSelection := TheSelection + ' (CC_CODE <> "'+copy(UnType,2,255)+'")';
+        TheSelection := TheSelection + ',"' + copy(UnType,2,255) + '"';
+      //
       if TheWhere = '' then
-      begin
-        TheWhere := '(BNP_TYPERESSOURCE <> "'+copy(UnType,2,255)+'")'
-      end else
-      begin
-        TheWhere := TheWhere + ' AND (BNP_TYPERESSOURCE <> "'+copy(UnType,2,255)+'")'
-      end;
-    end else
+        TheWhere := '(BNP_TYPERESSOURCE NOT IN ("' + copy(UnType,2,255) + '"'
+      else
+        TheWhere := TheWhere + ', "' + copy(UnType,2,255) + '"';
+    end
+    else
     begin
       if TheSelection = '' then
-        TheSelection := TheSelection + 'AND ((CC_CODE = "'+UnType+'")'
+        TheSelection := ' AND (CC_CODE IN ("' + UnType + '"'
       else
-        TheSelection := TheSelection + ' OR (CC_CODE = "'+UnType+'")';
+        TheSelection := TheSelection + ',"' + UnType + '"';
+
       if TheWhere = '' then
       begin
-        TheWhere := '(BNP_TYPERESSOURCE = "'+UnType+'")'
+        TheWhere := '(BNP_TYPERESSOURCE IN ("' + UnType + '"';
       end else
       begin
-        TheWhere := TheWhere + ' OR (BNP_TYPERESSOURCE = "'+UnType+'")'
+        TheWhere := TheWhere + ', "' + UnType + '"';
       end;
     end;
     Untype := READTOKENPipe (LesTypes,',');
@@ -580,12 +586,12 @@ begin
 
   if TheSelection <> '' then
   begin
-    TheSelection := TheSelection + ')';
+    TheSelection := TheSelection + '))';
     THValComboBox(GetControl('BNP_TYPERESSOURCE')).plus := TheSelection;
   end;
   if TheWhere <> '' then
   begin
-    THEdit(GetControl('XX_WHERE')).text := TheWhere;
+    THEdit(GetControl('XX_WHERE')).text := TheWhere + '))';
   end;
 end;
 
@@ -593,52 +599,85 @@ procedure TOF_BTARTICLE_MUL.ConstituePlusTypeArticle(TheTypes: string);
 var lesTypes,unType,TheSelection,TheWhere,LastType : string;
 		NB : integer;
 begin
+
   if TheTypes = '' then exit;
-  LesTypes := TheTypes;
-  TheSelection := '';
-  TheWhere := '';
-  Untype := READTOKENPipe (LesTypes,',');
+
+  if (ecran.Name = 'BTARTICLE_RECH') OR (ecran.Name = 'BTPREST_RECH') then
+  begin
+    If TypeArt=nil      then Exit;
+  end
+  else
+  begin
+    If TypeArticle=nil  then Exit;
+  end;
+
+  LesTypes      := TheTypes;
+
+  TheSelection  := '';
+  TheWhere      := '';
+
+  Untype        := READTOKENPipe (LesTypes,',');
+
   NB := 0;
+
   repeat
   	inc (Nb);
     if copy(UnType,1,1)='-' then
     begin
       if TheSelection = '' then
-         TheSelection := TheSelection + 'AND ((CO_CODE <> "'+copy(UnType,2,255)+'")'
+        TheSelection := 'AND (CO_CODE NOT IN ("' + copy(UnType,2,255) + '"'
       else
-        TheSelection := TheSelection + ' (CO_CODE <> "'+copy(UnType,2,255)+'")';
+        TheSelection := TheSelection + ', "' + copy(UnType,2,255) + '"';
+      //
       if TheWhere = '' then
+        TheWhere := '(GA_TYPEARTICLE NOT IN ("' + copy(UnType,2,255) +'"'
+      else
       begin
-        TheWhere := '(GA_TYPEARTICLE <> "'+copy(UnType,2,255)+'")'
-      end else
-      begin
-        TheWhere := TheWhere + ' AND (GA_TYPEARTICLE <> "'+copy(UnType,2,255)+'")'
+        TheWhere := TheWhere + ', "' + copy(UnType,2,255) + '"'
       end;
-    end else
+    end
+    else
     begin
     	LastType := UnType;
       if TheSelection = '' then
-        TheSelection := TheSelection + 'AND ((CO_CODE = "'+UnType+'")'
+        TheSelection := ' AND (CO_CODE IN ("' + UnType + '"'
       else
-        TheSelection := TheSelection + ' OR (CO_CODE = "'+UnType+'")';
+        TheSelection := TheSelection + ', "' + UnType + '"';
+      //
       if TheWhere = '' then
-      begin
-        TheWhere := '(GA_TYPEARTICLE = "'+UnType+'")'
-      end else
-      begin
-        TheWhere := TheWhere + ' OR (GA_TYPEARTICLE = "'+UnType+'")'
-      end;
+        TheWhere := '(GA_TYPEARTICLE IN ("' + UnType + '"'
+      else
+        TheWhere := TheWhere + ', "' + UnType + '"';
     end;
     Untype := READTOKENPipe (LesTypes,',');
   until UnType = '';
 
   if TheSelection <> '' then
   begin
-    TheSelection := TheSelection + ')';
-    THValComboBox(GetControl('GA_TYPEARTICLE')).plus := TheSelection;
-    if (NB = 1) and (LastType <> '')  then
-    	THValComboBox(GetControl('GA_TYPEARTICLE')).Value := LastType;
+    TheSelection := TheSelection + '))';
+    if (ecran.Name = 'BTARTICLE_RECH') OR (ecran.Name = 'BTPREST_RECH') then
+    begin
+      TypeArt.plus := TheSelection;
+      if (NB = 1) and (LastType <> '')  then
+      begin
+        TypeArt.text := LastType;
+      end;
+    end
+    else
+    begin
+      TypeArticle.plus := TheSelection;
+      if (NB = 1) and (LastType <> '')  then
+      begin
+        TypeArticle.Items[NB-1] := LastType;
+      end;
+    end;
   end;
+  //
+  if TheWhere <> '' then
+  begin
+    THEdit(GetControl('XX_WHERE')).text := TheWhere + '))';
+  end;
+
 end;
 
 procedure TOF_BTARTICLE_MUL.RenommageEnteteColonnes;
@@ -744,65 +783,53 @@ end;
 procedure TOF_BTARTICLE_MUL.TypeArticleChange(Sender: Tobject);
 var icol : integer;
     CC : THLabel;
-    TypeArticle : String;
+    TArticle : String;
 begin
 
-  if copy(Ecran.name,1,13) <> 'BTARTICLE_MUL' then
-  BEGIN
-  	TypeArticle := THValComboBox (GetControl ('GA_TYPEARTICLE')).Value  ;
-  END
+  if (ecran.Name = 'BTARTICLE_RECH') OR (ecran.Name = 'BTPREST_RECH') then
+    TArticle := TypeArt.Text
   else
-  BEGIN
-  	TypeArticle := THMultiValComboBox (GetControl ('GA_TYPEARTICLE')).Text  ;
-  END;
+  begin
+    TArticle := TypeArticle.Text;
+    TArticle := copy(TArticle,0, length(TArticle)-1);
+  end;
 
-  If (TypeArticle = 'MAR') or (TypeArticle = 'ARP') then
+  If pos(TArticle,'MAR;ARP') > 0 then
   	FamilleTarif.enabled := True
   else
   	FamilleTarif.enabled := False;
 
-	if ThvalComboBox(getCOntrol('GA_TYPEARTICLE')).Value = 'OUV' then
-  begin
-  	TFMul(ecran).SetDBListe ('BTMULOUVRAGE');
-    THValComboBox(getControl('GA_FAMILLENIV1')).Visible := False;
-    THValComboBox(getControl('GA_FAMILLENIV2')).Visible := False;
-    THValComboBox(getControl('GA_FAMILLENIV3')).Visible := False;
-    THValComboBox(getControl('GA_FAMILLENIV1_')).Visible := True;
-    THValComboBox(getControl('GA_FAMILLENIV2_')).Visible := True;
-    THValComboBox(getControl('GA_FAMILLENIV3_')).Visible := True;
-    FamilleN1.value := '';
-    FamilleN2.value := '';
-    FamilleN3.value := '';
-    THEdit(getcontrol('XX_WHERE')).Text := '';
-  end
+  THEdit(getcontrol('XX_WHERE')).Text := '';
+
+	if Pos(TArticle, 'OUV') > 0 then
+  	TFMul(ecran).SetDBListe ('BTMULOUVRAGE')
   else
-	if ThvalComboBox(getCOntrol('GA_TYPEARTICLE')).Value = 'PRE' then
-  begin
-  	TFMul(ecran).SetDBListe ('BTPRESTATIONSMUL');
-    THValComboBox(getControl('GA_FAMILLENIV1')).Visible := True;
-    THValComboBox(getControl('GA_FAMILLENIV2')).Visible := True;
-    THValComboBox(getControl('GA_FAMILLENIV3')).Visible := True;
-    THValComboBox(getControl('GA_FAMILLENIV1_')).Visible := False;
-    THValComboBox(getControl('GA_FAMILLENIV2_')).Visible := False;
-    THValComboBox(getControl('GA_FAMILLENIV3_')).Visible := False;
-    FamilleN1Ouv.value := '';
-    FamilleN2Ouv.value := '';
-    FamilleN3Ouv.value := '';
-    THEdit(getcontrol('XX_WHERE')).Text := '';
-  end
+	if Pos(TArticle, 'PRE') > 0 then
+  	TFMul(ecran).SetDBListe ('BTPRESTATIONSMUL')
   else
   begin
   	TFMul(ecran).SetDBListe ('BTRECHARTICLE');
-    THValComboBox(getControl('GA_FAMILLENIV1')).Visible := True;
-    THValComboBox(getControl('GA_FAMILLENIV2')).Visible := True;
-    THValComboBox(getControl('GA_FAMILLENIV3')).Visible := True;
-    THValComboBox(getControl('GA_FAMILLENIV1_')).Visible := False;
-    THValComboBox(getControl('GA_FAMILLENIV2_')).Visible := False;
-    THValComboBox(getControl('GA_FAMILLENIV3_')).Visible := False;
-    FamilleN1Ouv.value := '';
-    FamilleN2Ouv.value := '';
-    FamilleN3Ouv.value := '';
     THEdit(getcontrol('XX_WHERE')).Text := XXWhere;
+  end;
+
+  if Assigned(FamilleN1) then FamilleN1.Visible := (Pos(TArticle, 'OUV') = 0);
+  if Assigned(FamilleN2) then FamilleN2.Visible := (Pos(TArticle, 'OUV') = 0);
+  if Assigned(FamilleN3) then FamilleN3.Visible := (Pos(TArticle, 'OUV') = 0);
+  //
+  if assigned(FamilleN1Ouv) then
+  begin
+    //FamilleN1Ouv.value    := '';
+    FamilleN1Ouv.Visible  := (Pos(TArticle, 'OUV') > 0);
+  end;
+  if assigned(FamilleN2Ouv) then
+  begin
+    //FamilleN2Ouv.value    := '';
+    FamilleN2Ouv.Visible  := (Pos(TArticle, 'OUV') > 0);
+  end;
+  if assigned(FamilleN3Ouv) then
+  begin
+    //FamilleN3Ouv.value    := '';
+    FamilleN3Ouv.Visible  := (Pos(TArticle, 'OUV') > 0);
   end;
 
   for iCol:=1 to 3 do
@@ -810,17 +837,14 @@ begin
     CC:=THLabel(GetCOntrol('TGA_FAMILLENIV'+InttoStr(iCol)));
     if copy(ecran.name,1,13) <>'BTARTICLE_MUL' then
     begin
-      if ThvalComboBox(GetControl('GA_TYPEARTICLE')).Value = 'OUV' then
+      if (Pos(TArticle, 'OUV')>0) then
       begin
         CC.Caption:=RechDom('BTLIBOUVRAGE','BO'+InttoStr(iCol),false);
       end else
       begin
         CC.Caption:=RechDom('GCLIBFAMILLE','LF'+InttoStr(iCol),false);
       end;
-    end else
-    begin
     end;
-
   end;
 
   if GetparamSocsecur('SO_BTRECHARTAUTO',False) then
@@ -875,6 +899,7 @@ end;
 procedure TOF_BTARTICLE_MUL.Famille2OuvChange(Sender: TOBject);
 var st : string;
 begin
+
   if GetParamSoc('SO_GCFAMHIERARCHIQUE')=True then
   begin
     st := '';
@@ -902,7 +927,7 @@ end;
 procedure TOF_BTARTICLE_MUL.DuplicationArticle(Sender : TObject);
 var F           : TFMul ;
     FieldArticle: string;
-    TypeArticle : String;
+    TArticle : String;
     CodeArticle : string;
 begin
 
@@ -917,13 +942,10 @@ begin
 
   CodeArticle := F.Q.FindField(FieldArticle).AsString;
 
-  if copy(Ecran.name,1,13) <> 'BTARTICLE_MUL' then
-    TypeArticle := THValComboBox (GetControl ('GA_TYPEARTICLE')).Value
-  else
-    TypeArticle := THMultiValComboBox (GetControl ('GA_TYPEARTICLE')).Text  ;
+  TArticle := TypeArticle.Text;
 
-  if TypeArticle  <>'RES' then
-    V_PGI.DispatchTT(7,taCreat,CodeArticle,'','DUPLICATION='+CodeArticle+';TYPEARTICLE='+TypeArticle)
+  if Pos(TArticle,'RES') = 0 then
+    V_PGI.DispatchTT(7,taCreat,CodeArticle,'','DUPLICATION='+CodeArticle+';TYPEARTICLE='+TArticle)
   else
     V_PGI.DispatchTT(6,taCreat,CodeArticle,'','DUPLICATION='+CodeArticle);
 

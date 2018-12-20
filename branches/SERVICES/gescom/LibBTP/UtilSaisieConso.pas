@@ -555,7 +555,13 @@ begin
 end;
 
 procedure AlimenteValeurInit (TOBL : TOB);
+Var DPA, DPR, PUHT : Double;
 begin
+
+  DPA := TOBL.GetValue('BCO_DPA');
+  DPR := TOBL.GetValue('BCO_DPR');
+  PUHT := TOBL.GetValue('BCO_PUHT');
+  //
   TOBL.PutValue ('_PA_INIT',TOBL.GetValue('BCO_DPA'));
   TOBL.PutValue ('_PR_INIT',TOBL.GetValue('BCO_DPR'));
   TOBL.PutValue ('_PV_INIT',TOBL.GetValue('BCO_PUHT'));

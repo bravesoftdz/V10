@@ -1,6 +1,6 @@
 object FFacture: TFFacture
-  Left = 255
-  Top = 123
+  Left = 256
+  Top = 124
   Width = 1025
   Height = 710
   HelpContext = 119000017
@@ -3178,6 +3178,8 @@ object FFacture: TFFacture
             Width = 28
             Height = 27
             Hint = 'Voir les totalisations documents'
+            Glyph.Data = {00000000}
+            GlyphMask.Data = {00000000}
             ImageIndex = 0
             Images = HimgTOT
             Opaque = False
@@ -3468,6 +3470,23 @@ object FFacture: TFFacture
         '0\fnil Times New Roman;}}'
       '{\*\generator Riched20 6.3.9600}\viewkind4\uc1 '
       '\pard\f0\fs20 '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
+      '\par '
       '\par '
       '\par '
       '\par '
@@ -4387,6 +4406,23 @@ object FFacture: TFFacture
         '\par '
         '\par '
         '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
+        '\par '
         '\par }')
     end
   end
@@ -4700,6 +4736,14 @@ object FFacture: TFFacture
     object MBREPARTTVA: TMenuItem
       Caption = 'R'#233'partition de TVA au 1/1000e'
       OnClick = MBREPARTTVAClick
+    end
+    object NSep11: TMenuItem
+      Caption = '-'
+    end
+    object MnEpurDoc: TMenuItem
+      Caption = 'Nettoyage du document'
+      Hint = 'Epuration des lignes non quantifi'#233'es'
+      OnClick = MnEpurDocClick
     end
     object NSEPARATEUR: TMenuItem
       Caption = '-'

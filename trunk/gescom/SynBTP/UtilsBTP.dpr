@@ -1123,7 +1123,9 @@ uses
   UtilBTPVerdon in '..\..\Services\BTPVerdon\Lib\UtilBTPVerdon.pas',
   ExpEcrVerdon_TOF in '..\..\Services\BTPVerdon\Lib\ExpEcrVerdon_TOF.pas',
   UtilBSV in '..\LibBTP\UtilBSV.pas',
-  UDefGlobals in '..\LibBTP\UDefGlobals.pas';
+  UDefGlobals in '..\LibBTP\UDefGlobals.pas',
+  BEXPORTXLSSES_TOF in '..\SES\BEXPORTXLSSES_TOF.PAS';
+
 
 //
 

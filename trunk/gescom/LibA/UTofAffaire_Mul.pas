@@ -55,7 +55,7 @@ uses  StdCtrls,
       StrUtils,
       UplanningBTP,
       TraducAffaire,
-           Graphics
+      Graphics
 ;
 Type
 		 TModegestion = (TTgStd,TTgCotraitance);
@@ -141,6 +141,7 @@ Type
         procedure ChargeResponsable;
         Procedure ChargeDomaine;
         procedure ChargeEtablissement(Abrege : Boolean=False);
+        procedure BEXPORTXLSSES (Sender : TObject);
      END ;
 Type
      TOF_APPORTEUR_MUL = Class (TOF)
@@ -162,8 +163,9 @@ uses  UtilRessource,
       uTOFComm,
       CalcOLEGenericBTP,
       PiecesRecalculs,
-      AffEcheanceUtil
-      , CommonTools
+      AffEcheanceUtil,
+      CommonTools,
+      BEXPORTXLSSES_TOF
       ;
 
 
@@ -446,6 +448,14 @@ if bPasSiUn then
   if THValComboBox(GetControl('AFF_ETABLISSEMENT')) <> nil then THValComboBox(GetControl('AFF_ETABLISSEMENT')).visible := false;
 	TFMUL(Ecran).SetDbliste('BTMULAFFAIRE_S1');
 *}
+  if VH_GC.BTCODESPECIF = '004' then
+  begin
+    if GetControl('BSPECIF_SES')<>nil then
+    begin
+      TToolbarButton97 (GetControl('BSPECIF_SES')).Visible := True;
+      TToolbarButton97 (GetControl('BSPECIF_SES')).OnClick := BEXPORTXLSSES;
+    end;
+  end;
 
 End;
 
@@ -1640,7 +1650,7 @@ Var
   Lib2      : String;
 begin
   FromAppel := (Ecran.name = 'BTMULAPPELS');
-  GetRessourceRecherche(TResponsable, Tools.iif(not FromAppel, 'ARS_TYPERESSOURCE="SAL"', ''), Tools.iif(FromAppel, 'DEFAULTTYPERESSOURCE=INT|SAL', ''), '');
+  GetRessourceRecherche(TResponsable, Tools.iif(not FromAppel, 'ARS_TYPERESSOURCE="SAL"', ''), Tools.iif(not FromAppel, 'DEFAULTTYPERESSOURCE=SAL', ''), '');
 
   if LibResponsable = nil then Exit;
 
@@ -1886,6 +1896,19 @@ begin
   end;
 end;
 
+
+procedure TOF_AFFAIRE_MUL.BEXPORTXLSSES(Sender: TObject);
+var codeAffaire,Libelle : string;
+begin
+  if not FileExists(StdFileDATASES) then
+  begin
+    PGIInfo('Le fichier '+StdFileDATASES+' n''existe pas');
+    exit;
+  end;
+  codeAffaire := Fliste.datasource.dataset.FindField('AFF_AFFAIRE').AsString;
+  Libelle := Fliste.datasource.dataset.FindField('AFF_LIBELLE').AsString;
+  AGLLanceFiche('BTP','BEXPORTXLSSES','','','ACTION=MODIFICATION;CHANTIER='+CodeAffaire+';LIBCHANTIER='+Libelle);
+end;
 
 Initialization
 registerclasses([TOF_AFFAIRE_MUL]);

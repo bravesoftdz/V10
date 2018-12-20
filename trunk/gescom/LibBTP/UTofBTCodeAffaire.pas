@@ -44,8 +44,9 @@ uses  StdCtrls,Controls,Classes,forms,sysutils,ComCtrls,
 
 Type
     RParamDoc = record
-      Cledoc : R_CLEDOC;
+      Cledoc  : R_CLEDOC;
       Affaire : string;
+      RecVide : Boolean;
     end;
 
      TOF_BTCODEAFFAIRE = Class (TOF_AFBASECODEAFFAIRE)
@@ -89,6 +90,7 @@ Type
         ReajusteAnal    : Boolean;
         SaisieAvancPoc  : boolean;
         SaisieInterdite : Boolean;
+        ChantierOblig   : Boolean;
 
         Recup           : TCheckBox;
         EtatAffaire     : THValCombobox;
@@ -180,6 +182,7 @@ Inherited;
   Stock        := false;
   GensurDevisNonACPT  := GetParamSocSecur('SO_GENCESURDEVNACPT', False);
   SaisieInterdite     := GetParamSocSecur('SO_SAISIEDIRECTEINTERDITE', False);
+  ChantierOblig       := GetParamSocSecur('SO_CHANTIEROBLIGATOIRE', False);
   //
   if Assigned(GetControl('RECUP')) then Recup := TCheckBox(GetControl('RECUP'));
   if Assigned(GetControl('AFF_ETATAFFAIRE')) then EtatAffaire := THValComboBox(GetControl('AFF_ETATAFFAIRE'));
@@ -203,31 +206,33 @@ Inherited;
 
   UpdateCaption(Ecran);
 
-  if GetParamSocSecur('SO_CHANTIEROBLIGATOIRE', False) then
+  if TypePiece = 'CF' then
   begin
-    if TypePiece = 'CF' then
+    if ChantierOblig then
     begin
       IF not Stock then
-         XX_WHERE.text := XX_WHERE.Text + ' AND GP_AFFAIRE = ""'
+      begin
+        XX_WHERE.text := XX_WHERE.Text + ' AND GP_AFFAIRE = ""';
+      end
       else
-         XX_WHERE.text := XX_WHERE.text + ' AND GP_AFFAIRE <> ""';
+        XX_WHERE.text := XX_WHERE.text + ' AND GP_AFFAIRE <> ""';
     end;
   end;
 
-	 if TToolbarButton97 (GetControl('BACOMPTES')) <> nil then
-   	  Begin
-	    BAcomptes :=TToolbarButton97 (GetControl('BACOMPTES'));
-   	  if GetParamSoc ('SO_ACOMPTEOBLIG') then
-         Bacomptes.down := true
-		    else
-         Bacomptes.down := false;
-	    end;
+	if TToolbarButton97 (GetControl('BACOMPTES')) <> nil then
+  Begin
+    BAcomptes :=TToolbarButton97 (GetControl('BACOMPTES'));
+    if GetParamSoc ('SO_ACOMPTEOBLIG') then
+      Bacomptes.down := true
+    else
+      Bacomptes.down := false;
+	end;
 
-   if TToolbarButton97 (GetControl('BInsert')) <> nil then
-      Begin
-      BInsert := TToolbarButton97 (GetControl('BINSERT'));
-      BInsert.OnClick := BInsertClick;
-      end;
+  if TToolbarButton97 (GetControl('BInsert')) <> nil then
+  Begin
+    BInsert := TToolbarButton97 (GetControl('BINSERT'));
+    BInsert.OnClick := BInsertClick;
+  end;
 
   if TToolbarButton97 (GetControl('BInsert1')) <> nil then
   Begin
@@ -241,12 +246,12 @@ Inherited;
   CC:=THValComboBox(GetControl('GP_DOMAINE')) ;
   if CC<>Nil then PositionneDomaineUser(CC) ;
 
-  SetControlProperty('BSELECTCON', 'Visible', VH_GC.BTSeriaContrat);
-  SetControlProperty('TGPAFFAIRE1', 'Visible', VH_GC.BTSeriaContrat);
+  SetControlProperty('BSELECTCON'  , 'Visible', VH_GC.BTSeriaContrat);
+  SetControlProperty('TGPAFFAIRE1' , 'Visible', VH_GC.BTSeriaContrat);
   SetControlProperty('AFF_CONTRAT1', 'Visible', VH_GC.BTSeriaContrat);
   SetControlProperty('AFF_CONTRAT2', 'Visible', VH_GC.BTSeriaContrat);
   SetControlProperty('AFF_CONTRAT3', 'Visible', VH_GC.BTSeriaContrat);
-  SetControlProperty('CON_AVENANT', 'Visible', VH_GC.BTSeriaContrat);
+  SetControlProperty('CON_AVENANT' , 'Visible', VH_GC.BTSeriaContrat);
 
   if Assigned(GetControl('MnZTiers')) then
   begin
@@ -474,6 +479,7 @@ begin
   if pos(ecran.name,'BTDEVIS_MUL;BTDEVISSTRAITE;BTDEVISCOTRAI_MUL') > 0 then
   begin
     ParamDoc := chargeCleDoc;
+    if ParamDoc.RecVide then Exit;
     //
     ExportXls := TexportDocXls.create;
     ExportXls.ModeExport  := TmeExcel;
@@ -495,6 +501,7 @@ begin
   if pos(ecran.name,'BTDEVIS_MUL;BTDEVISSTRAITE;BTDEVISCOTRAI_MUL') > 0 then
   begin
     ParamDoc := chargeCleDoc;
+    if ParamDoc.RecVide then Exit;
     //
     ExportXls := TexportDocXls.create;
     ExportXls.ModeExport  := TmeXml;
@@ -518,6 +525,7 @@ begin
   if pos(ecran.name,'BTDEVIS_MUL;BTDEVISSTRAITE;BTDEVISCOTRAI_MUL') > 0 then
   begin
     ParamDoc := chargeCleDoc;
+    if ParamDoc.RecVide then Exit;
   	fournisseur := AGLLanceFiche('BTP','BTMULAFFECTEXTE','','','COTRAITANCE;DOCUMENT='+EncodeCleDoc(Paramdoc.cledoc)+';SELECTION');
     if fournisseur <> '' then
     begin
@@ -545,6 +553,7 @@ begin
   if pos(ecran.name,'BTDEVIS_MUL;BTDEVISSTRAITE;BTDEVISCOTRAI_MUL') > 0 then
   begin
     ParamDoc := chargeCleDoc;
+    if ParamDoc.RecVide then Exit;    
   	fournisseur := AGLLanceFiche('BTP','BTMULAFFECTEXTE','','','SOUSTRAITANCE;DOCUMENT='+EncodeCleDoc(ParamDoc.cledoc)+';SELECTION');
     if fournisseur <> '' then
     begin
@@ -576,6 +585,7 @@ begin
   if pos(ecran.name,'BTDEVIS_MUL') > 0 then
   begin
     ParamDoc := ChargeCleDoc;
+    if ParamDoc.RecVide then Exit;    
   	fournisseur := AGLLanceFiche('BTP','BTMULAFFECTEXTE','','','DOCUMENT='+ EncodeCleDoc(ParamDoc.cledoc)+';SELECTION');
     if fournisseur <> '' then
     begin
@@ -624,6 +634,8 @@ end;
 function TOF_BTCODEAFFAIRE.ChargeCleDoc: RParamDoc;
 begin
 
+  Result.RecVide := True;
+
 {$IFDEF EAGLCLIENT}
     TFMul(ecran).Q.TQ.Seek(TFMul(ecran).FListe.Row-1) ;
     Result.cledoc.naturePiece := TFMul(ecran).Q.FindField('GP_NATUREPIECEG').AsString;
@@ -633,6 +645,10 @@ begin
     Result.cledoc.indice := StrToInt(TFMul(ecran).Q.FindField('GP_INDICEG').AsString);
     result.affaire := TFMul(ecran).Q.FindField('GP_AFFAIRE').AsString;
 {$ELSE}
+    if Fliste.datasource.dataset.Recordcount = 0 then exit;
+    //
+    Result.RecVide := False;
+
     Result.Cledoc.naturePiece := Fliste.datasource.dataset.FindField('GP_NATUREPIECEG').AsString;
     Result.Cledoc.DatePiece  := Fliste.datasource.dataset.FindField('GP_DATEPIECE').AsDateTime;
     Result.Cledoc.souche := Fliste.datasource.dataset.FindField('GP_SOUCHE').AsString;
@@ -677,6 +693,7 @@ begin
     if copy(ecran.name,1,14)='BTDEVISINT_MUL' then
     begin
       ParamDoc := ChargeCleDoc;
+      if ParamDoc.RecVide then Exit;      
       //
       if (Consultation) or (not IsDevisIntModifiable (ParamDoc.cledoc)) then
       begin
@@ -905,21 +922,21 @@ Begin
      TmenuItem(getControl('MnExpCotraitXml')).OnClick := MnExpCotraitXml;
    end;
 
-   if GetArgumentValue(StArg, 'ACTION') = 'MODIFICATION'  then
-	    begin
-     if BTDuplic <> nil then BTDuplic.Visible := True;
-	   BInsert1.visible := True;
-		 BInsert.visible  := True;
-  		Consultation := False;
-	    end ;
+  if GetArgumentValue(StArg, 'ACTION') = 'MODIFICATION'  then
+  begin
+    if BTDuplic <> nil then BTDuplic.Visible := True;
+    BInsert1.visible := True;
+    BInsert.visible  := True;
+    Consultation := False;
+  end ;
 
-	 if GetArgumentValue(StArg, 'ACTION') = 'CONSULTATION'  then
-  		begin
-  		Consultation := True;
-	   BInsert1.visible := False;
-		 BInsert.visible  := False;
-     if BTDuplic <> nil then BTDuplic.Visible := False;
-	    end ;
+	if GetArgumentValue(StArg, 'ACTION') = 'CONSULTATION'  then
+  begin
+    Consultation := True;
+    BInsert1.visible := False;
+    BInsert.visible  := False;
+    if BTDuplic <> nil then BTDuplic.Visible := False;
+  end ;
 
 end;
 
@@ -1086,9 +1103,19 @@ end;
 
 procedure TOF_BTCODEAFFAIRE.MnZTiersClick(Sender: TObject);
 var CodeTiers : String;
+    TypePiece : String;
 begin
+  //
+  TypePiece := GetControlText ('GP_NATUREPIECEG');
+  //
   CodeTiers := Fliste.datasource.dataset.FindField('GP_TIERS').AsString;
-  AGLLanceFiche('GC','GCTIERS','',TiersAuxiliaire(CodeTiers,False),'ACTION=CONSULTATION;MONOFICHE');
+
+  if CodeTiers = '' then exit;
+  // Modified by f.vautrain 14/12/2018 11:30:12 - FS#3411 - SES - Affiche la fiche "Client" avec via la loupe "Voir tiers" dans les pièces d'achats
+  if (GetInfoParPiece(TypePiece,'GPP_VENTEACHAT'))='ACH'  then
+    AGLLanceFiche('GC','GCFOURNISSEUR','',TiersAuxiliaire(CodeTiers,False),'ACTION=CONSULTATION;MONOFICHE')
+  else
+    AGLLanceFiche('GC','GCTIERS','',TiersAuxiliaire(CodeTiers,False),'ACTION=CONSULTATION;MONOFICHE');
 end;
 
 procedure TOF_BTCODEAFFAIRE.MnZSuiviCdeClick(Sender: TObject);
@@ -1097,6 +1124,8 @@ var ParamDoc : RParamDoc;
 begin
 
   ParamDoc := ChargeCleDoc;
+  if ParamDoc.RecVide then Exit;
+
   Toto := EncodeCleDoc(ParamDoc.cledoc);
 
   AGLLanceFiche('BTP','BTSUIVICDE','','', 'DOCUMENT='+ Toto);
@@ -1398,109 +1427,136 @@ Inherited;
       if BTDuplic  <> nil Then BTDuplic.visible  := false;
       if BTDuplic1 <> nil Then BTDuplic1.visible := false;
     end;
-  end;
-
-if UpperCase(copy(Ecran.Name,1,15)) = 'BTPREPACHANTIER' then
-begin
-  if THEdit(GetControl ('ZEACTION')) <> nil then
+  end
+  Else if TypePiece = 'CF' then
   begin
-    if THEdit(GetControl ('ZEACTION')).Text = 'PLANNIFICATION' then
+    if ChantierOblig then
     begin
-      THEdit(GetControl('AFF_ETATAFFAIRE')).Enabled := false;
-{    Mis en commentaire par BRL le 6/08/2013
-     Pour rétablir le code tel qu'il était avant la modif de LS le 19/06.
-     Le code AFF_ETATAFFAIRE est passé en paramètre lors de l'appel de la fiche :  
-
-      //FV1 - 30/07/2013 - impossible de faire préparation sur contre étude parce que cette dernière n'est pas acceptée !!!
-      //FS#617 - TEAM RESEAUX - Préparation de chantier sur contre étude
-    	SetControlText('AFF_ETATAFFAIRE', 'ACP');
-      if TypePiece = 'BCE' then
+      IF not Stock then
       begin
-        SetControlText ('AFF_ETATAFFAIRE', 'ENC');
-      End;
-      //
-}
-      TToolbarButton97(GetControl('BInsert')).visible := false;
-      TToolbarButton97(GetControl('BINSERT1')).visible := false;
-      if BTDuplic <> nil then BTDuplic.Visible := False;
+        SetControlProperty('BSELECTAFF1' , 'Visible', Not ChantierOblig);
+        SetControlProperty('BEFFACEAFF1' , 'Visible', Not ChantierOblig);
+        SetControlProperty('TGPAFFAIRE1' , 'Visible', Not ChantierOblig);
+        SetControlProperty('AFF_AFFAIRE1', 'Visible', Not ChantierOblig);
+        SetControlProperty('AFF_AFFAIRE2', 'Visible', Not ChantierOblig);
+        SetControlProperty('AFF_AFFAIRE3', 'Visible', Not ChantierOblig);
+      end
+      else
+        SetControlProperty('BSELECTAFF1' , 'Visible', ChantierOblig);
+        SetControlProperty('BEFFACEAFF1' , 'Visible', ChantierOblig);
+        SetControlProperty('TGPAFFAIRE1' , 'Visible', ChantierOblig);
+        SetControlProperty('AFF_AFFAIRE1', 'Visible', ChantierOblig);
+        SetControlProperty('AFF_AFFAIRE2', 'Visible', ChantierOblig);
+        SetControlProperty('AFF_AFFAIRE3', 'Visible', ChantierOblig);
     end;
   end;
-end else if UpperCase(copy(Ecran.Name,1,11)) = 'BTDEVIS_MUL' then
-begin
-  //
-  if THEdit(GetControl ('ETATAFFAIRE')) <> nil then THMultiValComboBox(GetControl('AFF_ETATAFFAIRE')).Text := TheEtatAffaire;
-  //
-  if THEdit(GetControl ('ZEACTION')) <> nil then
+
+
+  if UpperCase(copy(Ecran.Name,1,15)) = 'BTPREPACHANTIER' then
   begin
-    if THEdit(GetControl ('ZEACTION')).Text = 'GENCONTRETU' then
+    if THEdit(GetControl ('ZEACTION')) <> nil then
     begin
-      //FV1 : 14/12/2017 - FS#2808 - TEAM RESEAUX : autorisation de passer les devis non acceptés en contre-étude
-      if Assigned(EtatAffaire) then
+      if THEdit(GetControl ('ZEACTION')).Text = 'PLANNIFICATION' then
       begin
-        EtatAffaire.Enabled := GensurDevisNonACPT;
-        if GensurDevisNonACPT then
+        THEdit(GetControl('AFF_ETATAFFAIRE')).Enabled := false;
+    {    Mis en commentaire par BRL le 6/08/2013
+       Pour rétablir le code tel qu'il était avant la modif de LS le 19/06.
+       Le code AFF_ETATAFFAIRE est passé en paramètre lors de l'appel de la fiche :
+
+        //FV1 - 30/07/2013 - impossible de faire préparation sur contre étude parce que cette dernière n'est pas acceptée !!!
+        //FS#617 - TEAM RESEAUX - Préparation de chantier sur contre étude
+        SetControlText('AFF_ETATAFFAIRE', 'ACP');
+        if TypePiece = 'BCE' then
         begin
-          EtatAffaire.Plus := 'AND CC_CODE = "ACP" OR CC_CODE = "ENC"';
-          EtatAffaire.Text := '';
-        end;
+          SetControlText ('AFF_ETATAFFAIRE', 'ENC');
+        End;
+        //
+    }
+        TToolbarButton97(GetControl('BInsert')).visible := false;
+        TToolbarButton97(GetControl('BINSERT1')).visible := false;
+        if BTDuplic <> nil then BTDuplic.Visible := False;
       end;
-      //THEdit(GetControl('AFF_ETATAFFAIRE')).Enabled := false;
-      TToolbarButton97(GetControl('BInsert')).visible := false;
-      TToolbarButton97(GetControl('BINSERT1')).visible := false;
-      if BTDuplic <> nil then BTDuplic.Visible := False;
-    end else if THEdit(GetControl ('ZEACTION')).Text = '' then
+    end;
+  end
+  else if UpperCase(copy(Ecran.Name,1,11)) = 'BTDEVIS_MUL' then
+  begin
+    //
+    if THEdit(GetControl ('ETATAFFAIRE')) <> nil then THMultiValComboBox(GetControl('AFF_ETATAFFAIRE')).Text := TheEtatAffaire;
+    //
+    if THEdit(GetControl ('ZEACTION')) <> nil then
     begin
-      if THEdit(GetControl('GP_AFFAIRE')).text <> '' then
+      if THEdit(GetControl ('ZEACTION')).Text = 'GENCONTRETU' then
       begin
-        QQ := OpenSql ('SELECT AFF_ETATAFFAIRE FROM AFFAIRE WHERE AFF_AFFAIRE="' + THEdit(GetControl('GP_AFFAIRE')).text + '"',true,1,'',True);
-        if not QQ.eof then
+        //FV1 : 14/12/2017 - FS#2808 - TEAM RESEAUX : autorisation de passer les devis non acceptés en contre-étude
+        if Assigned(EtatAffaire) then
         begin
-          if Pos(QQ.FindField('AFF_ETATAFFAIRE').AsString,'TER;CLO')>0 then
+          EtatAffaire.Enabled := GensurDevisNonACPT;
+          if GensurDevisNonACPT then
           begin
-            TToolbarButton97(GetControl('BInsert')).visible := false;
-            TToolbarButton97(GetControl('BINSERT1')).visible := false;
-            if BTDuplic <> nil then BTDuplic.Visible := False;
+            EtatAffaire.Plus := 'AND CC_CODE = "ACP" OR CC_CODE = "ENC"';
+            EtatAffaire.Text := '';
           end;
         end;
-        ferme (QQ);
+        //THEdit(GetControl('AFF_ETATAFFAIRE')).Enabled := false;
+        TToolbarButton97(GetControl('BInsert')).visible := false;
+        TToolbarButton97(GetControl('BINSERT1')).visible := false;
+        if BTDuplic <> nil then BTDuplic.Visible := False;
+      end
+      else if THEdit(GetControl ('ZEACTION')).Text = '' then
+      begin
+        if THEdit(GetControl('GP_AFFAIRE')).text <> '' then
+        begin
+          QQ := OpenSql ('SELECT AFF_ETATAFFAIRE FROM AFFAIRE WHERE AFF_AFFAIRE="' + THEdit(GetControl('GP_AFFAIRE')).text + '"',true,1,'',True);
+          if not QQ.eof then
+          begin
+            if Pos(QQ.FindField('AFF_ETATAFFAIRE').AsString,'TER;CLO')>0 then
+            begin
+              TToolbarButton97(GetControl('BInsert')).visible := false;
+              TToolbarButton97(GetControl('BINSERT1')).visible := false;
+              if BTDuplic <> nil then BTDuplic.Visible := False;
+            end;
+          end;
+          ferme (QQ);
+        end;
       end;
     end;
+    //
   end;
-  //
-end;
 
   if UpperCase(copy(Ecran.Name,1,13)) = 'BTREGLAFFAIRE' then
   begin
     if GetControlText ('GP_AFFAIRE') = '' then
     begin
-  Setcontrolvisible('BSELECTAFF1',True);
-  Setcontrolvisible('BEFFACEAFF1',True);
-  Setcontrolenabled('GP_AFFAIRE1',True);
-  Setcontrolenabled('GP_AFFAIRE2',True);
-  Setcontrolenabled('GP_AFFAIRE3',True);
-  Setcontrolproperty('TGPAFFAIRE','Caption',TraduireMemoire('Affaire'));
-  end;
+      Setcontrolvisible('BSELECTAFF1',True);
+      Setcontrolvisible('BEFFACEAFF1',True);
+      Setcontrolenabled('GP_AFFAIRE1',True);
+      Setcontrolenabled('GP_AFFAIRE2',True);
+      Setcontrolenabled('GP_AFFAIRE3',True);
+      Setcontrolproperty('TGPAFFAIRE','Caption',TraduireMemoire('Affaire'));
+    end;
   end;
 
   if UpperCase(copy(Ecran.Name,1,15)) = 'BTPIECESAFF_MUL' then
   begin
     if TCheckBox(GetControl('CONSULTATION')).checked=True then
     begin
-  Setcontrolvisible('BSELECTAFF1',False);
-  Setcontrolvisible('BEFFACEAFF1',False);
-  Setcontrolenabled('GP_AFFAIRE1',False);
-  Setcontrolenabled('GP_AFFAIRE2',False);
-  Setcontrolenabled('GP_AFFAIRE3',False);
-  Setcontrolenabled('GP_TIERS',False);
-  Setcontrolenabled('T_LIBELLE',False);
-  Setcontrolvisible('Binsert',False);
+      Setcontrolvisible('BSELECTAFF1',False);
+      Setcontrolvisible('BEFFACEAFF1',False);
+      Setcontrolenabled('GP_AFFAIRE1',False);
+      Setcontrolenabled('GP_AFFAIRE2',False);
+      Setcontrolenabled('GP_AFFAIRE3',False);
+      Setcontrolenabled('GP_TIERS',False);
+      Setcontrolenabled('T_LIBELLE',False);
+      Setcontrolvisible('Binsert',False);
       if BTDuplic <> nil then BTDuplic.Visible := False;
-  end;
+    end;
   end;
 
   if assigned(GetControl('AVANC')) then
-  if GetControlText('AVANC')='X' then SetControlVisible('BInsert',false);
-
+  begin
+    if GetControlText('AVANC')='X' then SetControlVisible('BInsert',false);
+  end;
+  
 end;
 
 procedure TOF_BTCODEAFFAIRE.OnUpdate;
@@ -1726,6 +1782,7 @@ begin
   if pos(ecran.name,'BTDEVIS_MUL;BTDEVISSTRAITE;BTDEVISCOTRAI_MUL') > 0 then
   begin
     ParamDoc := ChargeCleDoc;
+    if ParamDoc.RecVide then Exit;
   	fournisseur := AGLLanceFiche('BTP','BTMULAFFECTEXTE','','','COTRAITANCE;DOCUMENT='+EncodeCleDoc(ParamDoc.cledoc)+';SELECTION');
     if fournisseur <> '' then
     begin
@@ -1985,7 +2042,7 @@ procedure TOF_BTCODEAFFAIRE.RefuseMultiDevis(TOBPieces : TOB);
     begin
       Sql := 'UPDATE AFFAIRE SET AFF_ETATAFFAIRE="REF",AFF_DATEFIN="'+USDateTime(TOBPieces.GetDateTime('DATEREFUS'))+'",'+
              'AFF_DATERESIL="'+USDateTime(TOBPieces.GetDateTime('DATEREFUS'))+'",AFF_RESILAFF="'+TOBPieces.GetString('MOTIFREFUS')+'" '+
-             'WHERE AFF_AFFAIRE="'+AffaireDevis+'"';
+             ', AFF_DATEMODIF="' + USDATETIME(NowH) + '" WHERE AFF_AFFAIRE="'+AffaireDevis+'"';
       ExecuteSQL(Sql);
     end;
     Sql := 'UPDATE PIECE SET GP_VIVANTE="-" WHERE '+WherePiece(Cledoc,ttdPiece ,false);

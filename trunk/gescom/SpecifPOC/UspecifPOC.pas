@@ -43,7 +43,25 @@ function FindPhasePoc(Affaire,Fournisseur,CodeMarche : string) : string;
 
 
 implementation
-uses FactComm,UtilPGI,FactTOB,FactPiece,FactRG,FactUtil,ParamSOc,ENt1,AglInit,M3FP,cbpPath,LicUtil,UtilTOBPiece,UconnectBSV;
+uses
+  FactComm
+  , UtilPGI
+  , FactTOB
+  , FactPiece
+  , FactRG
+  , FactUtil
+  , ParamSOc
+  , ENt1
+  , AglInit
+  , M3FP
+  , cbpPath
+  , LicUtil
+  , UtilTOBPiece
+  , UconnectBSV
+  , UtilGC
+  , CommonTools
+  , ErrorsManagement
+  ;
 
 procedure GetCoefPoc (Affaire : string; var COEFFG,COEFMARGE : double);
 var fCOEFFG,COEFFS,COEFSAV,COEFFD : double;
@@ -570,11 +588,14 @@ procedure ValideLesTOBTS ( TOBPiece,TOBTSPOC : TOB);
     end;
   end;
 
-var II : Integer;
-    TOBLIG: TOB;
-    cledoc : R_CLEDOC;
+var
+  II : Integer;
+  TOBLIG: TOB;
+  cledoc : R_CLEDOC;
+  Msg  : string;
+  Okok : boolean;
 begin
-  if (TOBpiece.GetString('GP_NATUREPIECEG') <> 'BCE') or (VH_GC.BTCODESPECIF <> '001') then Exit;
+  if (TOBpiece.GetString('GP_NATUREPIECEG') <> 'BCE') or (EstSpecifPOC) then Exit;
   for II := 0 to TOBTSPOC.Detail.count - 1 do
   begin
     TOBLIG := TOBTSPOC.detail[II];
@@ -582,7 +603,17 @@ begin
   end;
   cledoc := TOB2CleDoc(TOBPiece);
   DeleteLesTOBTS (cledoc);
-  TOBTSPOC.InsertDbByNivel(false); 
+  try
+    OkOk := TOBTSPOC.InsertDbByNivel(false);
+  except
+    on E: Exception do
+      Msg := E.Message;
+  end;
+  if not OkOk then
+  begin
+    TUtilErrorsManagement.SetGenericMessage(TemErr_MessagePreRempli, Format('%s des travaux supplémentaires%s.', [TUtilErrorsManagement.GetUpdateError, Tools.iif(Msg <> '', ' (' + Msg + ')', '')]));
+    V_PGI.IoError := oeUnknown;
+  end;
 end;
 
 procedure LoadLesTOBTS (Cledoc : R_CLEDOC;TOBTSPOC : TOB);

@@ -162,11 +162,14 @@ var CNX : TADOConnection;
     QQ : TADOQuery;
     NbRec,OldValue : integer;
     SQL,NomPartage,Nomreel,NomReel1 : string;
+    CreateNew : boolean;
 begin
+  CreateNew := false;
   Result := -1;
   CNX := TADOConnection.Create(application);
   Cnx.ConnectionString :=DBSOC.ConnectionString;
   CNX.LoginPrompt := false;
+  //
   TRY
     CNX.Connected := True;
     Cnx.BeginTrans;
@@ -256,65 +259,81 @@ function CreateSequence(Cle: string; valeur : integer; xx : integer=0; entity : 
     result := stringreplace (Format('%35d', [numero + 1]), ' ', '0', [rfReplaceAll]);
   end;
 
-var TT,TT1 : TOB;
-    INumSeq : integer;
+var INumSeq : integer;
     QQ : TQuery;
     Clef : string;
+    SQL : String;
+    CNX : TADOConnection;
+    CO : TADOCommand;
+    Xy : Integer;
 begin
 	result := false;
   INumSeq := 0;
   CLef := '';
-  if wExistTable ('CPSEQCORRESP') then
-  begin
-    QQ := OpenSQL('SELECT MAX(CSC_SEQUENCE) AS MAXSEQ FROM CPSEQCORRESP',true,1,'',true);
-    if not QQ.eof then
-    begin
-      INumSeq := QQ.fields[0].AsInteger;
-    end;
-    ferme (QQ);
-    TT1 := TOB.Create('CPSEQCORRESP',nil,-1);
-    TT := TOB.Create('DESEQUENCES',nil,-1);
+  CNX := TADOConnection.Create(application);
+  CO := TADOCommand.Create(Application);
+  Cnx.ConnectionString :=DBSOC.ConnectionString;
+  CNX.LoginPrompt := false;
+  //
+  CNX.Connected := True;
+  CO.ConnectionString := CNX.ConnectionString;
+//  Cnx.BeginTrans;
+  TRY
     TRY
-      Inc(INumSeq);
-      Clef := FormateCorrespondance(INumSeq);
-      TRY
-        TT1.SetString('CSC_METIER',cle);
-        TT1.SetString('CSC_SEQUENCE',Clef);
-        TT1.InsertDB(nil);
-      EXCEPT
-        raise Exception.Create(traduirememoire('Problème en création de sequence '+Cle));
-        Exit;
+      if wExistTable ('CPSEQCORRESP') then
+      begin
+        QQ := OpenSQL('SELECT MAX(CSC_SEQUENCE) AS MAXSEQ FROM CPSEQCORRESP',true,1,'',true);
+        if not QQ.eof then
+        begin
+          INumSeq := QQ.fields[0].AsInteger;
+        end;
+        ferme (QQ);
+        Inc(INumSeq);
+        //
+        Clef := FormateCorrespondance(INumSeq);
+        SQL := Format('INSERT CPSEQCORRESP VALUES ( ''%s'', ''%s'')',[cle,clef]);
+        TRY
+          CO.CommandText := SQL;
+          CO.Execute(XY);
+        EXCEPT
+          ON E: Exception do
+          begin
+            raise;
+          end;
+        END;
+        //
+        SQL := Format('INSERT DESEQUENCES VALUES (''%s'',%d,%d)',[clef,Valeur,1]);
+        TRY
+          CO.CommandText := SQL;
+          CO.Execute(Xy);
+        EXCEPT
+          ON E: Exception do
+          begin
+            raise;
+          end;
+        END;
+      end else
+      begin
+        TRY
+          SQL := Format('INSERT DESEQUENCES VALUES (''%s'',%d,%d)',[cle,Valeur,1]);
+          CO.CommandText := SQL;
+          CO.Execute(Xy);
+        EXCEPT
+          ON E: Exception do
+          begin
+            raise;
+          end;
+        END;
       end;
-      //
-      TRY
-        TT.PutValue('DSQ_CODE',Clef);
-        TT.PutValue('DSQ_VALEUR',valeur);
-        TT.PutValue('DSQ_INCREMENT',1);
-        TT.InsertDB(nil);
-        result := true;
-      EXCEPT
-      END;
-    FINALLY
-      TT.Free;
-      TT1.Free;
+//      CNX.CommitTrans;
+    EXCEPT
+//      CNX.RollbackTrans;
     END;
-  end else
-  begin
-    TT := TOB.Create('DESEQUENCES',nil,-1);
-    try
-      try
-        TT.PutValue('DSQ_CODE',Cle);
-        TT.PutValue('DSQ_VALEUR',valeur);
-        TT.PutValue('DSQ_INCREMENT',1);
-        TT.InsertDB(nil);
-        result := true;
-      except
-        raise Exception.Create(traduirememoire('Problème en création de sequence '+Cle));
-      end;
-    finally
-      TT.free;
-    end;
-  end;
+  FINALLY
+    CO.Free;
+    CNX.Close;
+    Cnx.Free;
+  END;
 end;
 
 function CreerCompteur(TypeSouche,CodeSouche:string;DD:tDateTime;Compteur:integer;MultiExo:boolean;Entity:integer=0):integer;

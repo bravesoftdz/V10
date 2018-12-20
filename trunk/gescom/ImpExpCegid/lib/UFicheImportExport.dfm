@@ -1,8 +1,8 @@
 object FexpImpCegid: TFexpImpCegid
-  Left = 1094
-  Top = 236
-  Width = 551
-  Height = 597
+  Left = 649
+  Top = 205
+  Width = 578
+  Height = 700
   Caption = 'Import - Export de donn'#233'es CEGID'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -19,27 +19,27 @@ object FexpImpCegid: TFexpImpCegid
   TextHeight = 13
   object Dock971: TDock97
     Left = 0
-    Top = 519
-    Width = 535
-    Height = 39
+    Top = 618
+    Width = 562
+    Height = 43
     AllowDrag = False
     Position = dpBottom
     object PBouton: TToolWindow97
       Left = 0
       Top = 0
-      ClientHeight = 35
-      ClientWidth = 535
+      ClientHeight = 39
+      ClientWidth = 562
       Caption = 'Barre outils fiche'
-      ClientAreaHeight = 35
-      ClientAreaWidth = 535
+      ClientAreaHeight = 39
+      ClientAreaWidth = 562
       DockPos = 0
       FullSize = True
       TabOrder = 0
       DesignSize = (
-        535
-        35)
+        562
+        39)
       object BValider: TToolbarButton97
-        Left = 439
+        Left = 466
         Top = 2
         Width = 28
         Height = 27
@@ -61,7 +61,7 @@ object FexpImpCegid: TFexpImpCegid
         IsControl = True
       end
       object BFerme: TToolbarButton97
-        Left = 471
+        Left = 498
         Top = 2
         Width = 28
         Height = 27
@@ -75,7 +75,7 @@ object FexpImpCegid: TFexpImpCegid
         GlobalIndexImage = 'Z0021_S16G1'
       end
       object HelpBtn: TToolbarButton97
-        Left = 503
+        Left = 530
         Top = 2
         Width = 28
         Height = 27
@@ -95,7 +95,7 @@ object FexpImpCegid: TFexpImpCegid
         IsControl = True
       end
       object BImprimer: TToolbarButton97
-        Left = 407
+        Left = 434
         Top = 2
         Width = 28
         Height = 27
@@ -117,50 +117,38 @@ object FexpImpCegid: TFexpImpCegid
   object PGCTRL: THPageControl2
     Left = 0
     Top = 0
-    Width = 535
-    Height = 519
-    ActivePage = TPSHTCAR
+    Width = 562
+    Height = 618
+    ActivePage = TBSHTCONTROL
     Align = alClient
     TabOrder = 1
     object TPSHTCAR: TTabSheet
       Caption = 'Traitements'
-      object Label1: TLabel
-        Left = 7
-        Top = 157
-        Width = 174
-        Height = 13
-        Caption = 'R'#233'pertoire de destination des fichiers'
-      end
-      object Label2: TLabel
-        Left = 7
-        Top = 180
-        Width = 108
-        Height = 13
-        Caption = 'Nom du fichier d'#39'export'
-      end
       object Bevel1: TBevel
         Left = 2
-        Top = 132
-        Width = 523
-        Height = 3
+        Top = 122
+        Width = 535
+        Height = 132
+        Shape = bsFrame
       end
       object Bevel2: TBevel
-        Left = 4
-        Top = 259
-        Width = 523
-        Height = 3
+        Left = 1
+        Top = 275
+        Width = 537
+        Height = 246
+        Shape = bsFrame
       end
       object Label3: TLabel
         Left = 0
         Top = 0
-        Width = 527
+        Width = 554
         Height = 13
         Align = alTop
       end
       object Label5: TLabel
         Left = 0
         Top = 69
-        Width = 527
+        Width = 554
         Height = 20
         Align = alTop
         Alignment = taCenter
@@ -176,7 +164,7 @@ object FexpImpCegid: TFexpImpCegid
       object Label6: TLabel
         Left = 0
         Top = 13
-        Width = 527
+        Width = 554
         Height = 23
         Align = alTop
         Alignment = taCenter
@@ -192,14 +180,14 @@ object FexpImpCegid: TFexpImpCegid
       object Label7: TLabel
         Left = 0
         Top = 56
-        Width = 527
+        Width = 554
         Height = 13
         Align = alTop
       end
       object Label4: TLabel
         Left = 0
         Top = 36
-        Width = 527
+        Width = 554
         Height = 20
         Align = alTop
         Alignment = taCenter
@@ -212,27 +200,23 @@ object FexpImpCegid: TFexpImpCegid
         Font.Style = [fsBold]
         ParentFont = False
       end
-      object EXPORTFIC: THCritMaskEdit
-        Left = 217
-        Top = 153
-        Width = 298
-        Height = 21
-        TabOrder = 0
-        TagDispatch = 0
-        DataType = 'DIRECTORY'
-        ElipsisButton = True
+      object Label1: TLabel
+        Left = 15
+        Top = 157
+        Width = 174
+        Height = 13
+        Caption = 'R'#233'pertoire de destination des fichiers'
       end
-      object NOMFIC: THCritMaskEdit
-        Left = 217
-        Top = 176
-        Width = 288
-        Height = 21
-        TabOrder = 1
-        TagDispatch = 0
+      object Label2: TLabel
+        Left = 15
+        Top = 180
+        Width = 108
+        Height = 13
+        Caption = 'Nom du fichier d'#39'export'
       end
       object RDTEXPORT: TRadioButton
         Left = 13
-        Top = 124
+        Top = 116
         Width = 185
         Height = 17
         Caption = 'Exports des donn'#233'es'
@@ -249,7 +233,7 @@ object FexpImpCegid: TFexpImpCegid
       end
       object RDTIMPORT: TRadioButton
         Left = 13
-        Top = 250
+        Top = 266
         Width = 185
         Height = 17
         Caption = 'Import des donn'#233'es'
@@ -263,20 +247,20 @@ object FexpImpCegid: TFexpImpCegid
         OnClick = RDTIMPORTClick
       end
       object GroupBox1: TGroupBox
-        Left = 5
-        Top = 284
+        Left = 10
+        Top = 292
         Width = 515
         Height = 57
         TabOrder = 4
         object Label8: TLabel
-          Left = 7
+          Left = 15
           Top = 24
           Width = 155
           Height = 13
           Caption = 'Nom du fichier d'#39'export '#224' int'#233'grer'
         end
         object IMPORTFIC: THCritMaskEdit
-          Left = 199
+          Left = 207
           Top = 20
           Width = 298
           Height = 21
@@ -286,7 +270,7 @@ object FexpImpCegid: TFexpImpCegid
           ElipsisButton = True
         end
         object CHKZIP: TCheckBox
-          Left = 8
+          Left = 16
           Top = 0
           Width = 105
           Height = 17
@@ -298,13 +282,13 @@ object FexpImpCegid: TFexpImpCegid
         end
       end
       object GroupBox2: TGroupBox
-        Left = 4
-        Top = 344
+        Left = 9
+        Top = 368
         Width = 515
         Height = 57
         TabOrder = 5
         object Label9: TLabel
-          Left = 7
+          Left = 14
           Top = 23
           Width = 167
           Height = 13
@@ -320,7 +304,7 @@ object FexpImpCegid: TFexpImpCegid
           OnClick = CHKREPERTClick
         end
         object IMPORTDIR: THCritMaskEdit
-          Left = 201
+          Left = 208
           Top = 19
           Width = 298
           Height = 21
@@ -333,7 +317,7 @@ object FexpImpCegid: TFexpImpCegid
       end
       object CHKMSGSTRUCT: TCheckBox
         Left = 8
-        Top = 410
+        Top = 442
         Width = 337
         Height = 17
         Alignment = taLeftJustify
@@ -345,7 +329,7 @@ object FexpImpCegid: TFexpImpCegid
       end
       object CHKSTOPONERROR: TCheckBox
         Left = 8
-        Top = 431
+        Top = 463
         Width = 337
         Height = 17
         Alignment = taLeftJustify
@@ -356,9 +340,9 @@ object FexpImpCegid: TFexpImpCegid
         TabOrder = 7
       end
       object CBVIDAGEEXP: TCheckBox
-        Left = 8
-        Top = 200
-        Width = 337
+        Left = 408
+        Top = 232
+        Width = 120
         Height = 17
         Alignment = taLeftJustify
         Caption = 'Vidage du r'#233'pertoire'
@@ -368,7 +352,7 @@ object FexpImpCegid: TFexpImpCegid
       end
       object CBVIDAGEIMP: TCheckBox
         Left = 8
-        Top = 451
+        Top = 483
         Width = 337
         Height = 17
         Alignment = taLeftJustify
@@ -378,19 +362,149 @@ object FexpImpCegid: TFexpImpCegid
         State = cbChecked
         TabOrder = 9
       end
+      object CBCOMPTA: TCheckBox
+        Left = 16
+        Top = 208
+        Width = 105
+        Height = 17
+        Alignment = taLeftJustify
+        Caption = 'Comptabilit'#233
+        TabOrder = 10
+        OnClick = CBCOMPTAClick
+      end
+      object CBPAYE: TCheckBox
+        Left = 16
+        Top = 232
+        Width = 105
+        Height = 17
+        Alignment = taLeftJustify
+        Caption = 'Paye'
+        TabOrder = 11
+        OnClick = CBPAYEClick
+      end
+      object EXPORTFIC: THCritMaskEdit
+        Left = 225
+        Top = 153
+        Width = 298
+        Height = 21
+        TabOrder = 0
+        TagDispatch = 0
+        DataType = 'DIRECTORY'
+        ElipsisButton = True
+      end
+      object NOMFIC: THCritMaskEdit
+        Left = 225
+        Top = 176
+        Width = 288
+        Height = 21
+        TabOrder = 1
+        TagDispatch = 0
+      end
+      object CBDOSSIER: TCheckBox
+        Left = 137
+        Top = 219
+        Width = 105
+        Height = 17
+        Alignment = taLeftJustify
+        Caption = 'Dossier complet'
+        Checked = True
+        State = cbChecked
+        TabOrder = 12
+        OnClick = CBDOSSIERClick
+      end
     end
     object TBSHTCONTROL: TTabSheet
       Caption = 'Cont'#244'les'
       ImageIndex = 1
-      object Trace: TListBox
+      object HPanel1: THPanel
+        Left = 0
+        Top = 549
+        Width = 554
+        Height = 41
+        Align = alBottom
+        BevelOuter = bvNone
+        FullRepaint = False
+        TabOrder = 0
+        BackGroundEffect = bdFlat
+        ColorShadow = clWindowText
+        ColorStart = clBtnFace
+        TextEffect = tenone
+        object BLANCETRAIT: TToolbarButton97
+          Left = 200
+          Top = 8
+          Width = 153
+          Height = 27
+          Caption = 'Lancer le traitement'
+          Flat = False
+          Font.Charset = DEFAULT_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -13
+          Font.Name = 'MS Sans Serif'
+          Font.Style = [fsBold]
+          Opaque = False
+          ParentFont = False
+          Visible = False
+          OnClick = BLANCETRAITClick
+        end
+      end
+      object GS: THGrid
         Left = 0
         Top = 0
-        Width = 527
-        Height = 491
+        Width = 554
+        Height = 549
         Align = alClient
+        ColCount = 1
+        DefaultRowHeight = 18
+        FixedCols = 0
+        RowCount = 2
+        Options = [goFixedVertLine, goVertLine, goHorzLine, goRowSelect]
+        TabOrder = 1
+        OnDblClick = GSDblClick
+        SortedCol = -1
+        Couleur = False
+        MultiSelect = True
+        TitleBold = True
+        TitleCenter = True
+        ColCombo = 0
+        SortEnabled = False
+        SortRowExclude = 0
+        TwoColors = False
+        AlternateColor = clSilver
+        ColWidths = (
+          553)
+      end
+      object TX: THCritMaskEdit
+        Left = 80
+        Top = 432
+        Width = 65
+        Height = 21
+        MaxLength = 6
+        TabOrder = 2
+        Visible = False
+        OnExit = TXExit
+        TagDispatch = 0
+      end
+    end
+    object RAPPORT: TTabSheet
+      Caption = 'RAPPORT'
+      ImageIndex = 2
+      object TRACE: TListBox
+        Left = 0
+        Top = 0
+        Width = 554
+        Height = 590
+        Align = alClient
+        BiDiMode = bdLeftToRight
         ItemHeight = 13
+        ParentBiDiMode = False
         TabOrder = 0
       end
     end
+  end
+  object hmtrad: THSystemMenu
+    Separator = True
+    Traduction = False
+    Left = 236
+    Top = 280
   end
 end

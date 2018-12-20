@@ -1809,21 +1809,6 @@ BEGIN
   LaBase := Base;
   if EnHT then
   BEGIN
-    {En HT, calculer les bases type TPF (sur HT) puis la TVA en dernier (sur HT+TPF)}
-    if (RegimeTaxe='INT') and (VenteAchat = 'ACH') then
-    begin
-      // Si le fournisseur est intracommunautaire on force la tva en mode intracomnunautaire
-      (*
-      for I := 1 to 5 do
-      begin
-        FamilleTaxe:=TOBL.GetValue(prefixe+'_FAMILLETAXE'+IntToStr(i)) ;
-        if TypeTaxe (i) = BttTVA then
-        begin
-          TOBL.SetString(prefixe+'_FAMILLETAXE'+IntToStr(i),'INT') ;
-        end;
-      end;
-      *)
-    end;
     //
     if AvecTpf then
     begin

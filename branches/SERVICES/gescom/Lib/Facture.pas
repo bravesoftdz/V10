@@ -7973,8 +7973,25 @@ begin
   if (Arow >= GS.fixedRows) and (fGestionListe.ISZoneMontant(ACol)) then
   begin
     Canvas.FillRect(ARect); Zrect := ARect; ZRect.Right := ZRect.right - 2;
-    TheText := StrF00(fGestionListe.GetMtTotal(TOBL,Acol),DEV.Decimale);
-    DrawText(Canvas.Handle,PChar(TheText), -1, ZRect ,DT_SINGLELINE or DT_RIGHT or DT_VCENTER or DT_EDITCONTROL);
+    MtTemp := fGestionListe.GetMtTotal(TOBL,Acol);
+    if  MtTemp <> 0 then
+    begin
+      TheText := StrF00(MtTemp,DEV.Decimale);
+      GS.Canvas.TextOut (Arect.Right-canvas.TextWidth(TheText+' ')-2,Arect.Top+1,TheText);
+    end;
+  end;
+
+  if (ARow >= GS.FixedRows) and (ACol= SG_TOTALTS) then
+  begin
+    if TOBL = nil then Exit;
+    colformat := GS.ColFormats [SG_TOTALTS];
+    Canvas.FillRect(ARect);
+    if TOBL.GetDouble('TOTALTS') <> 0 then
+    begin
+      TheText := FormatFloat  (colformat,TOBL.GetDouble('TRANSFERED'));
+      PosX := Arect.Right-Canvas.TextWidth(TheText)-2;
+      GS.Canvas.TextOut (posX,Arect.Top+1,TheText);
+    end;
   end;
 
   if (TOBL.GetString('GL_NATUREPIECEG') = 'BCE') and (VH_GC.BTCODESPECIF = '001')  and (SG_TOTLIGNEBCE <> -1) then
@@ -7985,8 +8002,18 @@ begin
       Canvas.FillRect(ARect); Zrect := ARect; ZRect.Right := ZRect.right - 2;
       if (TypeL='ART') or (TypeL='SD') then
       begin
-        TheText := StrF00(TOBL.GetDouble('GL_MONTANTPA')+TOBL.GetDouble('SUMTOTALTS')-TOBL.GetDouble('MTTRANSFERT'),V_PGI.OkDecV);
-        DrawText(Canvas.Handle,PChar(TheText), -1, ZRect ,DT_SINGLELINE or DT_RIGHT or DT_VCENTER or DT_EDITCONTROL);
+        if TOBL.GetString('TYPETRANSFERT')='X' then
+        begin
+          MtTemp := TOBL.GetDouble('GL_MONTANTPA');
+        end else
+        begin
+          MTTemp := Arrondi(TOBL.GetDouble('GL_MONTANTPA')+TOBL.GetDouble('SUMTOTALTS')-TOBL.GetDouble('MTTRANSFERT'),V_PGI.okdecV);
+        end;
+        if MtTemp <> 0 then
+        begin
+          TheText := StrF00(MtTemp,V_PGI.OkDecV);
+          GS.Canvas.TextOut (Arect.Right-canvas.TextWidth(TheText+' ')-2,Arect.Top+1,TheText);
+        end;
       end;
     end;
   end;
@@ -8006,18 +8033,6 @@ begin
       end;
     end;
   end;
-  (*
-  if (Arow >= GS.fixedRows) and (ACol =SG_montantSit) then
-  begin
-    if TOBL = nil then Exit;
-    if TOBL.getValue('GL_TYPELIGNE')='RG' then
-    begin
-      Canvas.FillRect(ARect);
-      TheValue := FloatToStrF (TOBL.getValue('GL_MONTANTHTDEV'),ffNumber,12,DEV.Decimale);
-      GS.Canvas.TextOut (Arect.Right - canvas.TextWidth(TheValue)-6,Arect.Top +2,TheValue);
-    end;
-  end;
-  *)
   if (Arow >= GS.fixedRows) and (Acol = SG_DETAILBORD) then
   begin
     if TOBL = nil then Exit;
@@ -8035,14 +8050,18 @@ begin
     Canvas.FillRect(ARect);
     if TOBL.GetDouble('TRANSFERED') <> 0 then
     begin
-      TheText := FormatFloat  (colformat,TOBL.GetDouble('TRANSFERED'));
+      MtTemp := TOBL.GetDouble('TRANSFERED');
     end else if TOBL.GetDouble('MTTRANSFERT') <> 0 then
     begin
-      TheText := FormatFloat (colformat,TOBL.GetDouble('MTTRANSFERT'));
+      MtTemp := TOBL.GetDouble('MTTRANSFERT');
     end else exit;
 
-    PosX := Arect.Right-Canvas.TextWidth(TheText)-2;
-    GS.Canvas.TextOut (posX,Arect.Top+1,TheText);
+    if MtTemp <> 0 then
+    begin
+      TheText := FormatFloat  (colformat,MtTemp);
+      PosX := Arect.Right-Canvas.TextWidth(TheText)-2;
+      GS.Canvas.TextOut (posX,Arect.Top+1,TheText);
+    end;
   end;
 {$ENDIF}
   if Arow >= GS.fixedRows then
@@ -8942,7 +8961,7 @@ begin
     if  GP_DEPOT.Value <> '' then
     begin
       if VenteAchat = 'ACH' then
-        StWhere := ' ((GA_TENUESTOCK="-") OR (GQ_DEPOT="' + GP_DEPOT.Value + '" AND GA_TENUESTOCK="X"))'
+        StWhere := ' ((GA_TENUESTOCK="-") OR (GQ_DEPOT="' + GP_DEPOT.Value + '" OR GA_TENUESTOCK="X"))'
       else
         StWhere := '';
     end
@@ -19188,10 +19207,10 @@ begin
 
   if csDestroying in ComponentState then Exit;
 
-  if (GP_AFFAIRE1.Text = '') and (GP_AFFAIRE2.Text = '') and (GP_AFFAIRE3.Text = '') then
+  if (GP_AFFAIRE.Text = '') Then //and (GP_AFFAIRE2.Text = '') and (GP_AFFAIRE3.Text = '') then
   begin
-    GP_AFFAIRE.Text := '';
     // GUINIER - Saisie Affaire Sur Cde Stock
+
     if VenteAchat = 'ACH' then
     begin
       if not ControleAffaireAchat(MsgErreur) then
@@ -19205,7 +19224,6 @@ begin
         TOBPiece.PutValue('AFF_GENERAUTO','DIR');
       end;
     end
-    {$IFDEF V10}
     else
     begin
       if not ControleAffaireAchat(MsgErreur) then
@@ -19218,9 +19236,9 @@ begin
         TOBPiece.PutValue('GP_AFFAIRE','');
         TOBPiece.PutValue('AFF_GENERAUTO','DIR');
       end;
-    end
-    {$ENDIF};
+    end;
     exit;
+
   end;
 
   if (THCritMaskEdit(sender).Name = 'GP_AVENANT') then // Avenant
@@ -19236,7 +19254,9 @@ begin
     end;
   end;
   //
-  GP_AFFAIRE.Text := DechargeCleAffaire(GP_AFFAIRE0, GP_AFFAIRE1, GP_AFFAIRE2, GP_AFFAIRE3, GP_AVENANT, AFF_TIERS.Text, Action, False, True, false, iP);
+  If GP_AFFAIRE.Text = '' then
+    GP_AFFAIRE.Text := DechargeCleAffaire(GP_AFFAIRE0, GP_AFFAIRE1, GP_AFFAIRE2, GP_AFFAIRE3, GP_AVENANT, AFF_TIERS.Text, Action, False, True, false, iP);
+    
   // correctif FQ 12573
 	AFF_TIERS.text  := GetChampsAffaire (GP_AFFAIRE.text,'AFF_TIERS');
   //
@@ -19341,6 +19361,17 @@ begin
 end;
 
 procedure TFFacture.BRechAffaire__Click(Sender: TObject);
+
+	procedure AffecteValue (Champ : THcritMaskEdit; Value : string );
+  var PtrChange : TNotifyEvent;
+  begin
+   PtrChange := Champ.OnChange;
+   Champ.OnChange := nil;
+   Champ.Text := value;
+   Champ.OnChange := PtrChange;
+  end;
+
+  
 var bChangeTiers: Boolean;
 		bChangeStatus : boolean;
 		{$IFDEF BTP}
@@ -19348,6 +19379,11 @@ var bChangeTiers: Boolean;
 		{$ENDIF}
 		Nature : string;
     bAffaireSel : boolean;
+    Part0 : String;
+    Part1 : String;
+    Part2 : String;
+    Part3 : string;
+    CodeAvenant :string;
 begin
 
   bChangeTiers := True;
@@ -19355,11 +19391,13 @@ begin
   //FV1 : 30/10/2013 - FS#619 : BAGE : Pb en modification de chantier sur commande
   if (assigned(GP_REFINTERNE)) and (GP_REFINTERNE.Visible) then GP_REFINTERNE.SetFocus;
 
-  if (VenteAchat = 'VEN') and (TOBPiece.getValue('GP_NATUREPIECEG')<>'LBT') then
-  	 begin
-     AFF_TIERS.Text := GP_TIERS.Text;
-     if GP_TIERS.Text <> '' then bChangeTiers := False;
-     end;
+  //FV1 : 08/10/2018 - FS#3282 - EURO-ENERGIE : En livraison chantier le tiers n'est pas récupéré en recherche chantier.
+  if (VenteAchat = 'VEN') then ///and (TOBPiece.getValue('GP_NATUREPIECEG')<>'LBT') then
+  begin
+    AFF_TIERS.Text := GP_TIERS.Text;
+    if GP_TIERS.Text <> '' then bChangeTiers := False;
+  end;
+  //
 
 {$IFDEF BTP}
   TheAffaire := GP_AFFAIRE.Text;
@@ -19380,19 +19418,30 @@ begin
 	   bChangeStatus := true
   else
   	 bChangeStatus := false;
-  //   
+  //
   if VenteAchat = 'ACH' then bChangeStatus := True;
   //
   BaffaireSel :=  GetAffaireEnteteSt(GP_AFFAIRE0, GP_Affaire1, GP_Affaire2, GP_Affaire3, GP_AVENANT, AFF_TIERS, TheAffaire, false, bChangeStatus, false, bChangeTiers, true,VenteAchat);
-  if BaffaireSel then GP_AFFAIRE.text := TheAffaire;
+  if BaffaireSel then
+  begin
+    BTPCodeAffaireDecoupe(TheAffaire, Part0, Part1, Part2, Part3,CodeAvenant,taConsult,False);
+    //
+    GP_AFFAIRE.Text := TheAffaire;
+    //
+    AffecteValue (GP_AFFAIRE0,Part0);
+    AffecteValue (GP_AFFAIRE1,Part1);
+    AffecteValue (GP_AFFAIRE2,Part2);
+    AffecteValue (GP_AFFAIRE3,Part3);
+    AffecteValue (GP_AVENANT,CodeAvenant);
+    //
+  end;
 {$ELSE}
   GetAffaireEntete(GP_AFFAIRE, GP_Affaire1, GP_Affaire2, GP_Affaire3, GP_AVENANT, AFF_TIERS, false, false, false, bChangeTiers, true,'FAC');
 {$ENDIF}
   //////////////////////////////
   if GP_AFFAIRE.Text <> '' then
   begin
-
-    ChargeCleAffairePiece;
+    //ChargeCleAffairePiece;
 
     {$IFDEF BTP}
     // Why ?????
@@ -19450,7 +19499,7 @@ begin
   end
   else
   begin
-  	if TheAffaire = '' then GP_AFFAIRE0.Text := '';
+  	TheAffaire := '';
   end;
 
   //FV1 : 30-10-2013
@@ -21837,7 +21886,6 @@ begin
         Exit;
       end;
     end
-    {$IFDEF V10}
     else
     begin
       if not ControleAffaireVente(MsgErreur) then
@@ -21846,8 +21894,7 @@ begin
         GP_AFFAIRE1.SetFocus;
         Exit;
       end;
-    end
-    {$ENDIF};
+    end;
   end;
 
 //	Enabled := false;

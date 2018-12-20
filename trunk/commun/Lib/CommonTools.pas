@@ -22,34 +22,49 @@ const
   ToolsTobToTsl_Separator = '^';
 
 type
+  TGncERROR  = (GncOk, GncExists, GncAbort);
   tTypeField = (ttfNone, ttfNumeric, ttfInt, ttfMemo, ttfBoolean, ttfDate, ttfCombo, ttfText);
   tScaleSize = (tssNone, tssKo, TssMo);
   tTableName = (  ttnNone
-                , ttnChoixCod    // CHOIXCOD
-                , ttnCommun      // COMMUN
-                , ttnChoixExt    // CHOIXEXT
-                , ttnDevise      // DEVISE
-                , ttnModeRegl    // MODEREGL
-                , ttnPays        // PAYS
-                , ttnRib         // RIB
-                , ttnSection     // SECTION
-                , ttnTiers       // TIERS
-                , ttnCodePostaux // CODEPOST
-                , ttnContact     // CONTACT
-                , ttnEtabliss    // ETABLISS
-                , ttnModePaie    // MODEPAIE
-                , ttnGeneraux    // GENERAUX
-                , ttnJournal     // JOURNAL
-                , ttnRelance     // RELANCE
-                , ttnCorresp     // CORRESP
-                , ttnChancell    // CHANCELL
-                , ttnExercice    // EXERCICE
-                , ttnParamSoc    // PARAMSOC
-                , ttnEcriture    // ECRITURE
-                , ttnAcomptes    // ACOMPTES
+                , ttnChoixCod            // CHOIXCOD
+                , ttnCommun              // COMMUN
+                , ttnChoixExt            // CHOIXEXT
+                , ttnDevise              // DEVISE
+                , ttnModeRegl            // MODEREGL
+                , ttnPays                // PAYS
+                , ttnRib                 // RIB
+                , ttnSection             // SECTION
+                , ttnTiers               // TIERS
+                , ttnCodePostaux         // CODEPOST
+                , ttnContact             // CONTACT
+                , ttnEtabliss            // ETABLISS
+                , ttnModePaie            // MODEPAIE
+                , ttnGeneraux            // GENERAUX
+                , ttnJournal             // JOURNAL
+                , ttnRelance             // RELANCE
+                , ttnCorresp             // CORRESP
+                , ttnChancell            // CHANCELL
+                , ttnExercice            // EXERCICE
+                , ttnParamSoc            // PARAMSOC
+                , ttnEcriture            // ECRITURE
+                , ttnAcomptes            // ACOMPTES
+                , ttnPiece               // PIECE
+                , ttnLigne               // LIGNE
+                , ttnAffaire             // AFFAIRE
+                , ttnArticle             // ARTICLE
+                , ttnRessource           // RESSOURCE
+                , ttnConsommations       // CONSOMMATIONS
+                , ttnAffTiers            // AFFTIERS
+                , ttnCatalogu            // CATALOGU
+                , ttnBtFamilleTarif      // BTFAMILLETARIF
+                , ttnBtSousFamilleTarif // BTSOUSFAMILLETARIF
                );
   tTypeAlign = (traaNone, traaLeft, traaRigth);
   tFormatValueTypeDate = (tvtNone, tvtDate, tvtDateTime);
+  tAdoQryObjects = (taqoNone, taqoFieldList, taqoRequest, taqoRecordCount, taqoTslResult);
+  tMemoryTyp = (tmtNone, tmtOctetsAvailable, tmtOctetsTotal, tmtMoAvailable, tmtMoTotal);
+  tInfoTable = (titNone, titRecordsQty, titKbTotalSize, titKbUseSize, titKbAvailableSize, titMoTotalSize, titMoUseSize, titMoAvailableSize);
+  tRecordMaxSize = (trsNone, trsOctets, trsMo);
 
   AdoQry = class
   public
@@ -67,22 +82,25 @@ type
     Constructor Create;
     Destructor Destroy; override;
     function GetConnectionString : string;
+    procedure Reset(Without : tAdoQryObjects=taqoNone);
     function SingleTableSelect : string;
     procedure InsertUpdate;
   end;
 
   Tools = class
+    class function StringInList (St : string; ListST : string) : boolean;
     class function CaseFromString(Value: string; Values: array of string): integer;
     class function GetTypeFieldFromStringType(TypeString : string) : tTypeField;
     class function GetStFieldType(FieldName: string{$IFDEF APPSRV}; ServerName, DBName : string; DebugEvents : integer=0{$ENDIF APPSRV}): string;
     class function GetFieldType(FieldName: string{$IFDEF APPSRV}; ServerName, DBName : string{$ENDIF APPSRV}): tTypeField;
-    class function GetDefaultValueFromtTypeField(FieldType : tTypeField) : string;
+    class function GetDefaultValueFromtTypeField(FieldType : tTypeField; WithQuote : boolean=True) : string;
     class function iif(Const Expression, TruePart, FalsePart: Boolean): Boolean; overload;
     class function iif(Const Expression: Boolean; Const TruePart, FalsePart: Integer): Integer; overload;
     class function iif(Const Expression: Boolean; Const TruePart, FalsePart: Double): Double; overload;
     class function iif(Const Expression: Boolean; Const TruePart, FalsePart: String): String; overload;
     class function iif(Const Expression: Boolean; Const TruePart, FalsePart: char): char; overload;
     class function iif(Const Expression: Boolean; Const TruePart, FalsePart: TStringList): TStringList; overload;
+    class function iif(Const Expression: Boolean; Const TruePart, FalsePart: TGncERROR): TGncERROR; overload;
     {$IFNDEF APPSRV}
     class function iif(Const Expression: Boolean; Const TruePart, FalsePart: TActionFiche): TActionFiche; overload;
     class function iif(Const Expression: Boolean; Const TruePart, FalsePart: TOB): TOB; overload;
@@ -118,12 +136,14 @@ type
     class function GetParamSocSecur_(PSocName : string; DefaultValue : string{$IFDEF APPSRV}; ServerName, FolderName : string{$ENDIF APPSRV}) : string;
     class function GetConnectionString(ServerName, DBName: string): string;
     class function CastDateTimeForQry(lDate : TDateTime) : string;
+    class function DecodeDateTimeFromQry(sDate : string) : string;
     class function CastDateForQry(lDate : TDateTime) : string;
     class function UsDateTime_(dDateTime : TDateTime) : string;
     class function GetDocTypeFromStub(Stub : string{$IFDEF APPSRV}; ServerName, DBName : string{$ENDIF APPSRV}) : string;
     class function GetStringSeparatorForQry : string;
     {$IFNDEF APPSRV}
     class procedure TobToTStringList(TobOrig : TOB; TSlResult : TStringList; Level : Integer=1);
+    class procedure GetFieldsListAndTypeFromPrefix(TablePrefix : string; TslResult : TStringList);
     {$ENDIF !APPSRV}
     {$IFDEF APPSRVWITHCBP}
     class procedure TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
@@ -137,8 +157,27 @@ type
     class function SelectDB (SQL: string; TOBD: TOB {$IFDEF APPSRV} ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string='' {$ENDIF APPSRV}) : boolean;
     class function LoadDetailDB(SQL: string; TOBD : TOB {$IFDEF APPSRV} ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string='' {$ENDIF APPSRV}): boolean;
     class function GetparamSocSecur(Paramsoc,ValeurDefaut: string  ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string=''): string;
+    class function InsertOrUpdate(TobData : TOB{$IFDEF APPSRV} ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string='' {$ENDIF APPSRV}) : boolean;
     {$ENDIF}
+    class function MemoryStreamToOleVariant(Strm: TMemoryStream):  OleVariant;
+    class function GetNumUniqueConso (var TheResult : double{$IFDEF APPSRV}; ServerName, DBName : string{$ENDIF APPSRV}) : TGncERROR;
+    class function IsPieceGerableCoTraitance(DocType, CaseCode, Flow, CaseRepresentative : string) : boolean;
+    class function IsPieceGerableSousTraitance(DocType, Flow : string) : boolean;
+    class function GetMainIban(Auxiliary : string{$IFDEF APPSRV}; ServerName, DBName : string{$ENDIF APPSRV}) : string;
+    class function GetStringSeparator : string;
+    class function GetIndexOnSortedTsl(TslData : TStringList; Value : string; iFrom, iLen : integer) : integer;
+    class function GetComputerMoMemory(mType : tMemoryTyp) : integer;
+    {$IFNDEF APPSRV}
+    class function TobPutValue(TobData : TOB; FieldName : string; lValue : variant) : boolean;
+    class function TobGetValue(TobData : TOB; FieldName : string; lValue : variant) : Variant;
+    class Procedure TobPutValueDetail(TobData : TOB; fieldName : String; lValue : Variant);
+    class function GetTableInf(tInf : tInfoTable; TableName : string) : integer;
+    class procedure DropStoredProcedure(SPName : string);
+    class function GetRecordMaxSize(TableName : string; sType : tRecordMaxSize) : double;
+    class function GetTableSize(TableName : string) : double;
+    {$ENDIF APPSRV}
   end;
+
 
 implementation
 
@@ -161,6 +200,7 @@ uses
   , hCtrls
   , EntGC
   , ParamSoc
+  , CbpMCD
    {$IFNDEF DBXPRESS}
   , dbTables
    {$ELSE !DBXPRESS}
@@ -169,6 +209,14 @@ uses
   {$ENDIF !APPSRV}
   ;
 
+{***********A.G.L.***********************************************
+Auteur  ...... : ctrls
+Créé le ...... : 10/12/2018
+Modifié le ... :   /  /    
+Description .. : Fonction permettant de savoir si une chaine est contenu 
+Suite ........ : dans une liste de donnée séparée par des ;'
+Mots clefs ... : 
+*****************************************************************}
 { AdoQry }
 function AdoQry.GetConnectionString : string;
 begin
@@ -199,6 +247,41 @@ destructor AdoQry.Destroy;
 begin
   FreeAndNil(TSLResult);
   inherited;
+end;
+
+procedure AdoQry.Reset(Without : tAdoQryObjects=taqoNone);
+begin
+  if Without = taqoNone then
+  begin
+    FieldsList  := '';
+    Request     := '';
+    RecordCount := 0;
+    TSLResult.Clear;
+  end else
+  begin
+    case Without of
+      taqoFieldList   : begin
+                          Request     := '';
+                          RecordCount := 0;
+                          TSLResult.Clear;
+                        end;
+      taqoRequest     : begin
+                          FieldsList  := '';
+                          RecordCount := 0;
+                          TSLResult.Clear;
+                        end;
+      taqoRecordCount : begin
+                          FieldsList  := '';
+                          Request     := '';
+                          TSLResult.Clear;
+                        end;
+      taqoTslResult   : begin
+                          FieldsList  := '';
+                          Request     := '';
+                          RecordCount := 0;
+                        end;
+    end;
+  end;
 end;
 
 { Renvoie dans TSLResult le rï¿½sultat du SELECT dont les valeurs sont sï¿½parï¿½es par des ^.
@@ -323,7 +406,7 @@ begin
     Qry.SQL.Text         := Request;
     Qry.Prepared         := True;
     try
-      RecordCount          := Qry.ExecSQL;
+      RecordCount := Qry.ExecSQL;
     except
       on E:Exception do
       begin
@@ -335,6 +418,24 @@ end;
 
 
 { Tools }
+
+class function Tools.StringInList (St : string; ListST : string) : boolean;
+var SS,SST : string;
+begin
+  result := false;
+  SS := ListSt;
+  repeat
+    SST := readTokenSt(SS);
+    if SST <> '' then
+    begin
+      if St = SST then
+      begin
+        result := true;
+        break;
+      end;
+    end;
+  until SST = '';
+end;
 
 class function Tools.CaseFromString(Value: string; Values: array of string): integer;
 var
@@ -399,6 +500,7 @@ begin
       lAdoQry.SingleTableSelect;
       Result := lAdoQry.TSLResult[0];
     finally
+      lAdoQry.Reset;
       lAdoQry.Qry.Free;
       lAdoQry.Free;
     end;
@@ -415,16 +517,16 @@ begin
   Result    := Tools.GetTypeFieldFromStringType(FieldType);
 end;
 
-class function Tools.GetDefaultValueFromtTypeField(FieldType : tTypeField) : string;
+class function Tools.GetDefaultValueFromtTypeField(FieldType : tTypeField; WithQuote : boolean=True) : string;
 begin
   case FieldType of
     ttfNumeric : Result := '0';
     ttfInt     : Result := '0';
-    ttfMemo    : Result := '';
-    ttfBoolean : Result := '-';
-    ttfDate    : Result := '2';
-    ttfCombo   : Result := '';
-    ttfText    : Result := '';
+    ttfMemo    : Result := Tools.iif(WithQuote, '''''', '');
+    ttfBoolean : Result := Tools.iif(WithQuote, '''-''', '-');
+    ttfDate    : Result := Tools.iif(WithQuote, '''2''', '2');
+    ttfCombo   : Result := Tools.iif(WithQuote, '''''', '');
+    ttfText    : Result := Tools.iif(WithQuote, '''''', '');
   end;
 end;
 
@@ -469,6 +571,14 @@ begin
 end;
 
 class function Tools.iif(Const Expression: Boolean; Const TruePart, FalsePart: TStringList): TStringList;
+begin
+	if Expression then
+		Result := TruePart
+	else
+		Result := FalsePart;
+end;
+
+class function Tools.iif(Const Expression: Boolean; Const TruePart, FalsePart: TGncERROR): TGncERROR; 
 begin
 	if Expression then
 		Result := TruePart
@@ -591,8 +701,8 @@ begin
     MinOffset  := -1 * MinOffset;
   end;
   Time   := EncodeDateTime(Year, Month, Day, Hour, Minute, Second, Mlsecond);
-  Time   := IncHour(Time, hourOffset);
-  Time   := IncMinute(Time, minOffset);
+//  Time   := IncHour(Time, hourOffset);
+//  Time   := IncMinute(Time, minOffset);
   Result := DateTimeToStr(Time);
 end;
 
@@ -676,7 +786,7 @@ var
 
   function GetSelect : string;
   begin
-    Result := format('SELECT DH_NOMCHAMP FROM DECHAMPS WHERE DH_PREFIXE = ''%s'' ORDER BY DH_NUMCHAMP', [TablePrefix]);
+    Result := Format('SELECT DH_NOMCHAMP FROM DECHAMPS WHERE DH_PREFIXE = %s%s%s ORDER BY DH_NUMCHAMP', [Tools.GetStringSeparatorForQry, TablePrefix, Tools.GetStringSeparatorForQry]);
   end;
 
 begin
@@ -690,11 +800,9 @@ begin
       lAdoQry.Qry        := TADOQuery.create(nil);;
       lAdoQry.FieldsList := 'DH_NOMCHAMP';
       lAdoQry.Request    := GetSelect;
-//      lAdoQry.Connect := TADOConnection.Create(application);
       try
         lAdoQry.SingleTableSelect;
       finally
-//        lAdoQry.Connect.Free;
       end;
       for Cpt := 0 to pred(lAdoQry.TSLResult.Count) do
         Result := Result + Separator + lAdoQry.TSLResult[Cpt];
@@ -757,7 +865,7 @@ begin
       end;
     end;
   end;
- end;
+end;
 
 class function Tools.GetStValueFromTSl(TSlLine : string; Index : integer; Separator : string=',') : string;
 var
@@ -821,6 +929,25 @@ begin
 end;
 {$ENDIF !APPSRV}
 
+{$IFNDEF APPSRV}
+class procedure Tools.GetFieldsListAndTypeFromPrefix(TablePrefix : string; TslResult : TStringList);
+var
+  Sql : string;
+  Qry : TQuery;
+begin
+  if (TablePrefix <> '') and (assigned(TslResult)) then
+  begin
+    Sql := Format('SELECT DH_NOMCHAMP, DH_TYPECHAMP FROM DECHAMPS WHERE DH_PREFIXE = %s%s%s ORDER BY DH_NUMCHAMP', [Tools.GetStringSeparatorForQry, TablePrefix, Tools.GetStringSeparatorForQry]);
+    Qry := OpenSql(Sql, True);
+    while not Qry.Eof do
+    begin
+      TslResult.Add(Format('%s=%s', [Qry.Fields[0].AsString, Qry.Fields[1].AsString]));
+      Qry.Next;
+    end;
+  end;
+end;
+{$ENDIF APPSRV}
+
 {$IFDEF APPSRVWITHCBP}
 class procedure Tools.TStringListToTOB(TslValues : TStringList; ArrOfFields : array of string; TobResult : TOB; WithType : boolean);
 var
@@ -829,6 +956,7 @@ var
   Value      : string;
   FieldName  : string;
   FieldValue : string;
+  FieldType  : string;
   TobL       : TOB;
 begin
   if assigned(TobResult) and (TslValues.Count > 0) then
@@ -842,6 +970,13 @@ begin
       begin
         FieldName  := Tools.iif(WithType, ExtractFieldName(ArrOfFields[CptField]), ArrOfFields[CptField]);
         FieldValue := Tools.ReadTokenSt_(Value, '^');
+        if WithType then
+        begin
+          FieldType  := ExtractFieldType(ArrOfFields[CptField])
+        end else
+          FieldType  := '';
+        if (FieldType = 'BOOLEAN') then
+          FieldValue := Tools.iif(FieldValue = 'Faux', '-', 'X');
         TobL.AddChampSupValeur(FieldName, FieldValue);
         inc(CptField);
       end;
@@ -854,27 +989,38 @@ end;
 class function Tools.GetTableNameFromTtn(Ttn: tTableName): string;
 begin
   case Ttn of
-    ttnChoixCod    : Result := 'CHOIXCOD';
-    ttnCommun      : Result := 'COMMUN';
-    ttnChoixExt    : Result := 'CHOIXEXT';
-    ttnDevise      : Result := 'DEVISE';
-    ttnModeRegl    : Result := 'MODEREGL';
-    ttnPays        : Result := 'PAYS';
-    ttnRib         : Result := 'RIB';
-    ttnSection     : Result := 'SECTION';
-    ttnTiers       : Result := 'TIERS';
-    ttnCodePostaux : Result := 'CODEPOST';
-    ttnContact     : Result := 'CONTACT';
-    ttnEtabliss    : Result := 'ETABLISS';
-    ttnModePaie    : Result := 'MODEPAIE';
-    ttnGeneraux    : Result := 'GENERAUX';
-    ttnJournal     : Result := 'JOURNAL';
-    ttnRelance     : Result := 'RELANCE';
-    ttnCorresp     : Result := 'CORRESP';
-    ttnChancell    : Result := 'CHANCELL';
-    ttnExercice    : Result := 'EXERCICE';
-    ttnParamSoc    : Result := 'PARAMSOC';
-    ttnEcriture    : Result := 'ECRITURE';
+    ttnChoixCod           : Result := 'CHOIXCOD';
+    ttnCommun             : Result := 'COMMUN';
+    ttnChoixExt           : Result := 'CHOIXEXT';
+    ttnDevise             : Result := 'DEVISE';
+    ttnModeRegl           : Result := 'MODEREGL';
+    ttnPays               : Result := 'PAYS';
+    ttnRib                : Result := 'RIB';
+    ttnSection            : Result := 'SECTION';
+    ttnTiers              : Result := 'TIERS';
+    ttnCodePostaux        : Result := 'CODEPOST';
+    ttnContact            : Result := 'CONTACT';
+    ttnEtabliss           : Result := 'ETABLISS';
+    ttnModePaie           : Result := 'MODEPAIE';
+    ttnGeneraux           : Result := 'GENERAUX';
+    ttnJournal            : Result := 'JOURNAL';
+    ttnRelance            : Result := 'RELANCE';
+    ttnCorresp            : Result := 'CORRESP';
+    ttnChancell           : Result := 'CHANCELL';
+    ttnExercice           : Result := 'EXERCICE';
+    ttnParamSoc           : Result := 'PARAMSOC';
+    ttnEcriture           : Result := 'ECRITURE';
+    ttnAcomptes           : Result := 'ACOMPTES';
+    ttnPiece              : Result := 'PIECE';
+    ttnLigne              : Result := 'LIGNE';
+    ttnAffaire            : Result := 'AFFAIRE';
+    ttnArticle            : Result := 'ARTICLE';
+    ttnRessource          : Result := 'RESSOURCE';
+    ttnConsommations      : Result := 'CONSOMMATIONS';
+    ttnAffTiers           : Result := 'AFFTIERS';
+    ttnCatalogu           : Result := 'CATALOGU';
+    ttnBtFamilleTarif     : Result := 'BTFAMILLETARIF';
+    ttnBtSousFamilleTarif : Result := 'BTSOUSFAMILLETARIF';
   else
     Result := '';
   end;
@@ -883,32 +1029,45 @@ end;
 
 class function Tools.GetTtnFromTableName(TableName: string): tTableName;
 begin
-  case CaseFromString(TableName, [  'CHOIXCOD', 'COMMUN'  , 'DEVISE'  , 'MODEREGL', 'PAYS'    , 'RIB'
-                                  , 'SECTION' , 'TIERS'   , 'CODEPOST', 'CONTACT' , 'ETABLISS', 'MODEPAIE'
-                                  , 'GENERAUX', 'JOURNAL' , 'RELANCE' , 'CORRESP' , 'CHANCELL', 'EXERCICE'
-                                  , 'PARAMSOC', 'CHOIXEXT', 'ECRITURE'
+  case CaseFromString(TableName, [  'CHOIXCOD'      , 'COMMUN'            , 'DEVISE'   , 'MODEREGL'     , 'PAYS'    , 'RIB'
+                                  , 'SECTION'       , 'TIERS'             , 'CODEPOST' , 'CONTACT'      , 'ETABLISS', 'MODEPAIE'
+                                  , 'GENERAUX'      , 'JOURNAL'           , 'RELANCE'  , 'CORRESP'      , 'CHANCELL', 'EXERCICE'
+                                  , 'PARAMSOC'      , 'CHOIXEXT'          , 'ECRITURE' , 'ACOMPTES'     , 'PIECE'   , 'LIGNE'
+                                  , 'AFFAIRE'       , 'ARTICLE'           , 'RESSOURCE', 'CONSOMMATIONS', 'AFFTIERS', 'CATALOGU'
+                                  , 'BTFAMILLETARIF', 'BTSOUSFAMILLETARIF'
                                  ]) of
-    {CHOIXCOD} 0  : Result := ttnChoixCod;
-    {COMMUN}   1  : Result := ttnCommun;
-    {DEVISE}   2  : Result := ttnDevise;
-    {MODEREGL} 3  : Result := ttnModeRegl;
-    {PAYS}     4  : Result := ttnPays;
-    {RIB}      5  : Result := ttnRib;
-    {SECTION}  6  : Result := ttnSection;
-    {TIERS}    7  : Result := ttnTiers;
-    {CODEPOST} 8  : Result := ttnCodePostaux;
-    {CONTACT}  9  : Result := ttnContact;
-    {ETABLISS} 10 : Result := ttnEtabliss;
-    {MODEPAIE} 11 : Result := ttnModePaie;
-    {GENERAUX} 12 : Result := ttnGeneraux;
-    {JOURNAL}  13 : Result := ttnJournal;
-    {RELANCE}  14 : Result := ttnRelance;
-    {CORRESP}  15 : Result := ttnCorresp;
-    {CHANCELL} 16 : Result := ttnChancell;
-    {EXERCICE} 17 : Result := ttnExercice;
-    {PARAMSOC} 18 : Result := ttnParamSoc;
-    {CHOIXEXT} 19 : Result := ttnChoixExt;
-    {ECRITURE} 20 : Result := ttnEcriture;
+    {CHOIXCOD}           0  : Result := ttnChoixCod;
+    {COMMUN}             1  : Result := ttnCommun;
+    {DEVISE}             2  : Result := ttnDevise;
+    {MODEREGL}           3  : Result := ttnModeRegl;
+    {PAYS}               4  : Result := ttnPays;
+    {RIB}                5  : Result := ttnRib;
+    {SECTION}            6  : Result := ttnSection;
+    {TIERS}              7  : Result := ttnTiers;
+    {CODEPOST}           8  : Result := ttnCodePostaux;
+    {CONTACT}            9  : Result := ttnContact;
+    {ETABLISS}           10 : Result := ttnEtabliss;
+    {MODEPAIE}           11 : Result := ttnModePaie;
+    {GENERAUX}           12 : Result := ttnGeneraux;
+    {JOURNAL}            13 : Result := ttnJournal;
+    {RELANCE}            14 : Result := ttnRelance;
+    {CORRESP}            15 : Result := ttnCorresp;
+    {CHANCELL}           16 : Result := ttnChancell;
+    {EXERCICE}           17 : Result := ttnExercice;
+    {PARAMSOC}           18 : Result := ttnParamSoc;
+    {CHOIXEXT}           19 : Result := ttnChoixExt;
+    {ECRITURE}           20 : Result := ttnEcriture;
+    {ACOMPTES}           21 : Result := ttnAcomptes;
+    {PIECE}              22 : Result := ttnPiece;
+    {LIGNE}              23 : Result := ttnLigne;
+    {AFFAIRE}            24 : Result := ttnAffaire;
+    {ARTICLE}            25 : Result := ttnArticle;
+    {RESSOURCE}          26 : Result := ttnRessource;
+    {CONSOMMATIONS}      27 : Result := ttnConsommations;
+    {AFFTIERS}           28 : Result := ttnAffTiers;
+    {CATALOGU}           29 : Result := ttnCatalogu;
+    {BTFAMILLETARIF}     30 : Result := ttnBtFamilleTarif;
+    {BTSOUSFAMILLETARIF} 31 : Result := ttnBtSousFamilleTarif;
   else
     Result := ttnNone;
   end;
@@ -932,12 +1091,7 @@ begin
       AdoQryAut.Qry        := TADOQuery.create(nil);
       AdoQryAut.FieldsList := 'BWT_NOMTABLE';
       AdoQryAut.Request    := Format('SELECT %s FROM BTWSTABLEAUTO WHERE BWT_NOMTABLE = ''%s'' AND BWT_AUTORISEE = ''X''', [AdoQryAut.FieldsList, TableName]);
-//      AdoQryAut.Connect := TADOConnection.Create(application);
-      try
-        AdoQryAut.SingleTableSelect;
-      finally
-//        AdoQryAut.Connect.Free;
-      end;
+      AdoQryAut.SingleTableSelect;
       Result := AdoQryAut.RecordCount = 1;
     finally
       AdoQryAut.Qry.Free;
@@ -1201,6 +1355,7 @@ var
       Result := lAdoQry.TSLResult[0]
     else
       Result := '';
+    lAdoQry.Reset;  
   end;
   {$ENDIF APPSRV}
 
@@ -1290,12 +1445,7 @@ begin
       AdoQryL.Qry         := TADOQuery.create(nil);
       AdoQryL.FieldsList  := 'SOC_DATA';
       AdoQryL.Request     := Format('SELECT %s FROM PARAMSOC WHERE SOC_NOM = ''%s''', [AdoQryL.FieldsList, PSocName]);
-//      AdoQryL.Connect := TADOConnection.Create(application);
-      try
-        AdoQryL.SingleTableSelect;
-      finally
-//        AdoQryL.Connect.Free;
-      end;
+      AdoQryL.SingleTableSelect;
       if AdoQryL.RecordCount > 0 then
         Result := AdoQryL.TSLResult[0];
     finally
@@ -1311,6 +1461,30 @@ end;
 class function Tools.CastDateTimeForQry(lDate: TDateTime): string;
 begin
   Result := FormatDateTime('yyyymmdd hh:nn:ss', lDate);
+end;
+
+class function Tools.DecodeDateTimeFromQry(sDate : string) : string;
+var
+  lDateTime : TDateTime;
+  yy        : word;
+  mm        : word;
+  dd        : word;
+  hh        : word;
+  nn        : word;
+  ss        : word;
+  zz        : word;
+begin
+  if copy(sDate, 1, 1) = '''' then
+    sDate := copy(sDate, 2, length(sDate) -1);
+  yy := StrToInt(copy(sDate, 1, 4));
+  mm := StrToInt(copy(sDate, 5, 2));
+  dd := StrToInt(copy(sDate, 7, 2));
+  hh := StrToInt(copy(sDate, 10, 2));
+  nn := StrToInt(copy(sDate, 13, 2));
+  ss := StrToInt(copy(sDate, 16, 2));
+  zz := 00;
+  lDateTime := EncodeDateTime(yy, mm, dd, hh, nn, ss, zz);
+  Result    := DateTimeToStr(lDateTime);
 end;
 
 class function Tools.CastDateForQry(lDate : TDateTime) : string;
@@ -1425,6 +1599,7 @@ var
   Value : Variant;
 {$ENDIF}
 begin
+  Result := True;
 {$IFNDEF APPSRV}
   Qry := OpenSql(Sql, False);
   if not Qry.eof then
@@ -1538,6 +1713,466 @@ begin
   END;
 end;
 
+class function Tools.InsertOrUpdate(TobData : TOB{$IFDEF APPSRV} ;Servername : string; DBName : string; ModeDebug : Integer=0; LogFile:string='' {$ENDIF APPSRV}) : boolean;
+begin
+  Result := True;
+end;
 {$ENDIF APPSRVWITHCBP}
+
+class function Tools.MemoryStreamToOleVariant(Strm: TMemoryStream):  OleVariant;
+var
+  Data : PByteArray;
+begin
+  Result := VarArrayCreate ([0, Strm.Size - 1], varByte);
+  Data   := VarArrayLock(Result);
+  try
+    Strm.Position := 0;
+    Strm.ReadBuffer(Data^, Strm.Size);
+  finally
+    VarArrayUnlock(Result);
+  end;
+end;
+
+class function Tools.GetNumUniqueConso(var TheResult : double{$IFDEF APPSRV}; ServerName, DBName : string{$ENDIF APPSRV}) : TGncERROR;
+var
+  NumUnique : double;
+  PrecNum   : string;
+  PSocName  : string;
+  SqlUpdate : string; 
+  CptNombre : integer;
+  OkNumero  : boolean;
+  {$IFDEF APPSRV}
+  lAdoQry   : AdoQry;
+  {$ENDIF APPSRV}
+
+  function ReformatageNumStr(Numero : string) : string;
+  begin
+    Result := Numero;
+    if Pos('.',Numero) > 0 then
+    begin
+      Result := Copy(Result,1,Pos('.',Numero)-1);
+    end;
+    if Pos(',',Numero) > 0 then
+    begin
+      Result := Copy(Result,1,Pos(',',Numero)-1);
+    end;
+    Result := StringReplace(Result,' ','',[rfReplaceAll]);
+  end;
+
+
+  function GetNumParamSoc (var Numero : string) : TGncError;
+  var
+    Sql : string;
+    {$IFNDEF APPSRV}
+    Qry : TQuery;
+    {$ELSE !APPSRV}
+    Qry : AdoQry;
+    {$ENDIF !APPSRV}
+  begin
+    Sql := Format('SELECT SOC_DATA FROM PARAMSOC WHERE SOC_NOM = %s%s%s', [Tools.GetStringSeparator, PSocName, Tools.GetStringSeparator]);
+    {$IFNDEF APPSRV}
+    Qry := OpenSql(Sql,  True);
+    try
+      if not Qry.Eof then
+      begin
+        Result := GncOk;
+        Numero := Qry.FindField('SOC_DATA').AsString;
+        ReformatageNumStr(Numero);
+      end else
+        Result := GncAbort;
+    finally
+      ferme(Qry);
+    end;
+    {$ELSE !APPSRV}
+    Qry := AdoQry.Create;
+    try
+      Qry.ServerName := ServerName;
+      Qry.DBName     := DBName;
+      Qry.Qry        := TADOQuery.create(nil);
+      Qry.FieldsList := 'SOC_DATA';
+      Qry.Request    := Sql;
+      Qry.SingleTableSelect;
+      if Qry.RecordCount = 1 then
+      begin
+        Result := GncOk;
+        Numero := Qry.TSLResult[0];
+      end else
+        Result := GncAbort;
+    finally
+      Qry.Qry.Free;
+      Qry.Free;
+    end;
+    {$ENDIF !APPSRV}
+  end;
+
+begin
+  PSocName  := 'SO_BTCPTLIGCONSO';
+  OkNumero  := False;
+  CptNombre := 1;
+  NumUnique := 0;
+  Repeat
+    Result := GetNumParamSoc(precNum);
+    if Result = GncAbort then break;
+    NumUnique := StrToFloat(PrecNum) + 1;
+    SqlUpdate := Format('UPDATE PARAMSOC SET SOC_DATA = %s%s%s WHERE SOC_NOM = %s%s%s AND SOC_DATA = %s%s%s'
+                     , [  Tools.GetStringSeparator
+                        , FloatToStr(NumUnique)
+                        , Tools.GetStringSeparator
+                        , Tools.GetStringSeparator
+                        , PSocName
+                        , Tools.GetStringSeparator
+                        , Tools.GetStringSeparator
+                        , PrecNum
+                        , Tools.GetStringSeparator
+                       ]);                       
+    {$IFNDEF APPSRV}
+    OkNumero := (ExecuteSQL(SqlUpdate) = 1);
+    {$ELSE !APPSRV}
+    lAdoQry := AdoQry.Create;
+    try
+      lAdoQry.ServerName := ServerName;
+      lAdoQry.DBName     := DBName;
+      lAdoQry.Request    := SqlUpdate;
+      lAdoQry.InsertUpdate;
+      OkNumero := (lAdoQry.RecordCount = 1);
+    finally
+      lAdoQry.Free;
+    end;
+    {$ENDIF APPSRV}
+    if OkNumero then
+      break;                             
+    if CptNombre > 1000 then
+    begin
+      Result := GncAbort;
+      break;
+    end;
+    inc(CptNombre);
+  until OKNumero;
+  if Result = GncOk then
+    TheResult := NumUnique;
+end;
+
+class function Tools.IsPieceGerableCoTraitance(DocType, CaseCode, Flow, CaseRepresentative : string) : boolean;
+begin
+  Result := (    (pos(Format(';%s;', [DocType]),';ETU;DBT;FBT;FBP;ABP;') > 0) // Est une piÃ¨ce de co-traitance   (GP_NATUREPIEEG)
+             and (CaseCode <> '')                                             // Code affaire renseignÃ©          (GP_AFFAIRE)
+             and (Flow = 'VEN')                                               // Flux de vente                   (GP_VENTEACHAT)
+             and (CaseRepresentative <> '')                                   // Est une affaire avec mandataire (AFF_MANDATAIRE)
+{$IFNDEF APPSRV}
+             and (VH_GC.SeriaCoTraitance)                                     // Co-traitance sÃ©rialisÃ©e
+{$ENDIF !APPSRV}
+            );
+end;
+
+class function Tools.IsPieceGerableSousTraitance(DocType, Flow : string) : boolean;
+begin
+  Result := (    (pos(Format(';%s;', [DocType]),';ETU;BCE;DBT;FBT;PBT;ABT;FBP;ABP;') > 0) // Est une de piÃ¨ce de sous traitance (GP_NATUREPIEEG)
+             and (Flow = 'VEN')                                                           // Flux de vente                      (GP_VENTEACHAT)
+{$IFNDEF APPSRV}
+             and  (VH_GC.SeriaSousTraitance)                                              // Sous-traitance sÃ©rialisÃ©e
+{$ENDIF !APPSRV}
+            );
+end;
+
+class function Tools.GetMainIban(Auxiliary : string{$IFDEF APPSRV}; ServerName, DBName : string{$ENDIF APPSRV}) : string;
+var
+  {$IFNDEF APPSRV}
+  Qry : TQuery;
+  {$ELSE !APPSRV}
+  AdoQryL : AdoQry;
+  {$ENDIF !APPSRV}
+
+  function GetSql : string;
+  begin
+    Result := Format('SELECT R_CODEIBAN FROM RIB WHERE R_AUXILIAIRE = %s%s%s AND R_PRINCIPAL = %sX%s', [GetStringSeparator, Auxiliary, GetStringSeparator, GetStringSeparator, GetStringSeparator]);
+  end;
+
+begin
+  Result := '';
+  if Auxiliary <> '' then
+  begin
+    {$IFNDEF APPSRV}
+    Qry := OpenSQL(GetSql, true);
+    try
+      Result := Qry.Fields[0].AsString;
+    finally
+      Ferme(Qry);
+    end;
+    {$ELSE !APPSRV}
+    AdoQryL := AdoQry.Create;
+    try
+      AdoQryL.ServerName := ServerName;
+      AdoQryL.DBName     := DBName;
+      AdoQryL.Qry        := TADOQuery.Create(nil);
+      AdoQryL.FieldsList := 'R_CODEIBAN';
+      AdoQryL.Request    := GetSql;
+      AdoQryL.SingleTableSelect;
+      if AdoQryL.RecordCount = 1 then
+        Result := AdoQryL.TSLResult[0];
+    finally
+      AdoQryL.Qry.Free;
+      AdoQryL.free;
+    end;
+    {$ENDIF !APPSRV}
+  end;
+end;
+
+class function Tools.GetStringSeparator : string;
+begin
+  {$IFDEF APPSRV}
+  Result := '''';
+  {$ELSE APPSRV}
+  Result := '"';
+  {$ENDIF APPSRV}
+end;
+
+{$IFNDEF APPSRV}
+class function Tools.TobPutValue(TobData : TOB; FieldName : string; lValue : variant) : boolean;
+var
+  MCD       : IMCDServiceCOM;
+  FieldType : tTypeField;
+begin
+  Result := True;
+  if FieldName <> '' then
+  begin
+    if TobData.GetNumChamp(FieldName) < 1000 then
+    begin
+      MCD := TMCD.GetMcd;
+      if not MCD.loaded then MCD.WaitLoaded();
+      FieldType := GetTypeFieldFromStringType(MCD.ChampToType(FieldName));
+      case FieldType of
+        ttfNumeric : TobData.SetDouble(FieldName  , Double(lValue));
+        ttfInt     : TobData.SetInteger(FieldName , Integer(lValue));
+        ttfMemo
+        , ttfText
+        , ttfCombo : TobData.SetString(FieldName  , String(lValue));
+        ttfBoolean : TobData.SetBoolean(FieldName , (lValue = 'X'));
+        ttfDate    : TobData.SetDateTime(FieldName, tDateTime(lValue));
+      else
+         TobData.PutValue(FieldName, lValue);
+      end;
+    end else
+      TobData.PutValue(FieldName, lValue);
+  end;
+end;
+{$ENDIF !APPSRV}
+
+{$IFNDEF APPSRV}
+class function Tools.TobGetValue(TobData : TOB; FieldName : string; lValue : variant) : Variant;
+var
+  MCD       : IMCDServiceCOM;
+  FieldType : tTypeField;
+begin
+  Result := True;
+  if FieldName <> '' then
+  begin
+    if TobData.GetNumChamp(FieldName) < 1000 then
+    begin
+      MCD := TMCD.GetMcd;
+      if not MCD.loaded then MCD.WaitLoaded();
+      FieldType := GetTypeFieldFromStringType(MCD.ChampToType(FieldName));
+      case FieldType of
+        ttfNumeric : Result := TobData.GetDouble(FieldName);
+        ttfInt     : Result := TobData.GetInteger(FieldName);
+        ttfMemo
+        , ttfText
+        , ttfCombo : Result := TobData.GetString(FieldName);
+        ttfBoolean : Result := TobData.GetBoolean(FieldName);
+        ttfDate    : Result := TobData.GetDateTime(FieldName);
+      else
+         Result := TobData.GetValue(FieldName);
+      end;
+    end else
+      Result := TobData.GetValue(FieldName);
+  end;
+end;
+{$ENDIF !APPSRV}
+
+{$IFNDEF APPSRV}
+class Procedure Tools.TobPutValueDetail(TobData : TOB; FieldName : String; lValue : Variant);
+Var Indice : Integer;
+    TOBLData : TOB;
+Begin
+
+  If Tobdata = nil then Exit;
+
+  If Tobdata.Detail.count = 0 then exit;
+
+  if FieldName <> '' then
+  begin
+    For indice := 0 to TobData.Detail.count - 1 do
+    begin
+      TOBLData := Tobdata.detail[Indice];
+      If TOBLData.FieldExists(FieldName) then Tools.TobPutValue(TOBLData, FieldName, lValue);
+    end;
+  end;
+
+
+end;
+{$ENDIF !APPSRV}
+
+class function Tools.GetIndexOnSortedTsl(TslData : TStringList; Value : string; iFrom, iLen : integer) : integer;
+var
+  Milieu   : integer;
+  Min      : integer;
+  Max      : longint;
+  Trouve   : boolean;
+  TslValue : string;
+begin
+  Result := -1;
+  Trouve := False;
+  Min    := 0;
+  Max    := pred(TslData.count);
+  while (Max >= Min) and (not Trouve) do
+  begin
+    Milieu   := (Max + Min)  div 2;
+    TslValue := copy(TslData[Milieu], 1, pos('=', TslData[Milieu])-1);
+    Trouve   := (Value = TslValue);
+    if Trouve then
+      Result := Milieu
+    else                                                                                  
+    begin
+      if TslValue > Value then
+        Max := Milieu - 1
+      else
+        Min := Milieu + 1;
+    end;
+  end ;
+end;
+
+class function Tools.GetComputerMoMemory(mType : tMemoryTyp) : integer;
+var
+  Memory : TMemoryStatus;
+begin
+  Memory.dwLength := SizeOf(Memory);
+  GlobalMemoryStatus(Memory);
+  case mType of
+    tmtOctetsAvailable : Result := (Memory.dwAvailPhys);
+    tmtOctetsTotal     : Result := (Memory.dwTotalPhys);
+    tmtMoAvailable     : Result := (Memory.dwAvailPhys Div 1000000);
+    tmtMoTotal         : Result := (Memory.dwTotalPhys Div 1000000);
+  else
+    Result := -1;
+  end;
+end;
+
+{$IFNDEF APPSRV}
+class function Tools.GetTableInf(tInf : tInfoTable; TableName : string) : integer;
+var
+  Sql         : string;
+  Qry         : TQuery;
+  FieldNumber : integer;
+  Coeff       : integer;
+begin
+  Result := -1;
+  if (TableName <> '') and (tInf <> titNone) then
+  begin
+    case tInf of
+      titRecordsQty                         : FieldNumber := 0;
+      titKbTotalSize    ,titMoTotalSize     : FieldNumber := 1;
+      titKbUseSize      ,titMoUseSize       : FieldNumber := 2;
+      titKbAvailableSize,titMoAvailableSize : FieldNumber := 3;
+    else
+      FieldNumber := -1;
+    end;
+    if FieldNumber > -1 then
+    begin
+      case tInf of
+        titMoTotalSize
+        , titMoUseSize
+        , titMoAvailableSize : Coeff := 1024;
+      else
+        Coeff := 1;
+      end;
+      Sql := Format('SELECT p.rows                                        AS RecordsQty'
+                  + '    , (SUM(a.total_pages) * 8)                       AS MoSize'
+                  + '    , (SUM(a.used_pages) * 8)                        AS UseMoSize'
+                  + '    , ((SUM(a.total_pages) - SUM(a.used_pages)) * 8) AS AvailableMoSize'
+                  + ' FROM sys.tables t'
+                  + '  INNER JOIN sys.indexes i ON t.OBJECT_ID = i.object_id'
+                  + '  INNER JOIN sys.partitions p ON i.object_id = p.OBJECT_ID AND i.index_id = p.index_id'
+                  + '  INNER JOIN sys.allocation_units a ON p.partition_id = a.container_id'
+                  + '  LEFT OUTER JOIN sys.schemas s ON t.schema_id = s.schema_id'
+                  + '  WHERE t.NAME="%s"'
+                  + '  GROUP BY t.Name, s.Name, p.Rows'
+                    , [TableName]);
+      Qry := OpenSql(Sql, True);
+      try
+        if not Qry.EOF then
+          Result := Round(Qry.Fields[FieldNumber].AsInteger/Coeff);
+      finally
+        Ferme(Qry);
+      end;
+    end;
+  end;
+end;
+{$ENDIF APPSRV}
+
+{$IFNDEF APPSRV}
+class procedure Tools.DropStoredProcedure(SPName : string);
+begin
+  if (SPName <> '') and (ExisteSql(Format('SELECT 1 FROM [DBO].sysobjects where name = "%s"', [SPName]))) then
+    ExecuteSQL(Format('DROP PROCEDURE DBO.%s', [SPName]));
+end;
+{$ENDIF APPSRV}
+
+{$IFNDEF APPSRV}
+class function Tools.GetRecordMaxSize(TableName : string; sType : tRecordMaxSize) : double;
+var
+  Sql   : string;
+  Qry   : TQuery;
+  Coeff : integer;
+begin
+  Result := 0;
+  if TableName <> '' then
+  begin
+    case sType of
+      trsOctets : Coeff := 1;
+      trsMo     : Coeff := 1000000;
+    end;
+    Sql := Format('SELECT MaxSize'
+                + ' FROM (SELECT SUM(C.max_length) AS MaxSize'
+                + '       FROM sys.tables AS T'
+                + '       JOIN sys.columns AS C ON T.object_id = C.object_id'
+                + '       JOIN sys.types AS TY ON C.user_type_id = TY.user_type_id'
+                + '       WHERE T.Name = "%s"'
+                + '       GROUP BY T.name'
+                + ') AS TMP (MaxSize)'
+                , [TableName]);
+    Qry := OpenSql(Sql, True);
+    try
+
+      if not Qry.EOF then
+        Result := (Qry.Fields[0].AsInteger / Coeff);
+    finally
+      Ferme(Qry);
+    end;
+  end;
+end;
+
+class function Tools.GetTableSize(TableName: string): double;
+var
+  Sql   : string;
+  Qry   : TQuery;
+  REs : string;
+begin
+  Result := 0;
+  if TableName <> '' then
+  begin
+    Sql := Format('EXEC sp_spaceused "%s"', [TableName]);
+    Qry := OpenSql(Sql, True);
+    try
+      if not Qry.EOF then
+      begin
+        Res := Qry.Fields[3].AsString;
+        REs := StringReplace (REs,' KB','',[rfReplaceAll]);
+        Result := StrToFloat(Res)/1024;
+      end;
+    finally
+      Ferme(Qry);
+    end;
+  end;
+end;
+{$ENDIF APPSRV}
 
 end.

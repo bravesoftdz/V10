@@ -1133,7 +1133,10 @@ uses
   UtilBTPVerdon in '..\..\Services\BTPVerdon\Lib\UtilBTPVerdon.pas',
   ControlIniFile in '..\LibBTP\ControlIniFile.pas',
   BTVERDDESTMAIL_TOF in '..\Verdon\BTVERDDESTMAIL_TOF.PAS',
-  BTBIMEXPORT_TOF in '..\BIM\BTBIMEXPORT_TOF.PAS';
+  BTBIMEXPORT_TOF in '..\BIM\BTBIMEXPORT_TOF.PAS',
+  ErrorsManagement in '..\..\commun\Lib\ErrorsManagement.pas',
+  BEXPORTXLSSES_TOF in '..\SES\BEXPORTXLSSES_TOF.PAS',
+  BTTexteMemo_TOF in '..\LibBTP\BTTexteMemo_TOF.pas';
 
 //
 

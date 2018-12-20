@@ -24,6 +24,10 @@ procedure ReliquatFormule (TOBLigne,TOBLFormule : TOB) ;
 
 implementation
 
+uses
+  ErrorsManagement
+  ;
+
 function ChargerTobArt(TOBArt,TobFormule : Tob; VenteAchat,LaCle1 : String ; QQ : TQuery ; SansMemo : Boolean = FALSE) :boolean;
 Var TOBADet : TOB;
     QQSuite : TQuery;
@@ -237,41 +241,51 @@ procedure ValideLesFormules (TOBPiece,TOBLFormule : TOB);
 Var ind,IndiceFormule : integer ;
     TOBLF,TOBL : TOB ;
 begin
-if TOBLFormule.Detail.Count<=0 then Exit ;
-TOBLFormule.Detail[0].AddChampSup('UTILISE',True) ;
-for ind:=0 to TOBPiece.Detail.Count-1 do
-  begin
-  TOBL:=TOBPiece.Detail[ind];
-  if TOBL.FieldExists('GL_INDICEFORMULE') then
-    IndiceFormule:=TOBL.GetValue('GL_INDICEFORMULE')
-    else IndiceFormule:=0;
-  if IndiceFormule>0 then
+  if TOBLFormule.Detail.Count<=0 then Exit ;
+  TOBLFormule.Detail[0].AddChampSup('UTILISE',True) ;
+  for ind:=0 to TOBPiece.Detail.Count-1 do
     begin
-    TOBLF:=TOBLFormule.Detail[IndiceFormule-1] ;
-    TOBLF.PutValue('UTILISE','X') ;
-    UpdateLesFormules(TOBL,TOBLF) ;
+    TOBL:=TOBPiece.Detail[ind];
+    if TOBL.FieldExists('GL_INDICEFORMULE') then
+      IndiceFormule:=TOBL.GetValue('GL_INDICEFORMULE')
+      else IndiceFormule:=0;
+    if IndiceFormule>0 then
+      begin
+      TOBLF:=TOBLFormule.Detail[IndiceFormule-1] ;
+      TOBLF.PutValue('UTILISE','X') ;
+      UpdateLesFormules(TOBL,TOBLF) ;
+      end ;
     end ;
-  end ;
-for ind:=TOBLFormule.Detail.Count-1 downto 0 do
+  for ind:=TOBLFormule.Detail.Count-1 downto 0 do
+    begin
+    TOBLF:=TOBLFormule.Detail[ind] ;
+    if TOBLF.GetValue('UTILISE')<>'X' then TOBLF.Free ;
+    end ;
+  if Not TOBLFormule.InsertDB(Nil) then
   begin
-  TOBLF:=TOBLFormule.Detail[ind] ;
-  if TOBLF.GetValue('UTILISE')<>'X' then TOBLF.Free ;
-  end ;
-if Not TOBLFormule.InsertDB(Nil) then V_PGI.IoError:=oeUnknown ;
+    TUtilErrorsManagement.SetGenericMessage(TemErr_UpdateLIGNEFORMULE);
+    V_PGI.IoError:=oeUnknown ;
+  end;
 end ;
 
 function DetruitLesFormules (TOBPiece,TOBLFormule : TOB) : boolean;
-Var St : string;
+var
+  St : string;
 begin
-Result:=True;
-if TOBLFormule<>Nil then if TOBLFormule.Detail.Count>0 then
+  Result:=True;
+  if TOBLFormule<>Nil then if TOBLFormule.Detail.Count>0 then
   begin
-  St:=' GLF_NATUREPIECEG="'+TOBPiece.GetValue('GP_NATUREPIECEG')+'" AND GLF_SOUCHE="'
-   + TOBPiece.GetValue('GP_SOUCHE')+'" '
-   +' AND GLF_NUMERO='+IntToStr(TOBPiece.GetValue('GP_NUMERO'))+' AND GLF_INDICEG='
-   +IntToStr(TOBPiece.GetValue('GP_INDICEG'))
-   +' AND GLF_TYPEFORMULE="QTE" ' ;
-  if ExecuteSQL('Delete FROM LIGNEFORMULE WHERE '+St)<=0 then Result:=False;
+    St:=' GLF_NATUREPIECEG="'+TOBPiece.GetValue('GP_NATUREPIECEG')+'" AND GLF_SOUCHE="'
+     + TOBPiece.GetValue('GP_SOUCHE')+'" '
+     +' AND GLF_NUMERO='+IntToStr(TOBPiece.GetValue('GP_NUMERO'))+' AND GLF_INDICEG='
+     +IntToStr(TOBPiece.GetValue('GP_INDICEG'))
+     +' AND GLF_TYPEFORMULE="QTE" ' ;
+    if ExecuteSQL('DELETE FROM LIGNEFORMULE WHERE '+St)<=0 then
+    begin
+      TUtilErrorsManagement.SetGenericMessage(TemErr_DeleteLIGNEFORMULEPrec);
+      V_PGI.IOError := oeUnknown;
+      Result        := False;
+    end;
   end ;
 end;
 

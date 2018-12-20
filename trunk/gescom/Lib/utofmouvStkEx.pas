@@ -194,6 +194,11 @@ ErrorMessage: array[1..20] of string 	= (
 
 implementation
 
+uses
+  ErrorsManagement
+  , CommonTools
+  ;
+
 function GCLanceFiche_MouvStkEx(Nat,Cod : String ; Range,Lequel,Argument : string) : string;
 begin
 Result:='';
@@ -1702,35 +1707,11 @@ if V_PGI.IoError=oeOk then
 
 RefSuiv   := EncodeRefPiece(TOBPiece);
 TOBPieceDest.PutValue('GP_DEVENIRPIECE',RefSuiv);
-
-{for ind1 := 0 to TobDesLots.Detail.Count - 1 do
-    begin
-    TOBL:=TobDesLots.Detail[ind1] ;
-    TOBL.PutValue('GLL_NATUREPIECEG',TOBPiece.GetValue('GP_NATUREPIECEG'));
-    TOBL.PutValue('GLL_SOUCHE',TOBPiece.GetValue('GP_SOUCHE'));
-    TOBL.PutValue('GLL_INDICEG',TOBPiece.GetValue('GP_INDICEG'));
-    TOBL.PutValue('GLL_NUMERO',TOBPiece.GetValue('GP_NUMERO'));
-    end;
-for ind1 := 0 to TobSerie.Detail.Count - 1 do
-    begin
-    TOBL := TobSerie.Detail[ind1] ;
-    for ind2 := 0 to TOBL.Detail.Count - 1 do
-        begin
-        TOBL2 := TOBL.Detail[ind2] ;
-        TOBL2.PutValue('GLS_NATUREPIECEG',TOBPiece.GetValue('GP_NATUREPIECEG'));
-        TOBL2.PutValue('GLS_SOUCHE',TOBPiece.GetValue('GP_SOUCHE'));
-        TOBL2.PutValue('GLS_INDICEG',TOBPiece.GetValue('GP_INDICEG'));
-        TOBL2.PutValue('GLS_NUMERO',TOBPiece.GetValue('GP_NUMERO'));
-        end;
-    end;  }
-
 if V_PGI.IoError=oeOk then ValideLesLignes(TOBPiece,TOBArticles,Nil,TOBTmp,Nil,Nil,Nil,False,False) ;
 if V_PGI.IoError=oeOk then ValideLesLots ;
 if V_PGI.IoError=oeOk then ValideLesArticles(TOBPiece,TOBArticles) ;
 if V_PGI.IoError=oeOk then ValideLesSeries ;
-
 if V_PGI.IoError=oeOk then if Not TobPiece.InsertDBByNivel(False) then V_PGI.IoError:=oeUnknown ;
-
 TOBPiece.Dupliquer(TobPieceDest, True, True, True);
 TOBDesLots.Dupliquer(TobLotDest, True, True, True);
 TOBSerie.Dupliquer(TobSerieDest, True, True, True);
@@ -2015,60 +1996,62 @@ Result:=True ;
 END ;
 
 procedure TOF_MouvStkEx.ClickValide ;
-Var io : TIOErr ;
-    ResGC : integer ;
-    SomQte : Double;
+Var
+  io : TIOErr ;
+  ResGC : integer ;
+  SomQte : Double;
+  Msg : string;
 begin
-// Tests et actions préalables
-if Action=taConsult then Exit ;
-if Not SortDeLaLigne then Exit ;
-if Not PieceModifiee then Exit ;
-DepileTOBLignes(GS,TOBPiece,GS.Row,1) ;
-// Contrôle intégrité
-ResGC:=GCPieceCorrecte(TOBPiece,TOBArticles,Nil,Ecran) ;
-if ResGC=3 then ResGC:=0;
-SomQte:=TOBPiece.Somme('GL_QTEFACT',['GL_TYPELIGNE'],['ART'],TRUE);
-if (SomQte <=0) and ((Nature='EEX') or (Nature='SEX')) then ResGC:=3;
-if ResGC>0 then BEGIN HShowMessage(ErrorMessage[10+ResGC],TFVierge(Ecran).Caption,''); Exit ;END ;
-// Appels automatiques en fin de saisie
-//if Not BeforeValide(Self,TOBPiece,TOBBases,TOBTiers,TOBArticles,DEV) then Exit ;
-// Enregistrement de la saisie
-ValideEnCours:=True ;
-io:=Transactions(ValideLaPiece,0) ;
-if io<>oeOk then
-   begin
-   if Not TOBPiece.FieldExists('REVALIDATION') then TOBPiece.AddChampSup('REVALIDATION',False) ;
-   TOBPiece.PutValue('REVALIDATION', 'X') ;
-   end ;
-Case io of
-        oeOk : BEGIN
-               ForcerFerme:=True ;
-               //AfterValide(Self,TOBPiece,TOBBases,TOBTiers,TOBArticles,DEV) ;
-               END ;
-   oeUnknown : BEGIN MessageAlerte(TexteMessage[4]) ; ValideEnCours:=False ; Exit ; END ;
-    oeSaisie : BEGIN MessageAlerte(TexteMessage[5]) ; ValideEnCours:=False ; Exit ; END ;
-  oePointage : BEGIN MessageAlerte(TexteMessage[7]) ; ValideEnCours:=False ; Exit ; END ;
-  oeLettrage : BEGIN MessageAlerte(TexteMessage[6]) ; ValideEnCours:=False ; Exit ; END ;
-  oeStock    : BEGIN MessageAlerte(TexteMessage[8]) ; ValideEnCours:=False ; Exit ; END ;
-   END ;
-if GetInfoParPiece(Nature,'GPP_IMPIMMEDIATE')='X' then
-   BEGIN
-   if ((Action=taCreat) or (Action=taModif)) then
-      BEGIN
-      io:=Transactions(ValideImpression,1) ;
-      if io<>oeOk then MessageAlerte(TexteMessage[9]) ;
-      END ;
-   END ;
-ValideEnCours:=False ;
-if Action<>taCreat then
-   BEGIN
-   Close ;
-   END else
-   BEGIN
-   VH_GC.GCLastRefPiece:=EncodeRefPiece(TOBPiece) ;
-   MontreNumero(TOBPiece) ;
-   if PasBouclerCreat then Close else ReInitPiece ;
-   END ;
+  // Tests et actions préalables
+  if Action=taConsult then Exit ;
+  if Not SortDeLaLigne then Exit ;
+  if Not PieceModifiee then Exit ;
+  DepileTOBLignes(GS,TOBPiece,GS.Row,1) ;
+  // Contrôle intégrité
+  ResGC:=GCPieceCorrecte(TOBPiece,TOBArticles,Nil,Ecran) ;
+  if ResGC=3 then ResGC:=0;
+  SomQte:=TOBPiece.Somme('GL_QTEFACT',['GL_TYPELIGNE'],['ART'],TRUE);
+  if (SomQte <=0) and ((Nature='EEX') or (Nature='SEX')) then ResGC:=3;
+  if ResGC>0 then BEGIN HShowMessage(ErrorMessage[10+ResGC],TFVierge(Ecran).Caption,''); Exit ;END ;
+  // Appels automatiques en fin de saisie
+  //if Not BeforeValide(Self,TOBPiece,TOBBases,TOBTiers,TOBArticles,DEV) then Exit ;
+  // Enregistrement de la saisie
+  io := Transactions(ValideLaPiece,0) ;
+  ValideEnCours := (io = oeOk);
+  if io <> oeOk then
+  begin
+    if Not TOBPiece.FieldExists('REVALIDATION') then TOBPiece.AddChampSup('REVALIDATION',False) ;
+    TOBPiece.PutValue('REVALIDATION', 'X') ;
+  end ;
+  Msg := TUtilErrorsManagement.GetGenericMessage;
+  Msg := Tools.iif(Msg <> '', Format(' (%s)', [Msg]), '');
+  Case io of
+          oeOk : ForcerFerme:=True ;
+     oeUnknown : MessageAlerte(Format('', [TexteMessage[4], Msg]));
+      oeSaisie : MessageAlerte(Format('', [TexteMessage[5], Msg]));
+    oePointage : MessageAlerte(Format('', [TexteMessage[7], Msg]));
+    oeLettrage : MessageAlerte(Format('', [TexteMessage[6], Msg]));
+    oeStock    : MessageAlerte(Format('', [TexteMessage[8], Msg]));
+  end;
+  if io <> oeOk then Exit;
+  if GetInfoParPiece(Nature,'GPP_IMPIMMEDIATE')='X' then
+     BEGIN
+     if ((Action=taCreat) or (Action=taModif)) then
+        BEGIN
+        io:=Transactions(ValideImpression,1) ;
+        if io<>oeOk then MessageAlerte(TexteMessage[9]) ;
+        END ;
+     END ;
+  ValideEnCours:=False ;
+  if Action<>taCreat then
+     BEGIN
+     Close ;
+     END else
+     BEGIN
+     VH_GC.GCLastRefPiece:=EncodeRefPiece(TOBPiece) ;
+     MontreNumero(TOBPiece) ;
+     if PasBouclerCreat then Close else ReInitPiece ;
+     END ;
 end;
 
 Initialization

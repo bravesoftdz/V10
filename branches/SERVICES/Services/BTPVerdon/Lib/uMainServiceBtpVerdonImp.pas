@@ -89,11 +89,16 @@ begin
   try
     { Paramètres généraux }
     Section := 'GLOBALSETTINGS';
-    Import.LogValues.LogLevel     := SettingFile.ReadInteger(Section, 'LogLevel', 0);           Msg := SetMsg('Import.LogValues.LogLevel'    , IntToStr(Import.LogValues.LogLevel));
-    Import.LogValues.LogMoMaxSize := SettingFile.ReadInteger(Section, 'LogMoMaxSize', 0);       Msg := SetMsg('Import.LogValues.LogMoMaxSize', FloatToStr(Import.LogValues.LogMoMaxSize));
-    Import.LogValues.DebugEvents  := SettingFile.ReadInteger(Section, 'DebugEvents', 0);        Msg := SetMsg('Import.LogValues.DebugEvents' , IntToStr(Import.LogValues.DebugEvents));
-    Import.LogValues.OneLogPerDay := (SettingFile.ReadInteger(Section, 'OneLogPerDay', 0) = 1); Msg := SetMsg('Import.LogValues.OneLogPerDay', BoolToStr(Import.LogValues.OneLogPerDay));
-    Import.LogValues.LogPath      := LogPath;                                                   Msg := SetMsg('Import.LogValues.LogPath'     , Import.LogValues.LogPath);
+    Import.LogValues.LogLevel             := SettingFile.ReadInteger(Section, 'LogLevel', 0);                 Msg := SetMsg('LogValues.LogLevel'            , IntToStr(Import.LogValues.LogLevel));
+    Import.LogValues.LogMoMaxSize         := SettingFile.ReadInteger(Section, 'LogMoMaxSize', 0);             Msg := SetMsg('LogValues.LogMoMaxSize'        , FloatToStr(Import.LogValues.LogMoMaxSize));
+    Import.LogValues.DebugEvents          := SettingFile.ReadInteger(Section, 'DebugEvents', 0);              Msg := SetMsg('LogValues.DebugEvents'         , IntToStr(Import.LogValues.DebugEvents));
+    Import.LogValues.OneLogPerDay         := (SettingFile.ReadInteger(Section, 'OneLogPerDay', 0) = 1);       Msg := SetMsg('LogValues.OneLogPerDay'        , BoolToStr(Import.LogValues.OneLogPerDay));
+    Import.LogValues.LogPath              := LogPath;                                                         Msg := SetMsg('LogValues.LogPath'             , Import.LogValues.LogPath);
+    Import.LogValues.TrueValue            := SettingFile.ReadString(Section, 'TrueValue', 'Vrai');            Msg := SetMsg('LogValues.TrueValue'           , Import.LogValues.TrueValue);
+    Import.LogValues.FalseValue           := SettingFile.ReadString(Section, 'FalseValue', 'Faux');           Msg := SetMsg('LogValues.FalseValue'          , Import.LogValues.FalseValue);
+    Import.LogValues.ExecutionPeriodDays  := SettingFile.ReadString(Section, 'ExecutionPeriodDays'    , '');  Msg := SetMsg('LogValues.ExecutionPeriodDays' , Import.LogValues.ExecutionPeriodDays);
+    Import.LogValues.ExecutionPeriodStart := SettingFile.ReadString(Section, 'ExecutionPeriodStart'    , ''); Msg := SetMsg('LogValues.ExecutionPeriodStart', Import.LogValues.ExecutionPeriodStart);
+    Import.LogValues.ExecutionPeriodEnd   := SettingFile.ReadString(Section, 'ExecutionPeriodEnd'    , '');   Msg := SetMsg('LogValues.ExecutionPeriodEnd'  , Import.LogValues.ExecutionPeriodEnd);
     { Paramètres dossier }
     Section := 'FOLDER';
     Import.FolderValues.BTPUserAdmin := SettingFile.ReadString(Section, 'BTPUser'     , ''); Msg := SetMsg('Import.FolderValues.BTPUserAdmin' , Import.FolderValues.BTPUserAdmin);
@@ -318,24 +323,30 @@ begin
               inc(Import.ReglementValues.Count);
               inc(Import.HresSalariesValues.Count);
               inc(Import.ConsoStockValues.Count);
-              if (Import.ParametresValues.IsActive)   and ((Import.ParametresValues.Count   >= Import.ParametresValues.TimeOut)   or (Import.ParametresValues.FirstExec))   then ExecParametres;
-              if (Import.ArticlesValues.IsActive)     and ((Import.ArticlesValues.Count     >= Import.ArticlesValues.TimeOut)     or (Import.ArticlesValues.FirstExec))     then ExecArticles;
-              if (Import.SalariesValues.IsActive)     and ((Import.SalariesValues.Count     >= Import.SalariesValues.TimeOut)     or (Import.SalariesValues.FirstExec))     then ExecSalaries;
-              if (Import.ModeRegleValues.IsActive)    and ((Import.ModeRegleValues.Count    >= Import.ModeRegleValues.TimeOut)    or (Import.ModeRegleValues.FirstExec))    then ExecModeRegle;
-              if (Import.ReglementValues.IsActive)    and ((Import.ReglementValues.Count    >= Import.ReglementValues.TimeOut)    or (Import.ReglementValues.FirstExec))    then ExecEcrRegle;
-              if (Import.HresSalariesValues.IsActive) and ((Import.HresSalariesValues.Count >= Import.HresSalariesValues.TimeOut) or (Import.HresSalariesValues.FirstExec)) then ExecHresSalaries;
-              if (Import.ConsoStockValues.IsActive)   and ((Import.ConsoStockValues.Count   >= Import.ConsoStockValues.TimeOut)   or (Import.ConsoStockValues.FirstExec))   then ExecConsoStock;
+              if TServicesLog.CanExecuteFromPeriod(Import.LogValues, ServiceName_BTPVerdonImp) then
+              begin
+                if (Import.ParametresValues.IsActive)   and ((Import.ParametresValues.Count   >= Import.ParametresValues.TimeOut)   or (Import.ParametresValues.FirstExec))   then ExecParametres;
+                if (Import.ArticlesValues.IsActive)     and ((Import.ArticlesValues.Count     >= Import.ArticlesValues.TimeOut)     or (Import.ArticlesValues.FirstExec))     then ExecArticles;
+                if (Import.SalariesValues.IsActive)     and ((Import.SalariesValues.Count     >= Import.SalariesValues.TimeOut)     or (Import.SalariesValues.FirstExec))     then ExecSalaries;
+                if (Import.ModeRegleValues.IsActive)    and ((Import.ModeRegleValues.Count    >= Import.ModeRegleValues.TimeOut)    or (Import.ModeRegleValues.FirstExec))    then ExecModeRegle;
+                if (Import.ReglementValues.IsActive)    and ((Import.ReglementValues.Count    >= Import.ReglementValues.TimeOut)    or (Import.ReglementValues.FirstExec))    then ExecEcrRegle;
+                if (Import.HresSalariesValues.IsActive) and ((Import.HresSalariesValues.Count >= Import.HresSalariesValues.TimeOut) or (Import.HresSalariesValues.FirstExec)) then ExecHresSalaries;
+                if (Import.ConsoStockValues.IsActive)   and ((Import.ConsoStockValues.Count   >= Import.ConsoStockValues.TimeOut)   or (Import.ConsoStockValues.FirstExec))   then ExecConsoStock;
+              end;
               Sleep(1000);
               ServiceThread.ProcessRequests(False);
             end;
             {$ELSE !TSTSRV}
-            if (Import.ParametresValues.IsActive)   then ExecParametres;
-            if (Import.ArticlesValues.IsActive)     then ExecArticles;
-            if (Import.SalariesValues.IsActive)     then ExecSalaries;
-            if (Import.ModeRegleValues.IsActive)    then ExecModeRegle;
-            if (Import.ReglementValues.IsActive)    then ExecEcrRegle;
-            if (Import.HresSalariesValues.IsActive) then ExecHresSalaries;
-            if (Import.ConsoStockValues.IsActive)   then ExecConsoStock;
+            if TServicesLog.CanExecuteFromPeriod(Import.LogValues, ServiceName_BTPVerdonImp) then
+            begin
+              if (Import.ParametresValues.IsActive)   then ExecParametres;
+              if (Import.ArticlesValues.IsActive)     then ExecArticles;
+              if (Import.SalariesValues.IsActive)     then ExecSalaries;
+              if (Import.ModeRegleValues.IsActive)    then ExecModeRegle;
+              if (Import.ReglementValues.IsActive)    then ExecEcrRegle;
+              if (Import.HresSalariesValues.IsActive) then ExecHresSalaries;
+              if (Import.ConsoStockValues.IsActive)   then ExecConsoStock;
+            end;
             {$ENDIF !TSTSRV}
           finally
             Import.Free;

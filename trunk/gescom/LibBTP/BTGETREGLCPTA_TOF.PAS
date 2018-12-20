@@ -58,7 +58,7 @@ Type
     function ConstitueDebExerciceCourant : String;
     procedure TraitementRecuperationReglements;
     procedure GetPiecesRegl(TOBR: TOB);
-    function ConstitueJournal: string;
+    //function ConstitueJournal: string;
     procedure EnregistreReglPiece(TOBReglFAC : TOB);
     procedure ConstitueReglPiece(TOBR : TOB);
     procedure ChargePiece(TOBpiece, TOBAcomptes: TOB; Cledoc: r_cledoc);
@@ -92,16 +92,17 @@ var yy,mm,dd : word;
 begin
   Inherited ;
   RapportRecup.InitRapport;
-  if ThEdit(getControl('DATEDEPART')).Text <> DateToStr(StrToDateTime(OneDateSt)) then
+  if ThEdit(getControl('DATEDEPART')).Text <> DateToStr(StrToDate(OneDateSt)) then
   begin
     DecodeDate(StrtoDate(ThEdit(getControl('DATEDEPART')).Text),yy,mm,dd);
-    DateLancement := DateTimeToStr(EncodeDateTime(yy,mm,dd,0,0,0,0));
+    //DateLancement := DateTimeToStr(EncodeDateTime(yy,mm,dd,0,0,0,0));
+    DateLancement := DateToStr(EncodeDate(yy,mm,dd));
   end else
   begin
     DateLancement := OneDateSt;
   end;
   //
-  JUSqua := DateTimetoStr(NowH); // prochaine date de mise a jour
+  JUSqua := DatetoStr(NowH); // prochaine date de mise a jour
   if PgiAsk ('ATTENTION : Vous allez lancer un traitement qui peut être long.#13#10 Confirmez-Vous ?') <> mryes then
   begin
     TFVierge(Ecran).ModalResult := 0;
@@ -127,6 +128,8 @@ begin
 end ;
 
 procedure TOF_BTGETREGLCPTA.OnArgument (S : String ) ;
+Var TheDate : TDateTime;
+    Y,M,D   : Word;
 begin
   Inherited ;
 
@@ -143,14 +146,16 @@ begin
   RapportRecup.Width := round(screen.width / 2);
 
   TOBReglements := TOB.Create ('LES REGELEMENST',nil,-1);
-  TOBPIECES := TOB.Create ('LES PIECES',nil,-1);
-  OneDateSt := GetParamSocSecur('SO_BTGETREGLLASTDATE','');
-  JournauxSt := GetParamSocSecur('SO_BTGETJNLCOMPTA','');
+  TOBPIECES     := TOB.Create ('LES PIECES',nil,-1);
+  TheDate       := StrToDatetime(GetParamSocSecur('SO_BTGETREGLLASTDATE',now));
+  DecodeDate(TheDate, Y, M, D);
+  OneDateSt     := DateToStr(EncodeDate(y, m, d)) ;
+  JournauxSt    := GetParamSocSecur('SO_BTGETJNLCOMPTA','');
   if OneDateSt = '' then
   begin
     OneDateSt := ConstitueDebExerciceCourant;
   end;
-  ThEdit(getControl('DATEDEPART')).Text := DateToStr(StrToDateTime(OneDateSt));
+  ThEdit(getControl('DATEDEPART')).Text := DateToStr(StrToDate(OneDateSt));
   THMultiValComboBox(getControl('JOURNAUX')).Value:= JournauxSt;
 end ;
 
@@ -178,11 +183,11 @@ var TheDate : Tdatetime;
 begin
   TheDate := GetEnCours.Deb;
   DecodeDate (TheDate,yy,mm,dd);
-  TheDate := EncodeDateTime (yy,mm,dd,0,0,0,0);
-  result := DateTimeToStr(TheDate);
+  TheDate := EncodeDate(yy,mm,dd);
+  result := DateToStr(TheDate);
 end;
 
-
+{*
 function TOF_BTGETREGLCPTA.ConstitueJournal : string;
 var StIn,StST : string;
 begin
@@ -197,6 +202,7 @@ begin
     end;
   until StSt = '';
 end;
+*}
 
 procedure TOF_BTGETREGLCPTA.TraitementRecuperationReglements;
 var QQ : TQuery;
@@ -243,7 +249,10 @@ begin
              '(E_ECRANOUVEAU="N" OR E_ECRANOUVEAU="H") AND '+
              'E_CONFIDENTIEL<="0" AND '+
              'E_DATECOMPTABLE>="'+USDATETIME (StrToDateTime(DateLancement))+'" AND '+
-             '(E_GENERAL IN (SELECT G_GENERAL FROM GENERAUXMS WHERE G_NATUREGENE = "COC")) AND '+
+             // Modified by f.vautrain 14/12/2018 10:55:16 - FS#3410 - Viviane : Pas de récupération des règlements fournisseurs
+             //'(E_GENERAL IN (SELECT G_GENERAL FROM GENERAUXMS WHERE G_NATUREGENE = "COC")) AND '+
+             '(E_GENERAL IN (SELECT G_GENERAL FROM GENERAUXMS WHERE G_NATUREGENE IN ("COC","COF"))) AND '+
+             //Modified by f.vautrain 14/12/2018 10:55:16 - FS#3410 - Viviane : Pas de récupération des règlements fournisseurs
              '(E_TIERSPAYEUR="" OR E_TIERSPAYEUR IS NULL) '+
              'GROUP BY E_GENERAL, E_AUXILIAIRE, E_LETTRAGE '+
              'ORDER BY E_GENERAL, E_AUXILIAIRE, E_LETTRAGE';

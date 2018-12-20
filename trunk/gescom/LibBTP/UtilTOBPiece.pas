@@ -408,7 +408,18 @@ end;
 
 function MakeSelectLigneOuvBtp (WithLigneFac : boolean=false; NaturepieceG : string=''): string;
 begin
-  result :='SELECT O.*,N.BNP_TYPERESSOURCE,N.BNP_LIBELLE,';
+  result :='SELECT O.*,N.BNP_TYPERESSOURCE,N.BNP_LIBELLE,'+
+          '"ZZTRI0"=CASE '+
+          'WHEN (BNP_TYPERESSOURCE IS NULL) AND (BLO_NATURETRAVAIL<>"002") THEN "000" '+
+          'WHEN BLO_NATURETRAVAIL="002" THEN "003" '+
+          'WHEN BNP_TYPERESSOURCE="SAL" THEN "001" '+
+          'WHEN BNP_TYPERESSOURCE="INT" THEN "002" '+
+          'WHEN BNP_TYPERESSOURCE="ST" THEN "003" '+
+          'WHEN BNP_TYPERESSOURCE="LOC" THEN "004" '+
+          'WHEN BNP_TYPERESSOURCE="MAT" THEN "005" '+
+          'WHEN BNP_TYPERESSOURCE="OUT" THEN "006" '+
+          'ELSE "007" '+
+          'END,'; 
   if WithLigneFac then
   begin
     result := result + 'LIGNEFAC.*,BLF_MTSITUATION AS OLD_MTSITUATION, BLF_QTESITUATION AS OLD_QTESITUATION,';
@@ -544,6 +555,18 @@ begin
   result := result + 'IIF(GL_COEFMARG=0,0,(GL_COEFMARG -1) * 100) AS POURCENTMARG, ';
   result := result + 'IIF(GL_PUHT=0,0,((GL_PUHT-GL_DPR)/GL_PUHT)*100) AS POURCENTMARQ,';
   result := result + 'IIF(GL_GESTIONPTC="X", GL_MONTANTHTDEV , 0 ) AS MONTANTPTC, (SELECT GA_RELIQUATMT FROM ARTICLE WHERE GA_ARTICLE=GL_ARTICLE) AS GESTRELIQUAT ';
+  //
+  Result := Result +',"ZZTRI0"=CASE '+
+                    'WHEN (BNP_TYPERESSOURCE IS NULL) AND (GLC_NATURETRAVAIL<>"002") THEN "000" '+
+                    'WHEN GLC_NATURETRAVAIL="002" THEN "003" '+
+                    'WHEN BNP_TYPERESSOURCE="SAL" THEN "001" '+
+                    'WHEN BNP_TYPERESSOURCE="INT" THEN "002" '+
+                    'WHEN BNP_TYPERESSOURCE="ST"  THEN "003" '+
+                    'WHEN BNP_TYPERESSOURCE="LOC" THEN "004" '+
+                    'WHEN BNP_TYPERESSOURCE="MAT" THEN "005" '+
+                    'WHEN BNP_TYPERESSOURCE="OUT" THEN "006" '+
+                    'ELSE "007" '+
+                    'END ';
   if (VH_GC.BTCODESPECIF = '001') and (NaturepieceG ='BCE') then
   begin
     Result := Result +','+

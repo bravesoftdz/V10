@@ -567,6 +567,7 @@ begin
      TobLigneTarifLocal.GetIndex
   end;
 end;
+
 procedure DeleteTobLigneTarif(TobPiece: Tob; Tobl: Tob); overload;
 begin
   if TobL.Parent = TobPiece then

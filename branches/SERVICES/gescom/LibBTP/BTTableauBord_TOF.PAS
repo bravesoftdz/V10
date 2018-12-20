@@ -550,7 +550,7 @@ begin
   TFStat(Ecran).NatureEtat := 'BTB';
 
   FEtat.OnChange := OnChangeFEtat;
-  FETAT.Plus     := 'MO_TYPE="E" AND MO_NATURE="' + TFStat(Ecran).NatureEtat + '"';
+  FETAT.Plus     := 'AND MO_TYPE="E" AND MO_NATURE="' + TFStat(Ecran).NatureEtat + '"';
   FEtat.Value    := GetParamSocSecur('SO_BTTABLEAUBORD', '');
 
   BParamEtat.OnClick  := BParamEtatClick;

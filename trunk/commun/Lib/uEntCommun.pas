@@ -184,7 +184,7 @@ Type
                 NumOrdre    : Integer ;
                 Indice      : Integer;
                 NoPersp     : integer ;
-                UniqueBlo : integer;
+                UniqueBlo   : integer;
              END ;
   {ne pas changer l'ordre des 5 premiers (axes)}
   TFichierBase = (fbAxe1,fbAxe2,fbAxe3,fbAxe4,fbAxe5,fbGene,fbAux,fbJal,fbBudGen,fbBudJal,

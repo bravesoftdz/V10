@@ -101,14 +101,18 @@ procedure ValideLesListes(Sender : TWinControl; TOBSelection : TOB; Prix1, Prix2
 
 implementation
 
-uses HEnt1,
+uses
+  HEnt1,
 {$IFDEF EAGLCLIENT}
 {$ELSE}
      {$IFNDEF DBXPRESS} dbTables, {$ELSE} uDbxDataSet, {$ENDIF}
 {$ENDIF}
-     UtilPMAPCalcul,
-     FactCalc,
-     FactComm;
+  UtilPMAPCalcul,
+  FactCalc,
+  FactComm
+  , ErrorsManagement
+  , CommonTools
+  ;
 
 Const NaturePiece = 'INV';
       { StSelectArticle : String = 'SELECT * FROM ARTICLE'; }
@@ -466,6 +470,7 @@ var Q : TQuery;
     //Ecart;
     QteInv : Double;
     i,IndiceArticle : integer;
+    Msg : string;
 begin
   result:=false; IndiceArticle:=-1;
 
@@ -575,10 +580,14 @@ begin
     MAJQtePrixLignesGEN();
     IncNumSoucheG(CleDoc.Souche,DateInv);
     CalculFacture(nil, Tob_Piece, nil,nil,nil,nil,Tob_PiedBase,Tob_LigneBase, Tob_Tiers, Tob_Article, nil,nil,nil,nil, DEV) ;
-    if not ValideLesPieces() then PGIInfo(TraduireMemoire(TexteMessage[5]),Caption)
-                             else result:=true;
-  end
-  else
+    if not ValideLesPieces() then
+    begin
+      Msg := TUtilErrorsManagement.GetGenericMessage;
+      Msg := Tools.iif(Msg <> '', Format(' (%s)', [Msg]), '');
+      PGIInfo(Format('%s%s', [TraduireMemoire(TexteMessage[5]), Msg]), Caption);
+    end else
+      result := true;
+  end else
     result:=true;
 
 end;

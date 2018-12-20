@@ -5488,7 +5488,7 @@ FF:=GetLaForm(CC) ;
    if ExisteNam('SO_BTQPROXIMITE',FF) then SetInvi('SO_BTQPROXIMITE',FF) ;
    if ExisteNam('SO_GCCREERTARIFBASE',FF) then SetInvi('SO_GCCREERTARIFBASE',FF) ;
    // JT - Invisible nvelle cpta diff
-   if ExisteNam('SO_GCDESACTIVECOMPTA',FF) then SetInvi('SO_GCDESACTIVECOMPTA',FF) ;
+//   if ExisteNam('SO_GCDESACTIVECOMPTA',FF) then SetInvi('SO_GCDESACTIVECOMPTA',FF) ;
    if ExisteNam('SO_GESTIONOPCAISSE',FF) then SetInvi('SO_GESTIONOPCAISSE',FF) ;
    if ExisteNam('SO_MULTIETABCOMPTA',FF) then SetInvi('SO_MULTIETABCOMPTA',FF) ;
    if ExisteNam('SO_ACTIVECOMSX',FF) then SetInvi('SO_ACTIVECOMSX',FF) ;

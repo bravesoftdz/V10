@@ -43,7 +43,7 @@ type
     IntervenantsValues : T_IntervenantsValues;
 
     procedure ClearTablesValues;
-    function ReadSettings : boolean;
+    function ReadSettings : string;
 
   public
     function GetServiceController: TServiceController; override;
@@ -91,10 +91,11 @@ begin
   IntervenantsValues.TimeOut   := 0;
 end;
 
-function TSvcSyncBTPVerdonExp.ReadSettings : boolean;
+function TSvcSyncBTPVerdonExp.ReadSettings : string;
 var
   SettingFile : TInifile;
   Section     : string;
+  Msg         : string;
 
   function IsActive(lTn : T_TablesName) : boolean;
   var
@@ -107,42 +108,55 @@ var
       Result := (SettingFile.ReadInteger(Section, TableName, 0) = 1);
   end;
 
+  function SetMsg(Text, Value : string) : string;
+  begin
+    Result := Format('%s%s%s = %s', [Msg, #13#10, Text, Value]);
+  end;
+
 begin
-  Result := True;
+  Msg         := '';
   SettingFile := TIniFile.Create(IniPath);
   try
+    { Paramètres généraux }
     Section := 'GLOBALSETTINGS';
-    LogValues.LogLevel     := SettingFile.ReadInteger(Section, 'LogLevel', 0);
-    LogValues.LogMoMaxSize := SettingFile.ReadInteger(Section, 'LogMoMaxSize', 0);
-    LogValues.DebugEvents  := SettingFile.ReadInteger(Section, 'DebugEvents', 0);
-    LogValues.OneLogPerDay := (SettingFile.ReadInteger(Section, 'OneLogPerDay', 0) = 1);
-    LogValues.LogPath      := LogPath;
-    LogValues.TrueValue    := SettingFile.ReadString(Section, 'TrueValue', 'Vrai');
-    LogValues.FalseValue   := SettingFile.ReadString(Section, 'FalseValue', 'Faux');
+    LogValues.LogLevel             := SettingFile.ReadInteger(Section, 'LogLevel', 0);                  Msg := SetMsg('LogValues.LogLevel'            , IntToStr(LogValues.LogLevel));
+    LogValues.LogMoMaxSize         := SettingFile.ReadInteger(Section, 'LogMoMaxSize', 0);              Msg := SetMsg('LogValues.LogMoMaxSize'        , FloatToStr(LogValues.LogMoMaxSize));
+    LogValues.DebugEvents          := SettingFile.ReadInteger(Section, 'DebugEvents', 0);               Msg := SetMsg('LogValues.DebugEvents'         , IntToStr(LogValues.DebugEvents));
+    LogValues.OneLogPerDay         := (SettingFile.ReadInteger(Section,'OneLogPerDay', 0) = 1);         Msg := SetMsg('LogValues.OneLogPerDay'        , BoolToStr(LogValues.OneLogPerDay));
+    LogValues.LogPath              := LogPath;                                                          Msg := SetMsg('LogValues.LogPath'             , LogValues.LogPath);
+    LogValues.TrueValue            := SettingFile.ReadString(Section, 'TrueValue', 'Vrai');             Msg := SetMsg('LogValues.TrueValue'           , LogValues.TrueValue);
+    LogValues.FalseValue           := SettingFile.ReadString(Section, 'FalseValue', 'Faux');            Msg := SetMsg('LogValues.FalseValue'          , LogValues.FalseValue);
+    LogValues.ExecutionPeriodDays  := SettingFile.ReadString(Section, 'ExecutionPeriodDays'    , '');   Msg := SetMsg('LogValues.ExecutionPeriodDays' , LogValues.ExecutionPeriodDays);
+    LogValues.ExecutionPeriodStart := SettingFile.ReadString(Section, 'ExecutionPeriodStart'    , '');  Msg := SetMsg('LogValues.ExecutionPeriodStart', LogValues.ExecutionPeriodStart);
+    LogValues.ExecutionPeriodEnd   := SettingFile.ReadString(Section, 'ExecutionPeriodEnd'    , '');    Msg := SetMsg('LogValues.ExecutionPeriodEnd'  , LogValues.ExecutionPeriodEnd);
+    { Paramètres du dossier }
     Section := 'FOLDER';
-    FolderValues.BTPUserAdmin := SettingFile.ReadString(Section, 'BTPUser'     , '');
-    FolderValues.BTPServer    := SettingFile.ReadString(Section, 'Server'      , '');
-    FolderValues.BTPDataBase  := SettingFile.ReadString(Section, 'BTPFolder'   , '');
-    FolderValues.TMPServer    := SettingFile.ReadString(Section, 'Server'      , '');
-    FolderValues.TMPDataBase  := SettingFile.ReadString(Section, 'TMPBDDFolder', '');
+    FolderValues.BTPUserAdmin := SettingFile.ReadString(Section, 'BTPUser'     , ''); Msg := SetMsg('FolderValues.BTPUserAdmin', FolderValues.BTPUserAdmin);
+    FolderValues.BTPServer    := SettingFile.ReadString(Section, 'Server'      , ''); Msg := SetMsg('FolderValues.BTPServer'   , FolderValues.BTPServer);
+    FolderValues.BTPDataBase  := SettingFile.ReadString(Section, 'BTPFolder'   , ''); Msg := SetMsg('FolderValues.BTPDataBase' , FolderValues.BTPDataBase);
+    FolderValues.TMPServer    := SettingFile.ReadString(Section, 'Server'      , ''); Msg := SetMsg('FolderValues.TMPServer'   , FolderValues.TMPServer);
+    FolderValues.TMPDataBase  := SettingFile.ReadString(Section, 'TMPBDDFolder', ''); Msg := SetMsg('FolderValues.TMPDataBase' , FolderValues.TMPDataBase);
+    { Délai d'exécution }
     Section := 'EXPORT_EXECUTIONTIME';
-    TiersValues.TimeOut        := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnTiers)   , 0);
-    ChantierValues.TimeOut     := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnChantier), 0);
-    DevisValues.TimeOut        := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnDevis), 0);
-    LignesBRValues.TimeOut     := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnLignesBR), 0);
-    IntervenantsValues.TimeOut := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnIntervenants), 0);
+    TiersValues.TimeOut        := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnTiers)   , 0);     Msg := SetMsg('TiersValues.TimeOut'       , IntToStr(TiersValues.TimeOut));
+    ChantierValues.TimeOut     := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnChantier), 0);     Msg := SetMsg('ChantierValues.TimeOut'    , IntToStr(ChantierValues.TimeOut));
+    DevisValues.TimeOut        := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnDevis), 0);        Msg := SetMsg('DevisValues.TimeOut'       , IntToStr(DevisValues.TimeOut));
+    LignesBRValues.TimeOut     := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnLignesBR), 0);     Msg := SetMsg('LignesBRValues.TimeOut'    , IntToStr(LignesBRValues.TimeOut));
+    IntervenantsValues.TimeOut := SettingFile.ReadInteger(Section, TUtilBTPVerdon.GetTMPTableName(tnIntervenants), 0); Msg := SetMsg('IntervenantsValues.TimeOut', IntToStr(IntervenantsValues.TimeOut));
+    { Dernière synchronisation }
     Section := 'EXPORT_LASTSYNCHRO';
-    TiersValues.LastSynchro        := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnTiers)   , '');
-    ChantierValues.LastSynchro     := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnChantier), '');
-    DevisValues.LastSynchro        := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnDevis), '');
-    LignesBRValues.LastSynchro     := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnLignesBR), '');
-    IntervenantsValues.LastSynchro := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnIntervenants), '');
+    TiersValues.LastSynchro        := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnTiers)   , '');     Msg := SetMsg('TiersValues.LastSynchro'       , TiersValues.LastSynchro);
+    ChantierValues.LastSynchro     := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnChantier), '');     Msg := SetMsg('ChantierValues.LastSynchro'    , ChantierValues.LastSynchro);
+    DevisValues.LastSynchro        := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnDevis), '');        Msg := SetMsg('DevisValues.LastSynchro'       , DevisValues.LastSynchro);
+    LignesBRValues.LastSynchro     := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnLignesBR), '');     Msg := SetMsg('LignesBRValues.LastSynchro'    , LignesBRValues.LastSynchro);
+    IntervenantsValues.LastSynchro := SettingFile.ReadString(Section, TUtilBTPVerdon.GetTMPTableName(tnIntervenants), ''); Msg := SetMsg('IntervenantsValues.LastSynchro', IntervenantsValues.LastSynchro);
+    { Table active }
     Section := 'EXPORT_ISACTIVE';
-    TiersValues.IsActive        := IsActive(tnTiers);
-    ChantierValues.IsActive     := IsActive(tnChantier);
-    DevisValues.IsActive        := IsActive(tnDevis);
-    LignesBRValues.IsActive     := IsActive(tnLignesBR);
-    IntervenantsValues.IsActive := IsActive(tnIntervenants);
+    TiersValues.IsActive        := IsActive(tnTiers);        Msg := SetMsg('TiersValues.IsActive'       , Tools.iif(TiersValues.IsActive       , LogValues.TrueValue, LogValues.FalseValue));
+    ChantierValues.IsActive     := IsActive(tnChantier);     Msg := SetMsg('ChantierValues.IsActive'    , Tools.iif(ChantierValues.IsActive    , LogValues.TrueValue, LogValues.FalseValue));
+    DevisValues.IsActive        := IsActive(tnDevis);        Msg := SetMsg('DevisValues.IsActive'       , Tools.iif(DevisValues.IsActive       , LogValues.TrueValue, LogValues.FalseValue));
+    LignesBRValues.IsActive     := IsActive(tnLignesBR);     Msg := SetMsg('LignesBRValues.IsActive'    , Tools.iif(LignesBRValues.IsActive    , LogValues.TrueValue, LogValues.FalseValue));
+    IntervenantsValues.IsActive := IsActive(tnIntervenants); Msg := SetMsg('IntervenantsValues.IsActive', Tools.iif(IntervenantsValues.IsActive, LogValues.TrueValue, LogValues.FalseValue));
   finally
     SettingFile.Free;
   end;
@@ -173,7 +187,8 @@ end;
 
 procedure TSvcSyncBTPVerdonExp.ServiceExecute(Sender: TService);
 var
-  AppPath : string;
+  AppPath  : string;
+  Settings : string;
 
   procedure StartLog(lTn : T_TablesName; LastSynchro : string);
   begin
@@ -304,8 +319,9 @@ begin
       LogMessage(Format('Impossible d''initialiser le service %s. Le fichier de configuration "%s" est inexistant.', [ServiceName_BTPVerdonExp, IniPath]), EVENTLOG_ERROR_TYPE);
     end else
     begin
-      ClearTablesValues;                         
-      ReadSettings;
+      ClearTablesValues;
+      Settings := ReadSettings;
+      if (LogValues.DebugEvents > 0) then LogMessage(Format('Settings :%s%s', [#13#10, Settings]), EVENTLOG_INFORMATION_TYPE);
       {$IFNDEF TSTSRV}
       while not Terminated do
       begin
@@ -314,20 +330,26 @@ begin
         Inc(DevisValues.Count);
         Inc(LignesBRValues.Count);
         Inc(IntervenantsValues.Count);
-        if (TiersValues.IsActive)        and ((TiersValues.Count        >= TiersValues.TimeOut)        or (TiersValues.FirstExec))        then CallThreadTiers;
-        if (ChantierValues.IsActive)     and ((ChantierValues.Count     >= ChantierValues.TimeOut)     or (ChantierValues.FirstExec))     then CallThreadChantiers;
-        if (DevisValues.IsActive)        and ((DevisValues.Count        >= DevisValues.TimeOut)        or (DevisValues.FirstExec))        then CallThreadDevis;
-        if (LignesBRValues.IsActive)     and ((LignesBRValues.Count     >= LignesBRValues.TimeOut)     or (LignesBRValues.FirstExec))     then CallThreadLignesBR;
-        if (IntervenantsValues.IsActive) and ((IntervenantsValues.Count >= IntervenantsValues.TimeOut) or (IntervenantsValues.FirstExec)) then CallThreadIntervenants;
+        if TServicesLog.CanExecuteFromPeriod(LogValues, ServiceName_BTPVerdonExp) then
+        begin
+          if (TiersValues.IsActive)        and ((TiersValues.Count        >= TiersValues.TimeOut)        or (TiersValues.FirstExec))        then CallThreadTiers;
+          if (ChantierValues.IsActive)     and ((ChantierValues.Count     >= ChantierValues.TimeOut)     or (ChantierValues.FirstExec))     then CallThreadChantiers;
+          if (DevisValues.IsActive)        and ((DevisValues.Count        >= DevisValues.TimeOut)        or (DevisValues.FirstExec))        then CallThreadDevis;
+          if (LignesBRValues.IsActive)     and ((LignesBRValues.Count     >= LignesBRValues.TimeOut)     or (LignesBRValues.FirstExec))     then CallThreadLignesBR;
+          if (IntervenantsValues.IsActive) and ((IntervenantsValues.Count >= IntervenantsValues.TimeOut) or (IntervenantsValues.FirstExec)) then CallThreadIntervenants;
+        end;
         Sleep(1000);
         ServiceThread.ProcessRequests(False);
       end;
       {$ELSE !TSTSRV}
-      if (TiersValues.IsActive)        then CallThreadTiers;
-      if (ChantierValues.IsActive)     then CallThreadChantiers;
-      if (DevisValues.IsActive)        then CallThreadDevis;
-      if (LignesBRValues.IsActive)     then CallThreadLignesBR;
-      if (IntervenantsValues.IsActive) then CallThreadIntervenants;
+      if TServicesLog.CanExecuteFromPeriod(LogValues, ServiceName_BTPVerdonExp) then
+      begin
+        if (TiersValues.IsActive)        then CallThreadTiers;
+        if (ChantierValues.IsActive)     then CallThreadChantiers;
+        if (DevisValues.IsActive)        then CallThreadDevis;
+        if (LignesBRValues.IsActive)     then CallThreadLignesBR;
+        if (IntervenantsValues.IsActive) then CallThreadIntervenants;
+      end;
       {$ENDIF !TSTSRV}
     end;
   end else

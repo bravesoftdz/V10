@@ -1129,8 +1129,13 @@ uses
   UTOF_BTCODECPTA in '..\LibBTP\UTOF_BTCODECPTA.pas',
   UtilBSV in '..\LibBTP\UtilBSV.pas',
   UDefGlobals in '..\LibBTP\UDefGlobals.pas',
+  ExpEcrVerdon_TOF in '..\..\Services\BTPVerdon\Lib\ExpEcrVerdon_TOF.pas',
   UtilBTPVerdon in '..\..\Services\BTPVerdon\Lib\UtilBTPVerdon.pas',
-  ExpEcrVerdon_TOF in '..\..\Services\BTPVerdon\Lib\ExpEcrVerdon_TOF.pas';
+  ControlIniFile in '..\LibBTP\ControlIniFile.pas',
+  BTVERDDESTMAIL_TOF in '..\Verdon\BTVERDDESTMAIL_TOF.PAS',
+  BTBIMEXPORT_TOF in '..\BIM\BTBIMEXPORT_TOF.PAS',
+  ErrorsManagement in '..\..\commun\Lib\ErrorsManagement.pas',
+  BEXPORTXLSSES_TOF in '..\SES\BEXPORTXLSSES_TOF.PAS';
 
 //
 

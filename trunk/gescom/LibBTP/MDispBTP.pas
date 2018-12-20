@@ -148,6 +148,7 @@ uses Facture,(*Souche,*)dimension,UTomPiece, Traduc
      , BTWSTABLEAUTO_TOF
      , DB
      , Math
+     , ServicesTest
      , ed_Tools
      ;
 {$R *.DFM}
@@ -157,15 +158,42 @@ var lesTagsToRemove : string;
 //    PresenceSpigao  : Boolean;
 
 function OptimizeAffichage (MenuDispo : string) : integer;
+
+  function GetNumGroup(Groupe : string) : string;
+  var QQ: TQuery;
+  begin
+    Result := '';
+    QQ := OpenSQL('SELECT UG_NUMERO FROM USERGRP WHERE UG_GROUPE="'+Groupe+'"',true,1,'',true);
+    Result := IntToStr(QQ.fields[0].AsInteger);
+    ferme(QQ);
+  end;
+
+  function ConsitueRequeteRights(Grps : string) : string;
+  var SS,SX : string;
+  begin
+    result := '';
+    SS := Grps;
+    repeat
+      SX := READTOKENST(SS);
+      if SX <> '' then
+      begin
+        Result := Result + ' OR SUBSTRING(MN_ACCESGRP,'+GetNumGroup(SX)+',1)="0"';
+      end;
+    until SX='';
+  end;
+
 var QQ : TQuery;
     SQl : string;
+    SQL2 : string;
 begin
   Result := 1;
-  SQL := 'SELECT Count(*) FROM MENU WHERE MN_1=0 AND MN_2 IN ('+MenuDispo+') AND SUBSTRING(MN_ACCESGRP,'+InttoStr(V_PGI.FUserGrp)+',1)="0"';
+  SQL2 := ConsitueRequeteRights(V_PGI.GrpsDelegues);
+  SQL := 'SELECT Count(1) FROM MENU WHERE MN_1=0 AND MN_2 IN ('+MenuDispo+') AND (SUBSTRING(MN_ACCESGRP,'+InttoStr(V_PGI.FUserGrp)+',1)="0"' + SQL2+')';
   QQ := OpenSql(SQL,true,1,'',true);
   if not QQ.eof then
   begin
-    Result := Ceil(QQ.fields[0].AsInteger / V_PGI.NbRowModuleButtons);
+    Result := QQ.fields[0].AsInteger DIV V_PGI.NbRowModuleButtons;
+    if (QQ.fields[0].AsInteger mod V_PGI.NbRowModuleButtons)>0 then inc(Result);
   end;
   Ferme(QQ);
 end;
@@ -536,11 +564,13 @@ BEGIN
 	 15 : begin
    			end;
    16 : begin
-          V_PGI.NbColModuleButtons:= OptimizeAffichage('145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,281,148,280,60') ;
+          V_PGI.NbRowModuleButtons := 9;
+          V_PGI.NbColModuleButtons := OptimizeAffichage('145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,281,148,280,60') ;
           //
-   				stLesExclus := '';
-   				LesTagsToRemove := LesTagsToRemove + ';' + stLesExclus;
-          LesTagsToRemove      := InitLesTagsToRemoveFavoris('STANDARD');
+          LesTagsToRemove := '';
+          //stLesExclus     := '';
+   				//LesTagsToRemove := LesTagsToRemove + ';' + stLesExclus;
+          //LesTagsToRemove := InitLesTagsToRemoveFavoris('STANDARD');
    		  end; // entre connexion et chargemodule
    // Tarifs HT
 {$IFNDEF SANSPARAM}
@@ -1083,10 +1113,7 @@ BEGIN
    // FAVORIS
    60501 : // Gestion des favoris
      if not VH_GC.GCIfDefCEGID then
-        ParamFavoris('',LesTagsToRemove,False,False)
-     else
-{        ParamFavoris('',LesTagsToRemove
-Cegid,False,False)};
+        ParamFavoris('',LesTagsToRemove,False,False);
 
    // MODIF LS Confidentialité
    60208 : GCLanceFiche_Confidentialite( 'YY','YYCONFIDENTIALITE','','','26;27;60;92;111;145;146;147;148;149;150;160;279;283;284;285;304;319;320;321;322;323;325;327;328;329;331;280;281');
@@ -1443,7 +1470,8 @@ Cegid,False,False)};
             RetourForce:=TRUE;
             END;
 {$IFDEF V10}     
-    74164 : AglLanceFiche ('BTP','BTCOMMENTAIRE','','','') ;
+    //74164 : AglLanceFiche ('BTP','BTCOMMENTAIRE','','','') ;
+    74164 : AglLanceFiche ('BTP','BTTEXTEMEMO','','','') ;
 {$ELSE}
     74164 : HShowMessage('2;?caption?;'+TraduireMemoire('Fonction disponible uniquement à partir de la Version 10 : ')+';W;O;O;O;',TitreHalley,IntToStr(Num)); 
 {$ENDIF}
@@ -2205,7 +2233,7 @@ Cegid,False,False)};
              END;
     60901 : TestService(1);
     60902 : TestService(2);
-    69903 : TestService(3);
+    60903 : TestService(3);
     else HShowMessage('2;?caption?;'+TraduireMemoire('Fonction non disponible : ')+';W;O;O;O;',TitreHalley,IntToStr(Num)) ;
      end ;
 END ;
@@ -2731,6 +2759,7 @@ Case NumModule of
          {$ELSE APPSRV}
          FMenuG.RemoveGroup(60900, True);
          {$ENDIF APPSRV}
+         FmenuG.RemoveGroup(60300, True);
    			END;
     71:  BEGIN
          if Not(VH_GC.AFGestionCom) then FMenuG.removeItem (71501);
@@ -3018,12 +3047,13 @@ FMenuG.OnChargeMag:=ChargeMagHalley ;
 TOBParamSoc := TOB.create('PARAMSS1', nil, -1);
 if NomHalley = 'CBTPS1' then
 begin
-	FMenuG.SetModules([145,325,327,283,146,150,147,92,284,304,323,149,160,320,148,60],[24,77,21,74,121,124,41,77,127,73,9,110,69,99,59,34,49]) ;
+//	FMenuG.SetModules([145,325,327,283,146,150,147,92,284,304,323,149,160,320,148,60],[24,77,21,74,121,124,41,77,127,73,9,110,69,99,59,34,49]) ;
 end else
 begin
-	FMenuG.SetModules([145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,160,281,148,280,60],[24,77,21,74,72,121,124,41,77,99,127,73,9,110,45,69,99,89,34,78,49]) ;
+	FMenuG.SetModules([145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,281,148,280,60],[24,77,21,74,72,121,124,41,77,99,127,73,9,110,45,69,89,34,78,49]) ;
 end;
-V_PGI.NbColModuleButtons:=2 ; V_PGI.NbRowModuleButtons:=9 ;
+V_PGI.NbColModuleButtons:=3 ;
+V_PGI.NbRowModuleButtons:=9 ;
 
 FMenuG.OnChangeModule:=AfterChangeModule ;
 
@@ -3093,11 +3123,11 @@ ChargeXuelib ;
 V_PGI.VersionDemo:=True ;
 V_PGI.MenuCourant:=0 ;
 V_PGI.VersionReseau:=True ;
-V_PGI.NumVersion:='10.0.0' ;
+V_PGI.NumVersion:='10.00.000' ;
 V_PGI.NumVersionBase:=998 ;
-V_PGI.NumBuild:='000.162';
+V_PGI.NumBuild:='000.167';
 V_PGI.CodeProduit:='034' ;
-V_PGI.DateVersion:=EncodeDate(2018,10,16);
+V_PGI.DateVersion:=EncodeDate(2018,12,19);
 V_PGI.ImpMatrix := True ;
 V_PGI.OKOuvert:=FALSE ;
 V_PGI.Halley:=TRUE ;

@@ -11,8 +11,8 @@ BRCC = $(ROOT)\bin\brcc32.exe $**
 #------------------------------------------------------------------------------
 PROJECTS = BuildNewCptx.exe TestServices.exe SetupLSE.exe \
   SvcSynBTPVerdonImp.exe SvcSynBTPVerdonExp.exe SvcSynBTPY2.exe \
-  SVCEnvoiBASTGed.exe ImportExportCegid.exe UtilsBTP.exe UtilsPOC.exe \
-  MajVerBTP.exe CBTPS3.exe CBTPS5.exe
+  ImportExportCegid.exe UtilsPOC.exe UtilsBTP.exe MajVerBTP.exe CBTPS3.exe \
+  CBTPS5.exe
 #------------------------------------------------------------------------------
 default: $(PROJECTS)
 #------------------------------------------------------------------------------
@@ -41,9 +41,6 @@ SvcSynBTPVerdonExp.exe: ..\..\Services\BTPVerdon\Syn\SvcSynBTPVerdonExp.dpr
   $(DCC)
 
 SvcSynBTPY2.exe: ..\..\Services\BTPY2\Syn\SvcSynBTPY2.dpr
-  $(DCC)
-
-SVCEnvoiBASTGed.exe: SVCEnvoiBASTGed.dpr
   $(DCC)
 
 TestServices.exe: TestServices.dpr

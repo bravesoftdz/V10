@@ -29,7 +29,7 @@ uses Windows,
      Hctrls,
      Mask, 
      HPop97,
-     UtilUtilitaires, HPanel;
+     UtilUtilitaires, HPanel, TntStdCtrls, TntComCtrls, TntExtCtrls;
 
     procedure Assist_AffecteDepot;
 

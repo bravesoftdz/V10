@@ -166,6 +166,7 @@ Type
     BPhone      : TToolBarButton97;
     BAttente    : TToolBarButton97;
     BEffaceApp	: TToolBarButton97;
+    BTAppel     : TToolBarButton97;
     BEffaceCon	: TToolBarButton97;
     BEffaceCha  : TToolBarButton97;
     BEffaceClt  : TToolBarButton97;
@@ -1276,10 +1277,12 @@ begin
 
   AFF_LIBELLE :=THEdit(GetControl('AFF_LIBELLE'));
 
-   //formatage du code Appel
-  SetControlText('AFF_APPEL0','A');
-  ChargeCleAffaire(AFF_APPEL0, AFF_APPEL1, AFF_APPEL2, AFF_APPEL3, APP_AVENANT, BEFFACEAPP, AfTypeAction, CodeAppel, True);
-  SetControlText('AFF_APPEL0','W');
+  //formatage du code Appel
+  //FV1 : 09/10/2018 - FS#3285 - Euro Energie - en création appel la zone compteur du code appel est saisissable
+  AFF_APPEL0.Text := 'W';
+  ChargeCleAffaire(AFF_APPEL0, AFF_APPEL1, AFF_APPEL2, AFF_APPEL3, APP_AVENANT, BTAppel, AfTypeAction, CodeAppel, True);
+  //SetControlText('AFF_APPEL0','W');
+  //Fin FS#3285
 
   //formatage du code contrat
   ChargeCleAffaire(THEDIT(GetControl('AFF_CONTRAT0')),THEDIT(GetControl('AFF_CONTRAT1')), THEDIT(GetControl('AFF_CONTRAT2')), THEDIT(GetControl('AFF_CONTRAT3')), THEDIT(GetControl('CON_AVENANT')), BEFFACECON, AfTypeAction, CodeContrat, False);
@@ -1413,7 +1416,8 @@ begin
   BTHISTORIQUE := TToolbarButton97(ecran.FindComponent('BTHISTORIQUE'));
   BTHISTORIQUE.OnClick := BTHistoriqueClick;
 
-  BEffaceApp := TToolBarButton97(ecran.FindComponent('BEFFACEAPP'));
+  BEffaceApp  := TToolBarButton97(ecran.FindComponent('BEFFACEAPP'));
+  BTAppel     := TToolBarButton97(ecran.FindComponent('BTAPPEL'));
 
   if assigned(TMenuItem(GetControl('MnSignature'))) then TMenuItem(GetControl('MnSignature')).OnClick := BVALIDECLIENTClick;
 
@@ -2058,8 +2062,8 @@ begin
 
   if CodeEtat = 'FAC' Then
   begin
-    SetControlProperty('BTLIGNE', 'VISIBLE', True);
-  	 AfficheAnnule;
+    BTLIGNE.VISIBLE		:= True;
+    AfficheAnnule;
   end else if CodeEtat = 'ANN' Then
   begin
     AfficheAnnule;

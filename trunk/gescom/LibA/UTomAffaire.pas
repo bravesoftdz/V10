@@ -6,7 +6,8 @@ uses StdCtrls,
   Controls,
   Classes,
   Vierge,
-  Messages,                                                        
+  Messages,
+  CommonTools,
 {$IFDEF EAGLCLIENT}
   eFiche,
   MaineAGL,
@@ -252,6 +253,7 @@ type
     procedure GestionFeuEncour;
     procedure ExitLigCaution(Sender: Tobject);
     function GetLibResponsable(CodeResssource: string): string;
+    procedure DuplicationAdresseAffaire(AffaireToDuplic : String);
     //
     public
     //
@@ -266,6 +268,7 @@ type
     MnActions       : TmenuItem;
     MnExportDIE     : TMenuItem;
     MnPrevFacture   : TMenuItem;
+    MnPhase         : TMenuItem;
     BtLigne				  : Ttoolbarbutton97;
     BtTache 			  : Ttoolbarbutton97;
     //
@@ -445,6 +448,7 @@ type
     procedure MnVoirAffSpigaoClick(Sender: TObject);
     procedure MnCodeBarreClick(Sender: TObject);
     Procedure MnPrevFactureClick(Sender: TObject);
+    procedure MnPhaseClick(Sender: TObject);
     //FV1 : 18/01/2017 - FS#2314 - SES : Ajouter l'accès aux actions depuis la fiche Affaire
     procedure MnActionsClick(Sender: TObject);
     procedure MnTelechargerDIEClick(Sender: TObject);
@@ -546,6 +550,7 @@ uses
   , UtilWord
   , ShellApi
   , UPrintScreen
+  , SelectPhase
   ;
 
 // ******* TOM Détail des Echéances de l'affaire *************
@@ -2051,6 +2056,13 @@ Begin
 
 end;
 
+Procedure TOM_AFFAIRE.MnPhaseClick(Sender: TObject);
+Var Phase : string;
+begin
+
+  SelectionPhase (GetField('AFF_AFFAIRE'),Phase);
+
+end;
 
 /////////////////////////////////////////////////////////////////////////////
 //FV1 : 24/07/2013 - duplication d'un affaire sur une autre
@@ -2248,6 +2260,8 @@ begin
 {$IFDEF V10}                                                 
   MnPrevFacture := TMenuItem (ecran.FindComponent('MnPrevFacture'));
   if MnPrevFacture <> nil then MnPrevFacture.OnClick := MnPrevFactureClick;
+  MnPhase       := TMenuItem (ecran.FindComponent('mnListePhase'));
+  if MnPhase <> nil then MnPhase.OnClick := MnPhaseClick;
 {$ENDIF}
   //FV1 : 18/01/2017 - FS#2314 - SES : Ajouter l'accès aux actions depuis la fiche Affaire
   MnActions := TMenuItem (ecran.FindComponent('MnActions'));
@@ -2410,6 +2424,7 @@ begin
       Ecran.Caption := TraduitGa ('Appel d''offre SPIGAO')
     else
       Ecran.Caption := TraduitGa ('Appel d''offre') ;
+    if Assigned(MnPhase) then MnPhase.Visible := False;
     UpdateCaption (Ecran) ;
     SetControlText ('TAFF_DESCRIPTIF', TraduitGa ('Descriptif de l''appel d''offre') ) ;
     SetControlProperty ('AFF_AFFAIREHT', 'Caption', 'Appel d''offre &HT') ;
@@ -2456,7 +2471,7 @@ begin
     If Assigned(GetControl('MnRegEches')) then THMenuItem(GetControl('MnRegEches')).OnClick := RegroupeEches;
   end
   else
-     begin
+  begin
     if assigned(GetControl('AFF_ETATAFFAIRE')) then SetControlProperty ('AFF_ETATAFFAIRE', 'Plus', GetPlusEtatAffaire (True) ) ;
     //
 {$IFDEF BTP}
@@ -2482,6 +2497,9 @@ begin
     SetControlVisible ('AFF_DETECHEANCE', false) ;
     SetControlVisible ('TABSHEETSTAT', True) ;
     SetControlVisible ('BTACHES', False) ;
+    //
+    if Assigned(MnPhase) then MnPhase.Visible := True;
+    //
     if V_PGI.LaSerie = S5                 then SetControlVisible ('BTETUDES', True) ;
     If Assigned(GetControl('MnRegEches')) then SetControlVisible ('MnRegEches', False) ;
     SetControlVisible ('MnSep', False) ;
@@ -2857,6 +2875,8 @@ begin
   THEdit(getControl('TX_FACTURE')).OnExit := TiersFactureChange;
   NbMoisEngagement := GetParamSocSecur('SO_BTDUREEENGAGEMENT',12);
   THValCOmboBox(GetCOntrol('AFF_PERIODICITE')).onchange := ChangePeriodicite;
+
+  if Assigned(MnPhase) then MnPhase.Visible := False;
 
   GereAffichagePeriodicite;
   // gestion des editions de contrat
@@ -4308,7 +4328,7 @@ begin
         TOBCAUTIONLG.PutValue('BAR_CAUTIONMT',   GetControlText('BAR_MTCAUTION'  + IntToStr(II)));
         TOBCAUTIONLG.PutValue('BAR_NUMCAUTION',  GetControlText('BAR_NUMCAUTION' + IntToStr(II)));
         TOBCAUTIONLG.SetAllModifie(True);
-  end;
+      end;
       II := II + 1
     until II > 9;
     TOBCAUTION.InsertDB(Nil);
@@ -4365,6 +4385,8 @@ begin
     end;
     TOBAffTiers.SetAllModifie(True);
     TOBAffTiers.InsertOrUpdateDB(True);
+    //FV1 - 05/12/2018 : FS#2991 - ECHAFAUDAGE SERVICE : Dupliquer les adresses d'intervention d'une affaire
+    DuplicationAdresseAffaire(AffaireToDuplic);
   end;
 
   //{$IFDEF CEGID}  // Spécif CEGID
@@ -4557,6 +4579,50 @@ Begin
 
 End;
 *}
+//FV1 - 05/12/2018 : FS#2991 - ECHAFAUDAGE SERVICE : Dupliquer les adresses d'intervention d'une affaire
+Procedure TOM_AFFAIRE.DuplicationAdresseAffaire(AffaireToDuplic : String);
+Var TobAdresse  : TOB;
+    TobLAdresse : TOB;
+    StSQL       : String;
+    QQ          : TQuery;
+    Indice      : Integer;
+    Numero      : Integer;
+begin
+
+  //On recherche si l'affaire à dupliquer a des adresses associées
+  StSQL := 'SELECT * FROM ADRESSES WHERE ADR_REFCODE="' + AffaireToDuplic + '"';
+
+  QQ := OpenSQL(StSQL, False);
+
+  if not QQ.Eof then
+  begin
+    TobAdresse := Tob.create('LES ADRESSES', nil, -1);
+    TobAdresse.LoadDetailDB('ADRESSES','','',QQ, True);
+    //
+    {$IFNDEF APPSRV}
+    Tools.TobPutValueDetail(TobAdresse,'ADR_REFCODE',GetField('AFF_AFFAIRE'));
+    {$ENDIF APPSRV}
+    //
+    For Indice := 0 to TobAdresse.Detail.count -1 do
+    begin
+      TOBLAdresse := TobAdresse.detail[indice];
+      Numero := GetSetNumAdresse;
+     {$IFNDEF APPSRV}
+      if Numero > 0 then
+        Tools.TobPutValue(TOBLAdresse,'ADR_NUMEROADRESSE', Numero)
+      else
+        Tools.TobPutValue(TOBLAdresse,'ADR_NUMEROADRESSE', 1);
+     {$ENDIF APPSRV}
+    end;
+    TobAdresse.SetAllModifie(True);
+    TobAdresse.InsertOrUpdateDB;
+    FreeAndNil(TobAdresse);
+  end;
+
+  Ferme(QQ);
+            
+end;
+//
 
 procedure TOM_AFFAIRE.MiseAjourMotifAnnul (Affaire : string;DateResil : Tdatetime; preventives : Boolean=true);
 var QQ : TQuery;
@@ -4618,7 +4684,7 @@ begin
         //
         MiseAjourMotifAnnul (GetField('AFF_AFFAIRE'),GetField('AFF_DATERESIL'));
         //
-        StSQl := 'UPDATE AFFAIRE SET AFF_ETATAFFAIRE="ANN" '+
+        StSQl := 'UPDATE AFFAIRE SET AFF_ETATAFFAIRE="ANN", AFF_DATEMODIF="' + USDATETIME(NowH) + '" '+
                  'WHERE AFF_AFFAIREINIT = "' + GetField('AFF_AFFAIRE') + '" AND '+
                  'AFF_DATEFIN > "' + UsDateTime(GetField('AFF_DATERESIL')) + '" AND '+
                  'AFF_CREERPAR ="TAC" AND AFF_ETATAFFAIRE <> "ANN"';
