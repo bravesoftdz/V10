@@ -7143,6 +7143,7 @@ begin
   if SaisieTypeAvanc then Exit; // MODIF BRL AVANCEMENTS CHANTIERS
   GestionReliquat := (GetInfoParPiece (TOBPiece.GetValue('GP_NATUREPIECEG'),'GPP_RELIQUAT')='X');
   if ((Acol = SG_Px) and (TOBL.GetValue('GL_BLOQUETARIF')='X') and (not GereDocEnAchat)) Then begin result := false; exit; end;
+  if ((Acol = SG_QF) and IsSousDetail(TOBL) and (TOBL.GetValue('GL_BLOQUETARIF')='X') and (not GereDocEnAchat)) Then begin result := false; exit; end;
   if (action = taModif) and (EstLigneArticle(TOBL)) and (EstLigneSoldee(TOBL)) AND ((ACol <> SG_RefArt) and (Acol <> SG_Lib)) then
   begin
     Result := False;
@@ -11958,7 +11959,7 @@ begin
   //
 	if ISFromExcel(TOBL) and (TOBL.getDouble('GL_QTEFACT')<>0) then
   begin
-    if PGIAsk('ATTENTION : Cette quantité provient d''un appel d''offre.#13#10 Etes-vous sur de le modifier?')<>Mryes then
+    if PGIAsk('ATTENTION : Cette quantité provient d''un appel d''offre.#13#10 Etes-vous sur de la modifier?')<>Mryes then
     begin
       GS.Cells[Acol, Arow] := stcellCur;
       result := false;

@@ -86,7 +86,6 @@ type
     procedure GSDblClick(Sender: TObject);
     procedure TXExit(Sender: TObject);
   private
-    T_EXERCICE : TOB;
     T_Mere : TOB;
     T : TOB;
     fRepert : string;
@@ -215,7 +214,6 @@ end;
 
 procedure TFexpImpCegid.FormCreate(Sender: TObject);
 begin
-  T_EXERCICE := TOB.Create ('LES EXERCICES',nil,-1);
   T_Mere := TOB.Create('Ma TOB', nil, -1);
   T := TOB.Create('La TOB des tables', nil, -1);
 end;
@@ -233,7 +231,6 @@ end;
 
 procedure TFexpImpCegid.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  T_EXERCICE.free;
   T_Mere.free;
   T.free;
 end;
@@ -293,7 +290,7 @@ var
   Q: TQuery;
   Nbre, II : integer;
   NbRecords, NbrecordsOk : Integer;
-  RecordSize,TableSize,Ratio : double;
+  TableSize : double;
   NomTable : string;
 begin
   //
@@ -303,14 +300,11 @@ begin
   GS.Cells[0,1] := 'Nb Enreg/Partie';
   TRACE.Items.Clear;
   fModeTrait := tmtExport;
+  frepert := ExpDir;
   ZipFile := IncludeTrailingPathDelimiter (ExpDir) + ExpFile + '.zip';
-  T_EXERCICE.ClearDetail;
   T.ClearDetail;
   //
   TRY
-    Q := OpenSQl ('SELECT EX_EXERCICE,EX_DATEDEBUT,EX_DATEFIN,EX_ABREGE,EX_LIBELLE FROM EXERCICE',True);
-    if not Q.eof then T_EXERCICE.loadDetailDb ('EXERCICE','','',Q,false);
-    ferme (Q);
     st := RendSQLTable (True);
     Q := OPENSQL(ST, TRUE);
     T.LoadDetailDb('DETABLES', '', '', Q, FALSE);
@@ -345,11 +339,11 @@ begin
       //
       NomTable := T1.GetString('DT_NOMTABLE');
       TableSize   := Tools.GetTableSize(NomTable);
+      NbRecords   := Tools.GetTableInf(titRecordsQty, NomTable);
       T1.SetInteger('NBENREG',-1);
+      T1.SetInteger('NBENREGTOTAL',NbRecords);
       if TableSize > MaxFileSize then
       begin
-
-        NbRecords   := Tools.GetTableInf(titRecordsQty, NomTable);
         if TableSize > MaxFileSize then
         begin
           NbrecordsOk := Round(NbRecords / (TableSize / MaxFileSize));
@@ -357,7 +351,7 @@ begin
         begin
           NbrecordsOk := NbRecords;
         end;
-        if NbrecordsOk > 500000 then NbrecordsOk := 500000;
+        if NbrecordsOk > 200000 then NbrecordsOk := 200000;
         (*
         NbrecordsOk := Round(TableSize/MaxFileSize);
         if NbrecordsOk > 500000 then NbrecordsOk := 500000;
@@ -392,7 +386,6 @@ begin
     fModeTrait := TmtImport;
     T.ClearDetail;
     T_Mere.ClearDetail;
-    T_EXERCICE.ClearDetail;
     //
     if FileN<> '' then frepert := ExtractFilePath(FileN)
                   else fRepert := IncludeTrailingBackslash (ExportN);
@@ -576,6 +569,7 @@ function TFexpImpCegid.RendSQLTable (TraitExport : Boolean=False): string;
             + '     , DT_CLE1'
             + '     , 0 AS NBENREG '
             + '     , 0 AS NBTOTAL '
+            + '     , 0 AS NBENREGTOTAL '
             + '     , "-" AS REINIT'
             + '     , "-" AS VERIFIED'
             + '     , IIF(EXISTS(SELECT DH_NOMCHAMP FROM DECHAMPS WHERE DH_NOMCHAMP=DT_PREFIXE||"_PREDEFINI"),"X","-") AS PREDEFINI'
@@ -869,21 +863,21 @@ var
   I               : integer;
   ret             : integer;
   NbRecords       : integer;
+  NbRecordsTot    : integer;   
   NbRecordsOk     : double;
   NbPage          : integer;
   Cpt             : integer;
   CurrentLine     : integer;
-  RecordSize      : double;
-  AvailableMemory : integer;
   ExportOk        : Boolean;
   OkOk            : Boolean;
   TheToz          : TOZ;
   DDebut          : Tdatetime;
   DFin            : Tdatetime;
   sr              : TsearchRec;
-  TableSize       : integer;
+  FileName : string;
+  first : boolean;
+  PartNumber : Integer;
 begin
-  NbPage            := 0;
   CurrentLine       := 0;
   PGCTRL.ActivePage := RAPPORT;
   ExportOk          := False;
@@ -894,15 +888,12 @@ begin
     if fModeTrait = tmtExport then
     begin
       TheTOZ := nil;
-      if not WithOutZip then
+      if not PGCreatZipFile(ZipFile, moCreate, TheTOZ, self) then
       begin
-        if not PGCreatZipFile(ZipFile, moCreate, TheTOZ, self) then
-        begin
-          T.free;
-          T_Mere.free;
-          AddTrace('Erreur sur fichier archive : ' +ZipFile);
-          exit;
-        end;
+        T.free;
+        T_Mere.free;
+        AddTrace('Erreur sur fichier archive : ' +ZipFile);
+        exit;
       end;
       InitMoveProgressForm(nil, 'Lecture des données', 'Veuillez patienter SVP ...', T.detail.count, FALSE, TRUE);
       TRY
@@ -921,8 +912,9 @@ begin
             FieldsKey       := T1.GetString('DT_CLE1');
             DDebut          := IDate1900;
             DFin            := iDate2099;
-            NbRecordsOk       := T1.GetInteger('NBENREG');
+            NbRecordsOk     := T1.GetInteger('NBENREG');
             NbRecords       := T1.GetInteger('NBTOTAL');
+            NbRecordsTot    := T1.GetInteger('NBENREGTOTAL');
             if NbRecordsOk <>-1 then
             begin
               CreateStoredProcedure(MaTable, FieldsKey);
@@ -932,7 +924,7 @@ begin
                 for Cpt := 1 to NbPage do
                 begin
                   try
-                    if not TraitementTable(TheTOZ, MaTable, Domaine, PREDEFINI, Prefixe, Version, DDebut, DFin, CodeEx, LibEx, True, (Cpt=1), Cpt, Round(NbrecordsOk), CurrentLine, Round(NbRecords), NbPage) then
+                    if not TraitementTable(TheTOZ, MaTable, Domaine, PREDEFINI, Prefixe, Version, DDebut, DFin, CodeEx, LibEx, True, (Cpt=1), Cpt, Round(NbrecordsOk), CurrentLine, Round(NbRecordsTot), NbPage) then
                     begin
                       Msg := Format('Erreur dans table %s - Page %s/%s', [MaTable, IntToStr(Cpt), IntToStr(NbPage)]);
                       PgiError(Msg, self.caption);
@@ -954,7 +946,7 @@ begin
             end else
             begin
               TRY
-                if not TraitementTable(TheTOZ, MaTable, Domaine, PREDEFINI, Prefixe, version, DDebut, DFin, '', LibEx, False, True, 0, 0, CurrentLine, Round(NbRecords), 0) then
+                if not TraitementTable(TheTOZ, MaTable, Domaine, PREDEFINI, Prefixe, version, DDebut, DFin, '', LibEx, False, True, 0, 0, CurrentLine, Round(NbRecordsTot), 0) then
                 begin
                   Msg := 'Erreur dans table '+MaTable;
                   PgiError(Msg, self.caption);
@@ -982,8 +974,8 @@ begin
         end else
         begin
           PGFermeZipFile(TheTOZ);
+          if CBVIDAGEEXP.checked then PGVideDirectory(ExpDir);
         end;
-        if CBVIDAGEEXP.checked then PGVideDirectory(ExpDir);
         if Assigned(TheToz) then TheToz.Free;
         try
           AddTrace('Ecriture du fichier OK');
@@ -1004,6 +996,14 @@ begin
         begin
           T_mere.ClearDetail;
           //
+          First:= true;
+          FileName := Copy(ExtractFileName(sr.name),1,Pos('.',sr.Name)-1);
+          if Pos('#',FileName) > 0 then
+          begin
+            PartNumber  := valeurI(Copy(FileName,Pos('#',FileName)+1,255));
+            if  PartNumber > 1 then first := false;
+          end;
+          //
           MonFic := fRepert + sr.Name;
           TOBLoadFromBinFile(MonFic, nil, T_Mere);
           T1 := T_Mere.Detail[0];
@@ -1017,9 +1017,9 @@ begin
             end;
             if (T1.getString('VIDAGE')='X') then
             begin
-              if (T2.GetString('REINIT')<> 'X') then
+              if (T2.GetString('REINIT')<> 'X') and (first) then
               begin
-                ExecuteSql('DELETE FROM '+T1.GetValue('TABLE'));
+                ExecuteSql('TRUNCATE TABLE '+T1.GetValue('TABLE'));
                 T2.SetString('REINIT','X');
               end;
               T_Mere.SetAllModifie(true);
@@ -1030,17 +1030,24 @@ begin
               OkOk := T_Mere.InsertOrUpdateDB(TRUE);
             end;
             AddTrace('Traitement du fichier ' + sr.Name + ' OK');
+            ret := FindNext(sr);
           except
-            AddTrace('Erreur de traitement des données du fichier ' + sr.Name);
-            if (CHKSTOPONERROR.checked) then
+            On E:Exception do
             begin
-              PgiError('ATTENTION : Le traitement des données du fichier '+sr.name+' n''est pas correct.#13#10 votre base de données n''est pas utilisable en l''état !', self.Caption);
-              OkOk := FALSE;
+              Msg :='Erreur '+E.Message+' sur table '+ T1.GetValue('TABLE');
+              AddTrace(Msg);
+              if (CHKSTOPONERROR.checked) then
+              begin
+                PgiError('ATTENTION : Le traitement des données du fichier '+sr.name+' n''est pas correct.#13#10 votre base de données n''est pas utilisable en l''état !', self.Caption);
+                OkOk := FALSE;
+                break;
+              end;
             end;
           end;
-          ret := FindNext(sr);
         end;
       FINALLY
+        MoveCurProgressForm('Nettoyage final');
+        T_Mere.ClearDetail;
         FiniMoveProgressForm();
         sysutils.FindClose(sr);
       end;
@@ -1060,7 +1067,7 @@ begin
     AddTrace('--------------------------------');
     AddTrace('Heure fin '+DateTimeToStr(NowH));
     AddTrace('--------------------------------');
-    RapportName := Format('%s\%s_Rapport%s.txt', [EXPORTFIC.Text, FormatDateTime('yyyymmdd', Now), Tools.iif(fModeTrait = tmtExport, 'Export', 'Import')]);
+    RapportName := Format('%s\%s_Rapport%s.txt', [fRepert, FormatDateTime('yyyymmdd', Now), Tools.iif(fModeTrait = tmtExport, 'Export', 'Import')]);
     Trace.Items.SaveToFile(RapportName);
     PgiBox(Format('%s terminé (rapport enregistré dans %s)', [Tools.iif(fModeTrait = tmtExport, 'Export', 'Import'), RapportName]), self.caption);
     BLANCETRAIT.Visible := false;
@@ -1162,16 +1169,14 @@ end;
 
 procedure TFexpImpCegid.PostDrawCell(ACol, ARow: Integer; Canvas: TCanvas; AState: TGridDrawState);
 var Arect : TRect;
-    Fix : boolean;
     T1 : TOB;
 begin
 //
   if csDestroying in ComponentState then Exit;
   if GS.RowHeights[ARow] <= 0 then Exit;
-  if ARow = 0 then Exit; 
-  T1 := T.detail[Arow-1]; 
+  if ARow = 0 then Exit;
+  T1 := T.detail[Arow-1];
   ARect := GS.CellRect(ACol, ARow);
-  Fix := ((ACol < GS.FixedCols) or (ARow < GS.FixedRows));
   GS.Canvas.Pen.Style := psSolid;
   GS.Canvas.Pen.Color := clgray;
   GS.Canvas.Brush.Style := BsSolid;

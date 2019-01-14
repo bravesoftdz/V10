@@ -2583,7 +2583,15 @@ begin
          'AND E_NATUREPIECE=DBO.READTOKEN(@ECRCPTA,5,";") '+
          'END '+
          'END';
-  ExecuteSQL(Sql);
+  TRY
+    ExecuteSQL(Sql);
+  EXCEPT
+    ON E: Exception do
+    begin
+      PgiInfo (E.message);
+      exit;
+    end;
+  END;
   //
   SQL := 'CREATE PROCEDURE [dbo].[POC_CONTROLECPTA] '+
          '( '+
@@ -2606,7 +2614,15 @@ begin
          'E_QUALIFPIECE=DBO.READTOKEN(@ECRCPTA,4,";") AND E_NATUREPIECE=DBO.READTOKEN(@ECRCPTA,5,";") '+
          'END '+
          'END';
-  ExecuteSQL(Sql);
+  TRY
+    ExecuteSQL(Sql);
+  EXCEPT
+    ON E: Exception do
+    begin
+      PgiInfo (E.message);
+      exit;
+    end;
+  END;
   //
 end;
 
@@ -2651,8 +2667,11 @@ begin
   DropProcedure ('POC_UPDATECPTA');
   DropProcedure ('POC_CONTROLECPTA');
   //
-  CreateFunctionDecoupage;
-  CreateProcedurePOC;
+  if GetParamSocSecur('SO_BTCODESPECIF','') = '001' then
+  begin
+    CreateFunctionDecoupage;
+    CreateProcedurePOC;
+  end;
 end;
 
 procedure TMajStructBTP.CreateRealTable (NomTable : string);

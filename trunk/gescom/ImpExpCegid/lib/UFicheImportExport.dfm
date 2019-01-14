@@ -119,7 +119,7 @@ object FexpImpCegid: TFexpImpCegid
     Top = 0
     Width = 562
     Height = 618
-    ActivePage = TBSHTCONTROL
+    ActivePage = TPSHTCAR
     Align = alClient
     TabOrder = 1
     object TPSHTCAR: TTabSheet

@@ -4826,7 +4826,7 @@ BEGIN
    if (Acol = SGN_PREST) or (Acol = SGN_TPS) then BEGIN Result := false; exit; END;
    if (TypeArticle = 'OUV') and ((Acol = SGN_FOURN) or (Acol = SGN_PAHT )) then BEGIN Result := false; exit; END;
    end;
-  if (Acol = SGN_PVHT) and (TOBLIgPiece.getValue('GL_BLOQUETARIF')<> '-') then
+  if ((Acol = SGN_PVHT) or (Acol = SGN_Qte) or (Acol = SGN_QTESAIS)) and (TOBLIgPiece.getValue('GL_BLOQUETARIF')<> '-') then
   begin
 	result := false;
   exit;

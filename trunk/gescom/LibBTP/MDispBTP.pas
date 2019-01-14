@@ -185,17 +185,51 @@ function OptimizeAffichage (MenuDispo : string) : integer;
 var QQ : TQuery;
     SQl : string;
     SQL2 : string;
+    menus ,Menu : string;
+    number : Integer;
 begin
   Result := 1;
   SQL2 := ConsitueRequeteRights(V_PGI.GrpsDelegues);
-  SQL := 'SELECT Count(1) FROM MENU WHERE MN_1=0 AND MN_2 IN ('+MenuDispo+') AND (SUBSTRING(MN_ACCESGRP,'+InttoStr(V_PGI.FUserGrp)+',1)="0"' + SQL2+')';
+  number := 0;
+  menus := MenuDispo;
+  repeat
+    menu := READTOKENPipe (menus,',');
+    if Menu <> '' then
+    begin
+      SQL := 'SELECT 1 FROM MENU WHERE '+
+             '(MN_1=0 AND MN_2 ='+menu+' AND (SUBSTRING(MN_ACCESGRP,'+InttoStr(V_PGI.FUserGrp)+',1)="0"' + SQL2+')) OR '+
+             '(MN_1='+menu +' AND MN_2 <> 0 AND (SUBSTRING(MN_ACCESGRP,'+InttoStr(V_PGI.FUserGrp)+',1)="0"' + SQL2+'))';
+
+      if ExisteSQL(SQl) then inc(Number);
+    end;
+  until Menu = '';
+  V_PGI.NbRowModuleButtons := 9;
+  Result := number DIV V_PGI.NbRowModuleButtons;
+  if Result = 0 then
+  begin
+    V_PGI.NbRowModuleButtons := QQ.fields[0].AsInteger;
+    Result := 1;
+  end else
+  begin
+    if (number mod V_PGI.NbRowModuleButtons)>0 then inc(Result);
+  end;
+  (*
+  //  SQL := 'SELECT Count(1) FROM MENU WHERE MN_1=0 AND MN_2 IN ('+MenuDispo+') AND (SUBSTRING(MN_ACCESGRP,'+InttoStr(V_PGI.FUserGrp)+',1)="0"' + SQL2+')';
   QQ := OpenSql(SQL,true,1,'',true);
   if not QQ.eof then
   begin
     Result := QQ.fields[0].AsInteger DIV V_PGI.NbRowModuleButtons;
-    if (QQ.fields[0].AsInteger mod V_PGI.NbRowModuleButtons)>0 then inc(Result);
+    if Result = 0 then
+    begin
+      V_PGI.NbRowModuleButtons := QQ.fields[0].AsInteger;
+      Result := 1;
+    end else
+    begin
+      if (QQ.fields[0].AsInteger mod V_PGI.NbRowModuleButtons)>0 then inc(Result);
+    end;
   end;
   Ferme(QQ);
+  *)
 end;
 
 function InitLesTagsToRemoveFavoris(sParam : string) : string;
@@ -564,8 +598,7 @@ BEGIN
 	 15 : begin
    			end;
    16 : begin
-          V_PGI.NbRowModuleButtons := 9;
-          V_PGI.NbColModuleButtons := OptimizeAffichage('145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,281,148,280,60') ;
+          //V_PGI.NbColModuleButtons := OptimizeAffichage('145,325,327,283,328,146,150,147,92,329,284,304,323,331,149,281,148,280,60') ;
           //
           LesTagsToRemove := '';
           //stLesExclus     := '';
@@ -1803,7 +1836,7 @@ BEGIN
     // ---------------
     145955 : BEGIN
               V_PGI.ZoomOle := true;
-              AGLLanceFiche('BTP','BTGETREGLCPTA','','','') ;  // récupéaryion des reglemenst depuis la compta
+              AGLLanceFiche('BTP','BTGETREGLCPTA','','','') ;  // récupération des reglemenst depuis la compta
               V_PGI.ZoomOle := false;
               retourforce := True;
              end;

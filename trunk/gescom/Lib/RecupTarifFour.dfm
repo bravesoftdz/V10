@@ -216,7 +216,6 @@ inherited FRecupTarifFour: TFRecupTarifFour
           Font.Style = []
           ParentFont = False
           TabOrder = 1
-          OnClick = CBCreationArticleClick
         end
         object chkFamSsFam: TCheckBox
           Left = 10

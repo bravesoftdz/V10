@@ -88,7 +88,7 @@ type
     procedure HChamp3Change(Sender: TObject);
     procedure DATESUPDblClick(Sender: TObject);
   private
-    { DÈclarations privÈes }
+    { D√©clarations priv√©es }
     TheFournisseur : string;
     TobArticle      : TOB;
     TobCatalogu     : TOB;
@@ -111,11 +111,8 @@ type
 
     IndexParCatalogu  : Integer;
     IndexParArticle   : integer;
-    NbrEnregTrait     : integer;
-    LinesQty          : integer;
     //
     BSTop             : boolean;
-    TarifExist        : boolean;
     //
     TOBTablettes      : TOB;
     TOBP              : TOB;
@@ -128,20 +125,6 @@ type
     ListChampsCat     : String;
     ListChampsArtc    : string;
     ListChampsCB      : String;
-
-    TSLStats          : TStringList;
-    TSLCacheGCA       : TStringList;
-    TSLCacheGA        : TStringList;
-    TSLCacheGA2       : TStringList;
-    TSLCacheBFT       : TStringList;
-    TSLCacheBFS       : TStringList;
-    TSLCacheGNE       : TSTringList;
-    TSLCacheGNL       : TSTringList;
-    TSLCacheBCB       : TStringList;
-    TSLCacheTablette  : TStringList;
-    TSLExecQry        : TStringList;
-    WithLog           : boolean;
-
 
     // Initialisations
     procedure ActiveChamp (HCrit : THCritMaskEdit);
@@ -202,29 +185,25 @@ type
     procedure AffichageErreurs;
     procedure EnregistreErreur(Erreur, LigneDep : integer; ligneFin: integer=-1; Texte:string='');
     procedure CreationErreur (stErreur : string; LigneDep : Integer; LigneFin : integer =-1);
-    //FV1 : 21/01/2016 - FS#1854 - En import catalogue, les tables BTFAMILLETARIF et BTSOUSFAMILLETARIF ne sont pas alimentÈes
+    //FV1 : 21/01/2016 - FS#1854 - En import catalogue, les tables BTFAMILLETARIF et BTSOUSFAMILLETARIF ne sont pas aliment√©es
     procedure MiseAJourCodeBarre(TOBA: TOB);
     procedure MiseAJourFamilleTarif(TOBA: TOB);
+    procedure MiseAJourSsFamilleTarif(TOBA: TOB);
     function RechercheLibelleTablette(Thecode: string; TheTablette: TOB): string;
-    procedure AddTSLStats(Text : string; Level : integer=0);
-    procedure WriteStats;
+    // Utils
+//    function  ExtractLibelle ( St : string) : string;
   public
-    { DÈclarations publiques }
+    { D√©clarations publiques }
     TobParFou, TobParFouLig : TOB;
   end;
 
 const MAXTRAITENREG = 1000;
-      MaxQryExec    = 1;
 
 implementation
-uses
-  TiersUtil
-  , RECALCPIECE_RAP_TOF
-  , CbpMCD
-  , CbpEnumerator
-  , CommonTools
-  , UApplication
-  ;
+uses TiersUtil,RECALCPIECE_RAP_TOF
+   ,CbpMCD
+   ,CbpEnumerator
+;
 
 {$R *.DFM}
 
@@ -236,8 +215,8 @@ BEGIN
   FF := TFRecupTarifFour.Create(Application) ;
   FF.GRF_PARFOU.Text := StParFou;
 
-  PPANEL := FindInsidePanel ; // permet de savoir si la forme dÈpend d'un PANEL
-  if PPANEL = Nil then        // Le PANEL est le premier ecran affichÈ
+  PPANEL := FindInsidePanel ; // permet de savoir si la forme d√©pend d'un PANEL
+  if PPANEL = Nil then        // Le PANEL est le premier ecran affich√©
   BEGIN
     try
       FF.ShowModal ;
@@ -371,7 +350,7 @@ begin
 end;
 
 {==============================================================================================}
-{=============================== EvËnements de la Form ========================================}
+{=============================== Ev√®nements de la Form ========================================}
 {==============================================================================================}
 
 procedure TFRecupTarifFour.bFinClick(Sender: TObject);
@@ -383,11 +362,13 @@ begin
   begin
     if fileexists (GRF_FICHIER.Text) then
     begin
+// --
       TOBErreurs        := TOB.Create ('LES ANOMALIES',nil,-1);
       TOBChampsArt      := TOB.Create('LES CHAMPS ART',nil,-1);
       TOBChampsCatalogu := TOB.Create ('LES CHAMPS CAT',nil,-1);
       TOBChampsArtC     := TOB.Create ('LES CHAMPS ARTICLES COMPL',nil,-1);
       TOBChampsCB       := TOB.Create ('LES CHAMPS CAB',nil,-1);
+// --
       TRY
 				//
   			if not GRF_MULTIFOU.Checked then
@@ -802,9 +783,9 @@ end;
 procedure TFRecupTarifFour.CreationElementTob (stTable : string; IndexPar : integer;
                                                TobTable : Tob; CBCreation : boolean;
                                                var Index : integer);
-var
-  ValChamp, Champ, stRequete : string;
-  TSql : TQuery;
+var //TOBL : TOB;
+    ValChamp, Champ, stRequete : string;
+    TSql : TQuery;
 begin
 
   RecupereValChamp (TobParFouLig.Detail[IndexPar], IndexPar, Valchamp);
@@ -820,7 +801,7 @@ begin
     Champ := 'GA_CODEARTICLE';
   {$IFDEF BTP}
     CodeArticle := TobParFou.GetValue ('GRF_PREFIXE') + UpperCase (ValChamp) + TobParFou.GetValue ('GRF_SUFFIXE');
-    CodeArticle := Copy(CodeArticle, 1, 18); // Modif brl 180308 : on limite ‡ 18c
+    CodeArticle := Copy(CodeArticle, 1, 18); // Modif brl 180308 : on limite √† 18c
   {$ELSE}
     CodeArticle := UpperCase(ValChamp);
   {$ENDIF}
@@ -888,7 +869,7 @@ begin
 
     if (stTable = 'CATALOGU') and (Index >= 0) then
     Begin
-      // Modif BRL 11/03/2010 : Mise ‡ jour systÈmatique de la date de suppression catalogue si celle-ci change
+      // Modif BRL 11/03/2010 : Mise √† jour syst√©matique de la date de suppression catalogue si celle-ci change
       if (TobCatalogu.Detail[Index].GetValue ('GCA_DATESUP') <> StrToDate (DATESUP.Text)) then
       Begin
         TobCatalogu.Detail[Index].PutValue ('GCA_DATESUP', StrToDate (DATESUP.Text));
@@ -899,15 +880,13 @@ begin
   // Modif BRL 05/03/2010 : Modification du fournisseur principal de la fiche article
     if stTable = 'ARTICLE' then
     begin
-      if (Index >= 0) and (TobParFou.GetValue('GRF_FOURPRINC') = 'X') then
+      if (Index >= 0) and (TobParFou.GetValue('GRF_FOURPRINC')='X') then
       begin
-        if TOBArticle.detail[Index].GetString('GA_FOURNPRINC') <> TheFournisseur then
-        begin
-          TOBArticle.detail[Index].putValue('GA_FOURNPRINC',TheFournisseur);
-          TOBArticle.Detail[Index].Putvalue ('ISCHAMPSMODIFIE','X');
-        end;
+        //TOBArticle.detail[Index].putValue('GA_FOURNPRINC',TobParFou.GetValue ('GRF_TIERS'));
+        TOBArticle.detail[Index].putValue('GA_FOURNPRINC',TheFournisseur);
+        TOBArticle.Detail[Index].Putvalue ('ISCHAMPSMODIFIE','X');
       end;
-      // Modif BRL 03/07/2012 : Mise ‡ jour systÈmatique de la date de suppression article si celle-ci change
+      // Modif BRL 03/07/2012 : Mise √† jour syst√©matique de la date de suppression article si celle-ci change
       if (Index >= 0) and (TOBArticle.Detail[Index].GetValue ('GA_DATESUPPRESSION') <> StrToDate (DATESUP.Text)) then
       Begin
         TOBArticle.Detail[Index].PutValue ('GA_DATESUPPRESSION', StrToDate (DATESUP.Text));
@@ -928,9 +907,8 @@ begin
     if FileExists(TheTablette.GetValue('FICHIER LIE')) then MajLibelletablette(TheTablette);
   end;
 
-  for Indice := 0 to pred(TheTablette.detail.count) do
+  for Indice := 0 to TheTablette.detail.count -1 do
   begin
-    MoveCurProgressForm(Format('Mise ‡ jour des tablettes (%s/%s).', [IntToStr(Indice), IntToSTr(pred(TheTablette.detail.count))]));
     TheTabll := TheTablette.detail[Indice];
     TheTabll.SetAllModifie (true);
     if TheTabll.GetValue('EXIST')='-' then
@@ -940,13 +918,16 @@ begin
     end else
       TheTabll.UpdateDB;
   end;
+
   AvertirTable (TheTablette.getValue('DO_COMBO'));
+
 end;
 
 procedure TFRecupTarifFour.VerifSousFamilleTarif;
 var indice : integer;
     TOBA : TOB;
 begin
+{$IFDEF BTP}
   for indice := 0 to TobArticle.detail.count -1 do
   begin
     TOBA := TobArticle.detail[Indice];
@@ -955,12 +936,14 @@ begin
       TOBA.putValue('GA2_SOUSFAMTARART','');
     end;
   end;
+{$ENDIF}
 end;
 
 procedure TFRecupTarifFour.MAjPRixArticle;
 var indice : integer;
     TOBA : TOB;
 begin
+{$IFDEF BTP}
   for indice := 0 to TobArticle.detail.count -1 do
   begin
     TOBA := TobArticle.detail[Indice];
@@ -976,543 +959,177 @@ begin
       DefinieValorisation (TOBA);
     end;
   end;
+{$ENDIF}
 end;
 
 procedure TFRecupTarifFour.MiseajourTables;
-var
-  Indice        : integer;
-  lIndexOf      : integer;
-  QteUpd        : integer;
-  QteIns        : integer;
-  Cpt           : integer;
-  TheTablette   : TOB;
-  TOBA,TOBARTC  : TOB;
-  TobTabletteL  : TOB;
-  TSLToMaJ      : TStringList;
-  TSLQuery      : TStringList;
-  TSLExecQryL   : TStringList;
-  Sql           : string;
-  TableName     : string;
-  TableNameL    : string;
-  SqlAction     : string;
-  GlobalSql     : string;
-  lIndex        : string;
-  Prefix        : string;
-  Field1        : string;
-  Field2        : string;
-  DoUpdate      : boolean;
-
-  function ValueAnalysis(Value : string; FieldType : tTypeField) : string;
-  begin
-    Result := copy(Value, Pos('=', Value) + 1, length(Value));
-    case FieldType of
-      ttfDate    : Result := Tools.CastDateTimeForQry(StrToDateTime(Result));
-      ttfCombo   : Result := Trim(Result);
-      ttfNumeric :
-        begin
-          Result := StringReplace(Result, ',', '.', [rfReplaceAll]);
-          if Result = '' then
-            Result := '0';
-        end;
-    end;
-  end;
-
-  function SetlValue(FieldValue : string; FieldType : tTypeField) : string;
-  begin
-    case FieldType of
-      ttfBoolean, ttfCombo, ttfMemo, ttfText, ttfDate : Result := Format('"%s"', [FieldValue]);
-    else
-      Result := FieldValue;
-    end;
-  end;
-
-  function GetIndex : string;
-  var
-    Cpt       : integer;
-    FieldName : string;
-  begin
-    case Tools.CaseFromString(TableName, ['CATALOGU', 'ARTICLE', 'ARTICLECOMPL', 'NOMENENT', 'NOMENLIG', 'TABLETTE']) of
-      {CATALOGU}     0 : Result := Format('%s_%s', [TobA.GetString('GCA_REFERENCE'), TobA.GetString('GCA_TIERS')]);
-      {ARTICLE}      1 : Result := Format('%s'   , [TobA.GetString('GA_ARTICLE')]);
-      {ARTICLECOMPL} 2 : Result := Format('%s'   , [TobA.GetString('GA2_ARTICLE')]);
-      {NOMENENT}     3 : Result := Format('%s_%s', [TobA.GetString('GNE_ARTICLE'), TobA.GetString('GNE_NOMENCLATURE')]);
-      {NOMENLIG}     4 : Result := Format('%s_%s', [TobA.GetString('GNL_NOMENCLATURE'), TobA.GetString('GNL_NUMLIGNE')]);
-      {TABLETTE}     5 : begin
-                           Result := '';
-                           for Cpt := 0 to TobA.NbChamps do
-                           begin
-                             FieldName := TobA.GetNomChamp(Cpt);
-                             if Result = '' then
-                               Result := copy(FieldName, 1, pos('_', FieldName) - 1);
-                             Result := Format('%s%s', [Result, TobA.GetString(FieldName)]);
-                           end;
-                         end;
-    else
-      Result := '';
-    end;
-  end;
-
-  function GetWhere(Prefix : string='') : string;
-  begin
-    case Tools.CaseFromString(TableName, ['CATALOGU', 'ARTICLE', 'ARTICLECOMPL', 'TABLETTE']) of
-      {CATALOGU}     0 : Result := Format('GCA_REFERENCE = "%s" AND GCA_TIERS = "%s"', [TobA.GetString('GCA_REFERENCE'), TobA.GetString('GCA_TIERS')]);
-      {ARTICLE}      1 : Result := Format('GA_ARTICLE    = "%s"'                     , [TobA.GetString('GA_ARTICLE')]);
-      {ARTICLECOMPL} 2 : Result := Format('GA2_ARTICLE   = "%s"'                     , [TobA.GetString('GA2_ARTICLE')]);
-      {TABLETTE}     3 : Result := Format('%s_TYPE = "%s" AND %s_CODE = "%s"'        , [Prefix, TobA.GetString(Prefix + '_TYPE'), Prefix, TobA.GetString(Prefix + '_CODE')]);
-    else
-      Result := '';
-    end;
-  end;
-
-  function GetInsertUpdate(IsUpdate : boolean) : string;
-  var
-    Values         : string;
-    Value          : string;
-    FieldName      : string;
-    FieldValue     : string;
-    InsertedFields : string;
-    InsertedValues : string;
-    SqlUpdate      : string;
-    lTableName     : string;
-    Prefix         : string;
-    FieldType      : tTypeField;
-  begin
-    Result         := '';
-    FieldName      := '';
-    FieldType      := ttfNone;
-    FieldValue     := '';
-    InsertedFields := '';
-    InsertedValues := '';
-    SqlUpdate      := '';
-    Values         := TSLToMaJ[0];
-    while Values <> '' do
-    begin
-      Value := Tools.ReadTokenSt_(Values, '^');
-      if (Value <> '') and (copy(Value, 1, 5) <> 'LEVEL') then
-      begin
-        FieldName  := copy(Value, 1, Pos('=', Value) - 1);
-        FieldType  := Tools.GetFieldType(FieldName{$IFDEF TSTSRV}, '', ''{$ENDIF});
-        FieldValue := ValueAnalysis(Value, FieldType);
-        FieldValue := SetlValue(FieldValue, FieldType);
-        InsertedFields := InsertedFields + ', ' + FieldName;
-        InsertedValues := InsertedValues + ', ' + FieldValue;
-        SqlUpdate      := Format('%s, %s=%s', [SqlUpdate, FieldName, FieldValue]);
-      end;
-    end;
-    InsertedFields := Copy(InsertedFields, 2, Length(InsertedFields));
-    InsertedValues := Copy(InsertedValues, 2, Length(InsertedValues));
-    SqlUpdate      := Copy(SqlUpdate     , 2, Length(SqlUpdate));
-    if TableName = 'TABLETTE' then
-    begin
-      Prefix := TobA.GetNomchamp(1);
-      Prefix     := copy(Prefix, 1, pos('_', Prefix)-1);
-      lTableName := PrefixeToTable(Prefix);
-    end else
-    begin
-      Prefix     := '';
-      lTableName := TableName;
-    end;
-    if IsUpdate then
-      Result := Format('UPDATE %s SET %s WHERE %s', [lTableName, SqlUpdate, GetWhere(Prefix)])
-    else
-      Result := Format('INSERT INTO %s (%s) VALUES(%s)', [lTableName, InsertedFields, InsertedValues]);
-  end;
-
-  procedure ContinueBoucleSTables;
-  begin
-    {$IFNDEF APPSRV}
-    Tools.TobToTStringList(TobA, TSLToMaJ);
-    {$ENDIF APPSRV}
-    if lIndexOf > -1 then
-      Sql := GetInsertUpdate(True)
-    else if lIndexOf = -1 then
-      Sql := GetInsertUpdate(False);
-    if Sql <> '' then
-    begin
-      if DoUpdate then
-        inc(QteUpd)
-      else
-        inc(QteIns);
-      try
-        TSLExecQry.Add(Sql);
-      except
-        AddTSLStats(Format('Error : %s', [Sql]), 2);
-        AddTSLStats(Format('%s - %s Update - %s Insert', [TableName, IntToStr(QteUpd), IntToStr(QteIns)]), 2);
-      end;
-    end;
-    Sql := '';
-    TSLToMaJ.Clear;
-  end;
-
+var Indice        : integer;
+    TheTablette   : TOB;
+    TOBA,TOBARTC  : TOB;
 begin
-  TSLToMaJ := TStringList.Create;
-  try
-    QteUpd := 0;
-    QteIns := 0;
-    if CBCreationCatalogue.checked then
-    begin
-      TableName := 'CATALOGU';
-      for indice := 0 to pred(TobCatalogu.detail.count) do
-      begin
-        MoveCurProgressForm(Format('%s (%s/%s). Total lignes : %s', [TableName, IntToStr(Indice), IntToStr(pred(TobCatalogu.detail.count)), IntToStr(LinesQty)]));
-        TOBA     := TobCatalogu.detail[Indice];
-        DoUpdate := (TOBA.GetValue('UPDATE')= 'X') and (TOBA.GetValue('ISCHAMPSMODIFIE') = 'X');
-        lIndex   := GetIndex;
-        lIndexOf := TSLCacheGCA.IndexOfName(lIndex);
-        if lIndexOf = -1 then
-          TSLCacheGCA.Add(Format('%s=X', [lIndex]));
-        {$IFNDEF APPSRV}
-        Tools.TobToTStringList(TobA, TSLToMaJ);
-        {$ENDIF APPSRV}
-        if DoUpdate then
-          Sql := GetInsertUpdate(True)
-        else if (lIndexOf = -1) and (TOBA.GetValue('UPDATE') <> 'X') then
-          Sql := GetInsertUpdate(False);
-        if Sql <> '' then
-        begin
-          if DoUpdate then
-            inc(QteUpd)
-          else
-            inc(QteIns);
-          try
-            TSLExecQry.Add(Sql);
-          except
-            AddTSLStats(Format('%s - %s Update - %s Insert', [TableName, IntToStr(QteUpd), IntToStr(QteIns)]), 2);
-            AddTSLStats(Format('Error : %s', [Sql]), 2);
-          end;
-        end;
-        Sql := '';
-        TSLToMaJ.Clear;
-      end;
-    end;
-    QteUpd := 0;
-    QteIns := 0;
-    if CBCreationArticle.checked then
-    begin
-      TableName := 'ARTICLE';
-      for indice := 0 to pred(TobArticle.detail.count) do
-      begin
-        MoveCurProgressForm(Format('%s (%s/%s). Total lignes : %s', [TableName, IntToStr(Indice), IntToStr(pred(TobCatalogu.detail.count)), IntToStr(LinesQty)]));
-        TOBA     := TobArticle.detail[Indice];
-        DoUpdate := (TOBA.GetValue('UPDATE')= 'X') and (TOBA.GetValue('ISCHAMPSMODIFIE') = 'X');
-        lIndex   := GetIndex;
-        lIndexOf := TSLCacheGA.IndexOfName(lIndex);
-        if lIndexOf = -1 then
-          TSLCacheGA.Add(Format('%s=X', [lIndex]));
-       {$IFNDEF APPSRV}
-        Tools.TobToTStringList(TobA, TSLToMaJ);
-       {$ENDIF APPSRV}
-        if DoUpdate then
-        begin
-          SqlAction := 'U';
-          Sql       := GetInsertUpdate(True);
-        end else
-        if (lIndexOf = -1) and (TOBA.GetValue('UPDATE') <> 'X') then
-        begin
-          SqlAction := 'I';
-          Sql       := GetInsertUpdate(False);
-        end else
-        begin
-          SqlAction := '';
-          Sql       := '';
-        end;
-        if Sql <> '' then
-        begin
-          if DoUpdate then
-            inc(QteUpd)
-          else
-            inc(QteIns);
-          try
-            TSLExecQry.Add(Sql);
-          except
-            AddTSLStats(Format('%s - %s Update - %s Insert', [TableName, IntToStr(QteUpd), IntToStr(QteIns)]), 2);
-            AddTSLStats(Format('Error : %s', [Sql]), 2);
-          end;
-        end;
-        TSLToMaJ.Clear;
-        // PrÈpare M‡J ARTICLECOMPL
-        TOBARTC := TOB.create('ARTICLECOMPL',TOBArticleCompl,-1);
-        TOBARTC.putValue('GA2_ARTICLE',       TOBA.GetValue('GA_ARTICLE'));
-        TOBARTC.putValue('GA2_CODEARTICLE',   TOBA.GetValue('GA_CODEARTICLE'));
-        TOBARTC.putValue('GA2_SOUSFAMTARART', TOBA.GetValue('GA2_SOUSFAMTARART'));
-        TOBARTC.AddChampSupValeur('SQLACTION', SqlAction);
-        //Mise ‡ jour des Tarifs Article dans BTFAMILLETARIF et BTSOUSFAMILLETARIF
-        if TOBA.GetValue('GA_TARIFARTICLE') <> '' then MiseAJourFamilleTarif(TOBA);
-        //Gestion de la table des codes barres uniquement si la zone code barre est prÈsente dans la TOB Article.
-        if TOBA.FieldExists('BCB_CODEBARRE') then
-        begin
-          if TOBA.GetValue('BCB_CODEBARRE') <> '' then MiseAJourCodeBarre(TOBA);
-        end;
-      end;
-      QteUpd := 0;
-      QteIns := 0;
-      if TOBArticleCompl.detail.count > 0 then
-      begin
-        TableName := 'ARTICLECOMPL';
-        for indice := 0 to pred(TOBArticleCompl.detail.count) do
-        begin
-          MoveCurProgressForm(Format('%s (%s/%s). Total lignes : %s', [TableName, IntToStr(Indice), IntToStr(pred(TobCatalogu.detail.count)), IntToStr(LinesQty)]));
-          TOBA := TOBArticleCompl.detail[Indice];
-         {$IFNDEF APPSRV}
-          Tools.TobToTStringList(TobA, TSLToMaJ);
-         {$ENDIF APPSRV}
-          if TobA.GetString('SQLACTION') = 'U' then
-          begin
-            Sql      := GetInsertUpdate(True);
-            DoUpdate := True;
-          end else
-          if TobA.GetString('SQLACTION') = 'I' then
-          begin
-            Sql      := GetInsertUpdate(False);
-            DoUpdate := False;
-          end else
-            Sql := '';
-          if Sql <> '' then
-          begin
-            if DoUpdate then
-              inc(QteUpd)
-            else
-              inc(QteIns);
-            TSLExecQry.Add(Sql);
-          end;
-          TSLToMaJ.Clear;
-        end;
-        QteUpd := 0;
-        QteIns := 0;
-      end;
-      if TOBEnt.detail.count > 0 then
-      begin
-        TableName := 'NOMENENT';
-        for indice := 0 to TOBEnt.detail.count -1 do
-        begin
-          MoveCurProgressForm(Format('%s (%s/%s). Total lignes : %s', [TableName, IntToStr(Indice), IntToStr(pred(TobCatalogu.detail.count)), IntToStr(LinesQty)]));
-          TOBA     := TOBEnt.detail[Indice];
-          lIndex   := GetIndex;
-          lIndexOf := TSLCacheGNE.IndexOfName(lIndex);
-          if lIndexOf = -1 then
-            TSLCacheGNE.Add(Format('%s=X', [lIndex]));
-          ContinueBoucleSTables;
-        end;
-      end;
-      if TOBLig.detail.count > 0 then
-      begin
-        TableName := 'NOMENLIG';
-        for indice := 0 to pred(TobLig.detail.count) do
-        begin
-          MoveCurProgressForm(Format('%s (%s/%s). Total lignes : %s', [TableName, IntToStr(Indice), IntToStr(pred(TobCatalogu.detail.count)), IntToStr(LinesQty)]));
-          TOBA     := TobLig.detail[Indice];
-          lIndex   := GetIndex;
-          lIndexOf := TSLCacheGNL.IndexOfName(lIndex);
-          if lIndexOf = -1 then
-            TSLCacheGNL.Add(Format('%s=X', [lIndex]));
-          ContinueBoucleSTables;
-        end;
-      end;
-      if TOBCB.detail.count > 0  then
-      begin
-        TableName := 'BTCODEBARRE';
-        for indice := 0 to pred(TOBCB.detail.count) do
-        begin
-          MoveCurProgressForm(Format('%s (%s/%s). Total lignes : %s', [TableName, IntToStr(Indice), IntToStr(pred(TobCatalogu.detail.count)), IntToStr(LinesQty)]));
-          TOBA     := TOBCB.detail[Indice];
-          lIndex   := GetIndex;
-          lIndexOf := TSLCacheBCB.IndexOfName(GetIndex);
-          if lIndexOf = -1 then
-            TSLCacheBCB.Add(Format('%s=X', [GetIndex]));
-          ContinueBoucleSTables;
-        end;
-      end;
-      if TOBTablettes.detail.count > 0 then
-      begin
-        // Test s'il faut tout mettre ‡ jour
-        TableName := 'TABLETTE';
-(*
-        for Indice := 0 to pred(TOBTablettes.detail.count) do
-        begin
-          TobTabletteL := TOBTablettes.detail[indice];
-          for Cpt := pred(TobTabletteL.detail.count) downto 0 do
-          begin
-            MoveCurProgressForm(Format('Analyse des tablettes (%s).', [IntToSTr(pred(TobTabletteL.detail.count))]));
-            TobA     := TobTabletteL.detail[Cpt];
-            lIndex   := GetIndex;
-            lIndexOf := TSLCacheTablette.IndexOfName(lIndex);
-            if lIndexOf = -1 then
-              TSLCacheTablette.Add(Format('%s=X', [lIndex]))
-            else
-              TobA.free;
-          end;
-        end;
-*)
-        for Indice := 0 to pred(TOBTablettes.detail.count) do
-        begin
-          TobTabletteL := TOBTablettes.detail[Indice];
-          if TobTabletteL.Detail.count > 0 then
-          begin
-            if     (TobTabletteL.detail.count > 0)
-               and (TobTabletteL.GetString('FICHIER LIE') <> '')
-               and (FileExists(TobTabletteL.GetString('FICHIER LIE')))
-            then
-              MajLibelletablette(TobTabletteL);
-            for Cpt := 0 to pred(TobTabletteL.detail.count) do
-            begin
-              MoveCurProgressForm(Format('%s (%s/%s).', [TableName, IntToStr(Cpt), IntToStr(pred(TobTabletteL.detail.count))]));
-              TobA     := TobTabletteL.detail[Cpt];
-              lIndex   := GetIndex;
-              lIndexOf := TSLCacheTablette.IndexOfName(lIndex);
-              if lIndexOf = -1 then
-              begin
-                TSLCacheTablette.Add(Format('%s=X', [lIndex]));
-                Prefix     := TobA.GetNomchamp(1);
-                Prefix     := copy(Prefix, 1, pos('_', Prefix)-1);
-                TableNameL := PrefixeToTable(Prefix);
-                Field1     := Format('%s_TYPE', [Prefix]);
-                Field2     := Format('%s_CODE', [Prefix]);
-                Sql        := Format('SELECT ##TOP 1## %s FROM %s WHERE %s = "%s" AND %s = "%s"', [Field2, TableNameL, Field1, TobA.GetString(Field1), Field2, TobA.GetString(Field2)]);
-                DoUpdate   := ExisteSQL(Sql);
-                SqL        := '';
-               {$IFNDEF APPSRV}
-                Tools.TobToTStringList(TobA, TSLToMaJ);
-               {$ENDIF APPSRV}
-                Sql := GetInsertUpdate(DoUpdate);
-                if Sql <> '' then
-                begin
-                  if DoUpdate then
-                    inc(QteUpd)
-                  else
-                    inc(QteIns);
-                  TSLExecQry.Add(Sql);
-                end;
-                TSLToMaJ.Clear;
-              end;
-            end;
-//            AvertirTable (TobA.getValue('DO_COMBO'));
-          end;
-        end;
-      end;
-    end;
-  finally
-    FreeAndNil(TSLToMaJ);
-  end;
-  if TSLExecQry.Count > 0 then //      ExecuteSql(TSLExecQry.Text);
+
+  if CBCreationCatalogue.checked then
   begin
-    TSLExecQryL := TStringList.create;
-    try
-      for indice := 0 to pred(TSLExecQry.count) do
+  	ElimineDoublonsCatalog (TobCatalogu);
+    for indice := 0 to TobCatalogu.detail.count -1 do
+    begin
+      TOBA := TobCatalogu.detail[Indice];
+//      TobCatalogu.InsertOrUpdateDB (true);
+      if TOBA.GetValue ('UPDATE')= 'X' then
       begin
-        MoveCurProgressForm(Format('Mise ‡ jour des donnÈes (%s/%s)', [IntToStr(Indice), IntToStr(TSLExecQry.count-1)]));
-        if TSLExecQryL.Count = MaxQryExec then
-        begin
-          try
-            try
-              ExecuteSql(TSLExecQryL.Text);
-            except
-              AddTSLStats(Format('Error : %s/%s : %s', [IntToStr(Indice), IntToStr(TSLExecQry.count), TSLExecQryL.Text]), 2);
-            end;
-          finally
-            TSLExecQryL.Clear;
-          end;
-        end;
-        TSLExecQryL.Add(TSLExecQry[Indice]);
-      end;
-      if TSLExecQryL.Count > 0 then
+        if TOBA.GetValue('ISCHAMPSMODIFIE') = 'X' then TOBA.UpdateDB (false);
+      end else
       begin
-        try
-          ExecuteSql(TSLExecQryL.Text);
-        except
-          AddTSLStats(Format('Error : %s/%s : %s', [IntToStr(Indice), IntToStr(TSLExecQry.count), TSLExecQryL.Text]), 2);
-        end;
+        TobA.SetAllModifie (True);
+        TOBA.InsertDB (nil,false);
       end;
-    finally
-      FreeAndNil(TSLExecQryL);
     end;
-    TSLExecQry.Clear;
   end;
+
+  if CBCreationArticle.checked then
+  begin
+    ElimineDoublonsArticles(TobArticle);
+//    TobArticle.InsertOrUpdateDB(true);
+    for indice := 0 to TobArticle.detail.count -1 do
+    begin
+      TOBA := TobArticle.detail[Indice];
+      if TOBA.GetValue ('UPDATE')= 'X' then
+      begin
+        // si pas de modif --> on ne met pas a jour la table car inutile
+        if TOBA.GetValue('ISCHAMPSMODIFIE') = 'X' then
+        begin
+          TOBA.UpdateDB (false);
+        end;
+      end else
+      begin
+        TobA.SetAllModifie (True);
+        TOBA.InsertDB (nil,false);
+      end;
+      TOBARTC := TOB.create('ARTICLECOMPL',TOBArticleCompl,-1);
+      TOBARTC.putValue('GA2_ARTICLE',       TOBA.GetValue('GA_ARTICLE'));
+      TOBARTC.putValue('GA2_CODEARTICLE',   TOBA.GetValue('GA_CODEARTICLE'));
+      TOBARTC.putValue('GA2_SOUSFAMTARART', TOBA.GetValue('GA2_SOUSFAMTARART'));
+
+      //Mise √† jour des Tarifs Article dans BTFAMILLETARIF et BTSOUSFAMILLETARIF
+      if TOBA.GetValue('GA_TARIFARTICLE')<> '' then MiseAJourFamilleTarif(TOBA);
+
+      //
+      //Gestion de la table des codes barres uniquement si la zone code barre est pr√©sente dans la TOB Article.
+      IF TOBA.FieldExists('BCB_CODEBARRE') then
+      begin
+        if TOBA.GetValue('BCB_CODEBARRE') <> '' then MiseAJourCodeBarre(TOBA);
+      End;
+
+    end;
+    if TOBArticleCompl.detail.count > 0 then TOBArticleCompl.InsertorUpdateDB (true);
+    if TOBEnt.detail.count > 0          then TobEnt.InsertorUpdateDB (true);
+    if TOBLig.detail.count > 0          then TobLig.InsertorUpdateDB (true);
+    if TOBCB.detail.count > 0           then TOBCB.InsertorUpdateDB (true);
+
+    for Indice := 0 to TOBTablettes.detail.count -1 do
+    begin
+      TheTablette := TOBTablettes.detail[Indice];
+      MAJTablette (TheTablette);
+    end;
+  end;
+
+
 end;
 
-//FV1 : 21/01/2016 - FS#1854 - En import catalogue, les tables BTFAMILLETARIF et BTSOUSFAMILLETARIF ne sont pas alimentÈes
+//FV1 : 21/01/2016 - FS#1854 - En import catalogue, les tables BTFAMILLETARIF et BTSOUSFAMILLETARIF ne sont pas aliment√©es
 Procedure TFRecupTarifFour.MiseAJourFamilleTarif(TOBA : TOB);
-Var
-  CodeTarif  : string;
-  CodeSTarif : string;
-  Sql        : string;
-  lIndexOf   : integer;
+Var CodeTarif : string;
+    TobTarif  : TOB;
+    Req       : string;
 begin
-  if (chkFamSsFam.Checked) and (TOBA.GetString('GA_TARIFARTICLE') <> '') then
+
+  if not chkFamSsFam.Checked then Exit;
+
+  CodeTarif := TOBA.GetString('GA_TARIFARTICLE');
+
+  if CodeTarif = '' then Exit;
+
+  // Contr√¥le existence nouveau code tarif avant traitement dans tablette tarif article (GCTARIFARTICLE)
+  Req := 'SELECT BFT_FAMILLETARIF FROM BTFAMILLETARIF WHERE BFT_FAMILLETARIF="'+ CodeTarif +'"';
+  if Not ExisteSql(Req) then
   begin
-    CodeTarif := TOBA.GetString('GA_TARIFARTICLE');
-    lIndexOf  := TSLCacheBFT.IndexOfName(CodeTarif);
-    if lIndexOf = -1 then
-    begin
-      TSLCacheBFT.Add(Format('%s=X', [CodeTarif]));
-      Sql := Format('SELECT ##TOP 1## BFT_FAMILLETARIF FROM BTFAMILLETARIF WHERE BFT_FAMILLETARIF = "%s"', [CodeTarif]);
-      if not ExisteSQL(Sql) then
-      begin
-        Sql := Format('INSERT INTO BTFAMILLETARIF (BFT_FAMILLETARIF, BFT_LIBELLE) VALUES ("%s", "%s")', [CodeTarif, 'Famille : ' + CodeTarif]);
-        try
-          if ExecuteSql(Sql) = 1 then
-            AvertirTable('GCTARIFARTICLE');
-        except
-        end;
-      end;
-    end ;
-  end;
-  if (chkFamSsFam.Checked) and (TobA.GetString('GA2_SOUSFAMTARART') <> '') then
+    TobTarif := Tob.create('BTFAMILLETARIF', nil, -1);
+    TobTarif.PutValue('BFT_FAMILLETARIF', CodeTarif);
+    TobTarif.PutValue('BFT_LIBELLE', 'Famille : ' + CodeTarif);
+    TOBtarif.SetAllModifie(true); 
+    TobTarif.InsertOrUpdateDB;
+    AvertirTable('GCTARIFARTICLE');
+    FreeAndNil(TobTarif);
+  end ;
+
+  if TobA.GetString('GA2_SOUSFAMTARART') <> '' then MiseAJourSsFamilleTarif(TOBA);
+
+end;
+
+  //FV1 : 21/01/2016 - FS#1854 - En import catalogue, les tables BTFAMILLETARIF et BTSOUSFAMILLETARIF ne sont pas aliment√©es
+Procedure TFRecupTarifFour.MiseAJourSsFamilleTarif(TOBA : TOB);
+Var CodeSTarif: string;
+    CodeTarif : string;
+    TobSTarif : TOB;
+    Req       : string;
+begin
+
+  if not chkFamSsFam.Checked then Exit;
+
+  CodeTarif  := TOBA.GetString('GA_TARIFARTICLE');
+  CodeSTarif := TOBA.GetString('GA2_SOUSFAMTARART');
+
+  // Contr√¥le existence nouveau code tarif avant traitement dans tablette tarif article (GCTARIFARTICLE)
+  Req := 'SELECT * FROM BTSOUSFAMILLETARIF WHERE BSF_FAMILLETARIF="'+ CodeTarif +'" AND BSF_SOUSFAMTARART="' + CodeStarif + '"';
+  if Not ExisteSql(Req) then
   begin
-    CodeTarif  := TOBA.GetString('GA_TARIFARTICLE');
-    CodeSTarif := TOBA.GetString('GA2_SOUSFAMTARART');
-    lIndexOf   := TSLCacheBFS.IndexOfName(Format('%s_%s', [CodeTarif, CodeSTarif]));
-    if lIndexOf = -1 then
-    begin
-      TSLCacheBFS.Add(Format('%s_%s=X', [CodeTarif, CodeSTarif]));
-      Sql := Format('SELECT ##TOP 1## FROM BTSOUSFAMILLETARIF WHERE BSF_FAMILLETARIF ="%s" AND BSF_SOUSFAMTARART = "%s"', [CodeTarif, CodeSTarif]);
-      if not ExisteSQL(Sql) then
-      begin
-        Sql := Format('INSERT INTO BTSOUSFAMILLETARIF (BSF_FAMILLETARIF, BSF_SOUSFAMTARART, BSF_LIBELLE) VALUES ("%s", "%s", "%s")'
-                      , [CodeTarif, CodeSTarif, 'Sous-Famille : ' + CodeSTarif]);
-        try
-          if ExecuteSql(Sql) = 1 then
-            AvertirTable('BTSOUSFAMTARART');
-        except
-        end;
-      end;
-    end ;
-  end;
+    TobSTarif := Tob.create('BTSOUSFAMILLETARIF', nil, -1);
+    TobSTarif.PutValue('BSF_FAMILLETARIF',      CodeTarif);
+    TobSTarif.PutValue('BSF_SOUSFAMTARART',  CodeSTarif);
+    TobSTarif.PutValue('BSF_LIBELLE', 'Sous-Famille : ' + CodeSTarif);
+    TobSTarif.SetAllModifie(true); 
+    TobSTarif.InsertOrUpdateDB;
+    AvertirTable ('BTSOUSFAMTARART'); // rechargement tablette
+    FreeAndNil(TobSTarif);
+  end ;
+
 end;
 
 Procedure TFRecupTarifFour.MiseAJourCodeBarre(TOBA : TOB);
-Var
-  StSQL : String;
-  QQ    : TQuery;
-  TOBLCB: TOB;
-  okCrea: boolean;
+Var StSQL : String;
+    QQ    : TQuery;
+    TOBLCB: TOB;
+    okCrea: boolean;
 begin
+
   okcrea := False;
+
   StSQL := 'SELECT * FROM BTCODEBARRE WHERE BCB_NATURECAB="MAR" AND BCB_IDENTIFCAB="' + TOBA.GetValue('GA_ARTICLE') + '"';
   QQ := OpenSQL(StSQL, False);
-  try
-    if QQ.EOF Then
-    begin
-      OkCrea  := True;
-      TOBLCB  := TOB.create('BTCODEBARRE',TOBCB,-1);
-      TOBLCB.putValue('BCB_NATURECAB',      'MAR');
-      TOBLCB.putValue('BCB_CABPRINCIPAL',   'X');
-      TOBLCB.putValue('BCB_IDENTIFCAB',   TOBA.GetValue('GA_ARTICLE'));
-    end
-    else
-    begin
-      TOBLCB  := TOB.create('BTCODEBARRE',TOBCB,-1);
-      TOBLCB.SelectDB('BTCODEBARRE', QQ);
-    end;
-  finally
-    Ferme(QQ);
+
+  if QQ.EOF Then
+  begin
+    OkCrea  := True;
+    TOBLCB  := TOB.create('BTCODEBARRE',TOBCB,-1);
+    TOBLCB.putValue('BCB_NATURECAB',      'MAR');
+    TOBLCB.putValue('BCB_CABPRINCIPAL',   'X');
+    TOBLCB.putValue('BCB_IDENTIFCAB',   TOBA.GetValue('GA_ARTICLE'));
+  end
+  else
+  begin
+    TOBLCB  := TOB.create('BTCODEBARRE',TOBCB,-1);
+    TOBLCB.SelectDB('BTCODEBARRE', QQ);
   end;
+
+  Ferme(QQ);
+
   if TOBA.FieldExists('BCB_QUALIFCODEBARRE') then
   begin
     if TOBA.GetValue('BCB_QUALIFCODEBARRE') = '' then
       TOBLCB.putValue('BCB_QUALIFCODEBARRE', '128')
     else
     begin
-      //contrÙle si Qualifiant du code barre dans le combo yyybartype.
+      //contr√¥le si Qualifiant du code barre dans le combo yyybartype.
       StSQL := 'SELECT * FROM COMMUN WHERE CO_TYPE="YCB" AND CO_CODE="' + TOBA.GetValue('BCB_QUALIFCODEBARRE') + '"';
       if ExisteSQL(StSQL) then
         TOBLCB.putValue('BCB_QUALIFCODEBARRE', TOBA.GetValue('BCB_QUALIFCODEBARRE'))
@@ -1522,6 +1139,8 @@ begin
   end
   else
     TOBLCB.putValue('BCB_QUALIFCODEBARRE','128');
+
+  //
   if TOBA.FieldExists('BCB_CODEBARRE')       then
   begin
     if TOBLCB.GetValue('BCB_CODEBARRE') <> TOBA.GetValue('BCB_CODEBARRE') then
@@ -1530,6 +1149,8 @@ begin
      TOBLCB.putValue('BCB_CODEBARRE',     TOBA.GetValue('BCB_CODEBARRE'));
     end;
   end;
+
+
 end;
 
 procedure TFRecupTarifFour.ListeRecap;
@@ -1537,7 +1158,7 @@ BEGIN
   ListRecap.Items.Clear;
   ListRecap.Items.Add (PTITRE.Caption);
   ListRecap.Items.Add ('');
-  ListRecap.Items.Add ('Fichier rÈcupÈrÈ : ' + GRF_FICHIER.Text);
+  ListRecap.Items.Add ('Fichier r√©cup√©r√© : ' + GRF_FICHIER.Text);
   ListRecap.Items.Add ('');
   ListRecap.Items.Add (TDateSup.Caption + ' : ' + DATESUP.Text);
   ListRecap.Items.Add ('');
@@ -1559,7 +1180,7 @@ BEGIN
   ListRecap.Items.Add ('');
   if HChamp1.Text <> 'Aucun' then
   begin
-    ListRecap.Items.Add ('SÈlection des enregistrements');
+    ListRecap.Items.Add ('S√©lection des enregistrements');
     RecapChamp (HChamp1.Text, HLongueur1.Text, HOffset1.Text, HBorneInf1.Text,
     HBorneSup1.Text);
     if HChamp2.Text <> 'Aucun' then
@@ -1576,7 +1197,7 @@ BEGIN
     end;
   end else
   begin
-  	ListRecap.Items.Add ('Aucun ÈlÈment de sÈlection des enregistrements');
+  	ListRecap.Items.Add ('Aucun √©l√©ment de s√©lection des enregistrements');
   end;
   ListRecap.Items.Add ('');
 end;
@@ -1587,31 +1208,30 @@ var stChaine : string;
 begin
   if stChamp <> 'Autre' then
   begin
-  	ListRecap.Items.Add ('SÈlection sur le champ : ' + stChamp);
+  	ListRecap.Items.Add ('S√©lection sur le champ : ' + stChamp);
   end else
   begin
     if TobParFou.GetValue ('GRF_TYPEENREG') = 'X' then
     begin
-      ListRecap.Items.Add ('SÈlection ‡ la position : ' + stOffset);
-      stChaine := '    sur une longeur de : ' + stLongueur + ' caractËre';
+      ListRecap.Items.Add ('S√©lection √† la position : ' + stOffset);
+      stChaine := '    sur une longeur de : ' + stLongueur + ' caract√®re';
       if StrToInt(stLongueur) > 1 then stChaine := stChaine + 's';
       ListRecap.Items.Add (stChaine);
     end else
     begin
-      ListRecap.Items.Add ('SÈlection sur le champ n∞ : ' + stOffset);
+      ListRecap.Items.Add ('S√©lection sur le champ n¬∞ : ' + stOffset);
     end;
   end;
-  ListRecap.Items.Add ('    Borne infÈrieure : ' + stBorneInf);
-  ListRecap.Items.Add ('    Borne supÈrieure : ' + stBorneSup);
+  ListRecap.Items.Add ('    Borne inf√©rieure : ' + stBorneInf);
+  ListRecap.Items.Add ('    Borne sup√©rieure : ' + stBorneSup);
 end;
 
 function TFRecupTarifFour.EnregistreTables : TIOErr;
 begin
 	VerifSousFamilleTarif;
   MajPrixArticle;
-//  result := Transactions(MiseajourTables, 0);
-  MiseajourTables;
-//  if result = OeOk then RenseigneJournalEvenement (result,true);
+  result := Transactions (MiseajourTables, 0);
+  if result = OeOk then RenseigneJournalEvenement (result,true);
 end;
 
 procedure TFRecupTarifFour.VideTobs;
@@ -1881,10 +1501,6 @@ begin
                                else ListChampsArt := 'GA_FAMILLENIV1';
       end;
     end;
-    // Ajout GA_DATESUPPRESSION pour Èviter de faire des updates pour rien car utilisÈ pour alimenter le champ 'ISCHAMPSMODIFIE'
-    if ListChampsArt <> '' then ListChampsArt := ListChampsArt + ',GA_DATESUPPRESSION'
-                           else ListChampsArt := 'GA_DATESUPPRESSION';
-
   end;
 
   for Indice := 0 to TOBChampsArt.detail.count -1 do
@@ -1957,188 +1573,120 @@ begin
 end;
 
 procedure TFRecupTarifFour.RecupereTarif;
-var
-  SizeFic : integer;
-  Fichier : textfile;
-  SearchRec: TSearchRec;
-  ioerr : TIOErr;
-  Ligne,LigneDep,LigneFin : integer;
-  Erreur : integer;
-  texte : string;
-  ReStart : boolean;
-  AppDir  : string;
+var SizeFic : integer;
+    Fichier : textfile;
+    SearchRec: TSearchRec;
+    ioerr : TIOErr;
+    NbrEnregTrait : integer;
+    Ligne,LigneDep,LigneFin : integer;
+    Erreur : integer;
+    texte : string;
 begin
-  TSLStats := TStringList.create;
-  try
-    TSLCacheGCA := TStringList.create;
-    try
-      TSLCacheGA := TStringList.create;
-      try
-        TSLCacheGA2 := TStringList.Create;
-        try
-          TSLCacheBFT := TStringList.Create;
-          try
-            TSLCacheBFS := TStringList.Create;
-            try
-              TSLCacheGNE := TStringList.Create;
-              try
-                TSLCacheGNL := TStringList.Create;
-                try
-                  TSLCacheBCB := TSTringList.Create;
-                  try
-                    TSLExecQry := TSTringList.Create;
-                    try
-                      TSLCacheTablette := TSTringList.Create;
-                      try
-                        AppDir           := ExtractFilePath (Application.ExeName);
-                        WithLog          := (FileExists(IncludeTrailingBackslash (AppDir)+PROFILE));
-                        NbrEnregTrait    := 0;
-                        IndexParCatalogu := -1;
-                        IndexParArticle  := -1;
-                        RemplitChampsTob;
-                        ioerr := oeOk;
-                        if (IndexParCatalogu <> -1) or (IndexParArticle <> -1) then
-                        begin
-                          TobArticle      := TOB.Create ('', Nil, -1);
-                          TobCatalogu     := TOB.Create ('', Nil, -1);
-                          TOBEnt          := TOB.Create ('THE NOMENENT',nil,-1);
-                          TOBLig          := TOB.Create ('THE NOMENLIG',nil,-1);
-                          TOBArticleCompl := TOB.Create ('LES COMPLEMENTS ARTICLE',nil,-1);
-                          TOBTiers        := TOB.Create ('TIERS',nil,-1);
-                          TOBCB           := TOB.Create ('CODEBARRE',nil,-1);
-                          TobArticle.InitValeurs;
-                          TobCatalogu.InitValeurs;
-                          TarifExist := ExisteSQL('SELECT ##TOP 1## GF_TARIFARTICLE FROM TARIF');
-                          Ligne := 0;
-                          LigneDep := 1;
-                          LinesQty := 0;
-                          TRY
-                            AssignFile (Fichier, GRF_FICHIER.Text); // ouvre le pointeur sur le fichier
-                            Reset (Fichier);                        // equivalent open file
-                            readln (Fichier, stEnreg);              // calcul nb enreg du fichier de donnÈes
-                            FindFirst(GRF_FICHIER.Text, faAnyFile, SearchRec);
-                            SizeFic := Trunc(SearchRec.Size / Length(stEnreg));
-                            FindClose (SearchRec);
-                            Reset (Fichier);
-                            try
-                              InitMoveProgressForm (nil, 'Traitement en cours...', 'RÈcupÈration du catalogue fournisseur.', SizeFic, true, true) ;
-                              try
-                                AddTSLStats('DEBUT TRAITEMENT');
-                                ReStart := True;
-                                BStop := False;
-                                while not EOF(Fichier) and (BStop = False) do
-                                begin
-                                  inc(LinesQty);
-                                  if NbrEnregTrait >= MAXTRAITENREG then
-                                  begin
-                                    Restart := True;
-                                    AddTSLStats(Format('Fin chargement (traitement de %s ligne(s). Cumul : %s ligne(s)).', [IntToStr(NbrEnregTrait), IntToStr(LinesQty)]));
-                                    AddTSLStats(Format('DÈbut EnregistreTables.', []));
-                                    LigneFin := Ligne;
-                                    Ioerr := EnregistreTables;
-                                    if Ioerr <> oeOk then
-                                    begin
-                                      EnregistreErreur (99,LigneDep,LigneFin);
-                                      break;
-                                    end;
-                                    LigneDep := Ligne+1;
-                                    AddTSLStats(Format('Fin EnregistreTables (traitement de %s ligne(s). Cumul : %s ligne(s)).', [IntToStr(NbrEnregTrait), IntToStr(LinesQty)]));
-                                    NbrEnregTrait := 0;
-                                    VideTobs;
-                                    WriteStats;
-                                    TSLStats.Clear;
-                                  end;
-                                  if ReStart then
-                                  begin
-                                    Restart := False;
-                                    AddTSLStats('DÈbut chargement.');
-                                  end;
-                                  Application.ProcessMessages;
-                                  if not MoveCurProgressForm ('') then
-                                  begin
-                                    BStop := True;
-                                  end else
-                                  begin
-                                    readln (Fichier,stEnreg);     // lecture des donnÈes
-                                    if ControleEnreg then
-                                    try
-                                      inc(NbrEnregTrait);
-                                      if not TraiteEnregistrement (Erreur,Texte) then
-                                      begin
-                                        EnregistreErreur (Erreur,Ligne,-1,Texte);
-                                      end;
-                                    except
-                                      BStop := True;
-                                    end;
-                                    Inc(Ligne);
-                                  end;
-                                end;
-                                if not BStop then
-                                begin
-                                  AddTSLStats(Format('Fin chargement (traitement de %s ligne(s). Cumul : %s ligne(s)).', [IntToStr(NbrEnregTrait), IntToStr(LinesQty)]));
-                                  AddTSLStats(Format('DÈbut EnregistreTables.', []));
-                                  Ioerr := EnregistreTables;
-                                  if Ioerr <> oeOk then
-                                  begin
-                                    LigneFin := Ligne;
-                                    EnregistreErreur (99,LigneDep,LigneFin);
-                                  end;
-                                  AddTSLStats(Format('Fin EnregistreTables (traitement de %s ligne(s). Cumul : %s ligne(s)).', [IntToStr(NbrEnregTrait), IntToStr(LinesQty)]));
-                                end;
-                              finally
-                                FiniMoveProgressForm ;
-                              end;
-                            finally
-                              CloseFile(Fichier);
-                            end;
-                          FINALLY
-                            AddTSLStats(Format('FIN TRAITEMENT : %s ligne(s) lue(s).', [IntToStr(LinesQty)]));
-                            AddTSLStats('***********************************');
-                            WriteStats;
-                            TobArticle.Free;
-                            TobCatalogu.Free;
-                            TOBEnt.free;
-                            TOBLig.free;
-                            TobArticleCompl.Free;
-                            TOBCB.Free;
-                            TOBTiers := TOB.Create ('TIERS',nil,-1);
-                            // --
-                          END;
-                        end;
-                        RenseigneJournalEvenement (ioerr);
-                      finally
-                        FreeAndNil(TSLCacheTablette);
-                      end;
-                    finally
-                      FreeAndNil(TSLExecQry);
-                    end;
-                  finally
-                    FreeAndNil(TSLCacheBCB);
-                  end;
-                finally
-                  FreeAndNil(TSLCacheGNL);
-                end;
-              finally
-                FreeAndNil(TSLCacheGNE);
-              end;
-            finally
-              FreeAndNil(TSLCacheBFS);
-            end;
-          finally
-            FreeAndNil(TSLCacheBFT);
+
+  NbrEnregTrait := 0;
+  IndexParCatalogu := -1;
+  IndexParArticle := -1;
+
+  RemplitChampsTob;
+  ioerr := oeOk;
+
+  if (IndexParCatalogu <> -1) or (IndexParArticle <> -1) then
+  begin
+    TobArticle      := TOB.Create ('', Nil, -1);
+    TobCatalogu     := TOB.Create ('', Nil, -1);
+    // Modif BTP
+    TOBEnt          := TOB.Create ('THE NOMENENT',nil,-1);
+    TOBLig          := TOB.Create ('THE NOMENLIG',nil,-1);
+    TOBArticleCompl := TOB.Create ('LES COMPLEMENTS ARTICLE',nil,-1);
+    TOBTiers        := TOB.Create ('TIERS',nil,-1);
+    TOBCB           := TOB.Create ('CODEBARRE',nil,-1);
+
+    // --
+    TobArticle.InitValeurs;
+    TobCatalogu.InitValeurs;
+    //
+    Ligne := 0;
+    LigneDep := 1;
+
+    TRY
+      AssignFile (Fichier, GRF_FICHIER.Text); // ouvre le pointeur sur le fichier
+      Reset (Fichier);                        // equivalent open file
+      // calcul nb enreg du fichier de donn√©es
+      readln (Fichier, stEnreg);
+      FindFirst(GRF_FICHIER.Text, faAnyFile, SearchRec);
+      SizeFic := Trunc(SearchRec.Size / Length(stEnreg));
+      FindClose (SearchRec);
+      // ---
+      Reset (Fichier);
+      //-----------------
+      InitMoveProgressForm (nil,'Traitement en cours...','R√©cup√©ration du catalogue fournisseur', SizeFic, true, true) ;
+      //
+      BStop := False;
+      //
+      while not EOF(Fichier) and (BStop = False) do
+      begin
+        if NbrEnregTrait >= MAXTRAITENREG then
+        begin
+          LigneFin := Ligne;
+          Ioerr := EnregistreTables;
+          if Ioerr <> oeOk then
+          begin
+          	EnregistreErreur (99,LigneDep,LigneFin);
+            break;
           end;
-        finally
-          FreeAndNil(TSLCacheGA2);
+          LigneDep := Ligne+1;
+          NbrEnregTrait := 0;
+          VideTobs;
         end;
-      finally
-        FreeAndNil(TSLCacheGA);
+        Application.ProcessMessages;
+        if not MoveCurProgressForm ('') then
+        begin
+          BStop := True;
+        end
+        else
+        begin
+          readln (Fichier,stEnreg);     // lecture des donn√©es
+          if ControleEnreg then
+          try
+            inc(NbrEnregTrait);
+            if not TraiteEnregistrement (Erreur,Texte) then
+            begin
+              EnregistreErreur (Erreur,Ligne,-1,Texte);
+            end;
+          except
+            BStop := True;
+          end;
+          Inc(Ligne);
+        end;
       end;
-    finally
-      FreeAndNil(TSLCacheGCA);
-    end;
-  finally
-    FreeAndNil(TSLStats);
+
+      FiniMoveProgressForm ;
+
+      CloseFile (Fichier);
+
+      if BStop = False then
+      begin
+        Ioerr := EnregistreTables;
+        if Ioerr <> oeOk then
+        begin
+          LigneFin := Ligne;
+          EnregistreErreur (99,LigneDep,LigneFin);
+        end;
+      end;
+
+    FINALLY
+      TobArticle.Free;
+      TobCatalogu.Free;
+      // MOdif BTP
+      TOBEnt.free;
+      TOBLig.free;
+      TobArticleCompl.Free;
+      TOBCB.Free;
+      TOBTiers := TOB.Create ('TIERS',nil,-1);
+      // --
+    END;
   end;
+  RenseigneJournalEvenement (ioerr);
 end;
 
 procedure TFRecupTarifFour.RecupereValChamp (TobPar : TOB; Index : integer; var ValChamp : string);
@@ -2217,7 +1765,7 @@ var Lesuffixe : string;
     indice : integer;
 begin
   LeSuffixe := copy (champ,pos('_',champ)+1,255);
-  // Boucle pour rechercher le suffixe car dans DO_NOMCHAMP il peut y avoir plusieurs noms sÈparÈs par point-virgule
+  // Boucle pour rechercher le suffixe car dans DO_NOMCHAMP il peut y avoir plusieurs noms s√©par√©s par point-virgule
   result := Nil;
   For indice :=0 to TOBTablettes.detail.count -1 do
   begin
@@ -2325,7 +1873,7 @@ begin
     ThisLigne := TOB.Create (LaTable,ThisTablette,-1);
     ThisLigne.PutValue (LePrefixe+'_TYPE',LeType);
     ThisLigne.putValue (LePrefixe+'_CODE',Code);
-    //FV1 : 06/03/2017 - FS#2410 - SES ETANCH - Import tarif ne reprends pas les libellÈs des familles articles contenu ds le TXT
+    //FV1 : 06/03/2017 - FS#2410 - SES ETANCH - Import tarif ne reprends pas les libell√©s des familles articles contenu ds le TXT
     Libelle := RechercheLibelleTablette(Code, ThisTablette);
     ThisLigne.putValue (LePrefixe+'_LIBELLE', Libelle);
     ThisLigne.putValue (LePrefixe+'_ABREGE',  Libelle);
@@ -2342,7 +1890,7 @@ begin
     TheGdFather := '';
     NivPrec := strtoint(copy(LeType,3,1)) - 1;
     TheFather := TObTable.detail[IndexTobTable].GetValue('GA_FAMILLENIV'+inttostr(NivPrec));
-    //Gestion Famille de niveau 3.... Etrangement pas gÈrÈ ??? 
+    //Gestion Famille de niveau 3.... Etrangement pas g√©r√© ??? 
     if NivPrec  > 1 then TheGdFather := TObTable.detail[IndexTobTable].GetValue('GA_FAMILLENIV'+inttostr(NivPrec-1));
     //
     if ThisLigne.getValue(LePrefixe+'_LIBRE') = '' then
@@ -2358,7 +1906,7 @@ begin
       begin
         if not (InFamille(TheGdFather+TheFather,ThisLigne.GetValue(LePrefixe+'_LIBRE'))) then
         begin
-          ThisLigne.putValue (LePrefixe+'_LIBRE',ThisLigne.GetValue (LePrefixe+'_LIBRE')+';'+TheGdFather+TheFather);  //Je sais pas comment Áa peut marcher par la suite ?????
+          ThisLigne.putValue (LePrefixe+'_LIBRE',ThisLigne.GetValue (LePrefixe+'_LIBRE')+';'+TheGdFather+TheFather);  //Je sais pas comment √ßa peut marcher par la suite ?????
         end;
       end
       else
@@ -2390,7 +1938,7 @@ begin
   end;
 end;
 
-//FV1 : 06/03/2017 - FS#2410 - SES ETANCH - Import tarif ne reprends pas les libellÈs des familles articles contenu ds le TXT
+//FV1 : 06/03/2017 - FS#2410 - SES ETANCH - Import tarif ne reprends pas les libell√©s des familles articles contenu ds le TXT
 Function TFRecupTarifFour.RechercheLibelleTablette(Thecode : string; TheTablette : TOB) : string;
 var Fichier   : textFile;
     TheEnreg  : string;
@@ -2454,32 +2002,6 @@ begin
 
 end;
 
-procedure TFRecupTarifFour.AddTSLStats(Text : string; Level : integer=0);
-begin
-  if (WithLog) and (Text <> '') then
-    TSLStats.Add(Format('%s : %s%s', [DateTimeToStr(Now), StringOfChar(' ', Level), Text]));
-end;
-
-procedure TFRecupTarifFour.WriteStats;
-var
-  LogFileName : string;
-  LogFile     : TextFile;
-  Cpt         : integer;
-begin
-  if WithLog then 
-  begin
-    LogFileName := 'C:\PGI01\ImportCatalogue.txt';
-    AssignFile(LogFile, LogFileName);
-    try
-      if FileExists(LogFileName) then Append(LogFile)
-                                 else Rewrite(LogFile);
-      for Cpt := 0 to pred(TSLStats.Count) do
-        Writeln(LogFile, TSLStats[Cpt]);
-    finally
-      CloseFile(LogFile);
-    end;
-  end;
-end;
 
 procedure TFRecupTarifFour.CumulTablette(laTabl: TOB; champ, valeur: string;TobTable: TOB; IndextobTable : integer);
 var LaTable,LePrefixe,LeType : string;
@@ -2587,7 +2109,7 @@ begin
         begin
           TobTable.Detail[IndexTobTable].Putvalue ('ISCHAMPSMODIFIE','X');
         end;
-        // Modif BRL 28/09/2012 : chargement du code article unique si celui-ci est prÈsent dans le paramÈtrage
+        // Modif BRL 28/09/2012 : chargement du code article unique si celui-ci est pr√©sent dans le param√©trage
     if Champ = 'GCA_ARTICLE'       then ValChamp := CodeArticleUnique2 (Valchamp, '');
     //
         TobTable.Detail[IndexTobTable].PutValue (Champ, ValChamp);
@@ -2621,13 +2143,13 @@ begin
     if ioerr = oeOk then
     begin
       TOBJnal.PutValue('GEV_ETATEVENT', 'OK');
-      if Partiel then ListRecap.Items.Add('Traitement partiel terminÈ')
-                 else ListRecap.Items.Add('Traitement terminÈ');
+      if Partiel then ListRecap.Items.Add('Traitement partiel termin√©')
+                 else ListRecap.Items.Add('Traitement termin√©');
     end else
     begin
       TOBJnal.PutValue ('GEV_ETATEVENT', 'ERR');
-      if Partiel then ListRecap.Items.Add('Traitement partiel non terminÈ')
-                 else ListRecap.Items.Add('Traitement non terminÈ');
+      if Partiel then ListRecap.Items.Add('Traitement partiel non termin√©')
+                 else ListRecap.Items.Add('Traitement non termin√©');
     end;
   end;
   TOBJnal.PutValue('GEV_BLOCNOTE', ListRecap.Items.Text);
@@ -2689,8 +2211,8 @@ begin
   	Codeart := GetArticleFromEnreg;
     if (CBCreationCatalogue.Checked) and (TheFournisseur = '') then
     begin
-      // on doit crÈer les catalogues et pas de fournisseur ?? --> erreur...
-      codeErreur := 1; // --> Code fournisseur non renseignÈ
+      // on doit cr√©er les catalogues et pas de fournisseur ?? --> erreur...
+      codeErreur := 1; // --> Code fournisseur non renseign√©
       Texte := 'Article : ' + Codeart;
     	Result := false;
       Exit;
@@ -2738,7 +2260,7 @@ begin
           begin
             if TOBArticle.detail[indexArticle].GetValue('UPDATE') = '-' then
             begin
-              // en crÈation uniquement
+              // en cr√©ation uniquement
               TOBArticle.detail[indexArticle].PutValue('GA_LIBELLE',ValChamp);
               if TOBArticle.detail[indexArticle].GetValue('GA_TYPEARTICLE') = 'ARP' then
               begin
@@ -2770,7 +2292,7 @@ begin
             begin
               if TOBArticle.detail[indexArticle].GetValue('UPDATE') = '-' then
               begin
-                // en crÈation uniquement
+                // en cr√©ation uniquement
                 TOBArticle.detail[indexArticle].PutValue('GA_LIBELLE',ValChamp);
                 if TOBArticle.detail[indexArticle].GetValue('GA_TYPEARTICLE') = 'ARP' then
                 begin
@@ -2899,8 +2421,8 @@ begin
   if TobParFou.GetValue ('GRF_TYPEENREG') = 'X' then
   begin
     ValChamp := Copy (TheEnreg, Offset, Longueur);
-    // on considere que plus de 5 blanc dÈfinis que c'est la fin de la zone
-    // pas terrible ...en attendant la definition du fichier associÈ a la tablette
+    // on considere que plus de 5 blanc d√©finis que c'est la fin de la zone
+    // pas terrible ...en attendant la definition du fichier associ√© a la tablette
     i_pos := pos ('     ',valchamp);
     if i_pos > 0 then ValChamp := trim(copy (ValChamp,1,i_pos));
   end else
@@ -2947,15 +2469,14 @@ begin
 end;
 
 procedure TFRecupTarifFour.DefinieValorisation (TOBref: TOB);
-var
-  TOBCatalog,TOBTarif: TOB;
-  MTPAF : double;
-  TypeArticle :string;
-  Fournisseur : string;
-  PrixPourQte : double;
-  IsUniteAchat : boolean;
+var  TOBCatalog,TOBTarif: TOB;
+     MTPAF : double;
+     TypeArticle :string;
+     Fournisseur : string;
+     PrixPourQte : double;
+     IsUniteAchat : boolean;
 begin
-  IsUniteAchat := true; // par dÈfaut
+  IsUniteAchat := true; // par d√©faut
   TypeArticle:= TOBRef.GetValue('GA_TYPEARTICLE');
   Fournisseur := TOBRef.GetValue('GA_FOURNPRINC');
   if (Fournisseur <> TOBTiers.getValue('T_TIERS')) and (Fournisseur <> '') then
@@ -2973,8 +2494,7 @@ begin
     begin
       if Fournisseur <> '' then
       begin
-        if TarifExist then
-          GetTarifGlobal (TOBRef.getValue('GA_ARTICLE'), TOBRef.getValue('GA_TARIFARTICLE'), TOBRef.getValue('GA2_SOUSFAMTARART'), 'ACH', TOBRef, TOBTiers, TOBTarif, true);
+        GetTarifGlobal (TOBRef.getValue('GA_ARTICLE'),TOBRef.getValue('GA_TARIFARTICLE'),TOBRef.getValue('GA2_SOUSFAMTARART'),'ACH',TOBRef,TOBTiers,TOBTarif,true);
         if TOBTarif.GetValue('GF_PRIXUNITAIRE') <> 0 then
         begin
           MTPAF :=TOBTarif.GetValue('GF_PRIXUNITAIRE');
@@ -3091,13 +2611,13 @@ procedure TFRecupTarifFour.EnregistreErreur(Erreur, LigneDep : integer; ligneFin
 begin
 	if Erreur = 1 then
   begin
-    CreationErreur ('Fournisseur non renseignÈ. '+Texte,LigneDep);
+    CreationErreur ('Fournisseur non renseign√©. '+Texte,LigneDep);
   end else if Erreur = 2 then
   begin
     CreationErreur ('Fournisseur inconnu '+Texte,LigneDep);
   end else if Erreur = 99 then
   begin
-    CreationErreur ('Erreur d''enregistrement des donnÈes entre la ligne',LigneDep,LigneFin);
+    CreationErreur ('Erreur d''enregistrement des donn√©es entre la ligne',LigneDep,LigneFin);
   end;
 end;
 

@@ -129,6 +129,7 @@ end ;
 
 procedure TOF_BTGETREGLCPTA.OnArgument (S : String ) ;
 Var TheDate : TDateTime;
+    DateGetRegl : String;
     Y,M,D   : Word;
 begin
   Inherited ;
@@ -147,7 +148,12 @@ begin
 
   TOBReglements := TOB.Create ('LES REGELEMENST',nil,-1);
   TOBPIECES     := TOB.Create ('LES PIECES',nil,-1);
-  TheDate       := StrToDatetime(GetParamSocSecur('SO_BTGETREGLLASTDATE',now));
+  DateGetRegl   := GetParamSocSecur('SO_BTGETREGLLASTDATE',now);
+  If DateGetregl = '' then
+    Thedate     := Now
+  else
+    TheDate     := StrToDatetime(DateGetRegl);
+
   DecodeDate(TheDate, Y, M, D);
   OneDateSt     := DateToStr(EncodeDate(y, m, d)) ;
   JournauxSt    := GetParamSocSecur('SO_BTGETJNLCOMPTA','');

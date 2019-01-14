@@ -128,9 +128,16 @@ procedure Dispatch(Num: Integer; PRien: THPanel; var retourforce, sortiehalley: 
            '(60,10,0,0,"Imports Export CEGID-LSE",60300,"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","",59,"-","-","")';
     ExecuteSQL(SQL);
     //
-    SQL := 'SELECT 1 FROM MENU WHERE MN_1=60 AND MN_TAG=60301';
+    SQL := 'SELECT 1 FROM MENU WHERE MN_1=60 AND MN_TAG=60302';
     if ExisteSQL(SQL) then
       ExecuteSQL('DELETE FROM MENU WHERE MN_1=60 AND MN_TAG=60302');
+    SQL := 'INSERT INTO MENU (MN_1, MN_2, MN_3, MN_4, MN_LIBELLE, MN_TAG, MN_ACCESGRP, MN_SHORTCUT, MN_GROUPINDEX, MN_VERSIONDEV, MN_PERSO, MN_DOMAINE) VALUES '+
+           '(60,10,1,0,"Imports-Export ",60302,"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","",52,"-","-","")';
+    ExecuteSQL(SQL);
+    //
+    SQL := 'SELECT 1 FROM MENU WHERE MN_1=60 AND MN_TAG=60303';
+    if ExisteSQL(SQL) then
+      ExecuteSQL('DELETE FROM MENU WHERE MN_1=60 AND MN_TAG=60303');
     SQL := 'INSERT INTO MENU (MN_1, MN_2, MN_3, MN_4, MN_LIBELLE, MN_TAG, MN_ACCESGRP, MN_SHORTCUT, MN_GROUPINDEX, MN_VERSIONDEV, MN_PERSO, MN_DOMAINE) VALUES '+
            '(60,10,1,0,"Imports-Export ",60302,"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","",52,"-","-","")';
     ExecuteSQL(SQL);
@@ -400,15 +407,17 @@ V_PGI.StandardSurDp := False;  // indispensable pour l'aiguillage entre le DP et
 V_PGI.OutLook:=TRUE ;
 V_PGI.OfficeMsg:=TRUE ;
 V_PGI.ToolsBarRight:=TRUE ;
+V_PGI.NoProtec := True; 
+V_PGI.VersionDemo := false;
 ChargeXuelib ;
 V_PGI.VersionDemo:=True ;
 V_PGI.MenuCourant:=0 ;
 V_PGI.VersionReseau:=True ;
 V_PGI.NumVersion:='10.0.0' ;
 V_PGI.NumVersionBase:=998 ;
-V_PGI.NumBuild:='000.002';
+V_PGI.NumBuild:='000.004';
 V_PGI.CodeProduit:='034' ;
-V_PGI.DateVersion:=EncodeDate(2018,11,29);
+V_PGI.DateVersion:=EncodeDate(2018,12,28);
 V_PGI.ImpMatrix := True ;
 V_PGI.OKOuvert:=FALSE ;
 V_PGI.Halley:=TRUE ;

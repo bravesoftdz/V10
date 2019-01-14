@@ -533,6 +533,7 @@ begin
   FillChar (Clefac,sizeof(CleFac),#0);
   TToolWindow97(GetControl('PBouton')).Enabled := false;
   isModified := ExisteLigneSituation;
+  if 
   //
   if ReajusteDossier then
   begin

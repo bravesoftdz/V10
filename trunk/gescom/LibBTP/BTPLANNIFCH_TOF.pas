@@ -1769,8 +1769,10 @@ function TOF_BTPLANNIFCH.IntegreArticleGlobal (TOBL,TOBDEBUT: TOB;TheTypeLigne :
                     else TOBS.PutValue('IDENTIFIANTWOL',0);
     TOBS.putValue ('WOL ORIGINE',TOBL.GetValue('GL_IDENTIFIANTWOL'));
     //
+    (* --
     TOBLIg:=NewTobLigne(TOBS,0);
     TOBLIG.dupliquer (TOBL,false,true);
+    -- *)
     TOBS.AddChampSupValeur ('GP_REFINTERNE',TOBDevis.GetValue('GP_REFINTERNE'));
 
     if (TypeArt = 'OUV') or (TypeArt = 'ARP') then TOBLIG.PutValue('GL_INDICENOMEN',0);

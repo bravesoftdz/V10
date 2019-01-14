@@ -4375,15 +4375,23 @@ begin
     TOBP.SetDouble('CAUTIONUTIL', TOBP.GetDouble('CAUTIONUTIL') + TOBL.GetDouble('PRG_MTTTCRG'))  ;
     TOBP.SetDouble('CAUTIONUTILDEV', TOBP.GetDouble('CAUTIONUTILDEV') + TOBL.GetDouble('PRG_MTTTCRGDEV'))  ;
     //
-    TauxTva := TOBL.GetDouble('PRG_MTTTCRGDEV') / TOBL.GetDouble('PRG_MTHTRGDEV');
-    TauxDev := TOBL.GetDouble('PRG_MTTTCRGDEV') / TOBL.GetDouble('PRG_MTTTCRG');
+    // Modified by f.vautrain 03/01/2019 11:17:57 - FS#3426 - BATIPRO (Viviane) : Impossible d'imprimer le récap de situation
+    if TOBL.GetDouble('PRG_MTHTRGDEV') <> 0 then TauxTva := TOBL.GetDouble('PRG_MTTTCRGDEV') / TOBL.GetDouble('PRG_MTHTRGDEV');
+    If TOBL.GetDouble('PRG_MTTTCRG')   <> 0 then TauxDev := TOBL.GetDouble('PRG_MTTTCRGDEV') / TOBL.GetDouble('PRG_MTTTCRG');
+    // Modified by f.vautrain 03/01/2019 11:17:57 - FS#3426 - BATIPRO (Viviane) : Impossible d'imprimer le récap de situation
     //
     if TOBP.GetDouble('CAUTIONUTIL') > TOBP.GetDouble('CAUTIONINIT') then
     begin
       TOBP.SetDouble('PRG_MTTTCRG',  TOBP.GetDouble('CAUTIONUTIL')-TOBP.GetDouble('CAUTIONINIT'))  ;
       TOBP.SetDouble('PRG_MTTTCRGDEV', TOBP.GetDouble('CAUTIONUTILDEV')-TOBP.GetDouble('CAUTIONINITDEV'))  ;
-      TOBP.SetDouble('PRG_MTHTRG', Arrondi(TOBP.GetDouble('PRG_MTTTCRG')/TauxTva/TauxDev,V_PGI.okdecV))  ;
-      TOBP.SetDouble('PRG_MTHTRGDEV', Arrondi(TOBP.GetDouble('PRG_MTTTCRGDEV')/TauxTva,DEV.decimale))  ;
+      // Modified by f.vautrain 03/01/2019 11:52:21 - FS#3426 - BATIPRO (Viviane) : Impossible d'imprimer le récap de situation
+      if TauxTva <> 0 then
+      begin
+        TOBP.SetDouble('PRG_MTHTRG',    Arrondi(TOBP.GetDouble('PRG_MTTTCRG')/TauxTva,V_PGI.okdecV))  ;
+        TOBP.SetDouble('PRG_MTHTRGDEV', Arrondi(TOBP.GetDouble('PRG_MTTTCRGDEV')/TauxTva,DEV.decimale))  ;
+        if TauxDev <> 0 then TOBP.SetDouble('PRG_MTHTRG', Arrondi(TOBP.GetDouble('PRG_MTHTRG')/TauxDev,V_PGI.okdecV))  ;
+      end;
+      // Modified by f.vautrain 03/01/2019 11:52:21 - FS#3426 - BATIPRO (Viviane) : Impossible d'imprimer le récap de situation
     end else
     begin
       TOBP.SetString('PRG_NUMCAUTION','1111');
@@ -4403,9 +4411,17 @@ begin
     end else
     begin
       TOBP.SetDouble('PRG_MTTTCRG',  TOBP.GetDouble('CAUTIONUTIL'))  ;
-      TOBP.SetDouble('PRG_MTTTCRGDEV', TOBP.GetDouble('CAUTIONUTILDEV'))  ;
-      TOBP.SetDouble('PRG_MTHTRG', Arrondi(TOBP.GetDouble('PRG_MTTTCRG')/TauxTva/TauxDev,V_PGI.okdecV))  ;
-      TOBP.SetDouble('PRG_MTHTRGDEV', Arrondi(TOBP.GetDouble('PRG_MTTTCRGDEV')/TauxTva,DEV.decimale))  ;
+      TOBP.SetDouble('PRG_MTTTCRGDEV', TOBP.GetDouble('CAUTIONUTILDEV'));
+      // Modified by f.vautrain 03/01/2019 11:52:21 - FS#3426 - BATIPRO (Viviane) : Impossible d'imprimer le récap de situation
+      //TOBP.SetDouble('PRG_MTHTRG', Arrondi(TOBP.GetDouble('PRG_MTTTCRG')/TauxTva/TauxDev,V_PGI.okdecV))  ;
+      //TOBP.SetDouble('PRG_MTHTRGDEV', Arrondi(TOBP.GetDouble('PRG_MTTTCRGDEV')/TauxTva,DEV.decimale))  ;
+      if TauxTva <> 0 then
+      begin
+        TOBP.SetDouble('PRG_MTHTRG',    Arrondi(TOBP.GetDouble('PRG_MTTTCRG')/TauxTva,V_PGI.okdecV))  ;
+        TOBP.SetDouble('PRG_MTHTRGDEV', Arrondi(TOBP.GetDouble('PRG_MTTTCRGDEV')/TauxTva,DEV.decimale))  ;
+        if TauxDev <> 0 then TOBP.SetDouble('PRG_MTHTRG', Arrondi(TOBP.GetDouble('PRG_MTHTRG')/TauxDev,V_PGI.okdecV))  ;
+      end;
+      // Modified by f.vautrain 03/01/2019 11:52:21 - FS#3426 - BATIPRO (Viviane) : Impossible d'imprimer le récap de situation
       TOBP.SetDouble('PRG_CAUTIONMT',TOBP.GetDouble('CAUTIONINIT'));
       TOBP.SetDouble('PRG_CAUTIONMTDEV',TOBP.GetDouble('CAUTIONINITDEV'));
     end;
@@ -4450,7 +4466,9 @@ begin
   begin
     req := 'SELECT * FROM PIEDBASE, PIECE WHERE '+
            'GP_AFFAIREDEVIS="' + ThePiece.GetValue('GP_AFFAIREDEVIS') + '" AND ' +
-           'GP_NATUREPIECE IN ("FBP","FBT") AND '+
+           //FV1 - 03/01/2018 : FS#3427 - BATIPRO (Viviane) : Impossible d'imprimer le tableau totalisations sur facture directe
+           //'GP_NATUREPIECE IN ("FBP","FBT") AND '+
+           'GP_NATUREPIECEG IN ("FBP","FBT") AND '+
            'GP_NUMERO      = ' + IntToStr(ThePiece.GetValue('GP_NUMERO'))       + '  AND ' +
            'GP_VIVANTE="X" AND '+
            'GPB_NATUREPIECEG=GP_NATUREPIECEG AND GPB_SOUCHE=GP_SOUCHE AND GPB_NUMERO=GP_NUMERO';

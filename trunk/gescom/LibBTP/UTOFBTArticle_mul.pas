@@ -136,7 +136,11 @@ Inherited;
 
   CodeDepot := THValComboBox(Ecran.FindComponent('GQ_DEPOT'));
 
-  if copy(ecran.Name,1,16) = 'BTPRESTATION_MUL' then
+  if (ecran.Name = 'BTPREST_RECH') then
+  Begin
+    TypeArt.Visible := False;
+  end
+  else if copy(ecran.Name,1,16) = 'BTPRESTATION_MUL' then
   begin
     SType := St;
   end
@@ -485,7 +489,7 @@ begin
   F:=TFMul(Ecran) ;
   //
   if (F.Name = 'BTARTICLE_RECH') OR (F.Name = 'BTPREST_RECH') then
-    TArticle := TypeArt.Text
+    TArticle := TypeArt.Value
   else
     TArticle := TypeArticle.Text;
   //
@@ -660,7 +664,7 @@ begin
       TypeArt.plus := TheSelection;
       if (NB = 1) and (LastType <> '')  then
       begin
-        TypeArt.text := LastType;
+        TypeArt.Value := LastType;
       end;
     end
     else
@@ -787,17 +791,20 @@ var icol : integer;
 begin
 
   if (ecran.Name = 'BTARTICLE_RECH') OR (ecran.Name = 'BTPREST_RECH') then
-    TArticle := TypeArt.Text
+    TArticle := TypeArt.Value
   else
   begin
     TArticle := TypeArticle.Text;
     TArticle := copy(TArticle,0, length(TArticle)-1);
   end;
 
-  If pos(TArticle,'MAR;ARP') > 0 then
-  	FamilleTarif.enabled := True
-  else
-  	FamilleTarif.enabled := False;
+  if FamilleTarif <> nil then
+  begin
+    If pos(TArticle,'MAR;ARP') > 0 then
+      FamilleTarif.enabled := True
+    else
+      FamilleTarif.enabled := False;
+  end;
 
   THEdit(getcontrol('XX_WHERE')).Text := '';
 

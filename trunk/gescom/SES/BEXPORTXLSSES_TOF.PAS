@@ -45,18 +45,20 @@ Type
     procedure OnCancel                 ; override ;
   private
     CodeAffaire : string;
-    fWinExcel : OleVariant;
-    WorkBook : Variant;
+    fWinExcel   : OleVariant;
+    WorkBook    : Variant;
     procedure XLSNAMEClick (Sender : Tobject);
     procedure AlimChantierClick (Sender  :TObject);
-    function AlimenteFicheChantier : boolean;
-    function OuvreExcel : boolean;
+    function  AlimenteFicheChantier : boolean;
+    function  OuvreExcel : boolean;
     procedure FermeExcel;
     procedure RemplitDatas (WB : variant;CodeAffaire : string);
-    function ChargeAffaire(CodeAffaire: String; TOBAFFAIRE : TOB) : Boolean;
+    function  ChargeAffaire(CodeAffaire: String; TOBAFFAIRE : TOB) : Boolean;
     procedure ChargeTiers(CodeTiers : string;TOBTIER,TOBADRESSES : TOB);
     procedure ChargeLesDevis(TOBAffaire,TOBDEVIS,TOBSOUSTRAITS : TOB);
     procedure ChargeAffaireAdresses (TOBAFFAIRE,TOBADRESSES : TOB);
+    procedure RAZTableauDEVIS(WB: Variant);
+    procedure RAZTableauSOUSTRAIT(WB: Variant);
 
   end ;
 
@@ -195,17 +197,23 @@ begin
   end;
   TRY
     WorkBook := OpenWorkBook (THEdit(GetControl('XLSNAME')).Text ,fWinExcel);
-    if TrouveSheet (WorkBook,'DONNEES_LSE') Then
+    // Modified by f.vautrain 04/01/2019 16:39:27 - FS#3430 - SES ETANCHEITE - Erreur en intégration des fiches affaire si fait plusieurs fois
+    if not TrouveSheet (WorkBook,'DONNEES_LSE') Then
     begin
-      DelSheet (WorkBook,'DONNEES_LSE');
+      WB2 := OpenWorkBook (StdFileDATASES,fWinExcel);
+      TS := SelectSheet (WB2,'DONNEES_LSE');
+      TS.copy(WorkBook.sheets[2]);
+      WB2.Close(0);
+      TS := UnAssigned;
+    end
+    else
+    begin
+      TS := SelectSheet(WorkBook,'DONNEES_LSE');
+      RAZTableauDEVIS(WorkBook);
+      RAZTableauSOUSTRAIT(WorkBook);
+      TS := UnAssigned;
     end;
-    //
-    WB2 := OpenWorkBook (StdFileDATASES,fWinExcel);
-    TS := SelectSheet (WB2,'DONNEES_LSE');
-    TS.copy(WorkBook.sheets[2]);
-    WB2.Close(0);
-    TS := UnAssigned;
-    //
+    // Modified by f.vautrain 04/01/2019 16:39:27 - FS#3430 - SES ETANCHEITE - Erreur en intégration des fiches affaire si fait plusieurs fois
     TS := SelectSheet(WorkBook,'DONNEES_LSE');
     RemplitDatas (WorkBook,CodeAffaire);
     WorkBook.save;
@@ -220,6 +228,61 @@ var WinNew : Boolean;
 begin
   Result := OpenExcel (true,fWinExcel,WinNew);
 end;
+
+// Modified by f.vautrain 04/01/2019 16:39:27 - FS#3430 - SES ETANCHEITE - Erreur en intégration des fiches affaire si fait plusieurs fois
+Procedure TOF_BEXPORTXLSSES.RAZTableauDEVIS(WB : Variant);
+Var Ind : Integer;
+Begin
+
+  For Ind := 1 To 24 do
+  begin
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,1);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,2);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,3);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,4);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,5);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,6);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,7);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,8);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,9);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,10);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,11);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,12);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,13);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,14);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,15);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,16);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,17);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,18);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,19);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,20);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,21);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,22);
+    ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS','',Ind,23);
+  end;
+
+end;
+
+// Modified by f.vautrain 04/01/2019 16:39:27 - FS#3430 - SES ETANCHEITE - Erreur en intégration des fiches affaire si fait plusieurs fois
+Procedure TOF_BEXPORTXLSSES.RAZTableauSOUSTRAIT(WB : Variant);
+Var Ind : Integer;
+Begin
+
+  For Ind := 1 To 33 do
+  begin
+    ExcelRangeValue(WB, 'DONNEES_LSE','SOUSTRAIT','',Ind,1);
+    ExcelRangeValue(WB, 'DONNEES_LSE','SOUSTRAIT','',Ind,2);
+    ExcelRangeValue(WB, 'DONNEES_LSE','SOUSTRAIT','',Ind,3);
+    ExcelRangeValue(WB, 'DONNEES_LSE','SOUSTRAIT','',Ind,4);
+    ExcelRangeValue(WB, 'DONNEES_LSE','SOUSTRAIT','',Ind,5);
+    ExcelRangeValue(WB, 'DONNEES_LSE','SOUSTRAIT','',Ind,6);
+    ExcelRangeValue(WB, 'DONNEES_LSE','SOUSTRAIT','',Ind,7);
+    ExcelRangeValue(WB, 'DONNEES_LSE','SOUSTRAIT','',Ind,8);
+    ExcelRangeValue(WB, 'DONNEES_LSE','SOUSTRAIT','',Ind,9);
+  end;
+
+end;
+
 
 procedure TOF_BEXPORTXLSSES.RemplitDatas(WB: variant; CodeAffaire: string);
 var TOBAFFAIRE,TOBTIER,TOBADRESSES,TOBDEVIS,TOBSOUSTRAITS : TOB;
@@ -252,9 +315,9 @@ var TOBAFFAIRE,TOBTIER,TOBADRESSES,TOBDEVIS,TOBSOUSTRAITS : TOB;
     ExcelRangeValue(WB,'DONNEES_LSE','AFF_CHARLIBRE2',TOBAFFAIRE.GetString('AFF_CHARLIBRE2'),1,1);
     ExcelRangeValue(WB,'DONNEES_LSE','AFF_CHARLIBRE3',TOBAFFAIRE.GetString('AFF_CHARLIBRE3'),1,1);
     ExcelRangeFormat(WB,'DONNEES_LSE','AFF_VALLIBRE1','# ##0,00 €',1,1);
-    ExcelRangeValue(WB,'DONNEES_LSE','AFF_VALLIBRE1',StringReplace(TOBAFFAIRE.GetString('AFF_VALLIBRE1'),',','.',[rfreplaceAll]),1,1);
+    ExcelRangeValue(WB, 'DONNEES_LSE','AFF_VALLIBRE1',StringReplace(TOBAFFAIRE.GetString('AFF_VALLIBRE1'),',','.',[rfreplaceAll]),1,1);
     ExcelRangeFormat(WB,'DONNEES_LSE','AFF_VALLIBRE2','# ##0,00 €',1,1);
-    ExcelRangeValue(WB,'DONNEES_LSE','AFF_VALLIBRE2',StringReplace(TOBAFFAIRE.GetString('AFF_VALLIBRE2'),',','.',[rfreplaceAll]),1,1);
+    ExcelRangeValue(WB, 'DONNEES_LSE','AFF_VALLIBRE2',StringReplace(TOBAFFAIRE.GetString('AFF_VALLIBRE2'),',','.',[rfreplaceAll]),1,1);
     ExcelRangeFormat(WB,'DONNEES_LSE','AFF_VALLIBRE3','# ##0,00 €',1,1);
     ExcelRangeValue(WB,'DONNEES_LSE','AFF_VALLIBRE3',StringReplace(TOBAFFAIRE.GetString('AFF_VALLIBRE3'),',','.',[rfreplaceAll]),1,1);
     ExcelRangeValue(WB,'DONNEES_LSE','AFF_BOOLLIBRE1',TOBAFFAIRE.GetString('AFF_BOOLLIBRE1'),1,1);
@@ -294,37 +357,38 @@ var TOBAFFAIRE,TOBTIER,TOBADRESSES,TOBDEVIS,TOBSOUSTRAITS : TOB;
     ExcelRangeValue(WB,'DONNEES_LSE','ADR_LIVRAISON',TOBADRESSES.detail[0].GetString('NOMCONTACT'),7,1);
     ExcelRangeValue(WB,'DONNEES_LSE','ADR_LIVRAISON',TOBADRESSES.detail[0].GetString('TELCONTACT'),8,1);
     ExcelRangeValue(WB,'DONNEES_LSE','ADR_LIVRAISON',TOBADRESSES.detail[0].GetString('MAILCONTACT'),9,1);
+    //Grille des devis
     for II := 0 to TOBDEVIS.Detail.count -1 do
     begin
       TOBD := TOBDEVIS.detail[II];
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('GP_NUMERO'),II+1,1);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('ETATAFFAIRE'),II+1,2);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('GP_REFINTERNE'),II+1,3);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('GP_REFEXTERNE'),II+1,4);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('GP_NUMERO'),II+1,1);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('ETATAFFAIRE'),II+1,2);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('GP_REFINTERNE'),II+1,3);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('GP_REFEXTERNE'),II+1,4);
       ExcelRangeFormat(WB,'DONNEES_LSE','DEVIS','# ##0,00 €',II+1,5);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',StringReplace(TOBD.GetString('GP_TOTALHTDEV'),',','.',[rfreplaceAll]),II+1,5);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',StringReplace(TOBD.GetString('GP_TOTALHTDEV'),',','.',[rfreplaceAll]),II+1,5);
       ExcelRangeFormat(WB,'DONNEES_LSE','DEVIS','# ##0,00 €',II+1,6);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',StringReplace(TOBD.GetString('GP_TOTALTTCDEV'),',','.',[rfreplaceAll]),II+1,6);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',StringReplace(TOBD.GetString('GP_TOTALTTCDEV'),',','.',[rfreplaceAll]),II+1,6);
       ExcelRangeFormat(WB,'DONNEES_LSE','DEVIS','# ##0,00 €',II+1,7);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',StringReplace(TOBD.GetString('MONTANTTVA'),',','.',[rfreplaceAll]),II+1,7);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('REPRESENTANT'),II+1,8);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS1'),II+1,9);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS2'),II+1,10);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS3'),II+1,11);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS4'),II+1,12);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS5'),II+1,13);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS6'),II+1,14);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS7'),II+1,15);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS8'),II+1,16);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS9'),II+1,17);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERSA'),II+1,18);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('LIBREPIECE1'),II+1,19);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('LIBREPIECE2'),II+1,20);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('LIBREPIECE3'),II+1,21);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('GP_DATELIBREPIECE1'),II+1,22);
-      ExcelRangeValue(WB,'DONNEES_LSE','DEVIS',TOBD.GetString('GP_DATELIBREPIECE2'),II+1,23);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',StringReplace(TOBD.GetString('MONTANTTVA'),',','.',[rfreplaceAll]),II+1,7);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('REPRESENTANT'),II+1,8);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS1'),II+1,9);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS2'),II+1,10);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS3'),II+1,11);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS4'),II+1,12);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS5'),II+1,13);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS6'),II+1,14);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS7'),II+1,15);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS8'),II+1,16);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERS9'),II+1,17);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('LIBRETIERSA'),II+1,18);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('LIBREPIECE1'),II+1,19);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('LIBREPIECE2'),II+1,20);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('LIBREPIECE3'),II+1,21);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('GP_DATELIBREPIECE1'),II+1,22);
+      ExcelRangeValue(WB, 'DONNEES_LSE','DEVIS',TOBD.GetString('GP_DATELIBREPIECE2'),II+1,23);
     end;
-
+    //Grille des sous-traitants
     for II := 0 to TOBSOUSTRAITS.Detail.count -1 do
     begin
       TOBD := TOBSOUSTRAITS.detail[II];

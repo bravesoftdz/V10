@@ -2388,7 +2388,7 @@ end;
 
 procedure TPieceCotrait.SetInfoSoustraitancelig(TOBL: TOB; Fournisseur,ModePaie,CodeMarche,LibelleFou: string; var Ligne: integer; PrixBloque,FromExcel : boolean);
 var LigneInit : integer;
-    CodeFamille2 : string;
+    CodeFamille2,FamilleTaxe : string;
     MtPaiementDir : double;
 begin
   CodeFamille2 := '';
@@ -2408,6 +2408,8 @@ begin
   begin
     CodeFamille2 := GetInfoMarcheST (TOBL.GetString('GL_AFFAIRE'),Fournisseur,CodeMarche,'FAMILLENIV2');
     if CodeFamille2 <> #0 then TOBL.putvalue('GL_FAMILLENIV2',CodeFamille2);
+    FamilleTaxe := GetInfoMarcheST (TOBL.GetString('GL_AFFAIRE'),Fournisseur,CodeMarche,'FAMILLETAXE1');
+    if FamilleTaxe <> #0 then TOBL.putvalue('GL_FAMILLETAXE1',FamilleTaxe);
     if TOBL.GetString('GL_NATUREPIECEG')<>'BCE' then
     begin
       MtPaiementDir := GetMtPaiementDir (TOBL.GetString('GL_AFFAIRE'),Fournisseur,CodeMarche);

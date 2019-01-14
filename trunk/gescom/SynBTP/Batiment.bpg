@@ -11,8 +11,8 @@ BRCC = $(ROOT)\bin\brcc32.exe $**
 #------------------------------------------------------------------------------
 PROJECTS = BuildNewCptx.exe TestServices.exe SetupLSE.exe \
   SvcSynBTPVerdonImp.exe SvcSynBTPVerdonExp.exe SvcSynBTPY2.exe \
-  ImportExportCegid.exe UtilsPOC.exe UtilsBTP.exe MajVerBTP.exe CBTPS3.exe \
-  CBTPS5.exe
+  ImportExportCegid.exe UtilsPOC.exe ImpExpPartage.exe UtilsBTP.exe MajVerBTP.exe \
+  CBTPS3.exe CBTPS5.exe
 #------------------------------------------------------------------------------
 default: $(PROJECTS)
 #------------------------------------------------------------------------------
@@ -50,6 +50,9 @@ SetupLSE.exe: ..\..\Lanceur Install\SetupLSE.dpr
   $(DCC)
 
 UtilsPOC.exe: UtilsPOC.dpr
+  $(DCC)
+
+ImpExpPartage.exe: ImpExpPartage.dpr
   $(DCC)
 
 
